@@ -38,13 +38,15 @@ jobs:
           bun run --cwd packages/nodes/textNode typecheck
           bun run --cwd packages/nodes/imageGenerationNode typecheck
           bun run --cwd packages/nodes/videoGenerationNode typecheck
-      - name: Build node and tool plugins
-        run: |
-          bun run build:tools
-          bun run build:ext
-          bun run build:nodes
-      - name: Build Web and Server
-        run: |
-          bun run build
-          bun run build:mcp
-          bun run build:server
+      - name: Build Tools
+        run: bun run build:tools
+      - name: Build Extensions
+        run: bun run build:ext
+      - name: Build Nodes
+        run: bun run build:nodes
+      - name: Build MCP
+        run: bun run build:mcp
+      - name: Build Web
+        run: bun run --cwd apps/web build
+      - name: Build Server
+        run: bun run --cwd apps/server build
