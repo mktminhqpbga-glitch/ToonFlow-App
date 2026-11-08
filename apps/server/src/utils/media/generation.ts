@@ -65,12 +65,20 @@ function imageOptions(value: unknown, pattern: RegExp) {
 export async function listMediaModels(): Promise<MediaModel[]> {
   if (modelGateway.enabled()) return modelGateway.catalog(["image", "video", "audio"]);
   const installedProviders = await listMediaProviders();
+  const providerConfigs = record(conf.get("settings", {}).mediaProviderConfigs);
   installedProviders.sort((left, right) => Number(right.id === "toonflow") - Number(left.id === "toonflow"));
   const installedModels = installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => provider.models.flatMap(model => {
     if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
     const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
+    const config = record(providerConfigs[provider.id]);
+    const apiKeyRule = provider.rules.find(rule => rule.field === "apiKey");
+    const apiKey = config.apiKey ?? (apiKeyRule && "value" in apiKeyRule ? apiKeyRule.value : undefined);
+    // A saved key proves configuration only, never live connectivity or available credits.
+    const availability = provider.id === "toonflow" ? "configured"
+      : apiKeyRule && (typeof apiKey !== "string" || !apiKey.trim()) ? "needsConfiguration" : "configured";
     return [{
       providerId: provider.id, providerLabel: provider.label, modelId: model.id, label: model.label, type: model.type,
+      availability,
       supportsPrice: "supportsPrice" in provider && provider.supportsPrice === true,
       rules: model.rules,
       mode: model.mode, durationResolutionMap: model.durationResolutionMap, audio: model.audio,
@@ -82,7 +90,8 @@ export async function listMediaModels(): Promise<MediaModel[]> {
     } as MediaModel];
   }));
   // ACT: chỉ hiện nguồn AI theo khả năng được tab Chrome đã chọn xác nhận; provider gốc giữ nguyên.
-  return [...installedModels, ...chromeBridge.models("image"), ...chromeBridge.models("video")] as MediaModel[];
+  return [...installedModels, ...chromeBridge.models("image").map(model => ({ ...model, availability: "ready" })),
+    ...chromeBridge.models("video").map(model => ({ ...model, availability: "ready" }))] as MediaModel[];
 }
 
 export async function readReference(cwd: string, reference: MediaReference, mediaType: string, signal?: AbortSignal): Promise<Extract<MediaInput, { type: "base64" }>> {
