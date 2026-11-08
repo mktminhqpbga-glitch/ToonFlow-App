@@ -1,3 +1,7 @@
+> 🇻🇳 **SỔ GHI CHÚ DỰ ÁN — DÀNH CHO CHỦ REPO VÀ CÁC AI TIẾP NHẬN:** [📋 Bảng tổng quan](./docs/aiNotes/overview.md) · [✅ Việc đã làm / ai đã sửa](./docs/aiNotes/completedWork.md) · [⚠️ Vấn đề còn tồn tại / người sửa gần nhất](./docs/aiNotes/openIssues.md) · [📝 Lưu ý quan trọng cho AI](./docs/aiNotes/importantNotes.md)
+>
+> Sau mỗi lần sửa, cần cập nhật lịch sử, người thực hiện, bằng chứng commit, kết quả kiểm tra và mọi vấn đề còn mở. **Đọc [quy tắc ghi chú](./docs/aiNotes/overview.md) trước khi thay đổi.**
+
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=200&section=header&text=Toonflow&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=50" alt="Toonflow" width="100%" />
 
 <p>
