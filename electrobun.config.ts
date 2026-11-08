@@ -1,4 +1,4 @@
-import type { ElectrobunConfig } from "./.hutch/devkit/api/config/ElectrobunConfig";
+import type { ElectrobunConfig } from "electrobun";
 import { fileURLToPath } from "node:url";
 
 const startupTarget = process.platform === "darwin" ? (process.arch === "x64" ? "macX64" : "macArm64")

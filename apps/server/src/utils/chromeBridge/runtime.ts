@@ -31,7 +31,7 @@ export function providerForUrl(value: string): BridgeProvider | undefined {
 }
 
 class ChromeBridgeRuntime {
-  private server?: { port: number; stop: (closeActiveConnections?: boolean) => void };
+  private server?: { port?: number; stop: (closeActiveConnections?: boolean) => void };
   private socket?: { data: SocketData; send: (data: string) => unknown; close: (code?: number, reason?: string) => void };
   private token = "";
   private selections = new Map<BridgeProvider, BridgeSelection>();
@@ -124,7 +124,7 @@ class ChromeBridgeRuntime {
   status() {
     return {
       enabled: this.enabled, connected: this.connected,
-      pairingCode: this.enabled && this.server && !this.connected ? "toonflow-bridge://127.0.0.1:" + this.server.port + "/" + this.token : null,
+      pairingCode: this.enabled && this.server?.port !== undefined && !this.connected ? "toonflow-bridge://127.0.0.1:" + this.server.port + "/" + this.token : null,
       selected: Object.fromEntries([...this.selections].map(([id, selection]) => [id, selection])),
       jobs: [
         ...[...this.jobs.values()].map(job => ({ id: job.id, provider: job.provider, state: job.state, tabId: job.tabId, nodeId: job.nodeId })),
@@ -191,7 +191,7 @@ class ChromeBridgeRuntime {
   }
 
   async run(provider: BridgeProvider, kind: BridgeCapability, prompt: string, images: { data: string; mimeType: string }[] = [],
-    options: object = {}, signal?: AbortSignal, requestId = randomUUID(), nodeId?: string): Promise<BridgeResult> {
+    options: object = {}, signal?: AbortSignal, requestId: string = randomUUID(), nodeId?: string): Promise<BridgeResult> {
     const selection = this.selections.get(provider);
     if (!selection || !this.connected) throw new Error("Chưa kết nối tab " + provider);
     if (!selection.capabilities.includes(kind)) throw new Error(provider + " chưa hỗ trợ " + kind + " trên tab được chọn");

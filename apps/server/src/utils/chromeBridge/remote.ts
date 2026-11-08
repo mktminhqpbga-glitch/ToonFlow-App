@@ -196,7 +196,7 @@ class RemoteBridge {
   }
   async run(provider: BridgeProvider, kind: BridgeCapability, prompt: string,
     images: { data: string; mimeType: string }[] = [], options: object = {},
-    signal?: AbortSignal, requestId = randomUUID(), nodeId?: string): Promise<BridgeResult> {
+    signal?: AbortSignal, requestId: string = randomUUID(), nodeId?: string): Promise<BridgeResult> {
     const choice = this.selected.get(provider);
     if (!this.connected || !choice?.capabilities.includes(kind)) throw new Error("Remote AI not ready");
     if (!prompt.trim() || prompt.length > 100000 || !/^[0-9a-f-]{36}$/i.test(requestId)
