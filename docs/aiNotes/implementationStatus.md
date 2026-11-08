@@ -69,3 +69,11 @@ Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktm
 Codex (GPT-6), 2026-11-08 (UTC+7): đã thêm khóa documentToken/URL/Task/Provider/Tab/frame, giữ một tác vụ trên tab, receipt/anchor riêng, loại URL ảnh cũ và kiểm lại sau download. Chống gửi trùng bền vững áp dụng cả Local/Remote; UNKNOWN không tự retry. Không tự đổi hoặc kích hoạt tab Chrome.
 
 Phần code đã kiểm tra bằng Chromium có DOM kiểm soát, worker/API giả lập và Local WebSocket thật trên Linux; **chưa** có nghiệm thu website AI/Render/Mac thật. Các hạng mục toàn dự án khác giữ trạng thái PARTIAL như trên. Xem phần cập nhật trong e2eAcceptance và readme Extension 0.2.0 để cập nhật đồng bộ backend/Extension và tải lại tab AI.
+
+
+## Checkpoint 2026-11-09 — trình soạn prompt và tham chiếu (ChatGPT GPT-6)
+
+- **PARTIAL (đã commit code):** Việt hóa các điều khiển tại `packages/nodeShared/src/components/promptInput.vue` và `promptReferenceMenu.vue` khi `document.documentElement.lang === "vi"`; giữ nguyên nhãn gốc ở chế độ khác. Nhãn nhóm tài nguyên cập nhật phản ứng khi chuyển ngôn ngữ.
+- **Bằng chứng:** [6d02a4e](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6d02a4e3c82100f8ec407b5256b5bd70047628f2), [d3f94a8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d3f94a817f7054be62069e8954e77d236cedcf3f), [3f1cc0a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/3f1cc0a4661a1282228a9ebed766b0ee0b0ee529).
+- **NOT TESTED:** Bun typecheck/build, mở UI và chuyển ngôn ngữ trực tiếp trên Mac. Đây là thay đổi nhãn, không phải bằng chứng hoàn thành kéo media vào caret, lọc model kết nối hoặc Batch.
+- **Chưa sửa:** Batch Image/Video, Studio nhân vật, model readiness và drag/drop at caret tiếp tục PARTIAL/NOT STARTED theo mã thực tế; không tự coi là DONE.
