@@ -222,6 +222,12 @@ async function dispatch(operation, payload = {}) {
     || !["text", "image", "video"].includes(payload.kind) || !Array.isArray(payload.images) || payload.images.length > 4)
     throw Error("Nội dung yêu cầu không hợp lệ");
   if ([...active.values()].some(item => item.tabId === tabId)) throw Error("Tab đang chạy tác vụ khác");
+  // Check the currently open tab immediately before consuming an AI request.
+  // This read-only probe must not click any generate button or spend provider credits.
+  const probe = await chrome.tabs.sendMessage(tabId, { command: "probe", provider });
+  if (!probe?.ready) throw Error(probe?.error || "Tab không còn sẵn sàng; chưa gửi prompt");
+  if (!probe.capabilities?.includes(payload.kind))
+    throw Error("Chế độ tạo " + payload.kind + " không được xác minh trên tab; chưa gửi prompt");
   active.set(payload.id, { tabId, provider });
   try {
     const reply = await chrome.tabs.sendMessage(tabId, {

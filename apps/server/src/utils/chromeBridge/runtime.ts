@@ -1,9 +1,10 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { getRuntimePlatform } from "@/lib/platform";
+import { prepareChromePrompt, requestedRatios } from "./ratio";
 
 export type BridgeProvider = "muse" | "gemini" | "chatgpt";
 export type BridgeCapability = "text" | "image" | "video";
-export type BridgeResult = { kind: BridgeCapability; text?: string; data?: string; mimeType?: string };
+export type BridgeResult = { kind: BridgeCapability; text?: string; data?: string; mimeType?: string; width?: number; height?: number; duration?: number };
 export type BridgeTab = { id: number; title: string; url: string };
 export type BridgeSelection = { tab: BridgeTab; capabilities: BridgeCapability[] };
 export type BridgeState = "idle" | "connecting" | "ready" | "submitting" | "running" | "completed" | "failed" | "cancelled" | "disconnected";
@@ -185,7 +186,7 @@ class ChromeBridgeRuntime {
       .map(([provider]) => ({
         providerId: "chromeBridge", providerLabel: "Chrome Companion",
         modelId: provider + "_" + kind, label: provider === "muse" ? "Muse · Chrome" : provider === "gemini" ? "Gemini · Chrome" : "ChatGPT · Chrome",
-        type: kind, ...(kind === "image" ? { imageSizes: ["Theo giao diện AI"], imageRatios: ["16:9"] } : {}),
+        type: kind, ...(kind === "image" ? { imageSizes: ["Theo giao diện AI"], imageRatios: [...requestedRatios] } : {}),
         ...(kind === "video" ? { mode: ["text", "singleImage"], audio: false, durationResolutionMap: [] } : {}),
       }));
   }
@@ -211,7 +212,7 @@ class ChromeBridgeRuntime {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { cancel(); return; }
       signal?.addEventListener("abort", cancel, { once: true });
-      void this.call("run", { id: requestId, tabId: selection.tab.id, provider, kind, prompt, images, options }).then(result => {
+      void this.call("run", { id: requestId, tabId: selection.tab.id, provider, kind, prompt: prepareChromePrompt(kind, prompt, options), images, options }).then(result => {
         if (!(result as { accepted?: boolean } | null)?.accepted && this.jobs.has(requestId)) this.finishJob(job, new Error("Tiện ích Chrome không chấp nhận yêu cầu"));
       }, error => {
         // Không chắc lệnh đã tới tab hay chưa; không tự gửi lại.

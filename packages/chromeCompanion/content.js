@@ -118,7 +118,14 @@
     const bytes = new Uint8Array(buffer);
     let encoded = "";
     for (let i = 0; i < bytes.length; i += 0x8000) encoded += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    return { kind, mimeType, data: btoa(encoded) };
+    const width = kind === "image" ? element.naturalWidth : element.videoWidth;
+    const height = kind === "image" ? element.naturalHeight : element.videoHeight;
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1)
+      throw Error("Media tải được nhưng chưa xác minh được kích thước thật");
+    const duration = kind === "video" ? element.duration : undefined;
+    if (kind === "video" && (!Number.isFinite(duration) || duration <= 0))
+      throw Error("Video chưa có thời lượng thực; không sử dụng poster/thumbnail");
+    return { kind, mimeType, data: btoa(encoded), width, height, ...(kind === "video" ? { duration } : {}) };
   }
   async function execute(request, controller) {
     if (!composer()) throw Error("Tab không có ô prompt, có thể chưa đăng nhập");

@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import conf from "@/utils/conf";
 import { providerForUrl, type BridgeCapability, type BridgeProvider, type BridgeResult, type BridgeSelection, type BridgeState } from "./runtime";
 import { RemoteTransport } from "./remoteTransport";
+import { prepareChromePrompt, requestedRatios } from "./ratio";
 
 type RemoteSettings = { url: string; ownerKey: string; deviceId: string; secrets: Record<string, string> };
 type RemoteDevice = { id: string; name: string; online: boolean; createdAt: number };
@@ -190,7 +191,7 @@ class RemoteBridge {
     return [...this.selected.entries()].filter(([, choice]) => choice.capabilities.includes(kind))
       .map(([provider]) => ({ providerId: "chromeBridge", providerLabel: "Chrome Companion",
         modelId: provider + "_" + kind, label: provider + " · Remote Chrome", type: kind,
-        ...(kind === "image" ? { imageSizes: ["Default"], imageRatios: ["16:9"] } : {}),
+        ...(kind === "image" ? { imageSizes: ["Default"], imageRatios: [...requestedRatios] } : {}),
         ...(kind === "video" ? { mode: ["text", "singleImage"], audio: false, durationResolutionMap: [] } : {}),
       }));
   }
@@ -217,7 +218,7 @@ class RemoteBridge {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { onAbort(); return; }
       signal?.addEventListener("abort", onAbort, { once: true });
-      void this.call("run", { id: requestId, tabId, provider, kind, prompt, images, options }).then(answer => {
+      void this.call("run", { id: requestId, tabId, provider, kind, prompt: prepareChromePrompt(kind, prompt, options), images, options }).then(answer => {
         if (!(answer as { accepted?: boolean })?.accepted) this.finishJob(job, new Error("Remote AI refused request"));
       }, error => this.finishJob(job, new Error("Submission uncertain: " + error.message)));
     });
