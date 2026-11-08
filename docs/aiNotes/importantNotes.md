@@ -183,3 +183,10 @@
 - **Phạm vi:** [đường dẫn, module hoặc toàn dự án]
 - **Nguồn / bằng chứng:** [file/commit/yêu cầu trực tiếp]
 - **Có cần xác minh lại không?:** Có/Không; [khi nào]
+
+### NOTE-0025 — Phạm vi Việt hóa mới và cấu hình bản độc lập
+
+- **Ngày:** 2026-11-08 (UTC+7). **Người ghi:** Codex (GPT-6).
+- **Nguồn:** yêu cầu tổng tiếp quản hiện tại cho phép dịch UI và prompt tích hợp bằng tiếng Việt, thay cho giới hạn hàng chờ dịch trước đây. Không dịch nội dung người dùng, ID, schema hoặc giao thức.
+- **Cấu hình:** Web mặc định locale vi; VITE_TOONFLOW_DEFAULT_LOCALE cho phép locale khác hoặc system. Giá trị ngôn ngữ người dùng đã lưu được giữ. VITE_TOONFLOW_LEGACY_UI=1 cho phép hiển thị tài khoản upstream; publicWeb giữ luồng tài khoản nhiều người thuê.
+- **Font:** Be Vietnam Pro 5.3.0 từ @fontsource/be-vietnam-pro, SIL OFL kèm nguồn; các subset latin/latin-ext/vietnamese và trọng lượng 400/500/600/700 được phục vụ nội bộ, không cần Google Fonts.

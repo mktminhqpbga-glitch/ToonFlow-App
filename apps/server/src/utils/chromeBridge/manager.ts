@@ -16,9 +16,10 @@ class BridgeManager {
   }
   async stop() { remoteBridge.stop(); await localBridge.stop(); }
   status() {
-    return this.mode === "local"
+    const status = this.mode === "local"
       ? { ...localBridge.status(), mode: "local" as const }
       : remoteBridge.status();
+    return { ...status, localAvailable: localBridge.enabled };
   }
   async refreshStatus() {
     if (this.mode === "remote") {

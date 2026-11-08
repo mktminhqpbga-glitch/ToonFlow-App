@@ -275,7 +275,7 @@ function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory">
   const lastFrame = frameMode.value ? images[selectedMode.value === "startFrameOptional" && images.length === 1 ? 0 : 1] : undefined;
   return {
     ...getNodeModelIdentity(choice),
-    prompt: appendCameraInstructions(getGenerationPrompt(prompt, references), data.value.camera),
+    prompt: appendCameraInstructions(getGenerationPrompt(prompt, references), data.value.camera, document.documentElement.lang),
     mode: selectedMode.value,
     duration: data.value.duration,
     resolution: data.value.resolution || undefined,

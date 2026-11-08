@@ -47,7 +47,7 @@
     "build:teams": "NODE_ENV=production bun run --filter './packages/teams/*' build",
     "package:desktop": "bun run --cwd apps/desktop package",
     "release:desktop": "bun run apps/desktop/scripts/release.ts",
-    "typecheck": "bun run --filter '@toonflow/*' typecheck",
+    "typecheck": "bun scripts/typecheckWorkspaces.ts",
     "build:tools": "bun apps/server/scripts/buildPackageGroup.ts tools",
     "dev:server:local": "TOONFLOW_LOCAL_WEB_BRIDGE=1 TOONFLOW_SERVER_HOST=127.0.0.1 bun run --cwd apps/server dev",
     "dev:web:local": "bun run --cwd apps/web dev:local"

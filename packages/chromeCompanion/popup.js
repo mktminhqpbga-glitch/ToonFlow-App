@@ -19,10 +19,10 @@ const remoteStatus = document.getElementById("remoteStatus");
 async function remoteRequest(command, code, name) {
   try {
     const response = await chrome.runtime.sendMessage({ command, code, name });
-    remoteStatus.textContent = response?.ok ? (response.pending ? "Pairing pending approval in ToonFlow."
-      : response.connected ? "Remote connected via " + response.transport : response.error || "Remote offline.")
-      : response?.error || "Remote connection error";
-  } catch (error) { remoteStatus.textContent = error.message || "Remote request failed"; }
+    remoteStatus.textContent = response?.ok ? (response.pending ? "Đang chờ chấp thuận ghép nối trong ToonFlow."
+      : response.connected ? "Đã kết nối từ xa qua " + response.transport : response.error || "Kết nối từ xa đang ngoại tuyến.")
+      : response?.error || "Lỗi kết nối từ xa";
+  } catch (error) { remoteStatus.textContent = error.message || "Yêu cầu kết nối từ xa thất bại"; }
 }
 document.getElementById("remoteConnect").addEventListener("click", async () => {
   const code = document.getElementById("remoteCode").value.trim();
@@ -35,8 +35,8 @@ document.getElementById("remoteConnect").addEventListener("click", async () => {
       || relay.search || relay.hash || relay.port) throw Error();
     // Optional host access is requested ONLY for the exact, user-chosen HTTPS Render origin.
     const granted = await chrome.permissions.request({ origins: [relay.origin + "/*"] });
-    if (!granted) { remoteStatus.textContent = "Render relay permission denied."; return; }
-  } catch { remoteStatus.textContent = "Invalid Render pairing code."; return; }
+    if (!granted) { remoteStatus.textContent = "Quyền truy cập Render Relay bị từ chối."; return; }
+  } catch { remoteStatus.textContent = "Mã ghép nối Render không hợp lệ."; return; }
   document.getElementById("remoteCode").value = "";
   void remoteRequest("popupRemotePair", code, name);
 });

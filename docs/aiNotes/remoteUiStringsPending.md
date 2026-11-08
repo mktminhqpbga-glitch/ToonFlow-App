@@ -1,3 +1,5 @@
+> Cập nhật 2026-11-08 — Codex (GPT-6): yêu cầu tổng tiếp quản hiện tại cho phép Việt hóa UI/prompt; hạn chế chờ duyệt dưới đây là lịch sử của đợt trước. Một phần Remote UI đã được áp dụng và kiểm tra build trong checkpoint mới; xem vietnameseFullAudit.md và implementationStatus.md. Không suy ra mọi hàng đã hoàn tất.
+
 # Remote Chrome Bridge — chuỗi giao diện chưa có bản dịch được duyệt
 
 - **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).

@@ -219,3 +219,29 @@
 - **Còn tồn tại sau lần sửa cuối:** [mô tả hoặc “chờ kiểm thử”]
 - **Bước tiếp theo:** [việc cụ thể và người chịu trách nhiệm]
 - **Điều kiện đóng:** [bài kiểm chứng chứng minh đã hết]
+
+### ISSUE-0022 — Cloud không tải được tarball từ npm mirror
+
+- **Ngày:** 2026-11-08 (UTC+7). **Người phụ trách/sửa gần nhất:** Codex (GPT-6).
+- **Trạng thái:** Đang sửa.
+- **Bằng chứng:** `bun install --frozen-lockfile` lỗi ProxyConnectFailed; curl tới registry.npmmirror.com trả CONNECT 403, npm chính thức trả 200.
+- **Hướng sửa:** đổi duy nhất host URL tarball trong bun.lock sang registry.npmjs.org; giữ nguyên phiên bản, schema và checksum. Cài frozen và kiểm tra compiler/build sau đó.
+- **Điều kiện đóng:** cài frozen thành công và ghi rõ các kiểm tra thực sự đã chạy.
+
+- **Cập nhật ISSUE-0022 — Codex (GPT-6), 2026-11-08:** đã thay 1084 URL tarball mirror/Taobao bằng npm HTTPS; so sánh toàn bộ lockfile với HEAD xác nhận không đổi version/checksum. Frozen install PASS. Đã khắc phục đường cài Linux, không thay network allowlist.
+
+### ISSUE-0023 — Typecheck desktop/mobile thiếu SDK Hutch
+
+- **Ngày/người sửa gần nhất:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Trạng thái:** Mở / BLOCKED prerequisite.
+- **Đã làm:** runner tuần tự tránh Bun --filter FileNotFound và chạy đủ 50 workspace. 48 PASS, desktop/mobile lỗi import .hutch/devkit và electrobun/main, kèm lỗi type suy ra từ SDK thiếu.
+- **Đã thử:** Electrobun 2.0.5 bootstrap mặc định lỗi DNS; NODE_USE_ENV_PROXY=1 tải launcher Hutch 0.28.2 thành công rồi Cottontail ReleaseDownloadFailed. Không sửa expected checksum/TLS hoặc thêm declaration stub.
+- **Còn lại:** chuẩn bị SDK bằng đường tải chính thức được hỗ trợ, chạy lại toàn bộ typecheck. Không coi CI chọn một số workspace là toàn repo xanh.
+
+### ISSUE-0024 — Yêu cầu tổng thể còn các hạng mục chưa triển khai/nghiệm thu
+
+- **Ngày/người cập nhật:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Trạng thái:** Mở / PARTIAL.
+- **Đã thay đổi:** font local, locale mặc định vi, hiển thị nhãn node, cài đặt nâng cao, ZIP Extension, Bridge copy/capability, prompt Camera vi.
+- **Đã xác minh:** typecheck phạm vi sửa, build các nhóm, HTTP, Chromium UI, ZIP integrity và prompt Camera. Xem e2eAcceptance.
+- **Còn lại:** Việt hóa prompt/UI toàn app; Bridge diagnostics đầy đủ; AI/Render/Mac thật; toolbar, Thư viện vật liệu, Studio nhân vật và Batch bền vững. Chưa đọc bốn repo tham khảo. Không đánh dấu toàn bộ DONE.

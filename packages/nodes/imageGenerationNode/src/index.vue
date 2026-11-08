@@ -238,7 +238,7 @@ const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined
   const references = refList.value.filter(item => !inpaint || item.dataType !== "IMAGE" || item.value?.url !== inpaint.source);
   const input = {
     ...getNodeModelIdentity(choice),
-    prompt: inpaint ? generationPrompt.value : appendCameraInstructions(generationPrompt.value, data.value.camera),
+    prompt: inpaint ? generationPrompt.value : appendCameraInstructions(generationPrompt.value, data.value.camera, document.documentElement.lang),
     size: data.value.size,
     ratio: data.value.ratio,
     other: Object.keys(data.value.other).length ? { ...data.value.other } : undefined,

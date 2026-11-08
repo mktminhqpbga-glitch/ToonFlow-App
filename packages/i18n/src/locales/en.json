@@ -3953,5 +3953,6 @@
   "多租户媒体生成必须通过持久任务提交": "Multi-tenant media generation must be submitted as a persistent task",
   "当前模式不允许切换设备连接": "Switching device connections is not allowed in the current mode",
   "多租户主机模式下不能连接其他设备": "You cannot connect to other devices in multi-tenant host mode",
-  "请通过端口 10888 访问创作功能": "Please use port 10888 to access creation features"
+  "请通过端口 10888 访问创作功能": "Please use port 10888 to access creation features",
+  "界面语言立即生效，可选择跟随电脑语言。": "The interface language changes immediately; you can choose to follow your system language."
 }

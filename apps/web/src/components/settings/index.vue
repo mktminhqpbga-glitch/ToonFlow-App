@@ -2,7 +2,7 @@
   <el-dialog v-model="visible" :title="translate('设置')" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody>
     <div class="settings">
       <aside class="sidebar" :aria-label="translate('设置分类')">
-        <template v-for="item in settingsPanels" :key="item.id">
+        <template v-for="item in visibleSettingsPanels" :key="item.id">
           <h3 v-if="item.groupLabel" class="settingsGroupLabel">{{ item.groupLabel }}</h3>
           <button
             class="settingsItem"
@@ -16,6 +16,11 @@
             <span>{{ item.label }}</span>
           </button>
         </template>
+        <button v-if="independentMode && advancedPanels.length" class="settingsItem" type="button"
+          :aria-expanded="showAdvanced" :aria-label="translate('Advanced settings')" :title="translate('Advanced settings')" @click="showAdvanced = !showAdvanced">
+          <icon-settings :size="18" aria-hidden="true" />
+          <span>{{ translate('Advanced settings') }} {{ showAdvanced ? '▴' : '▾' }}</span>
+        </button>
       </aside>
       <section class="content" :aria-label="activePanel.label" tabindex="0">
         <h2 class="panelTitle">{{ activePanel.label }}</h2>
@@ -100,6 +105,9 @@ const allSettingsPanels = [
 ];
 const publicAccountPanel = { ...allSettingsPanels[0]!, get label() { return translate("账号"); } };
 const localWebBridgeAvailable = ref(false);
+const independentMode = computed(() => !publicWeb.value && import.meta.env.VITE_TOONFLOW_LEGACY_UI !== "1");
+const showAdvanced = ref(false);
+const advancedIds = new Set(["mcp", "pluginMarket", "developer", "network", "deviceLink", "multiTenant", "personalization"]);
 onMounted(async () => {
   if (actualPlatform.isLocalDesktop || !actualPlatform.isMac || publicWeb.value) return;
   try {
@@ -113,6 +121,7 @@ onMounted(async () => {
   } catch { /* Unavailable public or non-loopback Web server: keep remote controls hidden. */ }
 });
 const settingsPanels = computed(() => allSettingsPanels.filter(item => {
+  if (independentMode.value && item.id === "account") return false;
   if (item.id === "chromeBridge" && !(actualPlatform.isLocalDesktop && actualPlatform.isMac
       || localWebBridgeAvailable.value && actualPlatform.isMac && !publicWeb.value)) return false;
   // The upstream commercial plugin marketplace is not part of the independent local distribution.
@@ -121,6 +130,9 @@ const settingsPanels = computed(() => allSettingsPanels.filter(item => {
   if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket"].includes(item.id)) return false;
   return !multiTenantEnabled.value || !["languageModel", "mediaModel", "developer"].includes(item.id);
 }).map(item => publicWeb.value && item.id === "account" ? publicAccountPanel : item));
+const advancedPanels = computed(() => settingsPanels.value.filter(item => advancedIds.has(item.id)));
+const visibleSettingsPanels = computed(() => !independentMode.value ? settingsPanels.value
+  : [...settingsPanels.value.filter(item => !advancedIds.has(item.id)), ...(showAdvanced.value ? advancedPanels.value : [])]);
 const activePanel = shallowRef(settingsPanels.value.find(item => item.id === "general") ?? settingsPanels.value[0]!);
 const visible = defineModel<boolean>({ default: false });
 
@@ -134,6 +146,7 @@ function openPanel(id: string) {
   const panel = settingsPanels.value.find(item => item.id === id);
   if (!panel) return false;
   activePanel.value = panel;
+  if (advancedIds.has(id)) showAdvanced.value = true;
   visible.value = true;
   return true;
 }
@@ -235,10 +248,7 @@ defineExpose({ openPanel });
     grid-template-columns: 44px minmax(0, 1fr);
 
     .sidebar {
-      .settingsGroupLabel {
-        margin: 12px 0 6px;
-        text-align: center;
-      }
+      .settingsGroupLabel { display: none; }
 
       .settingsItem {
         justify-content: center;

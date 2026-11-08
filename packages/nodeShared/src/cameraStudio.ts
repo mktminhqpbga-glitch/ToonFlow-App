@@ -17,9 +17,17 @@ export function normalizeCameraSettings(value?: Partial<CameraSettings>): Camera
       ? value.aperture : defaults.aperture,
   };
 }
-export function buildCameraInstructions(value?: CameraSettings): string {
+export function buildCameraInstructions(value?: CameraSettings, language = "en"): string {
   const camera = normalizeCameraSettings(value);
   if (!camera.enabled) return "";
+  if (language === "vi") return [
+    "Hướng dẫn quay phim ảo (AI chỉ diễn giải phong cách hình ảnh; chưa xác minh khả năng điều khiển máy ảnh vật lý):",
+    ...(camera.body ? [`Tham chiếu phong cách thân máy: ${camera.body}.`] : []),
+    ...(camera.lens ? [`Đặc trưng tái hiện hình ảnh của ống kính: ${camera.lens}.`] : []),
+    `Phối cảnh tiêu cự mong muốn: ${camera.focalLength} mm.`,
+    `Diện mạo độ sâu trường ảnh mong muốn: f/${camera.aperture}.`,
+    "Giữ nguyên chủ thể người dùng yêu cầu. Các chỉ dẫn này mô tả phong cách, không phải thông số quang học chính xác.",
+  ].join("\n");
   return [
     "Virtual cinematography guidance (AI visual interpretation only; no verified physical camera controls):",
     ...(camera.body ? [`Camera body visual reference: ${camera.body}.`] : []),
@@ -29,7 +37,7 @@ export function buildCameraInstructions(value?: CameraSettings): string {
     "Preserve the original user subject. These instructions are stylistic, not exact optical specifications.",
   ].join("\n");
 }
-export function appendCameraInstructions(prompt: string, value?: CameraSettings): string {
-  const instructions = buildCameraInstructions(value);
+export function appendCameraInstructions(prompt: string, value?: CameraSettings, language = "en"): string {
+  const instructions = buildCameraInstructions(value, language);
   return instructions ? [prompt, instructions].filter(Boolean).join("\n\n") : prompt;
 }
