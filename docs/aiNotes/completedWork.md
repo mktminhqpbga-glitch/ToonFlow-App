@@ -276,3 +276,17 @@
 - **Chưa kiểm tra:** [nếu có]
 - **Vấn đề sau khi sửa:** [ISSUE-xxxx hoặc “chưa phát hiện qua kiểm tra đã nêu”; không khẳng định toàn bộ không lỗi]
 - **Trạng thái:** Đã ghi vào repo / Đã kiểm thử / Chưa kiểm thử
+
+
+### DONE-0018 — Bổ sung nhãn Việt hóa cho trình soạn prompt và menu tham chiếu (code only)
+
+- **Ngày:** 2026-11-09 (UTC+7).
+- **Người thực hiện:** ChatGPT (GPT-6).
+- **Phạm vi:** chỉ hai Vue component của nodeShared; không sửa backend, schema hay nội dung prompt người dùng.
+- **Tệp:** `packages/nodeShared/src/components/promptInput.vue`, `packages/nodeShared/src/components/promptReferenceMenu.vue` và ghi chú bàn giao.
+- **Đã làm:** thêm nhãn tiếng Việt cho mở rộng prompt, placeholder, lỗi chọn tài nguyên và menu tham chiếu; giữ nhãn Trung cho ngôn ngữ khác; nhóm category cập nhật theo locale.
+- **Bằng chứng:** [6d02a4e](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6d02a4e3c82100f8ec407b5256b5bd70047628f2), [d3f94a8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d3f94a817f7054be62069e8954e77d236cedcf3f), [3f1cc0a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/3f1cc0a4661a1282228a9ebed766b0ee0b0ee529).
+- **Kiểm tra:** đọc lại code/nhánh qua GitHub; chưa chạy Bun, browser hoặc Mac thật.
+- **Chưa kiểm tra:** Vue typecheck, build, tương tác UI, drag/drop, persistence và payload AI.
+- **Vấn đề:** ISSUE-0026 vẫn mở.
+- **Trạng thái:** Đã ghi code lên nhánh, NOT TESTED runtime; chưa nghiệm thu chức năng.
