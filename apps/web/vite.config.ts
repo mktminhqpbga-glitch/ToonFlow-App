@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
-import desktopConfig from "../../electrobun.config.ts";
+import { appVersion } from "../../appVersion";
 import postcssConfig from "../../postcss.config.ts";
 import { i18nPlugin } from "@toonflow/i18n/vite";
 
@@ -13,7 +13,7 @@ const serverOrigin = `http://127.0.0.1:${process.env.TOONFLOW_SERVER_PORT || 300
 export default defineConfig(({ command }) => ({
   css: { postcss: postcssConfig },
   define: {
-    "import.meta.env.appVersion": JSON.stringify(desktopConfig.app.version),
+    "import.meta.env.appVersion": JSON.stringify(appVersion),
   },
   server: {
     proxy: {
