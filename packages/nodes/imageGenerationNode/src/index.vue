@@ -53,6 +53,10 @@
           @remove="removeReference" />
         <promptInput v-if="editor?.mode === 'inpaint'" v-model="data.inpaintPromptModel" v-model:text="data.inpaintPrompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
         <promptInput v-else v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
+        <div v-if="ratioReport?.actualWidth" class="ratioFeedback" :class="{ mismatch: ratioReport.ratioMatched === false }">
+          Ảnh đầu ra: {{ ratioReport.actualWidth }} × {{ ratioReport.actualHeight }} px · Yêu cầu {{ ratioReport.ratio }} ·
+          {{ ratioReport.ratioMatched ? 'Khớp gần đúng' : 'Không khớp — tỷ lệ trong prompt không được bảo đảm' }}
+        </div>
         <div class="promptFooter">
           <el-select
             v-if="editor?.mode !== 'inpaint'"
@@ -166,7 +170,7 @@ watch(vietnamese, () => {
   if (imageHandle) imageHandle.label = nodeText("图片输出", "Ảnh đầu ra");
 }, { flush: "sync" });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; camera?: CameraSettings; cameraHistory?: Record<string, { camera: CameraSettings; ratio: string; submittedPrompt: string; savedAt: string; nodeId: string }>; inpaint?: ImageInpaint });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; camera?: CameraSettings; cameraHistory?: Record<string, { camera: CameraSettings; ratio: string; submittedPrompt: string; savedAt: string; nodeId: string; actualWidth?: number; actualHeight?: number; ratioMatched?: boolean }>; inpaint?: ImageInpaint });
 data.value.prompt ??= "";
 data.value.promptModel ??= [];
 data.value.inpaintPrompt ??= "";
@@ -251,6 +255,7 @@ const priceInput = computed(() => {
   return inpaint ? buildInpaintRequest(input, inpaint) : input;
 });
 const outputFile = computed(() => outputs.value.image?.dataType === "IMAGE" ? outputs.value.image.value : undefined);
+const ratioReport = computed(() => outputFile.value ? data.value.cameraHistory?.[outputFile.value.url] : undefined);
 const inpaintGuideUrl = files.useFileUrl(
   () => data.value.inpaint?.guide ? { url: data.value.inpaint.guide, mimeType: "image/png" } : undefined,
   error => showNodeError(error, "重绘标注读取失败")
@@ -407,6 +412,15 @@ async function resizeImage(event: Event) {
   const image = event.currentTarget as HTMLImageElement;
   if (!image.naturalWidth || !image.naturalHeight) return;
   imageWidth.value = (240 * image.naturalWidth) / image.naturalHeight;
+  const report = ratioReport.value;
+  if (report) {
+    const [requestedWidth, requestedHeight] = report.ratio.split(":").map(Number);
+    const desired = requestedWidth! / requestedHeight!;
+    report.actualWidth = image.naturalWidth;
+    report.actualHeight = image.naturalHeight;
+    report.ratioMatched = Number.isFinite(desired) && desired > 0
+      && Math.abs(image.naturalWidth / image.naturalHeight - desired) / desired <= 0.025;
+  }
   await nextTick();
   updateNodeInternals();
 }
@@ -519,6 +533,9 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.ratioFeedback { font-size: 12px; color: var(--el-color-success); margin-top: 6px;
+  &.mismatch { color: var(--el-color-warning); }
+}
 .panoramaButton {
   &[aria-expanded="true"] .menuChevron { transform: rotate(180deg); }
 }
