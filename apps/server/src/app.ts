@@ -117,8 +117,8 @@ export async function createApp({
   app.use(["/api/workspaces/files/write", "/api/assets/save"], express.raw({ type: "application/octet-stream", limit: "100mb" }));
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-  app.use("/api/desktop", desktopRequest);
-  // ACT: macOS desktop mới mở Chrome Bridge cục bộ; không lộ endpoint trên web/mobile/server.
+  // Install the carefully gated Chrome Bridge router BEFORE the generic desktop-only middleware.
+  // Otherwise local Web Ventura receives 404 even when the Render Bridge is enabled.
   if ((getRuntimePlatform().desktop && getRuntimePlatform().os === "darwin") || isLocalWebBridgeEnabled()) {
     const [{ chromeBridge }, { default: chromeBridgeRouter }] = await Promise.all([
       import("@/utils/chromeBridge/manager"), import("@/utils/chromeBridge/router"),
@@ -126,6 +126,7 @@ export async function createApp({
     chromeBridge.start();
     app.use("/api/desktop/chromeBridge", chromeBridgeRouter);
   }
+  app.use("/api/desktop", desktopRequest);
 
   const router = await import("@/router");
   router.default(app);

@@ -26,6 +26,7 @@ function authorized(req: Request, res: Response, next: NextFunction) {
   // The proxy overwrites this header from the browser, preventing a remote LAN browser from passing it through.
   if (localWebAllowed && req.get("x-toonflow-local-client") === "0") { res.sendStatus(403); return; }
   if (!(desktopAllowed || localWebAllowed) || !loopback
+    || req.method === "POST" && req.get("x-toonflow-desktop") !== "1"
     || supplied !== undefined && supplied !== expectedOrigin
     || referer !== undefined && !referer.startsWith(expectedOrigin + "/")
     || !supplied && !referer) { res.sendStatus(403); return; }
