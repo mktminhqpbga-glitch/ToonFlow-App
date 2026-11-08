@@ -52,3 +52,11 @@ Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktm
 - Dùng cơ chế locale hiện có tại `packages/nodeShared/src/nodeLanguage.ts`; không dịch tên tài nguyên do người dùng nhập, model ID, JSON, khóa tham chiếu hoặc protocol. Nhãn nhóm dùng `computed` để theo thay đổi locale.
 - **Trạng thái PARTIAL / NOT TESTED:** chưa chạy Vue typecheck, chưa xác nhận trực quan đổi ngôn ngữ, chưa kiểm mọi chuỗi trong editor. Không đánh dấu 100%.
 - Commit code: [6d02a4e](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6d02a4e3c82100f8ec407b5256b5bd70047628f2) · [d3f94a8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d3f94a817f7054be62069e8954e77d236cedcf3f) · [3f1cc0a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/3f1cc0a4661a1282228a9ebed766b0ee0b0ee529).
+
+
+## Checkpoint 2026-11-09 — bảng điều khiển tạo ảnh và video
+
+- `packages/nodeShared/src/components/imageGenerationSettings.vue`: Việt hóa nhãn độ phân giải, tỷ lệ, số ảnh, aria-label và cảnh báo Chrome có điều kiện theo locale.
+- `packages/nodes/videoGenerationNode/src/components/generationSettings.vue`: Việt hóa chế độ tạo video, thời lượng/giây, độ phân giải, tỷ lệ, âm thanh, aria-label và cảnh báo Chrome. Mode ID và giá trị JSON gửi API được giữ nguyên; chỉ nhãn trình bày thay đổi.
+- **PARTIAL / NOT TESTED:** chưa chạy typecheck, build, browser; không coi toàn bộ pipeline đa ngôn ngữ đã hoàn chỉnh.
+- Code: [2302f60](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/2302f600c7ab30f2afbfb814a119725f8c6eb706), [bccd1bd](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/bccd1bd10af5955160300adb5ab9ec332ce1bbd1).
