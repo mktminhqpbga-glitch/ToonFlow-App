@@ -204,6 +204,7 @@ class RemoteBridge {
       || images.length > 4 || images.some(img => !/^image\/(png|jpeg|webp)$/.test(img.mimeType)
         || img.data.length > 20 * 1024 * 1024)) throw new Error("Invalid remote AI prompt or reference image");
     if (this.jobs.has(requestId)) throw new Error("Duplicate AI request");
+    const preparedPrompt = prepareChromePrompt(kind, prompt, options);
     return new Promise((resolve, reject) => {
       const tabId = choice.tab.id;
       const job: Job = { id: requestId, provider, tabId, nodeId, kind, state: "submitting", resolve, reject,
@@ -218,7 +219,7 @@ class RemoteBridge {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { onAbort(); return; }
       signal?.addEventListener("abort", onAbort, { once: true });
-      void this.call("run", { id: requestId, tabId, provider, kind, prompt: prepareChromePrompt(kind, prompt, options), images, options }).then(answer => {
+      void this.call("run", { id: requestId, tabId, provider, kind, prompt: preparedPrompt, images, options }).then(answer => {
         if (!(answer as { accepted?: boolean })?.accepted) this.finishJob(job, new Error("Remote AI refused request"));
       }, error => this.finishJob(job, new Error("Submission uncertain: " + error.message)));
     });

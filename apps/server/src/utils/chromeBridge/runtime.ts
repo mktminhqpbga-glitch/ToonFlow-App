@@ -199,6 +199,7 @@ class ChromeBridgeRuntime {
     if (!prompt.trim() || prompt.length > 100000 || !/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error("Yêu cầu AI không hợp lệ");
     if (images.length > 4 || images.some(image => !/^image\/(png|jpeg|webp)$/.test(image.mimeType) || image.data.length > 20 * 1024 * 1024)) throw new Error("Ảnh tham chiếu không được hỗ trợ hoặc quá lớn");
     if (this.jobs.has(requestId)) throw new Error("Tác vụ đã được gửi; không gửi trùng");
+    const preparedPrompt = prepareChromePrompt(kind, prompt, options);
     return new Promise<BridgeResult>((resolve, reject) => {
       const job: Job = {
         id: requestId, provider, tabId: selection.tab.id, nodeId, state: "submitting", resolve, reject,
@@ -212,7 +213,7 @@ class ChromeBridgeRuntime {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { cancel(); return; }
       signal?.addEventListener("abort", cancel, { once: true });
-      void this.call("run", { id: requestId, tabId: selection.tab.id, provider, kind, prompt: prepareChromePrompt(kind, prompt, options), images, options }).then(result => {
+      void this.call("run", { id: requestId, tabId: selection.tab.id, provider, kind, prompt: preparedPrompt, images, options }).then(result => {
         if (!(result as { accepted?: boolean } | null)?.accepted && this.jobs.has(requestId)) this.finishJob(job, new Error("Tiện ích Chrome không chấp nhận yêu cầu"));
       }, error => {
         // Không chắc lệnh đã tới tab hay chưa; không tự gửi lại.
