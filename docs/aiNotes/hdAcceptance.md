@@ -1,0 +1,30 @@
+# Kết quả kiểm thử theo lệnh HD-01 đến HD-05
+
+**Ngày ghi:** 2026-11-09 (UTC+7) · **Người thực hiện:** ChatGPT (GPT-6)
+**Nhánh:** `feat/independentToonFlowFullIntegration` · **PR #4:** Draft.
+**Quy tắc thực hiện:** chỉ hoàn tất và kiểm thử một HD trước khi bắt đầu sửa code HD kế tiếp. Phân biệt kiểm tra source, CI, UI chạy thật và AI/provider thật.
+
+| Hạng mục | Code/source | Typecheck/build | Giao diện chạy thật | Provider thực | Kết luận |
+| --- | --- | --- | --- | --- | --- |
+| HD-01 Model thiếu cấu hình bị khóa | Đã thêm metadata `availability` cho media model cài đặt và model Chrome sẵn sàng; Image/Video selector khóa `needsConfiguration`, guard ở submit. Không tự suy đoán provider có API key là đã kết nối mạng | Chờ CI commit mới | NOT TESTED | NOT TESTED | PARTIAL |
+| HD-02 Thumbnail + tên và kéo thả đúng caret | Chưa sửa trong giai đoạn HD-01. Component có chip và avatar, kéo thả caret chưa được nghiệm thu | NOT TESTED | NOT TESTED | NOT TESTED | PENDING |
+| HD-03 Tạo node bằng preset prompt | Chưa sửa trong giai đoạn HD-01 | NOT TESTED | NOT TESTED | NOT TESTED | PENDING |
+| HD-04 Studio nhân vật chỉ một bộ ảnh cố định | Chưa sửa trong giai đoạn HD-01 | NOT TESTED | NOT TESTED | NOT TESTED | PENDING |
+| HD-05 Batch tiếp tục cảnh độc lập, đánh dấu cảnh lỗi | Chưa sửa trong giai đoạn HD-01; UNKNOWN không tự retry | NOT TESTED | NOT TESTED | NOT TESTED | PENDING |
+
+## HD-01 — Kiểm tra chính xác
+
+1. Backend `apps/server/src/utils/media/generation.ts`: model có API key bắt buộc nhưng không được cấu hình → `needsConfiguration`. Có cấu hình → `configured` (không phải `ready`); Chrome Bridge chỉ trả model `ready` khi capability của tab được xác nhận.
+2. `packages/nodeScaffold/src/nodeAi.ts`: khai báo metadata, không thêm bí mật vào response.
+3. `packages/nodes/imageGenerationNode/src/index.vue` và `videoGenerationNode/src/index.vue`: model thiếu cấu hình được hiển thị nhưng khóa không chọn, mặc định chọn model có cấu hình, chặn submit thiếu cấu hình; lựa chọn cũ vẫn giữ trong dự án.
+4. **Giới hạn:** API hiện mới liệt kê provider đã cài và Chrome Bridge khi khả dụng, không phải catalog đầy đủ của provider chưa cài; không được tuyên bố HD-01 hoàn thành 100%. Xác thực tài khoản, quota và mạng của model `configured` không được suy ra từ API key.
+5. **Kiểm thử UI cần thực hiện:** A thiếu key → disabled và nút tạo không gửi; B key có nhưng mạng lỗi → báo lỗi, không tạo output giả; C Chrome mất tab → không gửi; D đổi model/locale, save/reload không mất selection; E provider cũ vẫn tạo được khi cấu hình hợp lệ.
+
+## Log bằng chứng
+
+- Mã backend: [c051788](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/c051788523eb2e5973676bc798870b5e2061b2d3).
+- Kiểu model: [fec3e8e](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/fec3e8e95b785cdeb47cacd36e3e84c9298ba682).
+- Image: [4253903](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/4253903b1ca60710bae2d4edbb3fa6284e791b76), [6f174cc](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6f174cc7ce38df74043b3f2a96de15685d097f74).
+- Video: [5fab792](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/5fab792b84458e82a8c90cd2a657ac6407349bd7), [333261f](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/333261f324ad0dc7a32217155f147b73548efd0f).
+
+Không đánh dấu PASS E2E khi chỉ typecheck/build. Không sửa hay xóa dữ liệu người dùng.
