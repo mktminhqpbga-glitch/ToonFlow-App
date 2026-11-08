@@ -1,4 +1,4 @@
-import { computed, getCurrentInstance, inject, readonly, ref, type Component, type Ref } from "vue";
+import { computed, getCurrentInstance, inject, readonly, ref, toValue, type Component, type MaybeRefOrGetter, type Ref } from "vue";
 import { useNode as useFlowNode, useVueFlow } from "@vue-flow/core";
 import { isTypeCompatible, type NodeData, type NodeHandle } from "./connection";
 import { isNodeOutput, type NodeOutputs } from "./values";
@@ -12,7 +12,7 @@ import { useNodePreviewReady } from "./useNodePreviewReady";
 import type { NodeDocumentContext } from "./nodeDocument";
 
 export type NodeOptions<T extends NodeOutputs = NodeOutputs> = {
-  label?: string;
+  label?: MaybeRefOrGetter<string>;
   icon?: Component;
   handles?: NodeHandle[];
   outputs?: T;
@@ -37,7 +37,7 @@ export function useNode<T extends NodeOutputs = NodeOutputs>(options: NodeOption
   const outputs = ref({ ...options.outputs, ...savedOutputs }) as Ref<T>;
   const nodeProps = computed(() => ({
     previewReady: previewReady.value,
-    label: node.data.label ?? options.label,
+    label: node.data.label ?? toValue(options.label),
     icon: options.icon ?? defaults?.icon,
     handles: handles.value,
     outputs: outputs.value,

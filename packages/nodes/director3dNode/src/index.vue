@@ -33,7 +33,7 @@ import referenceItem from "@toonflow/node-shared/referenceItem";
 import sceneEditor from "./sceneEditor.vue";
 import { capturePreview, sceneSchema, createEmptyScene, createMannequinObject, createStage, disposeStage, getSceneLighting, type LightingSettings, type SceneDocument, type SceneSettings } from "./scene";
 import { createDirectorDraft } from "./agentTools";
-import { directorPrompt } from "./agentPrompt";
+import { directorPrompt, directorPromptVi } from "./agentPrompt";
 import { anchorSchema, prepareMotion, sampleMotion, type CameraAnchor } from "./motion";
 import { directorPlanSchema, prepareSceneAnimation, type DirectorPlan, type DirectorGeneration } from "./sceneAnimation";
 import { renderImage, renderVideo } from "./renderMedia";
@@ -369,7 +369,7 @@ async function generate() {
     await ai.generate({
       references: mediaReferences,
       ...getNodeModelIdentity(choice),
-      systemPrompt: directorPrompt,
+      systemPrompt: document.documentElement.lang === "vi" ? directorPromptVi : directorPrompt,
       prompt: JSON.stringify({ instruction: requirement, references, selectedPlanId: basePlanId, document: draft.summary() }),
       directory,
       tools: draft.tools,

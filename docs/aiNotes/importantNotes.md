@@ -59,6 +59,24 @@
 - **Phạm vi:** phân phối / phát hành.
 - **Nguồn:** [LICENSE](../../LICENSE), [package.json](../../package.json).
 
+### NOTE-0008 — Quy tắc Việt hóa prompt theo đúng ID được duyệt
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Nguồn:** `ToonFlow_Bang_Viet_Hoa_Prompt_v1.xlsx` và `ToonFlow_Prompt_Viet_Hoa_Cho_AI_Lap_Trinh_v1.md`; [commit code](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/cbeb30013f5a07da42c64b74eebd3d748e6d4538).
+- **Quyết định:** chỉ dùng câu Việt được cung cấp cho `VI-0001`–`VI-0127` nếu chuỗi gốc khớp nguyên văn và đúng file; không tự dịch, diễn đạt lại, rút gọn hay thêm prompt. Giữ token, các tên hàm/công cụ, JSON key, schema và logic. Các chuỗi không có ID phải ghi thành issue và để nguyên.
+- **Phạm vi:** System Prompt Agent, Đạo diễn 3D, một số mô tả công cụ/nút hình-video-text, Settings. **Không phải toàn bộ ToonFlow**.
+
+### NOTE-0009 — Đường chọn ngôn ngữ không phá i18n hiện có
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quyết định:** host Settings vẫn để chuỗi Trung làm khóa của từ điển `packages/i18n/src/locales/vi.json`; chỉ cập nhật giá trị `vi`, các locale khác giữ nguyên. System Prompt server dựa vào `apps/server/src/lib/i18n.ts` xử lý `Accept-Language` theo yêu cầu; Node plugin chỉ nhận tín hiệu `document.documentElement.lang` của host và không có riêng kho ngôn ngữ toàn cục. Prompt do người dùng tự cấu hình hoặc nhãn người dùng lưu riêng không bị tự động sửa.
+- **Lưu ý:** đúng logic theo code không đồng nghĩa đã kiểm thử runtime; phải chạy GUI/chức năng AI trước khi merge.
+
+### NOTE-0010 — Các phạm vi khóa không được đưa vào kế hoạch Việt hóa V1
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** chưa dịch `providerPrompt.ts`, `v118workflow/SKILL.md`, các tài liệu `references/*`, `canvas/SKILL.md`, các prompt tool/plugin khác ngoài danh sách ID. Không thay các đoạn ghép tiếng Trung còn thiếu trong Node vì chưa có câu Việt được duyệt.
+- **Nguồn:** mục `06 - CHƯA DUYỆT` của tệp Markdown được đính kèm. Mọi AI tiếp theo phải đọc bảng và `docs/aiNotes/vietnameseAuditV1.md` trước khi mở rộng.
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý
