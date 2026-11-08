@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from "vue";
 import { ElButton, ElCard, ElLoading, ElOption, ElOptionGroup, ElSelect } from "element-plus";
 import { IconArrowUp, IconGauge, IconMusicBolt, IconPlayerStop, IconScissors, IconTransfer, IconTextRecognition } from "@tabler/icons-vue";
@@ -97,7 +98,8 @@ defineOptions({
   ] satisfies NodeHandle[],
 });
 const vLoading = ElLoading.directive;
-const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({ label: "音频生成", onModelsChanged: () => void refreshProviderModels() });
+const vietnamese = useNodeVietnamese();
+const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({ label: () => { void vietnamese.value; return nodeText("音频生成", "Tạo âm thanh"); }, onModelsChanged: () => void refreshProviderModels() });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; language: string; sampleRate: number; format: string; other: Record<string, unknown> });
 data.value.prompt ??= "";

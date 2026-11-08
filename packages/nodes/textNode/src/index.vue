@@ -5,7 +5,7 @@
     :topVisible="node.selected"
     topWidth="max-content"
     :downloadUrl="downloadUrl"
-    :downloadName="`${nodeProps.label || '文本'}.md`"
+    :downloadName="`${nodeProps.label || nodeText('文本', 'Văn bản')}.md`"
     :bottomWidth="660"
     @fullscreen="fullscreen = true; editing = true">
     <div class="textContent" :class="{ empty: !outputs.text.value.trim(), resized }">
@@ -28,7 +28,7 @@
         </div>
         <promptInput v-model="promptModel" v-model:text="prompt" :references="referenceMentions" />
         <div class="promptFooter">
-          <el-select :modelValue="selectedModel ? model : ''" class="modelSelect" filterable :loading="modelsLoading" :disabled="generating" placeholder="选择模型" aria-label="生成模型" noDataText="请先在设置中添加模型" placement="top-start" @update:modelValue="model = $event" @visible-change="visible => visible && loadModels()">
+          <el-select :modelValue="selectedModel ? model : ''" class="modelSelect" filterable :loading="modelsLoading" :disabled="generating" :placeholder="vietnamese ? 'Chọn mô hình' : '选择模型'" aria-label="生成模型" noDataText="请先在设置中添加模型" placement="top-start" @update:modelValue="model = $event" @visible-change="visible => visible && loadModels()">
             <template v-if="!selectedModel" #prefix><icon-sparkles :size="17" /></template>
             <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
             <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
@@ -38,13 +38,13 @@
             </el-option-group>
           </el-select>
           <div class="promptActions">
-            <el-button class="sendButton" :loading="generating && !isBridgeText" :icon="generating && isBridgeText ? IconPlayerStop : IconArrowUp" :disabled="!textReady || generating && !isBridgeText || !generating && (!prompt.trim() || !selectedModel)" title="生成 / 停止 Chrome 请求" aria-label="生成 / 停止 Chrome 请求" @click="generating ? cancelBridgeText() : generateText()" />
+            <el-button class="sendButton" :loading="generating && !isBridgeText" :icon="generating && isBridgeText ? IconPlayerStop : IconArrowUp" :disabled="!textReady || generating && !isBridgeText || !generating && (!prompt.trim() || !selectedModel)" :title="generating ? '停止 Chrome 请求' : (vietnamese ? 'Tạo nội dung' : '生成')" :aria-label="generating ? '停止 Chrome 请求' : (vietnamese ? 'Tạo nội dung' : '生成')" @click="generating ? cancelBridgeText() : generateText()" />
           </div>
         </div>
       </el-card>
     </template>
   </nodeSkeleton>
-  <el-dialog v-model="editing" title="编辑文本" width="min(860px, calc(100vw - 32px))" :fullscreen="fullscreen" alignCenter appendToBody @closed="fullscreen = false">
+  <el-dialog v-model="editing" :title="vietnamese ? 'Chỉnh sửa văn bản' : '编辑文本'" width="min(860px, calc(100vw - 32px))" :fullscreen="fullscreen" alignCenter appendToBody @closed="fullscreen = false">
     <div class="textEditor" :class="{ fullscreen }">
       <markdownEditor v-model="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="editing" :disabled="generating || textReloading" :readonly="!!documentState.error" ariaLabel="编辑文本内容" />
     </div>
@@ -57,6 +57,7 @@ import { ElAlert, ElButton, ElCard, ElSelect, ElDialog, ElOption, ElOptionGroup,
 import { IconEdit, IconFileText, IconSparkles, IconArrowUp, IconPlayerStop } from "@tabler/icons-vue";
 import { getNodeModelIdentity, getNodeModelKey, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeAiModel, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import modelLabel from "@toonflow/node-shared/modelLabel";
 import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
 import markdownEditor from "./markdownEditor.vue";
@@ -65,21 +66,30 @@ import referenceItem from "@toonflow/node-shared/referenceItem";
 import promptInput from "@toonflow/node-shared/promptInput";
 import { useNodeDocumentState, type NodeDocumentContext } from "@toonflow/nodes-scaffold/nodeDocument";
 
+const vietnamese = useNodeVietnamese();
+
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 
 defineOptions({
   inheritAttrs: false,
   icon: IconFileText,
   handles: [
-    { id: "in", type: "target", dataType: ["VIDEO", "IMAGE", "STRING", "FILE"], label: "视频、图片、文本、文件输入" },
-    { id: "text", type: "source", dataType: "STRING", label: "文本输出" },
+    { id: "in", type: "target", dataType: ["VIDEO", "IMAGE", "STRING", "FILE"], label: nodeText("视频、图片、文本、文件输入", "Đầu vào video, ảnh, văn bản hoặc tệp") },
+    { id: "text", type: "source", dataType: "STRING", label: nodeText("文本输出", "Văn bản đầu ra") },
   ] satisfies NodeHandle[],
 });
-const { node, nodeProps, outputs, ai, files, nodeEvent, previewReady } = useNode({
-  label: "文本",
+const { node, nodeProps, handles, outputs, ai, files, nodeEvent, previewReady } = useNode({
+  label: () => { void vietnamese.value; return nodeText("文本", "Văn bản"); },
   onModelsChanged: () => void loadModels(),
   outputs: { text: { dataType: "STRING", value: "" } },
 });
+watch(vietnamese, () => {
+  // Đổi nhãn hiển thị theo ngôn ngữ, không thay ID, kiểu dữ liệu hoặc cấu trúc kết nối.
+  const inHandle = handles.value.find(item => item.id === "in");
+  if (inHandle) inHandle.label = nodeText("视频、图片、文本、文件输入", "Đầu vào video, ảnh, văn bản hoặc tệp");
+  const textHandle = handles.value.find(item => item.id === "text");
+  if (textHandle) textHandle.label = nodeText("文本输出", "Văn bản đầu ra");
+}, { flush: "sync" });
 const { refList, referenceMentions, setReferencePreview, removeReference } = useNodeReferences();
 const editing = ref(false);
 const fullscreen = ref(false);
@@ -301,7 +311,7 @@ const promptModel = computed({ get: () => data.value.promptModel ?? [], set: (va
 
 nodeTools.register({
   name: "setText",
-  description: "修改此节点的文本输出",
+  description: () => nodeText("修改此节点的文本输出", "Sửa nội dung văn bản đầu ra của node này."),
   parameters: z.strictObject({ text: z.string() }),
   async execute({ text }) {
     if (!textReady.value) throw new Error("文本尚未加载");

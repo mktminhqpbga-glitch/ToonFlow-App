@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, nextTick, ref } from "vue";
 import { IconPhoto, IconUpload, IconTransfer, IconLayoutGrid, IconBrush, IconPencil, IconSun, IconCameraRotate, IconPanoramaHorizontal, IconChevronDown } from "@tabler/icons-vue";
 import { ElButton, ElImageViewer, ElMessage } from "element-plus";
@@ -90,8 +91,9 @@ defineOptions({
     { id: "image", type: "source", dataType: "IMAGE", label: "图片输出" },
   ] satisfies NodeHandle[],
 });
+const vietnamese = useNodeVietnamese();
 const { node, nodeProps, outputs, nodeEvent, files, updateNodeInternals } = useNode({
-  label: "图片",
+  label: () => { void vietnamese.value; return nodeText("图片", "Hình ảnh"); },
 });
 const fileInput = ref<HTMLInputElement>();
 const gridSplit = ref<InstanceType<typeof imageGridSplit>>();

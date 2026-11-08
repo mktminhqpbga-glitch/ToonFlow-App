@@ -133,6 +133,13 @@
 - **Việt hóa:** chuỗi UI mới bằng tiếng Anh/thuật ngữ kỹ thuật chưa có bản dịch `vi` duyệt; danh sách `docs/aiNotes/remoteUiStringsPending.md`. **Không tự dịch và không thay PR #2**.
 - **Điều kiện đóng:** có log typecheck/build+test, chuỗi Việt được duyệt, kiểm thử bảo mật và runtime thành công.
 
+### ISSUE-0013 — Việt hóa ghép với Chrome Bridge chưa qua build và kiểm thử
+
+- **Ngày:** 2026-11-08 · **Người ghi/sửa gần nhất:** ChatGPT (GPT-6). **Trạng thái:** Mở.
+- **Đã làm:** ba-way source review, giữ logic Chrome Bridge khi hợp nhất `Text Node`, đưa 127 ID và 10 nhãn menu đúng bản duyệt vào cây mã. Hai bản ghi chú nguồn Việt hóa được giữ riêng, không ghi đè lịch sử Remote.
+- **Chưa chứng minh:** Vue/TS compile, reactive label, Text Node gửi/hủy thực tế, 3D prompt, các ngôn ngữ cũ, các chuỗi mới chờ dịch. **Không tự dịch những câu chưa duyệt**.
+- **Điều kiện đóng:** log build/typecheck và chạy thử locale vi/zh/en với Text/Media/3D Node, giữ nguyên prompt user và kết quả đúng node.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề

@@ -89,6 +89,7 @@
 </template>
 
 <script setup lang="ts">
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, inject, nextTick, onScopeDispose, reactive, ref, shallowRef, watch } from "vue";
 import { IconMovie, IconPhoto, IconUpload, IconWaveSine, IconScissors, IconAdjustmentsHorizontal, IconSparkles, IconTransfer, IconMaximize, IconFileText, IconArrowUp, IconPlayerStop } from "@tabler/icons-vue";
 import { ElMessage, ElSelect, ElOption, ElOptionGroup, ElButton, ElCard, ElCheckbox, ElPopover, ElInputNumber, ElSwitch, ElProgress } from "element-plus";
@@ -127,7 +128,8 @@ type AnalysisSettings = {
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 type AnalysisState = AnalysisSettings & { source?: NodeMediaValue; lastResult?: AnalysisResult; resultSource?: string };
 
-const { id, node, nodeProps, outputs, ai, nodeEvent, files, ffmpeg: loadFfmpeg, updateNodeInternals } = useNode({ label: "逐帧拉片", onModelsChanged: () => void loadModels() });
+const vietnamese = useNodeVietnamese();
+const { id, node, nodeProps, outputs, ai, nodeEvent, files, ffmpeg: loadFfmpeg, updateNodeInternals } = useNode({ label: () => { void vietnamese.value; return nodeText("逐帧拉片", "Phân tích video theo khung hình"); }, onModelsChanged: () => void loadModels() });
 // ACT: 拉片结果由独立素材节点承载，本节点仅保留视频输入；迁移旧版遗留输出。
 outputs.value = {};
 node.data.outputs = outputs.value;

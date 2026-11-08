@@ -115,6 +115,14 @@
 - **Quy tắc:** thêm panel Render trong Settings Chrome Bridge đang có, dùng Element Plus + token/theme cũ. Không sửa bố cục Canvas, nhãn node, ngôn ngữ gốc. Chuỗi Remote UI chưa có bản dịch `vi` duyệt được ghi thành từng ID ở `remoteUiStringsPending.md`; không tự dịch. Khi nhánh Việt hóa PR #2 cần kết hợp, phải review/resolve riêng, không tự merge.
 - **Nguồn:** [bảng UI chờ duyệt](./remoteUiStringsPending.md), [PR #1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/pull/1), [PR #2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/pull/2).
 
+### NOTE-0017 — Nguồn và giới hạn hợp nhất Việt hóa vào nhánh độc lập
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** không ghi đè bản Việt đã duyệt từ `feat/vietnameseApprovedPromptsV1`, không đổi prompt nguồn ngoài 127 ID. 10 cặp tên node/menu thêm trong chỉ thị tích hợp là các bản dịch đã duyệt. Hai chuỗi `3D导演台`, `逐帧拉片` mới có khóa `vi.json`, không sửa locale khác.
+- **Conflict:** `Text Node` đồng thời chỉnh chức năng Chrome ở PR #1 và ngôn ngữ ở PR #2; đã kết hợp nội dung thay vì chọn một file nguyên vẹn.
+- **Lưu trữ nguồn:** sổ `docs/aiNotes/historyVietnameseV1/` giữ bản gốc từ nhánh PR #2; không đổi số thứ tự ID cũ trên PR đó.
+- **Chưa kiểm tra runtime:** không đóng ISSUE cho đến khi có log compile và chạy macOS/Web Ventura.
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý

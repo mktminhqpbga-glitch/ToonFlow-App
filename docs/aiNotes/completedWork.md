@@ -97,6 +97,17 @@
 - **Vấn đề còn mở:** `ISSUE-0005`–`ISSUE-0008` từ PR #1, `ISSUE-0009`–`ISSUE-0012` của Remote.
 - **Trạng thái:** Đã ghi mã vào GitHub trên nhánh riêng; **chưa kiểm thử thực tế**.
 
+### DONE-0009 — Hợp nhất nhánh Việt hóa V1 vào nền Remote Bridge, giải quyết xung đột Text Node
+
+- **Ngày:** 2026-11-08 (UTC+7). **Người trực tiếp sửa:** ChatGPT (GPT-6).
+- **Nền:** `feat/remoteChromeBridgeRender` tại `a08cff1a0be2c89e443e782851f49faa25811fbb`; nguồn Việt hóa `feat/vietnameseApprovedPromptsV1` tại `8f6395ee1271f0bc36c104cadcda05b3a6db8703`. Cả hai nhánh gốc và các PR Draft vẫn giữ nguyên.
+- **Thực hiện:** tích hợp 127 mục Việt hóa được duyệt, hợp nhất thủ công `packages/nodes/textNode/src/index.vue` để giữ nút hủy/submit của Chrome Bridge và bản Việt theo locale; thêm 10 bản dịch tên node/menu được duyệt, chỉ bổ sung bản Việt của hai khóa chưa có `3D导演台`, `逐帧拉片`, áp dụng nhãn phản ứng theo ngôn ngữ trên sáu node hiện hữu.
+- **Các file chính:** `apps/server/src/agent/runtime/prompt.ts`, `packages/i18n/src/locales/vi.json`, `packages/nodeScaffold/src/{useNode,nodeTools}.ts`, `packages/nodeShared/src/nodeLanguage.ts`, `packages/nodes/{textNode,director3dNode,frameAnalysisNode,audioGenerationNode,imageNode,videoNode,audioNode,imageGenerationNode,videoGenerationNode}/src/index.vue` và các mô tả tool/prompt Đạo diễn.
+- **Nhật ký nguồn Việt hóa bảo toàn tại:** `docs/aiNotes/historyVietnameseV1/`; bảng kiểm 127 ID tại `docs/aiNotes/vietnameseAuditV1.md`.
+- **Kiểm chứng:** so sánh tệp theo SHA, kiểm tra mâu thuẫn nội dung và giữ luồng Chrome Bridge trong Text Node. **Chưa typecheck, build hoặc kiểm tra runtime ứng dụng.**
+- **Bằng chứng:** [lịch sử nhánh tích hợp](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/independentToonFlowFullIntegration).
+- **Trạng thái:** Đã đưa vào cây mã tích hợp; chưa nghiệm thu.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn
