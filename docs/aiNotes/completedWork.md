@@ -33,6 +33,29 @@
 - **Vấn đề sau khi sửa:** `ISSUE-0001` đến `ISSUE-0004` vẫn chưa xử lý.
 - **Trạng thái:** Đã ghi vào repo; chưa kiểm thử ứng dụng.
 
+### DONE-0003 — Đưa bản dịch được duyệt V1 vào mã, giữ nguyên prompt gốc
+
+- **Ngày:** 2026-11-08 (UTC+7).
+- **Người trực tiếp sửa:** ChatGPT (GPT-6), không đồng nhất với tên tài khoản GitHub.
+- **Nguồn bắt buộc:** `ToonFlow_Bang_Viet_Hoa_Prompt_v1.xlsx`, `ToonFlow_Prompt_Viet_Hoa_Cho_AI_Lap_Trinh_v1.md`; các mục `VI-0001`–`VI-0127` đối chiếu commit gốc `ddd0667c933f7ebb2c0c6a74cd8956e584c169b2`.
+- **Phạm vi mã:** `apps/server/src/agent/runtime/prompt.ts` (39 ID); `packages/nodes/director3dNode/src/agentPrompt.ts` (14), `agentTools.ts` (2), `index.vue` (chọn bản theo ngôn ngữ); `packages/nodes/imageGenerationNode/src/index.vue` (25); `packages/nodes/videoGenerationNode/src/index.vue` (14); `packages/nodes/textNode/src/index.vue` (7); `packages/i18n/src/locales/vi.json` (26, thay đổi 18 giá trị, 8 đã đúng); `packages/nodeShared/src/nodeLanguage.ts` (mới), `packages/nodeShared/package.json`; `packages/nodeScaffold/src/nodeTools.ts`, `packages/nodeScaffold/src/useNode.ts`.
+- **Đã làm:** chỉ chọn câu Việt theo locale `vi` trong đường gửi prompt AI và mô tả công cụ; giữ nguyên bản Trung gốc cho ngôn ngữ khác và cho custom prompt. Giao diện Settings dùng từ điển đa ngôn ngữ gốc, không sửa các locale khác. Node plugin dựa vào `document.documentElement.lang` của host, cập nhật một số nhãn và mô tả công cụ khi ngôn ngữ đổi; không sửa ID, JSON key, Zod schema, tên hàm hay hành vi sinh media.
+- **Bằng chứng:** [commit mã nguồn](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/cbeb30013f5a07da42c64b74eebd3d748e6d4538), [nhánh Việt hóa](https://github.com/mktminhqpbga-glitch/ToonFlow-App/tree/feat/vietnameseApprovedPromptsV1), [bảng nghiệm thu tĩnh](./vietnameseAuditV1.md).
+- **Kiểm tra đã làm:** Đối chiếu 127/127 ID giữa Excel và Markdown; hash 127/127 đúng; câu gốc tồn tại 127/127 tại đúng file trên commit tham chiếu; tìm 95 chuỗi xuất hiện một lần và 32 chuỗi xuất hiện nhiều lần/chuỗi con; kiểm tra tĩnh đủ 127 câu Việt trong cây mã, giữ nguyên câu gốc và token. Không phát hiện ID nào sai nguyên văn, sai đường dẫn, sai bản dịch; nguyên bản còn nguyên trong mã; template marker `{{...}}` và biểu thức `${...}` trong hai prompt chính giữ nguyên.
+- **Chưa kiểm tra:** `bun run typecheck`, build ứng dụng, kiểm thử GUI chuyển ngôn ngữ và chạy AI Agent/Đạo diễn 3D/Node tạo ảnh/video thực tế, bởi môi trường kiểm tra không có Bun/dependencies/macOS và phiên tài khoản AI. Không coi static check là chức năng đã chạy.
+- **Còn tồn tại:** `ISSUE-0005` (câu chưa duyệt/chưa có ID) và `ISSUE-0006` (runtime/typecheck/build), không tuyên bố Việt hóa toàn bộ ứng dụng.
+- **Trạng thái:** Đã ghi vào repository trên nhánh phát triển; **chưa kiểm thử ứng dụng**.
+
+### DONE-0004 — Cập nhật sổ bàn giao và bảng kiểm từng ID
+
+- **Ngày:** 2026-11-08 (UTC+7).
+- **Người trực tiếp sửa:** ChatGPT (GPT-6).
+- **Phạm vi:** tài liệu `docs/aiNotes/completedWork.md`, `docs/aiNotes/openIssues.md`, `docs/aiNotes/importantNotes.md`, `docs/aiNotes/vietnameseAuditV1.md`; không sửa thêm logic AI trong bước ghi sổ.
+- **Đã làm:** thêm nhật ký nguồn/bằng chứng, các phần chưa dịch và điều kiện nghiệm thu; giữ toàn bộ lịch sử trước đó.
+- **Bằng chứng:** [lịch sử nhánh](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/vietnameseApprovedPromptsV1).
+- **Kiểm tra:** kiểm tra các file và nội dung trên cây Git sau commit. Chưa kiểm thử vận hành.
+- **Trạng thái:** Đã ghi vào repo; chưa kiểm thử ứng dụng.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn

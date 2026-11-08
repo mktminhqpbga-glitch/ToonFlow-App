@@ -63,6 +63,26 @@
 - **Điều kiện đóng:** báo cáo kiểm thử với phiên bản, môi trường và kết quả xác minh có thể đối chiếu.
 - **Lịch sử sửa:** Chưa có.
 
+### ISSUE-0005 — Các chuỗi tiếng Trung chưa có ID hoặc chưa duyệt, nghiêm cấm tự dịch
+
+- **Ngày phát hiện:** 2026-11-08 · **Người phát hiện:** ChatGPT (GPT-6).
+- **Mức độ:** Cao với phạm vi Việt hóa toàn bộ · **Trạng thái:** Mở; chờ bảng bổ sung của người điều phối.
+- **Bằng chứng:** mục `06 - CHƯA DUYỆT` của tài liệu V1 khóa `apps/web/src/components/settings/panels/mediaModel/providerPrompt.ts`, `packages/skills/v118workflow/SKILL.md` và `references/*`, `packages/skills/canvas/SKILL.md`, `packages/tools/*`, các node/plugin chưa có ID.
+- **Ví dụ ghi nhận ngoài bảng, giữ nguyên câu gốc:** `apps/web/src/components/settings/panels/general/ui.vue` còn `Toonflow 每一个灵感，都值得被看见` và `这是当前颜色、字体与圆角的实际效果。`; `packages/nodes/imageGenerationNode/src/index.vue` còn các đoạn ghép `参考 ` / ` 张图` và dấu phân cách tiếng Trung chưa có ID riêng. Đây chỉ là ví dụ có thể xác minh, **không phải danh sách tất cả chuỗi còn lại**.
+- **Đã thử sửa:** chỉ triển khai 127 dòng được duyệt theo mã `VI-xxxx`, tuyệt đối không tự cấp bản dịch cho những câu khác. [Commit mã](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/cbeb30013f5a07da42c64b74eebd3d748e6d4538).
+- **Người sửa lần cuối:** ChatGPT (GPT-6), riêng mục chưa duyệt **không sửa**.
+- **Điều kiện đóng:** nhận bản dịch được duyệt nguyên văn cho các chuỗi còn thiếu, đối chiếu với code mới rồi triển khai có kiểm tra; không tự sửa prompt dài.
+
+### ISSUE-0006 — Chưa typecheck/build hoặc nghiệm thu runtime/AI của bản Việt hóa
+
+- **Ngày phát hiện:** 2026-11-08 · **Người ghi nhận và sửa mã lần cuối:** ChatGPT (GPT-6).
+- **Mức độ:** Cao trước khi merge · **Trạng thái:** Mở.
+- **Đã kiểm tra:** Excel↔Markdown 127 ID/hash; đối chiếu GitHub từng chuỗi; tách bản VI/ZH, kiểm tra nội dung và token template, không có file locale khác thay đổi; nhãn Node và description có đường theo dõi locale trong mã.
+- **Chưa kiểm tra:** dependencies Bun, TypeScript/Vue typecheck, build; chuyển locale `vi` ↔ `zh-CN` ↔ `en` trong GUI; hành vi gửi system prompt thực, Agent tools, Đạo diễn 3D, text/image/video; dark mode, đầu ra và tải lại project. Chưa có môi trường Bun/macOS/AI để chạy.
+- **Nguy cơ cần kiểm chứng:** mô tả công cụ thay theo locale tại runtime, nhãn/handle Node theo dõi host DOM `lang`; nhãn do người dùng đặt lưu trong `node.data.label` cần được bảo toàn, không tự dịch dữ liệu người dùng.
+- **Bằng chứng:** [commit mã](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/cbeb30013f5a07da42c64b74eebd3d748e6d4538), [bảng kiểm](./vietnameseAuditV1.md).
+- **Điều kiện đóng:** ghi log typecheck/build thành công và test hồi quy thực tế các chức năng AI với chuyển ngôn ngữ; không đóng bằng kiểm tra tĩnh.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề
