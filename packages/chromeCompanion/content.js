@@ -99,9 +99,12 @@
   function notify(id, state, result, error) {
     void chrome.runtime.sendMessage({ command: "job", id, provider, state, ...(result ? { result } : {}), ...(error ? { error } : {}) }).catch(() => {});
   }
+  function stopButton() {
+    return find(['button[data-testid="hatch-composer-stop-button"]', 'button[data-testid="stop-button"]',
+      'button[aria-label="Stop generating"]', 'button[aria-label="Stop response"]']);
+  }
   function busy() {
-    return !!find(['button[data-testid="hatch-composer-stop-button"]', 'button[data-testid="stop-button"]', 'button[aria-label="Stop generating"]',
-      'button[aria-label="Stop response"]', '[aria-busy=true]', '.result-streaming']);
+    return !!stopButton() || !!find(['[aria-busy=true]', '.result-streaming']);
   }
   async function readMedia(element, kind, signal) {
     const url = element.currentSrc || element.src;
@@ -124,6 +127,7 @@
     const pathBefore = location.origin + location.pathname;
     const before = new Map(assistantNodes().map(element => [element, element.innerText || element.textContent || ""]));
     const usersBefore = new Set(userNodes());
+    const alertsBefore = new Set(document.querySelectorAll("[role=alert]"));
     const normalizedPrompt = request.prompt.replace(/\s+/g, " ").trim();
     const matchingReceipt = () => userNodes().find(element =>
       !usersBefore.has(element) && (element.innerText || element.textContent || "").replace(/\s+/g, " ").includes(normalizedPrompt));
@@ -150,12 +154,19 @@
       controller.signal.throwIfAborted();
       if (location.origin + location.pathname !== pathBefore)
         throw Error("Cuộc trò chuyện đã thay đổi; không nhận kết quả từ chat khác");
+      const limitAlert = [...document.querySelectorAll("[role=alert]")].find(element => !alertsBefore.has(element)
+        && visible(element) && /(?:rate limit|usage limit|too many requests|quota exceeded|usage cap|giới hạn|hết lượt|配额|次数限制)/i
+          .test(element.textContent || ""));
+      if (limitAlert) throw Error("Tab AI thông báo giới hạn sử dụng; không tự gửi lại yêu cầu");
       const receipt = matchingReceipt();
       if (!receipt) { await new Promise(resolve => setTimeout(resolve, 750)); continue; }
       // ACT: nhận kết quả mới chỉ khi câu trả lời được tạo sau thông điệp yêu cầu của người dùng.
       const replies = assistantNodes().filter(element =>
         (!before.has(element) || before.get(element) !== (element.innerText || element.textContent || ""))
         && !!(receipt.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING));
+      const responseText = (replies.at(-1)?.innerText || "").trim();
+      if (/^(?:you(?:'|’)ve reached|you have reached|rate limit|too many requests|usage limit|hết lượt|đã đạt giới hạn|已达到|超出限制)/i.test(responseText))
+        throw Error("AI báo giới hạn lượt hoặc quyền sử dụng; không tự gửi lại");
       if (request.kind === "text") {
         const current = replies.at(-1);
         const value = current?.innerText?.trim() || "";
@@ -182,7 +193,12 @@
     if (message.command === "probe") { respond(probe()); return false; }
     if (message.command === "cancel") {
       const controller = jobs.get(message.id);
-      if (controller) { controller.abort(); jobs.delete(message.id); }
+      if (controller) {
+        controller.abort();
+        jobs.delete(message.id);
+        // ACT: yêu cầu dừng tác vụ phía website khi nút Stop thuộc tab này đang hiện.
+        stopButton()?.click();
+      }
       respond({ ok: true, stopped: !!controller }); return false;
     }
     if (message.command !== "run" || message.provider !== provider || typeof message.id !== "string") return false;

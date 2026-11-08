@@ -74,6 +74,15 @@
 - **Kiểm tra:** đọc logic trạng thái từ mã, chưa kiểm tra GUI/macOS thực.
 - **Trạng thái:** Đã viết, chưa nghiệm thu; `ISSUE-0006` vẫn mở.
 
+### DONE-0007 — Hủy tốt nhất trên website và nhận diện giới hạn
+
+- **Ngày:** 2026-11-08 (UTC+7) · **Người sửa:** ChatGPT (GPT-6).
+- **File sửa:** `packages/chromeCompanion/content.js`, các sổ ghi chú.
+- **Đã sửa:** khi người dùng hủy, hủy watcher local và thử bấm nút Stop hiện có trên tab; phát hiện cảnh báo rate limit/usage limit mới sau yêu cầu; không gửi lại tự động.
+- **Đã kiểm tra:** parse cú pháp JS thành công. **Chưa chứng minh nút Stop hoạt động hoặc nhận diện lỗi thật trên ba website**.
+- **Bằng chứng:** [lịch sử nhánh](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/chromeBridgeMuseGeminiChatgpt).
+- **Trạng thái:** Đã viết mã, chưa nghiệm thu; ISSUE-0005/0008 vẫn mở.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn
