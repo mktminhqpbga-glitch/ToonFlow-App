@@ -190,3 +190,12 @@
 - **Nguồn:** yêu cầu tổng tiếp quản hiện tại cho phép dịch UI và prompt tích hợp bằng tiếng Việt, thay cho giới hạn hàng chờ dịch trước đây. Không dịch nội dung người dùng, ID, schema hoặc giao thức.
 - **Cấu hình:** Web mặc định locale vi; VITE_TOONFLOW_DEFAULT_LOCALE cho phép locale khác hoặc system. Giá trị ngôn ngữ người dùng đã lưu được giữ. VITE_TOONFLOW_LEGACY_UI=1 cho phép hiển thị tài khoản upstream; publicWeb giữ luồng tài khoản nhiều người thuê.
 - **Font:** Be Vietnam Pro 5.3.0 từ @fontsource/be-vietnam-pro, SIL OFL kèm nguồn; các subset latin/latin-ext/vietnamese và trọng lượng 400/500/600/700 được phục vụ nội bộ, không cần Google Fonts.
+
+### NOTE-0026 — Khóa phiên tab và đối chiếu kết quả Bridge 0.2.0
+
+- **Ngày/người ghi:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Quyết định:** selection/run/result đối chiếu documentToken theo mỗi content document, URL chính xác, Task/Provider/Tab và frame 0. Không gọi API đổi URL/active tab. Reload dù cùng URL cần chọn/kiểm tra lại tab.
+- **Nhận kết quả:** receipt prompt phải khớp, không chấp nhận user turn khác; giữ anchor hội thoại, chặn URL media lịch sử, kiểm lại sau download. Khi site không cho đủ bằng chứng (DOM ảo hóa, prompt trùng không có ID ổn định), từ chối/UNKNOWN thay vì đoán.
+- **Chống lặp:** lịch sử Task ID của Extension dùng chung Local/Remote, ghi tuần tự trước dispatch, không tự hết hạn. Giới hạn 20.000 bản ghi thì chặn gửi; không tự xóa lịch sử để tiếp tục. Chỉ lưu ID/thời điểm, không lưu nội dung hay credential.
+- **Tương thích:** backend và Extension 0.2.0 phải cập nhật cùng nhau; tải lại tab AI sau Reload Extension. Extension cũ không có documentToken bị từ chối an toàn.
+- **Giới hạn:** các kiểm tra DOM kiểm soát, worker giả lập và Local WS không thay thế AI/Render/Mac E2E. Không cam kết ngăn người dùng tự đổi tab; cam kết phần mềm không tự đổi và không tiếp tục nhận kết quả khi mất dấu phiên.

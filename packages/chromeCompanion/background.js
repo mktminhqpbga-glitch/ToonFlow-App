@@ -11,6 +11,7 @@ let remotePendingTimer = null;
 let socket = null;
 let state = "disconnected";
 const active = new Map();
+let runLedgerQueue = Promise.resolve();
 const serviceHosts = {
   muse: new Set(["muse.ai"]),
   gemini: new Set(["gemini.google.com"]),
@@ -146,19 +147,6 @@ function startRemote(config) {
 async function remoteReceive(value) {
   if (!value || value.type !== "request" || typeof value.id !== "string") return;
   try {
-    if (value.operation === "run") {
-      // Store the ID BEFORE interacting with an AI tab. An unconfirmed run is never resubmitted,
-      // even if a WSS frame is redelivered or Chrome restarts its MV3 worker.
-      const stored = await chrome.storage.local.get("remoteRunLedger");
-      const ledger = stored.remoteRunLedger || {};
-      if (ledger[value.payload?.id]) {
-        await remote.send({ type: "reply", id: value.id, result: { accepted: true, uncertain: true } });
-        return;
-      }
-      ledger[value.payload.id] = Date.now();
-      const fresh = Object.fromEntries(Object.entries(ledger).filter(([, time]) => Number(time) > Date.now() - 86400000));
-      await chrome.storage.local.set({ remoteRunLedger: fresh });
-    }
     const answer = await dispatch(value.operation, value.payload);
     if (value.operation === "run" && answer?.accepted) {
       await chrome.storage.local.set({ remoteActive: [...active].map(([id, entry]) => ({ id, ...entry })) });
@@ -180,7 +168,7 @@ void chrome.storage.local.get(["remoteConfig", "remoteMode", "remotePending", "r
   if (remoteMode !== "remote") return;
   for (const item of data.remoteActive || []) {
     if (typeof item.id === "string" && Number.isInteger(item.tabId)) active.set(item.id,
-      { tabId: item.tabId, provider: item.provider });
+      { tabId: item.tabId, provider: item.provider, documentToken: item.documentToken, expectedUrl: item.expectedUrl });
   }
   remotePending = data.remotePending || null;
   if (remotePending) void checkRemotePairing();
@@ -199,46 +187,90 @@ function snapshot(tab) { return { id: tab.id, title: tab.title || "", url: tab.u
 async function getTab(id, provider) {
   if (!Number.isInteger(id) || id < 0) throw Error("ID tab không hợp lệ");
   const tab = await chrome.tabs.get(id);
+  if (tab.status === "loading") throw Error("Tab đang tải trang; chờ tải xong rồi chọn lại");
   if (providerFor(tab.url) !== provider) throw Error("Tab đã chuyển khỏi dịch vụ được chọn");
   return tab;
 }
+async function claimRun(id) {
+  // Giữ lịch sử chung Local/Remote qua restart; không tự hết hạn rồi gửi lại Task ID cũ.
+  const pending = runLedgerQueue.then(async () => {
+    const stored = await chrome.storage.local.get("remoteRunLedger");
+    const ledger = stored.remoteRunLedger || {};
+    if (Object.hasOwn(ledger, id)) return false;
+    const maxRecordedRuns = 20000;
+    if (Object.keys(ledger).length >= maxRecordedRuns)
+      throw Error("Lịch sử chống gửi trùng đã đầy; dừng gửi để không làm mất dấu tác vụ cũ");
+    ledger[id] = Date.now();
+    await chrome.storage.local.set({ remoteRunLedger: ledger });
+    return true;
+  });
+  runLedgerQueue = pending.then(() => {}, () => {});
+  return pending;
+}
+function persistActive() {
+  if (remoteMode === "remote") return chrome.storage.local.set({ remoteActive: [...active].map(([id, entry]) => ({ id, ...entry })) });
+  return Promise.resolve();
+}
 async function dispatch(operation, payload = {}) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw Error("Gói dữ liệu không hợp lệ");
-  if (operation === "tabs") {
-    return (await chrome.tabs.query({})).filter(tab => providerFor(tab.url)).map(snapshot);
-  }
+  if (operation === "tabs") return (await chrome.tabs.query({})).filter(tab => providerFor(tab.url)).map(snapshot);
   if (!["probe", "run", "cancel"].includes(operation)) throw Error("Lệnh Chrome không được phép");
-  const id = operation === "cancel" ? active.get(payload.id) : undefined;
-  const tabId = operation === "cancel" ? id?.tabId : payload.tabId;
-  const provider = operation === "cancel" ? id?.provider : payload.provider;
+  const record = operation === "cancel" ? active.get(payload.id) : undefined;
+  const tabId = operation === "cancel" ? record?.tabId : payload.tabId;
+  const provider = operation === "cancel" ? record?.provider : payload.provider;
   if (!provider || !serviceHosts[provider]) throw Error("Dịch vụ AI không hợp lệ");
   const targetTab = await getTab(tabId, provider);
-  if (operation === "run" && (typeof payload.expectedUrl !== "string" || payload.expectedUrl !== targetTab.url))
-    throw Error("Cuộc trò chuyện đã chuyển URL sau khi chọn tab; chưa gửi prompt. Hãy chọn lại tab AI.");
-  if (operation === "probe") return chrome.tabs.sendMessage(tabId, { command: "probe", provider });
+  if (operation === "probe") return chrome.tabs.sendMessage(tabId, { command: "probe", provider }, { frameId: 0 });
   if (operation === "cancel") {
-    if (id) active.delete(payload.id);
-    return chrome.tabs.sendMessage(tabId, { command: "cancel", id: payload.id });
+    return chrome.tabs.sendMessage(tabId, { command: "cancel", id: payload.id }, { frameId: 0 });
   }
-  if (!/^[0-9a-f-]{36}$/i.test(payload.id || "") || typeof payload.prompt !== "string" || payload.prompt.length > 100000
+  if (typeof payload.expectedUrl !== "string" || payload.expectedUrl !== targetTab.url
+    || !/^[0-9a-f-]{36}$/i.test(payload.expectedDocumentToken || ""))
+    throw Error("Tab hoặc phiên trang đã thay đổi; chọn lại tab AI trước khi gửi");
+  if (!/^[0-9a-f-]{36}$/i.test(payload.id || "") || typeof payload.prompt !== "string" || !payload.prompt.trim() || payload.prompt.length > 100000
     || !["text", "image", "video"].includes(payload.kind) || !Array.isArray(payload.images) || payload.images.length > 4)
     throw Error("Nội dung yêu cầu không hợp lệ");
-  if ([...active.values()].some(item => item.tabId === tabId)) throw Error("Tab đang chạy tác vụ khác");
-  // Check the currently open tab immediately before consuming an AI request.
-  // This read-only probe must not click any generate button or spend provider credits.
-  const probe = await chrome.tabs.sendMessage(tabId, { command: "probe", provider });
-  if (!probe?.ready) throw Error(probe?.error || "Tab không còn sẵn sàng; chưa gửi prompt");
-  if (!probe.capabilities?.includes(payload.kind))
-    throw Error("Chế độ tạo " + payload.kind + " không được xác minh trên tab; chưa gửi prompt");
-  active.set(payload.id, { tabId, provider });
+  if (active.has(payload.id)) return { accepted: true, uncertain: true };
+  if ([...active.values()].some(item => item.tabId === tabId))
+    throw Error("Tab đang chạy hoặc chưa rõ kết quả tác vụ cũ; kiểm tra website, không gửi lại tự động");
+  const entry = { tabId, provider, documentToken: payload.expectedDocumentToken, expectedUrl: payload.expectedUrl };
+  // Giữ tab trước mọi await; không tự kích hoạt, điều hướng hay chuyển sang tab khác.
+  active.set(payload.id, entry);
+  let dispatched = false;
   try {
+    const probe = await chrome.tabs.sendMessage(tabId, { command: "probe", provider }, { frameId: 0 });
+    if (!probe?.ready) throw Error(probe?.error || "Tab không còn sẵn sàng; chưa gửi prompt");
+    if (probe.documentToken !== entry.documentToken || probe.url !== entry.expectedUrl)
+      throw Error("Tab tải lại hoặc đổi cuộc trò chuyện sau khi chọn; chưa gửi prompt");
+    if (!probe.capabilities?.includes(payload.kind)) throw Error("Chế độ tạo chưa được xác minh trên tab");
+    const current = await getTab(tabId, provider);
+    if (current.url !== entry.expectedUrl || active.get(payload.id) !== entry)
+      throw Error("Tab thay đổi trước khi gửi; chưa gửi prompt");
+    if (!await claimRun(payload.id)) {
+      if (active.get(payload.id) === entry) active.delete(payload.id);
+      await persistActive();
+      return { accepted: true, uncertain: true };
+    }
+    // Lưu khóa trước dispatch để MV3 restart không làm mất tác vụ chưa xác nhận.
+    await persistActive();
+    const pinnedTab = await getTab(tabId, provider);
+    if (pinnedTab.url !== entry.expectedUrl || active.get(payload.id) !== entry)
+      throw Error("Phiên tab thay đổi trong khi chuẩn bị gửi; chưa gửi prompt");
+    dispatched = true;
     const reply = await chrome.tabs.sendMessage(tabId, {
-      command: "run", id: payload.id, kind: payload.kind, provider, expectedUrl: payload.expectedUrl, prompt: payload.prompt,
-      images: payload.images, options: payload.options || {},
-    });
-    if (!reply?.accepted) { active.delete(payload.id); throw Error(reply?.error || "Tab không nhận được yêu cầu"); }
+      command: "run", id: payload.id, kind: payload.kind, provider, expectedUrl: entry.expectedUrl,
+      expectedDocumentToken: entry.documentToken, prompt: payload.prompt, images: payload.images, options: payload.options || {},
+    }, { frameId: 0 });
+    if (!reply?.accepted) {
+      dispatched = false;
+      throw Error(reply?.error || "Tab không nhận được yêu cầu");
+    }
     return { accepted: true };
-  } catch (error) { active.delete(payload.id); throw error; }
+  } catch (error) {
+    if (!dispatched && active.get(payload.id) === entry) { active.delete(payload.id); await persistActive(); }
+    // Khi không rõ dispatch có tới trang hay chưa, giữ khóa tab đến khi có terminal event hoặc reload.
+    throw error;
+  }
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || !message || typeof message !== "object") return false;
@@ -259,15 +291,16 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message.command === "job" && sender.tab && providerFor(sender.tab.url) === message.provider
     && typeof message.id === "string") {
     const record = active.get(message.id);
-    if (!record || record.tabId !== sender.tab.id || record.provider !== message.provider) return false;
+    if (!record || record.tabId !== sender.tab.id || record.provider !== message.provider || sender.frameId !== 0
+      || message.documentToken !== record.documentToken
+      || !["submitting", "running", "completed", "failed", "cancelled", "unknown"].includes(message.state)) return false;
+    if (message.state === "completed" && sender.tab.url !== record.expectedUrl) return false;
     if (["completed", "failed", "cancelled"].includes(message.state)) {
       active.delete(message.id);
-      if (remoteMode === "remote") void chrome.storage.local.set({
-        remoteActive: [...active].map(([id, entry]) => ({ id, ...entry })),
-      });
+      void persistActive().catch(error => { remoteError = error.message || "Không lưu được trạng thái tác vụ"; });
     }
     try { send({ type: "job", id: message.id, tabId: sender.tab.id, provider: message.provider, state: message.state,
-      result: message.result, error: message.error }); } catch {}
+      result: message.result, error: message.error, documentToken: record.documentToken }); } catch {}
     respond({ ok: true });
   }
   return false;
@@ -276,7 +309,8 @@ chrome.tabs.onRemoved.addListener(tabId => {
   for (const [id, item] of active) {
     if (item.tabId !== tabId) continue;
     active.delete(id);
-    try { send({ type: "job", id, tabId, provider: item.provider, state: "failed", error: "Tab đã đóng; tác vụ bên website có thể chưa dừng" }); } catch {}
+    void persistActive().catch(error => { remoteError = error.message || "Không lưu được trạng thái tác vụ"; });
+    try { send({ type: "job", id, tabId, provider: item.provider, state: "unknown", documentToken: item.documentToken, error: "Tab đã đóng; tác vụ bên website có thể chưa dừng, không tự gửi lại" }); } catch {}
   }
 });
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
@@ -284,6 +318,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   for (const [id, item] of active) {
     if (item.tabId !== tabId) continue;
     active.delete(id);
-    try { send({ type: "job", id, tabId, provider: item.provider, state: "failed", error: "Tab tải lại hoặc chuyển trang; hãy kiểm tra kết quả trên website, không gửi lại tự động" }); } catch {}
+    void persistActive().catch(error => { remoteError = error.message || "Không lưu được trạng thái tác vụ"; });
+    try { send({ type: "job", id, tabId, provider: item.provider, state: "unknown", documentToken: item.documentToken, error: "Tab tải lại hoặc chuyển trang; hãy kiểm tra kết quả trên website, không gửi lại tự động" }); } catch {}
   }
 });

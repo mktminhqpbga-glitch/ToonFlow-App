@@ -35,7 +35,7 @@
 | Mac Intel Ventura 13 | BLOCKED | Không có máy Mac trong môi trường thử |
 | CI hiện tại/PR Draft | BLOCKED API | api.github.com CONNECT 403. Không đổi Draft hoặc merge |
 
-ZIP SHA256 sau pack cố định mtime: `2ce4e7c81a7444613acbff0819be872fece850f8c014b8a44583c7cd4d49fff9` (cập nhật nếu nguồn Extension đổi).
+ZIP SHA256 lịch sử tại checkpoint 412912a (không phải bản 0.2.0): `2ce4e7c81a7444613acbff0819be872fece850f8c014b8a44583c7cd4d49fff9` (cập nhật nếu nguồn Extension đổi).
 
 ## Checklist trên Mac/Chrome/Render thật
 
@@ -50,3 +50,37 @@ ZIP SHA256 sau pack cố định mtime: `2ce4e7c81a7444613acbff0819be872fece850f
 Không gửi cookie, pairing code, owner key, API key hoặc prompt riêng tư vào báo cáo công khai.
 
 Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).
+
+
+## Bridge 0.2.0 — kiểm tra giữ đúng tab và đúng kết quả
+
+Codex (GPT-6), 2026-11-08 (UTC+7). Bản nền a3b72a3. Các fixture không có tài khoản AI và không gửi prompt ra website thật; Chromium chặn mạng và phục vụ DOM có kiểm soát. Không coi đây là nghiệm thu Muse/Gemini/ChatGPT/Render/Mac.
+
+| Tình huống content script thật trên Chromium | Bản nền | Sau sửa |
+|---|---|---|
+| User gửi lượt khác sau receipt; không được lấy câu trả lời lượt đó | FAIL | PASS |
+| Đổi URL trong khi upload; không submit vào chat mới | FAIL | PASS |
+| Tab đã có tác vụ đang tạo; không gửi chồng | FAIL | PASS |
+| Media cũ được render thành element mới; không fetch/nhận URL cũ | FAIL | PASS |
+| Receipt chỉ chứa prompt như một phần chuỗi khác | FAIL | PASS |
+| Đổi trang trong khi fetch kết quả; không trả completed | FAIL | PASS, UNKNOWN |
+| Composer có bản nháp chưa gửi; giữ nguyên bản nháp | FAIL | PASS |
+| Thay toàn bộ lịch sử chat cùng URL khi upload | FAIL (chạy riêng đối chiếu bản nền) | PASS |
+| Văn bản đúng receipt | PASS | PASS |
+| Ảnh PNG tự tạo 512×512, đọc đúng kích thước từ bytes | PASS | PASS |
+
+Các kiểm tra bổ sung đã chạy:
+
+- Chromium reload thực tại URL không đổi: documentToken thay đổi và request từ phiên đã chọn cũ bị từ chối trước submit.
+- Worker code với Chrome API giả lập: đổi document/URL trước run bị chặn; chỉ dispatch một tác vụ khi hai request đồng thời; iframe/sai document không được trả output; đúng context nhận được.
+- Task ID đã hoàn tất hoặc worker restart vẫn không dispatch lại; ledger ghi đồng thời trên hai tab không mất ID; UNKNOWN tiếp tục giữ khóa tab.
+- Backend Local/Remote: bắt buộc document handshake; gửi đúng token đã chọn; không nhận loại output/MIME/base64/kích thước/thời lượng sai; event document khác bị bỏ qua; uncertain/UNKNOWN được giữ đúng trạng thái.
+- Giao thức WebSocket Local thực trên loopback Linux (chỉ bật seam enabled cho kiểm tra giao thức, không giả mạo bằng chứng macOS): auth/pin payload/event đúng nhận được, sai document bị bỏ qua, sai kind bị từ chối.
+- Server/Web typecheck PASS; Server/Web build PASS; Companion JS syntax PASS. Không chạy lại toàn repo 50 workspace: lỗi SDK Hutch trước đó vẫn là blocker riêng.
+- ZIP 0.2.0: HTTP 200, CRC PASS, whitelist đúng 7 tệp, bytes của mỗi tệp khớp nguồn hiện tại, pack lặp lại cùng hash.
+
+ZIP 0.2.0 SHA256: `3515eb393a62b3bfc48cef54747c22de690ef394cba3d30f431a67dce371f2e1`.
+
+Harness/log cục bộ tại `/workspace/cloudSetup/bridgeValidation/v020/`, không thêm framework hoặc test module vào mã ứng dụng. Đây là artifact của môi trường kiểm tra, không phải tệp được publish cùng repo. Ví dụ chạy lại: `node /workspace/cloudSetup/bridgeValidation/v020/bridgeGuardChecks.cjs`; bản nền dùng biến BRIDGE_SOURCE trỏ tới bridgeContentBaseline.js. Backend harness dùng Bun `--tsconfig-override apps/server/tsconfig.json` và TOONFLOW_DATA_DIR riêng.
+
+**Còn BLOCKED/NOT TESTED:** DOM/selector hiện tại của tài khoản AI thật, nhận video thực hoàn chỉnh và codec/duration của file tải, Render WSS/HTTPS thật, Mac Ventura thật. Sau cập nhật phải Reload Extension và tab AI, chọn lại tab; xem packages/chromeCompanion/readme.md. Không tự retry UNKNOWN.

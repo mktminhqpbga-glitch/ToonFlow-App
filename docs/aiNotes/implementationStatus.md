@@ -63,3 +63,9 @@ bun run dev:server:local
 Terminal thứ hai: `bun run dev:web:local`. Mở địa chỉ Vite trên loopback, thường cổng 5173. Extension ZIP được tạo khi dev/build Web; tải trong Cài đặt → AI Bridge · Chrome. Không thay Electrobun hay hạ metadata yêu cầu macOS.
 
 Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).
+
+## Cập nhật Bridge 0.2.0 — giữ tab và đúng kết quả
+
+Codex (GPT-6), 2026-11-08 (UTC+7): đã thêm khóa documentToken/URL/Task/Provider/Tab/frame, giữ một tác vụ trên tab, receipt/anchor riêng, loại URL ảnh cũ và kiểm lại sau download. Chống gửi trùng bền vững áp dụng cả Local/Remote; UNKNOWN không tự retry. Không tự đổi hoặc kích hoạt tab Chrome.
+
+Phần code đã kiểm tra bằng Chromium có DOM kiểm soát, worker/API giả lập và Local WebSocket thật trên Linux; **chưa** có nghiệm thu website AI/Render/Mac thật. Các hạng mục toàn dự án khác giữ trạng thái PARTIAL như trên. Xem phần cập nhật trong e2eAcceptance và readme Extension 0.2.0 để cập nhật đồng bộ backend/Extension và tải lại tab AI.

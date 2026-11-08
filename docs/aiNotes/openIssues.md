@@ -245,3 +245,13 @@
 - **Đã thay đổi:** font local, locale mặc định vi, hiển thị nhãn node, cài đặt nâng cao, ZIP Extension, Bridge copy/capability, prompt Camera vi.
 - **Đã xác minh:** typecheck phạm vi sửa, build các nhóm, HTTP, Chromium UI, ZIP integrity và prompt Camera. Xem e2eAcceptance.
 - **Còn lại:** Việt hóa prompt/UI toàn app; Bridge diagnostics đầy đủ; AI/Render/Mac thật; toolbar, Thư viện vật liệu, Studio nhân vật và Batch bền vững. Chưa đọc bốn repo tham khảo. Không đánh dấu toàn bộ DONE.
+
+### ISSUE-0025 — Chrome task có thể nhận lượt trả lời khác hoặc gửi sau khi đổi chat
+
+- **Ngày/người phụ trách:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Trạng thái:** Đang sửa.
+- **Tái hiện:** Chromium chạy content.js thật trên DOM mô phỏng: FAIL khi có user message mới sau receipt, đổi URL trong khi upload tham chiếu, trang đang busy, hoặc ảnh cũ được render thành element mới. Trường hợp text thông thường PASS. Không coi mô phỏng là nghiệm thu provider thật.
+- **Hướng sửa:** khóa tab + documentToken + exact URL; probe lại và kiểm ngay trước submit; gắn output với receipt của chính prompt, chặn lượt user khác/URL media cũ; kiểm lại sau download; giữ UNKNOWN nếu đã submit mà mất bằng chứng.
+- **Điều kiện đóng phần code:** ca tái hiện từ đỏ sang xanh, kiểm transport Local/Remote và build/typecheck liên quan. E2E Chrome/Render/account thật vẫn phải nghiệm thu riêng.
+
+- **Cập nhật ISSUE-0025 — Codex (GPT-6), 2026-11-08:** 8 ca không an toàn đã đối chiếu FAIL ở bản nền và PASS sau sửa; 2 ca kết quả đúng tiếp tục PASS. Đã xác minh thêm reload cùng URL, khóa tab đồng thời, frame/document, ledger/restart, backend và Local WS. Server/Web typecheck/build và ZIP 0.2.0 PASS. **Phần lỗi tái hiện có kiểm soát đã sửa; ISSUE vẫn Mở/chờ nghiệm thu website AI, Render và Mac thật.** Không khẳng định adapter production đã hoạt động đầy đủ.

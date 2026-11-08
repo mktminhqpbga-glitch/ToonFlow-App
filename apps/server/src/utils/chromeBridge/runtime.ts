@@ -6,12 +6,13 @@ export type BridgeProvider = "muse" | "gemini" | "chatgpt";
 export type BridgeCapability = "text" | "image" | "video";
 export type BridgeResult = { kind: BridgeCapability; text?: string; data?: string; mimeType?: string; width?: number; height?: number; duration?: number };
 export type BridgeTab = { id: number; title: string; url: string };
-export type BridgeSelection = { tab: BridgeTab; capabilities: BridgeCapability[] };
-export type BridgeState = "idle" | "connecting" | "ready" | "submitting" | "running" | "completed" | "failed" | "cancelled" | "disconnected";
+export type BridgeSelection = { tab: BridgeTab; capabilities: BridgeCapability[]; documentToken: string };
+export type BridgeProbe = { ready?: boolean; capabilities?: BridgeCapability[]; error?: string; documentToken?: string; url?: string };
+export type BridgeState = "idle" | "connecting" | "ready" | "submitting" | "running" | "completed" | "failed" | "cancelled" | "disconnected" | "unknown";
 
 type SocketData = { authenticated: boolean; extensionId: string; authTimer?: ReturnType<typeof setTimeout> };
 type Call = { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Job = { id: string; provider: BridgeProvider; tabId: number; state: BridgeState; nodeId?: string; resolve: (value: BridgeResult) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout>; abort?: () => void };
+type Job = { id: string; provider: BridgeProvider; tabId: number; documentToken: string; kind: BridgeCapability; state: BridgeState; nodeId?: string; resolve: (value: BridgeResult) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout>; abort?: () => void };
 
 const allowedHosts: Record<BridgeProvider, string[]> = {
   muse: ["muse.ai"],
@@ -19,6 +20,22 @@ const allowedHosts: Record<BridgeProvider, string[]> = {
   chatgpt: ["chatgpt.com", "www.chatgpt.com", "chat.openai.com"],
 };
 const maxResultBytes = 70 * 1024 * 1024;
+
+export function isBridgeResult(value: unknown, kind: BridgeCapability): value is BridgeResult {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  if (result.kind !== kind) return false;
+  if (kind === "text") return typeof result.text === "string" && !!result.text.trim() && result.text.length <= 1000000;
+  if (typeof result.data !== "string" || result.data.length > 65 * 1024 * 1024 || result.data.length < 28
+    || result.data.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(result.data)) return false;
+  if (typeof result.mimeType !== "string" || !(kind === "image" ? /^image\/(png|jpeg|webp)$/ : /^video\/(mp4|webm|quicktime)$/).test(result.mimeType)) return false;
+  if (![result.width, result.height].every(value => typeof value === "number" && Number.isInteger(value) && value > 0)) return false;
+  return kind !== "video" || typeof result.duration === "number" && Number.isFinite(result.duration) && result.duration > 0;
+}
+
+export function isBridgeDocumentToken(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
+}
 
 export function providerForUrl(value: string): BridgeProvider | undefined {
   try {
@@ -95,18 +112,17 @@ class ChromeBridgeRuntime {
             else call.resolve(value.result);
           } else if (value.type === "job" && typeof value.id === "string") {
             const job = this.jobs.get(value.id);
-            if (!job || job.tabId !== value.tabId || job.provider !== value.provider) return;
+            if (!job || job.tabId !== value.tabId || job.provider !== value.provider || job.documentToken !== value.documentToken) return;
             if (value.state === "submitting" || value.state === "running") job.state = value.state;
             else if (value.state === "completed" && value.result && typeof value.result === "object") {
-              const result = value.result as BridgeResult;
-              if (result.kind !== "text" && result.kind !== "image" && result.kind !== "video") { this.finishJob(job, new Error("Kết quả AI không đúng loại")); return; }
-              if (result.kind === "text" && (!result.text?.trim() || result.text.length > 1000000)
-                || result.kind !== "text" && (!result.data || result.data.length > maxResultBytes || !/^(image\/(png|jpeg|webp)|video\/(mp4|webm|quicktime))$/.test(result.mimeType ?? ""))) {
-                this.finishJob(job, new Error("Kết quả AI không hợp lệ hoặc vượt giới hạn")); return;
+              const result = value.result;
+              if (!isBridgeResult(result, job.kind)) {
+                this.finishJob(job, new Error("Kết quả AI không đúng tác vụ, định dạng hoặc kích thước hợp lệ")); return;
               }
               this.finishJob(job, undefined, result);
-            } else if (value.state === "failed" || value.state === "cancelled") {
-              this.finishJob(job, new Error(typeof value.error === "string" ? value.error : "AI không hoàn thành tác vụ"));
+            } else if (value.state === "failed" || value.state === "cancelled" || value.state === "unknown") {
+              this.finishJob(job, new Error(typeof value.error === "string" ? value.error : "AI không hoàn thành tác vụ"), undefined,
+                value.state === "unknown" ? "unknown" : undefined);
             }
           }
         },
@@ -116,7 +132,7 @@ class ChromeBridgeRuntime {
           this.socket = undefined;
           this.selections.clear();
           for (const [id, call] of this.calls) { clearTimeout(call.timer); call.reject(new Error("Chrome đã ngắt kết nối")); this.calls.delete(id); }
-          for (const job of [...this.jobs.values()]) this.finishJob(job, new Error("Chrome bị ngắt: trạng thái tác vụ đã gửi chưa xác định; không tự gửi lại"));
+          for (const job of [...this.jobs.values()]) this.finishJob(job, new Error("Chrome bị ngắt: trạng thái tác vụ đã gửi chưa xác định; không tự gửi lại"), undefined, "unknown");
         },
       },
     });
@@ -157,11 +173,13 @@ class ChromeBridgeRuntime {
     if ([...this.jobs.values()].some(job => job.provider === provider)) throw new Error("Tab này đang có tác vụ; hãy hủy trước khi đổi tab");
     const found = (await this.tabs()).find(tab => tab.id === id && tab.provider === provider);
     if (!found) throw new Error("Không tìm thấy tab AI được phép");
-    const result = await this.call("probe", { tabId: id, provider }) as { ready?: boolean; capabilities?: BridgeCapability[]; error?: string };
+    const result = await this.call("probe", { tabId: id, provider }) as BridgeProbe;
     if (!result?.ready) throw new Error(result?.error || "Tab chưa đăng nhập hoặc không tìm thấy ô nhập prompt");
+    if (!isBridgeDocumentToken(result.documentToken) || result.url !== found.url)
+      throw new Error("Phiên tab thay đổi hoặc Extension quá cũ; cập nhật Extension và chọn lại tab");
     const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(capability => result.capabilities?.includes(capability));
     if (!capabilities.length) throw new Error("Tab không có chức năng đã được xác minh");
-    this.selections.set(provider, { tab: found, capabilities });
+    this.selections.set(provider, { tab: found, capabilities, documentToken: result.documentToken });
     this.recentJobs = this.recentJobs.filter(job => job.provider !== provider);
     return this.status();
   }
@@ -202,8 +220,8 @@ class ChromeBridgeRuntime {
     const preparedPrompt = prepareChromePrompt(kind, prompt, options);
     return new Promise<BridgeResult>((resolve, reject) => {
       const job: Job = {
-        id: requestId, provider, tabId: selection.tab.id, nodeId, state: "submitting", resolve, reject,
-        timer: setTimeout(() => this.finishJob(job, new Error("Quá thời gian; yêu cầu có thể đã được AI nhận. Hãy kiểm tra tab, không tự gửi lại")), 15 * 60 * 1000),
+        id: requestId, provider, tabId: selection.tab.id, nodeId, documentToken: selection.documentToken, kind, state: "submitting", resolve, reject,
+        timer: setTimeout(() => this.finishJob(job, new Error("Quá thời gian; yêu cầu có thể đã được AI nhận. Hãy kiểm tra tab, không tự gửi lại"), undefined, "unknown"), 15 * 60 * 1000),
       };
       const cancel = () => {
         void this.call("cancel", { id: requestId, tabId: job.tabId }).catch(() => {});
@@ -213,21 +231,24 @@ class ChromeBridgeRuntime {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { cancel(); return; }
       signal?.addEventListener("abort", cancel, { once: true });
-      void this.call("run", { id: requestId, tabId: selection.tab.id, expectedUrl: selection.tab.url, provider, kind, prompt: preparedPrompt, images, options }).then(result => {
+      void this.call("run", { id: requestId, tabId: selection.tab.id, expectedUrl: selection.tab.url, expectedDocumentToken: selection.documentToken, provider, kind, prompt: preparedPrompt, images, options }).then(result => {
+        if ((result as { uncertain?: boolean } | null)?.uncertain) {
+          this.finishJob(job, new Error("Tác vụ đã gửi nhưng chưa rõ kết quả; không gửi lại tự động"), undefined, "unknown"); return;
+        }
         if (!(result as { accepted?: boolean } | null)?.accepted && this.jobs.has(requestId)) this.finishJob(job, new Error("Tiện ích Chrome không chấp nhận yêu cầu"));
       }, error => {
         // Không chắc lệnh đã tới tab hay chưa; không tự gửi lại.
-        if (this.jobs.has(requestId)) this.finishJob(job, new Error("Không xác nhận được việc gửi cho Chrome: " + error.message));
+        if (this.jobs.has(requestId)) this.finishJob(job, new Error("Không xác nhận được việc gửi cho Chrome: " + error.message), undefined, "unknown");
       });
     });
   }
 
-  private finishJob(job: Job, failure?: Error, result?: BridgeResult) {
+  private finishJob(job: Job, failure?: Error, result?: BridgeResult, failureState?: "unknown") {
     if (this.jobs.get(job.id) !== job) return;
     this.jobs.delete(job.id); clearTimeout(job.timer); job.abort?.();
-    const state: BridgeState = failure
+    const state: BridgeState = failureState ?? (failure
       ? failure.name === "AbortError" ? "cancelled" : /ngắt kết nối|bị ngắt|disconnected/i.test(failure.message) ? "disconnected" : "failed"
-      : "completed";
+      : "completed");
     this.recentJobs.unshift({ id: job.id, provider: job.provider, tabId: job.tabId, nodeId: job.nodeId, state });
     if (this.recentJobs.length > 20) this.recentJobs.length = 20;
     if (failure) job.reject(failure);

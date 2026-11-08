@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import conf from "@/utils/conf";
-import { providerForUrl, type BridgeCapability, type BridgeProvider, type BridgeResult, type BridgeSelection, type BridgeState } from "./runtime";
+import { isBridgeResult, isBridgeDocumentToken, providerForUrl, type BridgeProbe, type BridgeCapability, type BridgeProvider, type BridgeResult, type BridgeSelection, type BridgeState } from "./runtime";
 import { RemoteTransport } from "./remoteTransport";
 import { prepareChromePrompt, requestedRatios } from "./ratio";
 
@@ -8,7 +8,7 @@ type RemoteSettings = { url: string; ownerKey: string; deviceId: string; secrets
 type RemoteDevice = { id: string; name: string; online: boolean; createdAt: number };
 type Pending = { pairId: string; name: string; expiresAt: number };
 type Call = { resolve: (result: unknown) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> };
-type Job = { id: string; provider: BridgeProvider; tabId: number; nodeId?: string; kind: BridgeCapability; state: BridgeState;
+type Job = { id: string; provider: BridgeProvider; tabId: number; nodeId?: string; documentToken: string; kind: BridgeCapability; state: BridgeState;
   resolve: (value: BridgeResult) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout>; cleanup: () => void };
 const providers: BridgeProvider[] = ["muse", "gemini", "chatgpt"];
 const empty = (): RemoteSettings => ({ url: "", ownerKey: "", deviceId: "", secrets: {} });
@@ -80,7 +80,7 @@ class RemoteBridge {
     for (const [id, call] of this.calls) {
       clearTimeout(call.timeout); call.reject(new Error(reason)); this.calls.delete(id);
     }
-    for (const job of [...this.jobs.values()]) this.finishJob(job, new Error(reason));
+    for (const job of [...this.jobs.values()]) this.finishJob(job, new Error(reason), undefined, "unknown");
   }
   async configure(url: string, ownerKey: string) {
     if (this.jobs.size) throw new Error("Finish or cancel remote AI tasks before changing the Relay");
@@ -169,12 +169,14 @@ class RemoteBridge {
     if ([...this.jobs.values()].some(x => x.provider === provider)) throw new Error("AI task already running");
     const tab = (await this.tabs()).find(tab => tab.provider === provider && tab.id === tabId);
     if (!tab) throw new Error("Remote tab not found");
-    const probe = await this.call("probe", { provider, tabId }) as { ready?: boolean; capabilities?: BridgeCapability[]; error?: string };
+    const probe = await this.call("probe", { provider, tabId }) as BridgeProbe;
     if (!probe?.ready) throw new Error(probe?.error || "AI tab not logged in");
+    if (!isBridgeDocumentToken(probe.documentToken) || probe.url !== tab.url)
+      throw new Error("Phiên tab thay đổi hoặc Extension quá cũ; cập nhật Extension và chọn lại tab");
     const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(kind =>
       probe.capabilities?.includes(kind) && (provider === "muse" ? kind !== "text" : kind !== "video"));
     if (!capabilities.length) throw new Error("No capability verified in remote tab");
-    this.selected.set(provider, { tab, capabilities });
+    this.selected.set(provider, { tab, capabilities, documentToken: probe.documentToken });
     return this.status();
   }
   async refresh(provider: BridgeProvider) {
@@ -207,8 +209,8 @@ class RemoteBridge {
     const preparedPrompt = prepareChromePrompt(kind, prompt, options);
     return new Promise((resolve, reject) => {
       const tabId = choice.tab.id;
-      const job: Job = { id: requestId, provider, tabId, nodeId, kind, state: "submitting", resolve, reject,
-        timeout: setTimeout(() => this.finishJob(job, new Error("AI result timeout; check Chrome before resubmitting")), 15 * 60 * 1000),
+      const job: Job = { id: requestId, provider, tabId, nodeId, kind, documentToken: choice.documentToken, state: "submitting", resolve, reject,
+        timeout: setTimeout(() => this.finishJob(job, new Error("AI result timeout; check Chrome before resubmitting"), undefined, "unknown"), 15 * 60 * 1000),
         cleanup: () => {},
       };
       const onAbort = () => {
@@ -219,9 +221,12 @@ class RemoteBridge {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { onAbort(); return; }
       signal?.addEventListener("abort", onAbort, { once: true });
-      void this.call("run", { id: requestId, tabId, expectedUrl: choice.tab.url, provider, kind, prompt: preparedPrompt, images, options }).then(answer => {
+      void this.call("run", { id: requestId, tabId, expectedUrl: choice.tab.url, expectedDocumentToken: choice.documentToken, provider, kind, prompt: preparedPrompt, images, options }).then(answer => {
+        if ((answer as { uncertain?: boolean })?.uncertain) {
+          this.finishJob(job, new Error("Tác vụ đã gửi nhưng chưa rõ kết quả; không gửi lại tự động"), undefined, "unknown"); return;
+        }
         if (!(answer as { accepted?: boolean })?.accepted) this.finishJob(job, new Error("Remote AI refused request"));
-      }, error => this.finishJob(job, new Error("Submission uncertain: " + error.message)));
+      }, error => this.finishJob(job, new Error("Submission uncertain: " + error.message), undefined, "unknown"));
     });
   }
   private onMessage(raw: unknown) {
@@ -234,24 +239,22 @@ class RemoteBridge {
       else call.resolve(msg.result);
     } else if (msg.type === "job" && typeof msg.id === "string") {
       const job = this.jobs.get(msg.id);
-      if (!job || msg.provider !== job.provider || msg.tabId !== job.tabId) return;
+      if (!job || msg.provider !== job.provider || msg.tabId !== job.tabId || msg.documentToken !== job.documentToken) return;
       if (msg.state === "submitting" || msg.state === "running") job.state = msg.state;
       else if (msg.state === "completed") {
-        const result = msg.result as BridgeResult;
-        if (!result || result.kind !== job.kind
-          || (job.kind === "text" && (!result.text?.trim() || result.text.length > 1000000))
-          || (job.kind !== "text" && (!result.data || result.data.length > 65 * 1024 * 1024
-            || !/^(image\/(png|jpeg|webp)|video\/(mp4|webm|quicktime))$/.test(result.mimeType ?? ""))))
+        const result = msg.result;
+        if (!isBridgeResult(result, job.kind))
           this.finishJob(job, new Error("AI returned invalid or mismatched output"));
         else this.finishJob(job, undefined, result);
-      } else if (msg.state === "failed" || msg.state === "cancelled")
-        this.finishJob(job, new Error(String(msg.error || "Remote AI task failed")));
+      } else if (msg.state === "failed" || msg.state === "cancelled" || msg.state === "unknown")
+        this.finishJob(job, new Error(String(msg.error || "Remote AI task failed")), undefined,
+          msg.state === "unknown" ? "unknown" : undefined);
     }
   }
-  private finishJob(job: Job, error?: Error, result?: BridgeResult) {
+  private finishJob(job: Job, error?: Error, result?: BridgeResult, failureState?: "unknown") {
     if (this.jobs.get(job.id) !== job) return;
     this.jobs.delete(job.id); clearTimeout(job.timeout); job.cleanup();
-    const state: BridgeState = error ? error.name === "AbortError" ? "cancelled" : "failed" : "completed";
+    const state: BridgeState = failureState ?? (error ? error.name === "AbortError" ? "cancelled" : "failed" : "completed");
     this.recent.unshift({ id: job.id, provider: job.provider, tabId: job.tabId, nodeId: job.nodeId, state });
     if (this.recent.length > 20) this.recent.length = 20;
     if (error) job.reject(error); else if (result) job.resolve(result);

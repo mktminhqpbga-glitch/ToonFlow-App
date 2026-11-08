@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ToonFlow Chrome Companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ghép nối tab Muse, Gemini và ChatGPT đã đăng nhập với ToonFlow Desktop, theo sự đồng ý của người dùng.",
   "permissions": [
     "tabs",
