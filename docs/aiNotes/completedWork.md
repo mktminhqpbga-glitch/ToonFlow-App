@@ -290,3 +290,14 @@
 - **Chưa kiểm tra:** Vue typecheck, build, tương tác UI, drag/drop, persistence và payload AI.
 - **Vấn đề:** ISSUE-0026 vẫn mở.
 - **Trạng thái:** Đã ghi code lên nhánh, NOT TESTED runtime; chưa nghiệm thu chức năng.
+
+
+### DONE-0019 — Code nhãn locale của bảng tạo ảnh và video
+
+- **Ngày:** 2026-11-09 (UTC+7). **Người trực tiếp sửa:** ChatGPT (GPT-6).
+- **Phạm vi:** labels/aria-label và chế độ hiển thị trong `packages/nodeShared/src/components/imageGenerationSettings.vue` và `packages/nodes/videoGenerationNode/src/components/generationSettings.vue`.
+- **Đã làm:** thêm nhãn vi khi locale vi, giữ nhãn zh gốc ngoài chế độ vi. Không sửa giá trị mode và payload model.
+- **Bằng chứng:** [commit ảnh](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/2302f600c7ab30f2afbfb814a119725f8c6eb706), [commit video](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/bccd1bd10af5955160300adb5ab9ec332ce1bbd1).
+- **Kiểm tra:** kiểm tra lại nội dung source qua GitHub, không chạy runtime, typecheck hoặc Mac trong phiên này; CI commit mới đang cần kiểm tra.
+- **Vấn đề:** ISSUE-0027 mở; tính năng tạo ảnh/video thật không được tuyên bố DONE.
+- **Trạng thái:** Đã ghi vào repo / NOT TESTED runtime.
