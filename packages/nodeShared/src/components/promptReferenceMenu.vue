@@ -69,13 +69,13 @@ const activeKey = ref("");
 const menuPosition = ref({ left: "0px", top: "0px" });
 const submenuStyle = ref({ left: "0px", top: "0px" });
 const menuStyle = computed(() => ({ ...menuPosition.value, zIndex: props.zIndex }));
-const categories = [
+const categories = computed(() => [
   { type: "IMAGE", label: localized("图片", "Ảnh"), icon: IconPhoto },
   { type: "VIDEO", label: localized("视频", "Video"), icon: IconVideo },
   { type: "AUDIO", label: localized("音频", "Âm thanh"), icon: IconMusic },
-  { type: "STRING", label: "文本", icon: IconFileText },
-] as const;
-const groups = computed(() => categories.map(group => ({ ...group, items: props.materials.filter(item => item.dataType === group.type) })));
+  { type: "STRING", label: localized("文本", "Văn bản"), icon: IconFileText },
+] as const);
+const groups = computed(() => categories.value.map(group => ({ ...group, items: props.materials.filter(item => item.dataType === group.type) })));
 const matches = (name: string) => name.toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase());
 const matchingReferences = computed(() => props.references.filter(item => matches(item.label || item.name)));
 const matchingGroups = computed(() => groups.value.map(group => ({ ...group, items: group.items.filter(item => matches(item.name)) })).filter(group => group.items.length));
