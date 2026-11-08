@@ -3,7 +3,8 @@ import { z } from "zod";
 import { getRuntimePlatform } from "@/lib/platform";
 import u from "@/utils";
 import { readReference } from "@/utils/media/generation";
-import { chromeBridge, type BridgeProvider } from "./runtime";
+import { type BridgeProvider } from "./runtime";
+import { chromeBridge } from "./manager";
 import { success, errorFromCause } from "@/lib/responseFormat";
 
 const providerSchema = z.enum(["muse", "gemini", "chatgpt"]);
@@ -31,7 +32,24 @@ function handler(action: (req: Request, res: Response) => Promise<unknown> | unk
     catch (cause) { const value = errorFromCause(cause); res.status(value.code).json(value); }
   };
 }
-router.get("/status", handler(() => chromeBridge.status()));
+router.get("/status", handler(() => chromeBridge.refreshStatus()));
+router.post("/mode", handler(req => chromeBridge.setMode(z.enum(["local", "remote"]).parse(req.body?.mode))));
+router.post("/remote/config", handler(req => {
+  const input = z.object({ url: z.string().min(8).max(2048), ownerKey: z.string().min(32).max(256) }).parse(req.body);
+  return chromeBridge.configureRemote(input.url, input.ownerKey);
+}));
+router.get("/remote/devices", handler(() => chromeBridge.listDevices()));
+router.post("/remote/pair", handler(() => chromeBridge.createPairing()));
+router.post("/remote/approve", handler(req =>
+  chromeBridge.approvePairing(z.string().uuid().parse(req.body?.pairId))));
+router.post("/remote/selectDevice", handler(req =>
+  chromeBridge.selectDevice(z.string().uuid().parse(req.body?.deviceId))));
+router.post("/remote/rename", handler(req => {
+  const input = z.object({ deviceId: z.string().uuid(), name: z.string().trim().min(1).max(80) }).parse(req.body);
+  return chromeBridge.renameDevice(input.deviceId, input.name);
+}));
+router.post("/remote/revoke", handler(req =>
+  chromeBridge.revokeDevice(z.string().uuid().parse(req.body?.deviceId))));
 router.get("/tabs", handler(() => chromeBridge.tabs()));
 router.post("/select", handler(req => {
   const input = z.object({ provider: providerSchema, tabId: z.number().int().nonnegative() }).parse(req.body);

@@ -5,7 +5,8 @@
   "description": "Ghép nối tab Muse, Gemini và ChatGPT đã đăng nhập với ToonFlow Desktop, theo sự đồng ý của người dùng.",
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "https://muse.ai/*",
@@ -38,5 +39,9 @@
       ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "minimum_chrome_version": "116"
 }

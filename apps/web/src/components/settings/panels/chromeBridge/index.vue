@@ -5,6 +5,65 @@
     <el-card shadow="never" class="bridgeCard">
       <div class="bridgeHeading">
         <div>
+          <h3>Chrome Bridge mode</h3>
+          <el-text type="info" size="small">Local stays on 127.0.0.1; Remote connects out to Render.</el-text>
+        </div>
+      </div>
+      <el-radio-group :modelValue="status.mode || 'local'" :disabled="!!busy" @update:modelValue="changeMode">
+        <el-radio-button value="local">Chrome on this Mac</el-radio-button>
+        <el-radio-button value="remote">Chrome through Render</el-radio-button>
+      </el-radio-group>
+    </el-card>
+    <el-card v-if="status.mode === 'remote'" shadow="never" class="bridgeCard">
+      <div class="bridgeHeading">
+        <div>
+          <h3>Remote Relay · Render</h3>
+          <el-text type="info" size="small">Both devices connect out over WSS or HTTPS. The Relay URL must point to your Render Web Service.</el-text>
+        </div>
+        <el-tag effect="plain" :type="status.remote?.transport === 'wss' ? 'success' : 'warning'">
+          {{ status.remote?.transport || 'offline' }}
+        </el-tag>
+      </div>
+      <el-input v-model="relayUrl" placeholder="https://your-render-service.onrender.com" aria-label="Render Relay HTTPS URL" />
+      <el-input v-model="relayKey" type="password" showPassword autocomplete="off" placeholder="RELAY_OWNER_KEY" aria-label="Render owner key" />
+      <div class="bridgeActions">
+        <el-button type="primary" :loading="remoteBusy" @click="saveRelay">Connect Render</el-button>
+        <el-button :loading="remoteBusy" :disabled="!status.remote?.configured" @click="loadDevices">Refresh devices</el-button>
+      </div>
+      <el-alert v-if="!status.remote?.configured" type="info" :closable="false"
+        title="Enter Render Relay HTTPS URL and owner key to enable remote connections." />
+      <div v-if="status.remote?.configured" class="remoteControls">
+        <div class="bridgeActions">
+          <el-button type="primary" :loading="remoteBusy" @click="newPairCode">New one-time pairing code</el-button>
+        </div>
+        <div v-if="status.pairingCode" class="pairControls">
+          <el-input :modelValue="status.pairingCode" type="password" showPassword readonly aria-label="Remote device pairing code" />
+          <el-button :icon="IconCopy" @click="copyPairing">Copy</el-button>
+        </div>
+        <el-text v-if="status.remote?.expiresAt" type="info" size="small">
+          Pairing expires: {{ new Date(status.remote.expiresAt).toLocaleString() }}
+        </el-text>
+        <div v-for="pair in status.remote?.pending || []" :key="pair.pairId" class="remoteRow">
+          <el-text>{{ pair.name }} · pending approval</el-text>
+          <el-button size="small" :disabled="!!remoteBusy" type="primary" @click="approvePair(pair.pairId)">Approve device</el-button>
+        </div>
+        <el-select v-model="deviceSelection" class="tabSelector" filterable
+          placeholder="Select paired Chrome device" aria-label="Remote Chrome device" @change="selectDevice">
+          <el-option v-for="device in status.remote?.devices || []" :key="device.id"
+            :label="device.name + (device.online ? ' · online' : ' · offline')" :value="device.id" />
+        </el-select>
+        <div v-if="deviceSelection" class="remoteRow">
+          <el-input v-model="deviceName" placeholder="New device name" aria-label="Rename Chrome device" />
+          <el-button :disabled="!deviceName.trim() || !!remoteBusy" @click="renameDevice">Rename</el-button>
+          <el-button type="danger" plain :disabled="!!remoteBusy" @click="revokeDevice">Revoke</el-button>
+        </div>
+        <el-alert v-if="!status.connected" type="warning" :closable="false"
+          title="Chrome offline or Relay not reachable. Check HTTPS access and pairing on the remote machine." />
+      </div>
+    </el-card>
+    <el-card v-if="status.mode !== 'remote'" shadow="never" class="bridgeCard">
+      <div class="bridgeHeading">
+        <div>
           <h3>Chrome Companion</h3>
           <el-text type="info" size="small">仅通过本机 Chrome 中您主动选择的 AI 标签页工作。不会读取登录密码或 Cookie。</el-text>
         </div>
@@ -67,7 +126,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
-import { ElAlert, ElButton, ElCard, ElInput, ElMessage, ElOption, ElSelect, ElTag, ElText } from "element-plus";
+import { ElAlert, ElButton, ElCard, ElInput, ElMessage, ElMessageBox, ElOption, ElRadioButton, ElRadioGroup, ElSelect, ElTag, ElText } from "element-plus";
 import { IconBrowser, IconCopy, IconExternalLink, IconRefresh } from "@tabler/icons-vue";
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
 
@@ -75,7 +134,11 @@ type Provider = "muse" | "gemini" | "chatgpt";
 type Tab = { id: number; title: string; url: string; provider: Provider };
 type Selection = { tab: Tab; capabilities: string[] };
 type Status = {
-  enabled: boolean; connected: boolean; pairingCode: string | null;
+  enabled: boolean; connected: boolean; pairingCode: string | null; mode?: "local" | "remote";
+  remote?: { url: string; configured: boolean; transport: "wss" | "https" | "offline";
+    devices: { id: string; name: string; online: boolean; createdAt: number }[];
+    pending: { pairId: string; name: string; expiresAt: number }[];
+    selectedDeviceId: string; expiresAt: number | null; };
   selected: Partial<Record<Provider, Selection>>;
   jobs: { id: string; provider: Provider; tabId: number; state: string }[];
 };
@@ -94,6 +157,11 @@ const busy = ref<Provider | "">("");
 const refreshing = ref(false);
 const loadingTabs = ref(false);
 const loadError = ref("");
+const remoteBusy = ref(false);
+const relayUrl = ref("");
+const relayKey = ref("");
+const deviceSelection = ref("");
+const deviceName = ref("");
 let timer: ReturnType<typeof setInterval> | undefined;
 function selected(provider: Provider) { return status.value.selected[provider]; }
 function currentState(provider: Provider) {
@@ -125,8 +193,13 @@ async function refresh() {
     const next = await api<Status>("status");
     const changed = JSON.stringify(status.value.selected) !== JSON.stringify(next.selected)
       || status.value.connected !== next.connected;
+    const modeChanged = status.value.mode !== next.mode
+      || status.value.remote?.selectedDeviceId !== next.remote?.selectedDeviceId;
     status.value = next;
-    if (!next.connected) tabs.value = [];
+    if (!next.connected || modeChanged) tabs.value = [];
+    if (modeChanged) invalidate();
+    if (next.remote?.url && !relayUrl.value) relayUrl.value = next.remote.url;
+    if (next.remote?.selectedDeviceId) deviceSelection.value = next.remote.selectedDeviceId;
     if (changed) invalidate();
     loadError.value = "";
   } catch (error) { loadError.value = error instanceof Error ? error.message : "无法查询连接状态"; }
@@ -150,6 +223,45 @@ async function action(provider: Provider, path: string, data: object) {
   } catch (error) { ElMessage.error(error instanceof Error ? error.message : "操作失败"); }
   finally { busy.value = ""; }
 }
+async function remoteAction(path: string, body?: object) {
+  if (remoteBusy.value) return;
+  remoteBusy.value = true;
+  try {
+    status.value = await api<Status>(path, body || {});
+    invalidate();
+    ElMessage.success("Remote settings updated");
+  } catch (error) { ElMessage.error(error instanceof Error ? error.message : "Remote error"); }
+  finally { remoteBusy.value = false; }
+}
+function changeMode(value: string | number | boolean | undefined) {
+  if (value !== "local" && value !== "remote") return;
+  void remoteAction("mode", { mode: value });
+}
+function saveRelay() {
+  if (!relayUrl.value.trim() || !relayKey.value.trim()) {
+    ElMessage.warning("Enter Relay URL and owner key"); return;
+  }
+  void remoteAction("remote/config", { url: relayUrl.value.trim(), ownerKey: relayKey.value.trim() })
+    .then(() => { relayKey.value = ""; });
+}
+function loadDevices() { void refresh(); }
+function newPairCode() { void remoteAction("remote/pair", {}); }
+function approvePair(pairId: string) { void remoteAction("remote/approve", { pairId }); }
+function selectDevice(deviceId: string) {
+  deviceSelection.value = deviceId;
+  void remoteAction("remote/selectDevice", { deviceId });
+}
+function renameDevice() {
+  if (deviceSelection.value) void remoteAction("remote/rename", { deviceId: deviceSelection.value, name: deviceName.value.trim() });
+}
+async function revokeDevice() {
+  if (!deviceSelection.value) return;
+  try {
+    await ElMessageBox.confirm("Revoke this Chrome device? Running tasks cannot be recovered.", "Revoke device", { type: "warning" });
+    await remoteAction("remote/revoke", { deviceId: deviceSelection.value });
+    deviceSelection.value = "";
+  } catch { /* User cancelled the confirmation. */ }
+}
 function connectProvider(provider: Provider) {
   const tabId = tabSelection[provider];
   if (tabId != null) void action(provider, "select", { provider, tabId });
@@ -166,7 +278,7 @@ function openInstructions() {
 }
 onMounted(() => {
   void refresh();
-  timer = setInterval(() => { if (props.visible !== false) void refresh(); }, 2500);
+  timer = setInterval(() => { if (props.visible !== false) void refresh(); }, 10000);
 });
 onBeforeUnmount(() => { if (timer) clearInterval(timer); });
 watch(() => status.value.connected, connected => { if (connected && !tabs.value.length) void fetchTabs(); });
@@ -204,5 +316,8 @@ watch(() => status.value.connected, connected => { if (connected && !tabs.value.
   }
   .bridgeLinks { justify-content: space-between; }
   .pairControls :deep(.el-input) { flex: 1; min-width: 180px; }
+  .remoteControls { display: flex; flex-direction: column; gap: 10px; }
+  .remoteRow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .remoteRow :deep(.el-input) { flex: 1; min-width: 140px; }
 }
 </style>

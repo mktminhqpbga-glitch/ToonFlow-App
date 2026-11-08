@@ -11,7 +11,8 @@ import { lockWorkspaceFiles, resolveWorkspacePath, writeWorkspaceFile } from "@/
 import { beginGeneration, getProviderPrice } from "@/utils/media/billing";
 import { detectMimeType, readPriceReference } from "@/utils/media/priceReference";
 import { modelGateway } from "@/utils/multiTenant/gateway";
-import { chromeBridge, type BridgeProvider } from "@/utils/chromeBridge/runtime";
+import { type BridgeProvider } from "@/utils/chromeBridge/runtime";
+import { chromeBridge } from "@/utils/chromeBridge/manager";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
