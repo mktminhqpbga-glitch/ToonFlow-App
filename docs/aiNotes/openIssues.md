@@ -140,6 +140,35 @@
 - **Chưa chứng minh:** Vue/TS compile, reactive label, Text Node gửi/hủy thực tế, 3D prompt, các ngôn ngữ cũ, các chuỗi mới chờ dịch. **Không tự dịch những câu chưa duyệt**.
 - **Điều kiện đóng:** log build/typecheck và chạy thử locale vi/zh/en với Text/Media/3D Node, giữ nguyên prompt user và kết quả đúng node.
 
+### ISSUE-0014 — Chưa kiểm tra Web Ventura thật và quyền truy cập Bridge qua Vite proxy
+
+- **Ngày:** 2026-11-08 · **Người phát hiện/sửa gần nhất:** ChatGPT (GPT-6). **Mức độ:** Cao. **Trạng thái:** Mở.
+- **Đã làm:** mode Web chỉ bật trên macOS với `TOONFLOW_LOCAL_WEB_BRIDGE=1` và `TOONFLOW_SERVER_HOST=127.0.0.1`; Vite script bind loopback; kiểm Origin, Referer, socket loopback, `x-toonflow-local-client` từ proxy Vite. [Commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d1f4598993e7785a2ecfe348977fb94e0e0a9403).
+- **Chưa xác minh:** truy cập từ browser Mac Ventura, chống LAN/public qua proxy, extension cả WSS/HTTPS, từng endpoint, TypeScript and Vue build; không coi kiểm mã là security proof.
+- **Điều kiện đóng:** test Mac Ventura 13 Intel, curl/browser same-origin và cross-site, request từ LAN bị từ chối, Render handshake, output đúng node.
+
+### ISSUE-0015 — Quảng cáo/upstream chưa được kiểm toán triệt để toàn monorepo
+
+- **Ngày:** 2026-11-08 · **Người ghi/sửa gần nhất:** ChatGPT (GPT-6). **Mức độ:** Cao. **Trạng thái:** Mở.
+- **Đã làm:** xóa mount/tải quảng cáo, bỏ Explore khỏi trang Home, sửa grid, route ad trả rỗng; `channelRequest` chặn mặc định để không gọi `api.toonflow.net`; marketplace local không được mount, metadata/release chính hướng về fork. [Commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d1f4598993e7785a2ecfe348977fb94e0e0a9403).
+- **Còn tồn tại:** các component banner không còn mount ở Home nhưng file nguồn vẫn nằm trong repo; các thư viện/route upstream khác, addon, updateServer, SDK và network có thể có lời gọi khác chưa được chứng minh đã chặn; chưa có network capture lúc mở app.
+- **Điều kiện đóng:** audit mọi caller theo mã + log network thực tế, chứng minh không gửi upstream không chủ động, rà soát component chết trước khi xóa và xác nhận giữ nguyên Canvas/workspace.
+
+### ISSUE-0016 — Chưa hoàn tất Việt hóa tất cả UI, kỹ năng workflow và chuỗi Remote mới
+
+- **Ngày:** 2026-11-08 · **Người ghi/sửa gần nhất:** ChatGPT (GPT-6). **Mức độ:** Trung bình. **Trạng thái:** Mở.
+- **Đã làm:** tích hợp 127 ID và 10 nhãn node được duyệt, áp dụng các câu đã có trong `vi.json` lên 24 vị trí Home, 2 vị trí Settings; tạo hàng chờ 20 chuỗi Remote UI ở `translationApprovalQueue.md`.
+- **Còn tồn tại:** chưa duyệt và chưa áp dụng bản dịch Remote mới; plugin/tools/prompts dài, 185 file .vue và 625 file .ts chưa được kiểm kê văn bản từng chuỗi; chưa test chuyển vi/zh/en.
+- **Điều kiện đóng:** có bản dịch phê duyệt đầy đủ, diff từng ID đúng ngữ cảnh, và chạy GUI/AI prompt kiểm chứng không làm đổi token/schema.
+
+### ISSUE-0017 — Build, phát hành và crash Desktop Ventura chưa được chứng minh đã sửa
+
+- **Ngày:** 2026-11-08 · **Người ghi/sửa gần nhất:** ChatGPT (GPT-6). **Mức độ:** Cao. **Trạng thái:** Mở.
+- **Đã làm:** thêm `.github/workflows/integrationCheck.yml` trên nhánh tích hợp, lệnh `bun install --frozen-lockfile`, TypeScript typecheck, build tools/ext/nodes/Web/server/MCP; scripts `dev:server:local`, `dev:web:local`; định tuyến release sang fork.
+- **Chưa thực hiện:** không có Bun/dependencies/macOS trong môi trường trực tiếp nên không chạy lệnh; chưa đọc log CI thực tế; chưa có DMG, chưa chạy Desktop macOS14+ hoặc Ventura.
+- **Thông tin máy người dùng cung cấp:** macOS Ventura 13 Intel, Bun 1.4.3/1.4.4, Web/Server mở được, Desktop crash C++/Bun. Đây là nguồn do người dùng báo, **chưa tái hiện ở môi trường này**.
+- **Điều kiện đóng:** CI PASS, Web Ventura runtime PASS và Desktop được chứng minh trên OS hỗ trợ; không hạ minimum macOS bằng sửa metadata giả.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề

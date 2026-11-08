@@ -108,6 +108,18 @@
 - **Bằng chứng:** [lịch sử nhánh tích hợp](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/independentToonFlowFullIntegration).
 - **Trạng thái:** Đã đưa vào cây mã tích hợp; chưa nghiệm thu.
 
+### DONE-0010 — Web Ventura cục bộ, trang chủ độc lập và kênh upstream opt-in
+
+- **Ngày:** 2026-11-08 (UTC+7). **Người trực tiếp làm:** ChatGPT (GPT-6).
+- **Bằng chứng mã:** [commit tích hợp Web và độc lập hóa](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d1f4598993e7785a2ecfe348977fb94e0e0a9403).
+- **File runtime:** `apps/server/src/{app,index}.ts`, `apps/server/src/utils/chromeBridge/{access,router,manager}.ts`, `apps/server/src/lib/channelRequest.ts`, `apps/server/src/routes/channel/community/getAdvertisements.ts`, `apps/web/src/pages/home/index.vue`, `apps/web/src/components/settings/index.vue`, `apps/web/src/router/index.ts`.
+- **Hành vi mã:** thêm tùy chọn `TOONFLOW_LOCAL_WEB_BRIDGE=1` dành cho Mac Web và bind `127.0.0.1`; chỉ cho Remote Render trên Web, Local Desktop `127.0.0.1` giữ nguyên; ràng buộc Origin/Referer/loopback và kiểm proxy Vite; Settings kiểm backend trước khi hiện Bridge; Home không mount banner quảng cáo và Explore upstream, bỏ fetch quảng cáo, sửa grid và đi thẳng vào Home; route quảng cáo trả trống; API thương mại upstream mặc định bị chặn, `TOONFLOW_LEGACY_CHANNEL=1` mới opt-in.
+- **File nhận diện/build:** `package.json`, `apps/web/package.json`, `electrobun.config.ts`, `README.md`, `.github/workflows/integrationCheck.yml`. Đổi URL repo, issues, release fallback sang fork, giữ `author` MIT gốc; bổ sung script Web loopback và workflow kiểm tra build.
+- **Tài liệu:** `docs/independentDistribution.md`, `docs/integrationAudit.md`, `docs/aiNotes/translationApprovalQueue.md`. Ghi 20 câu Remote UI với đề xuất **chưa duyệt/chưa áp dụng**.
+- **Đã kiểm tra:** đối chiếu file thực tế; kiểm tra tĩnh các import và chuỗi gọi Home, Vite proxy, HTTP gate, logic manager; nhận diện một thiếu sót Settings và sửa trước khi commit; chưa có log typecheck/build/runtime.
+- **Chưa kiểm tra:** Web Ventura thật, tất cả upstream callers, Canvas lưu/mở, Extension trên máy ảo, Render WSS/HTTPS, phiên AI thật, CI status, macOS Desktop/installer. Không tuyên bố production-ready.
+- **Trạng thái:** Đã commit mã, kiểm chứng tĩnh một số luồng; **chưa nghiệm thu vận hành**.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn

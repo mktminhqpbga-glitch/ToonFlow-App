@@ -123,6 +123,26 @@
 - **Lưu trữ nguồn:** sổ `docs/aiNotes/historyVietnameseV1/` giữ bản gốc từ nhánh PR #2; không đổi số thứ tự ID cũ trên PR đó.
 - **Chưa kiểm tra runtime:** không đóng ISSUE cho đến khi có log compile và chạy macOS/Web Ventura.
 
+### NOTE-0018 — Web Ventura chỉ mở Remote Bridge khi backend an toàn
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quyết định:** chạy `bun run dev:server:local` và `bun run dev:web:local` trên Mac Intel Ventura. Vite/Express bind loopback; server host Mac và env opt-in. Web được dùng Render Remote Mode; local WebSocket Chrome vẫn riêng cho Desktop. Frontend Settings không tự bật tính năng nếu không đọc được endpoint backend.
+- **Lưu ý bảo mật:** proxy Vite gắn `x-toonflow-local-client` cho request loopback; kiểm cả Origin/Referer và source socket. Cần test cross-origin, không tin rằng `127.0.0.1` riêng đủ nếu có reverse proxy.
+- **Nguồn:** [commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d1f4598993e7785a2ecfe348977fb94e0e0a9403), [hướng dẫn Ventura](../../docs/independentDistribution.md).
+
+### NOTE-0019 — Mọi kênh thương mại upstream phải là opt-in
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quyết định:** `channelRequest` trả 503 mặc định, bật `TOONFLOW_LEGACY_CHANNEL=1` mới cho phép gọi dịch vụ ToonFlow gốc. Home không mount quảng cáo/Explore, route quảng cáo trả rỗng; không xóa hệ thống provider/Canvas hoặc sửa phương thức thanh toán bên thứ ba.
+- **Chưa đủ:** các module mạng khác chưa quét hết, có thể còn truy vấn upstream; cần audit network capture thực tế. Tên/identifier thương hiệu, updater native và bản phát hành phải kiểm tra tiếp.
+
+### NOTE-0020 — Kiểm soát bản dịch, giấy phép và mức xác nhận
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Dịch:** chỉ áp dụng 127 ID V1 và 10 tên menu đã duyệt; 20 chuỗi Remote là **đề xuất chờ duyệt**, không tự áp dụng; không đổi prompt/token AI, không mất các locale khác. Giao diện Home/Settings dùng từ điển `vi.json` hiện có.
+- **Phát hành:** dùng GitHub fork cho mã/issues/update fallback, giữ MIT và tác giả HBAI-Ltd, không gắn nhãn sở hữu độc quyền. `@toonflow/*` là namespace nội bộ hợp lệ, không cần đổi toàn bộ. Không merge PR Draft khi chưa test.
+- **Nguồn:** [báo cáo kiểm kê](../../docs/integrationAudit.md), [hàng chờ dịch](./translationApprovalQueue.md), [commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d1f4598993e7785a2ecfe348977fb94e0e0a9403).
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý
