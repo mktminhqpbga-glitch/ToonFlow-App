@@ -10,7 +10,7 @@ export type BridgeState = "idle" | "connecting" | "ready" | "submitting" | "runn
 
 type SocketData = { authenticated: boolean; extensionId: string; authTimer?: ReturnType<typeof setTimeout> };
 type Call = { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Job = { id: string; provider: BridgeProvider; tabId: number; state: BridgeState; resolve: (value: BridgeResult) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout>; abort?: () => void };
+type Job = { id: string; provider: BridgeProvider; tabId: number; state: BridgeState; nodeId?: string; resolve: (value: BridgeResult) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout>; abort?: () => void };
 
 const allowedHosts: Record<BridgeProvider, string[]> = {
   muse: ["muse.ai"],
@@ -29,8 +29,8 @@ export function providerForUrl(value: string): BridgeProvider | undefined {
 }
 
 class ChromeBridgeRuntime {
-  private server?: ReturnType<typeof Bun.serve>;
-  private socket?: import("bun").ServerWebSocket<SocketData>;
+  private server?: { port: number; stop: (closeActiveConnections?: boolean) => void };
+  private socket?: { data: SocketData; send: (data: string) => unknown; close: (code?: number, reason?: string) => void };
   private token = "";
   private selections = new Map<BridgeProvider, BridgeSelection>();
   private calls = new Map<string, Call>();
@@ -120,7 +120,7 @@ class ChromeBridgeRuntime {
       enabled: this.enabled, connected: this.connected,
       pairingCode: this.enabled && this.server && !this.connected ? "toonflow-bridge://127.0.0.1:" + this.server.port + "/" + this.token : null,
       selected: Object.fromEntries([...this.selections].map(([id, selection]) => [id, selection])),
-      jobs: [...this.jobs.values()].map(job => ({ id: job.id, provider: job.provider, state: job.state, tabId: job.tabId })),
+      jobs: [...this.jobs.values()].map(job => ({ id: job.id, provider: job.provider, state: job.state, tabId: job.tabId, nodeId: job.nodeId })),
     };
   }
 
@@ -180,7 +180,7 @@ class ChromeBridgeRuntime {
   }
 
   async run(provider: BridgeProvider, kind: BridgeCapability, prompt: string, images: { data: string; mimeType: string }[] = [],
-    options: object = {}, signal?: AbortSignal, requestId = randomUUID()): Promise<BridgeResult> {
+    options: object = {}, signal?: AbortSignal, requestId = randomUUID(), nodeId?: string): Promise<BridgeResult> {
     const selection = this.selections.get(provider);
     if (!selection || !this.connected) throw new Error("Chưa kết nối tab " + provider);
     if (!selection.capabilities.includes(kind)) throw new Error(provider + " chưa hỗ trợ " + kind + " trên tab được chọn");
@@ -189,7 +189,7 @@ class ChromeBridgeRuntime {
     if (this.jobs.has(requestId)) throw new Error("Tác vụ đã được gửi; không gửi trùng");
     return new Promise<BridgeResult>((resolve, reject) => {
       const job: Job = {
-        id: requestId, provider, tabId: selection.tab.id, state: "submitting", resolve, reject,
+        id: requestId, provider, tabId: selection.tab.id, nodeId, state: "submitting", resolve, reject,
         timer: setTimeout(() => this.finishJob(job, new Error("Quá thời gian; yêu cầu có thể đã được AI nhận. Hãy kiểm tra tab, không tự gửi lại")), 15 * 60 * 1000),
       };
       const cancel = () => {

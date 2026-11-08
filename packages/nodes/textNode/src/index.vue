@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, watch } from "vue";
+import { computed, inject, onMounted, onScopeDispose, ref, watch } from "vue";
 import { ElAlert, ElButton, ElCard, ElSelect, ElDialog, ElOption, ElOptionGroup, ElMessage, ElMessageBox } from "element-plus";
 import { IconEdit, IconFileText, IconSparkles, IconArrowUp, IconPlayerStop } from "@tabler/icons-vue";
 import { getNodeModelIdentity, getNodeModelKey, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeAiModel, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
@@ -103,6 +103,7 @@ const selectedModel = useNodeModelSelection(models, model);
 const isBridgeText = computed(() => selectedModel.value?.providerId === "chromeBridge");
 let bridgeTextController: AbortController | undefined;
 function cancelBridgeText() { bridgeTextController?.abort(); }
+onScopeDispose(() => bridgeTextController?.abort());
 const modelGroups = computed(() => groupNodeModels(models.value));
 const textReady = ref(false);
 const textReloading = ref(false);
@@ -267,7 +268,7 @@ async function generateText() {
         const response = await fetch("/api/desktop/chromeBridge/text", {
           method: "POST", headers: { "Content-Type": "application/json",
             "x-toonflow-desktop": "1", "x-toonflow-workspace": "1" },
-          body: JSON.stringify({ provider, prompt: input.prompt, directory,
+          body: JSON.stringify({ provider, prompt: input.prompt, directory, nodeId: node.id,
             references: references.filter(item => item.dataType === "STRING" || item.dataType === "IMAGE") }),
           signal: controller.signal,
         });

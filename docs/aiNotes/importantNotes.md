@@ -59,6 +59,37 @@
 - **Phạm vi:** phân phối / phát hành.
 - **Nguồn:** [LICENSE](../../LICENSE), [package.json](../../package.json).
 
+### NOTE-0008 — Kiến trúc AI Bridge tự viết, không sao chép GPL
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quyết định:** giữ Bun/Electrobun, không Electron, không Canvas khác; adapter `apps/server/src/utils/chromeBridge` + MV3 Chrome `packages/chromeCompanion`, chỉ ba AI. Nguồn `workflow` GPL-2.0-or-later dùng tham khảo hành vi/giao thức, không sao chép.
+- **Luồng:** Node gốc → API desktop hoặc mediaTasks gốc → loopback websocket ghép nối → extension → tab người dùng chọn → kết quả → workspace/output gốc. Text Node: Gemini/ChatGPT; Image: Muse/Gemini/ChatGPT nếu giao diện có; Video: Muse nếu có.
+- **Bằng chứng:** [nhánh code](https://github.com/mktminhqpbga-glitch/ToonFlow-App/tree/feat/chromeBridgeMuseGeminiChatgpt).
+
+### NOTE-0009 — Bảo toàn dữ liệu, trạng thái không chắc chắn
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** mỗi request có UUID, provider/tab, nodeId; media còn có canvas/workspace gốc do `useNodeGeneration` quản lý. File media lưu bằng `writeWorkspaceFile` pipeline hiện có, không đưa base64 vào JSON Canvas; output cũ không mất khi tải file lỗi. Sau khi đã gửi mà mất kết nối/timeout: **không tự gửi lại**. Reopen media job bị gián đoạn phải yêu cầu người dùng xác minh tab.
+- **Giới hạn:** MV3 worker/job in-memory chưa chứng minh khả năng khôi phục sau restart; cần test thật.
+
+### NOTE-0010 — Giữ giao diện, chủ đề và tài khoản
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** dùng Settings gốc Element Plus + màu `--el-*`; model selector và output/history/preview node gốc; không nhúng website AI; không đổi bố cục, ngôn ngữ hoặc kích thước Canvas. Light/dark cần kiểm thử.
+- **Quy tắc dịch vụ:** không khai báo video cho Gemini/ChatGPT. Chức năng hình ảnh chỉ hiển thị khi probe tab phát hiện nút có khả năng. Đăng nhập Chrome không đồng nghĩa quyền API. Không vượt CAPTCHA/giới hạn tài khoản.
+
+### NOTE-0011 — Bảo mật và phạm vi macOS
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** chỉ bật Bridge khi host desktop macOS, không mở listener ở server/Web/Android/Windows/Linux. WebSocket chỉ `127.0.0.1`; Origin extension + mã ghép nối ngẫu nhiên; chỉ domain Muse/Gemini/ChatGPT; không thu cookie, token, mật khẩu hoặc dữ liệu đăng nhập; không ghi token pairing vào log/repo.
+- **Giới hạn:** cần kiểm toán bảo mật và điều khoản sử dụng khi phát hành.
+
+### NOTE-0012 — Chưa có nghiệm thu thực tế
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Xác minh:** files trên GitHub và cú pháp JavaScript/JSON extension bằng parser.
+- **Chưa xác minh:** TypeScript/Vue typecheck, desktop build, 3 tab AI thật, bất kỳ media được tạo, lưu/mở project, toàn bộ UI light/dark và provider API cũ. Không được đánh dấu tính năng là hoàn thành khi chỉ mới được commit. Tiếp tục ở `ISSUE-0005`–`ISSUE-0008`.
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý

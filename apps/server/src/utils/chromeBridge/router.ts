@@ -44,6 +44,7 @@ router.post("/text", handler(async (req, res) => {
     provider: z.enum(["gemini", "chatgpt"]),
     prompt: z.string().trim().min(1).max(100000),
     directory: z.string().max(4096).optional(),
+    nodeId: z.string().trim().min(1).max(256),
     references: z.array(referenceSchema).max(8).default([]),
   }).parse(req.body);
   const localImages: { data: string; mimeType: string }[] = [];
@@ -61,7 +62,7 @@ router.post("/text", handler(async (req, res) => {
   const controller = new AbortController();
   req.once("aborted", () => controller.abort());
   res.once("close", () => { if (!res.writableEnded) controller.abort(); });
-  const result = await chromeBridge.run(input.provider as BridgeProvider, "text", fullPrompt, localImages, {}, controller.signal);
+  const result = await chromeBridge.run(input.provider as BridgeProvider, "text", fullPrompt, localImages, {}, controller.signal, undefined, input.nodeId);
   if (result.kind !== "text" || !result.text?.trim()) throw new Error("AI không trả về văn bản hợp lệ");
   return { text: result.text };
 }));
