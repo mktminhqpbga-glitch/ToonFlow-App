@@ -264,3 +264,12 @@
 - **Đã thử sửa:** bổ sung nhãn tiếng Việt vào `promptInput.vue` và `promptReferenceMenu.vue`, bảo toàn nhãn gốc cùng cơ chế reference, không thay đổi model, schema hoặc thao tác x-sender; các commit 6d02a4e, d3f94a8, 3f1cc0a.
 - **Vẫn chưa xác minh:** thay đổi locale trên UI, build/typecheck, drag media đúng tọa độ caret, lưu/khôi phục reference, Undo/Redo trong Chrome/Mac. Không đánh dấu phần drag-and-drop DONE.
 - **Bước tiếp theo:** chạy typecheck nodeShared; test chuyển locale; xác định định dạng drag hiện có ở Canvas/Asset Library trước khi chạm luồng insertion; test persistence và payload AI.
+
+
+### ISSUE-0027 — Hai bảng tạo ảnh/video chưa nghiệm thu sau Việt hóa
+
+- **Ngày/người sửa lần cuối:** 2026-11-09 (UTC+7), ChatGPT (GPT-6).
+- **Trạng thái:** Mở / PARTIAL, runtime NOT TESTED.
+- **Đã thử:** Việt hóa nhãn và aria-label hai bảng cài đặt (commit 2302f60 và bccd1bd). Bảo toàn giá trị mode/duration/ratio/size và model.
+- **Còn lại:** typecheck/build ở commit mới, test chuyển locale vi/en lúc popover mở, thử chọn ratio và mode ảnh/video với model thật, xác nhận cảnh báo Chrome.
+- **Điều kiện đóng:** CI pass trên commit mới và kiểm tra UI liên quan; E2E với provider chỉ đóng khi có kết quả thực.
