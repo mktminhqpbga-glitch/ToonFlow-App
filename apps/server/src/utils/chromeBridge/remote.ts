@@ -219,7 +219,7 @@ class RemoteBridge {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { onAbort(); return; }
       signal?.addEventListener("abort", onAbort, { once: true });
-      void this.call("run", { id: requestId, tabId, provider, kind, prompt: preparedPrompt, images, options }).then(answer => {
+      void this.call("run", { id: requestId, tabId, expectedUrl: choice.tab.url, provider, kind, prompt: preparedPrompt, images, options }).then(answer => {
         if (!(answer as { accepted?: boolean })?.accepted) this.finishJob(job, new Error("Remote AI refused request"));
       }, error => this.finishJob(job, new Error("Submission uncertain: " + error.message)));
     });

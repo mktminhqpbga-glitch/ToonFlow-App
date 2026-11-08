@@ -213,7 +213,7 @@ class ChromeBridgeRuntime {
       this.jobs.set(requestId, job);
       if (signal?.aborted) { cancel(); return; }
       signal?.addEventListener("abort", cancel, { once: true });
-      void this.call("run", { id: requestId, tabId: selection.tab.id, provider, kind, prompt: preparedPrompt, images, options }).then(result => {
+      void this.call("run", { id: requestId, tabId: selection.tab.id, expectedUrl: selection.tab.url, provider, kind, prompt: preparedPrompt, images, options }).then(result => {
         if (!(result as { accepted?: boolean } | null)?.accepted && this.jobs.has(requestId)) this.finishJob(job, new Error("Tiện ích Chrome không chấp nhận yêu cầu"));
       }, error => {
         // Không chắc lệnh đã tới tab hay chưa; không tự gửi lại.

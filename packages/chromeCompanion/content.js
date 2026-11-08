@@ -209,6 +209,9 @@
       respond({ ok: true, stopped: !!controller }); return false;
     }
     if (message.command !== "run" || message.provider !== provider || typeof message.id !== "string") return false;
+    if (message.expectedUrl !== location.href) {
+      respond({ accepted: false, error: "URL cuộc trò chuyện thay đổi; không gửi prompt sang cuộc trò chuyện khác" }); return false;
+    }
     if (jobs.size) { respond({ accepted: false, error: "Tab đang xử lý tác vụ khác" }); return false; }
     if (!probe().capabilities.includes(message.kind)) { respond({ accepted: false, error: "Chức năng chưa sẵn sàng hoặc chưa hỗ trợ" }); return false; }
     const controller = new AbortController();

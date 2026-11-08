@@ -212,7 +212,9 @@ async function dispatch(operation, payload = {}) {
   const tabId = operation === "cancel" ? id?.tabId : payload.tabId;
   const provider = operation === "cancel" ? id?.provider : payload.provider;
   if (!provider || !serviceHosts[provider]) throw Error("Dịch vụ AI không hợp lệ");
-  await getTab(tabId, provider);
+  const targetTab = await getTab(tabId, provider);
+  if (operation === "run" && (typeof payload.expectedUrl !== "string" || payload.expectedUrl !== targetTab.url))
+    throw Error("Cuộc trò chuyện đã chuyển URL sau khi chọn tab; chưa gửi prompt. Hãy chọn lại tab AI.");
   if (operation === "probe") return chrome.tabs.sendMessage(tabId, { command: "probe", provider });
   if (operation === "cancel") {
     if (id) active.delete(payload.id);
@@ -231,7 +233,7 @@ async function dispatch(operation, payload = {}) {
   active.set(payload.id, { tabId, provider });
   try {
     const reply = await chrome.tabs.sendMessage(tabId, {
-      command: "run", id: payload.id, kind: payload.kind, provider, prompt: payload.prompt,
+      command: "run", id: payload.id, kind: payload.kind, provider, expectedUrl: payload.expectedUrl, prompt: payload.prompt,
       images: payload.images, options: payload.options || {},
     });
     if (!reply?.accepted) { active.delete(payload.id); throw Error(reply?.error || "Tab không nhận được yêu cầu"); }
