@@ -38,7 +38,7 @@
             </el-option-group>
           </el-select>
           <div class="promptActions">
-            <el-button class="sendButton" :icon="IconArrowUp" :loading="generating" :disabled="!prompt.trim() || !selectedModel || generating || !textReady" title="生成" aria-label="生成" @click="generateText" />
+            <el-button class="sendButton" :loading="generating && !isBridgeText" :icon="generating && isBridgeText ? IconPlayerStop : IconArrowUp" :disabled="!textReady || generating && !isBridgeText || !generating && (!prompt.trim() || !selectedModel)" title="生成 / 停止 Chrome 请求" aria-label="生成 / 停止 Chrome 请求" @click="generating ? cancelBridgeText() : generateText()" />
           </div>
         </div>
       </el-card>
@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from "vue";
 import { ElAlert, ElButton, ElCard, ElSelect, ElDialog, ElOption, ElOptionGroup, ElMessage, ElMessageBox } from "element-plus";
-import { IconEdit, IconFileText, IconSparkles, IconArrowUp } from "@tabler/icons-vue";
+import { IconEdit, IconFileText, IconSparkles, IconArrowUp, IconPlayerStop } from "@tabler/icons-vue";
 import { getNodeModelIdentity, getNodeModelKey, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeAiModel, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
 import modelLabel from "@toonflow/node-shared/modelLabel";
@@ -100,6 +100,9 @@ const models = ref<NodeAiModel[]>([]);
 const modelsLoading = ref(false);
 const generating = ref(false);
 const selectedModel = useNodeModelSelection(models, model);
+const isBridgeText = computed(() => selectedModel.value?.providerId === "chromeBridge");
+let bridgeTextController: AbortController | undefined;
+function cancelBridgeText() { bridgeTextController?.abort(); }
 const modelGroups = computed(() => groupNodeModels(models.value));
 const textReady = ref(false);
 const textReloading = ref(false);
@@ -217,6 +220,20 @@ async function loadModels() {
   modelsLoading.value = true;
   try {
     models.value = await ai.getModels();
+    // ACT: model Chrome chỉ có trên macOS desktop, đã chọn tab và probe thành công.
+    try {
+      const response = await fetch("/api/desktop/chromeBridge/status", { cache: "no-store",
+        headers: { "x-toonflow-workspace": "1" } });
+      if (response.ok) {
+        const result = await response.json() as { data?: { selected?: Record<string, { capabilities: string[] }> } };
+        for (const provider of ["gemini", "chatgpt"]) {
+          if (!result.data?.selected?.[provider]?.capabilities?.includes("text")) continue;
+          models.value.push({ providerId: "chromeBridge", providerLabel: "Chrome Companion",
+            modelId: provider + "_text", label: (provider === "gemini" ? "Gemini" : "ChatGPT") + " · Chrome",
+            protocol: "openai-completions" });
+        }
+      }
+    } catch { /* Không ảnh hưởng các model gốc khi bridge không có sẵn. */ }
     if (!model.value) {
       const first = modelGroups.value[0]?.models[0];
       model.value = first ? getNodeModelKey(first) : "";
@@ -240,14 +257,36 @@ async function generateText() {
       .map(item => item.dataType === "STRING" ? { dataType: item.dataType, value: item.value } : { dataType: item.dataType, value: { ...item.value } });
     const input = { ...getNodeModelIdentity(choice), prompt: prompt.value.trim(), references };
     const directory = references.some(item => item.dataType !== "STRING") ? (await textFiles.list()).directory : undefined;
-    const result = await ai.generate({
-      ...input,
-      directory,
-      onEvent(event) {
-        if (event.type === "text") outputs.value.text.value = text += event.delta;
-      },
-    });
-    outputs.value.text.value = result.text;
+    if (choice.providerId === "chromeBridge") {
+      const controller = bridgeTextController = new AbortController();
+      try {
+        const provider = choice.modelId.replace(/_text$/, "");
+        if (!["gemini", "chatgpt"].includes(provider)) throw new Error("Chrome Bridge không hỗ trợ nguồn văn bản này");
+        if (references.some(item => item.dataType === "VIDEO" || item.dataType === "FILE"))
+          throw new Error("Chrome Bridge Text Node chỉ nhận văn bản và ảnh tham chiếu");
+        const response = await fetch("/api/desktop/chromeBridge/text", {
+          method: "POST", headers: { "Content-Type": "application/json",
+            "x-toonflow-desktop": "1", "x-toonflow-workspace": "1" },
+          body: JSON.stringify({ provider, prompt: input.prompt, directory,
+            references: references.filter(item => item.dataType === "STRING" || item.dataType === "IMAGE") }),
+          signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok || result.code !== 200 || typeof result.data?.text !== "string")
+          throw new Error(result.message || "Chrome Bridge không trả về văn bản");
+        controller.signal.throwIfAborted();
+        outputs.value.text.value = result.data.text;
+      } finally { if (bridgeTextController === controller) bridgeTextController = undefined; }
+    } else {
+      const result = await ai.generate({
+        ...input,
+        directory,
+        onEvent(event) {
+          if (event.type === "text") outputs.value.text.value = text += event.delta;
+        },
+      });
+      outputs.value.text.value = result.text;
+    }
   } catch (error) {
     if (error instanceof Error && error.name !== "AbortError") ElMessage.error(error.message);
   } finally {
