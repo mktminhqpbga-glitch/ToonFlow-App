@@ -21,7 +21,9 @@
     "./useModelForm": "./src/useModelForm.ts",
     "./useAudioTranscription": "./src/useAudioTranscription.ts",
     "./groupNodeModels": "./src/groupNodeModels.ts",
-    "./nodeLanguage": "./src/nodeLanguage.ts"
+    "./nodeLanguage": "./src/nodeLanguage.ts",
+    "./cameraStudio": "./src/cameraStudio.ts",
+    "./cameraStudioPanel": "./src/components/cameraStudio.vue"
   },
   "scripts": {
     "typecheck": "vue-tsc --noEmit"
