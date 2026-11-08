@@ -84,3 +84,5 @@ ZIP 0.2.0 SHA256: `3515eb393a62b3bfc48cef54747c22de690ef394cba3d30f431a67dce371f
 Harness/log cục bộ tại `/workspace/cloudSetup/bridgeValidation/v020/`, không thêm framework hoặc test module vào mã ứng dụng. Đây là artifact của môi trường kiểm tra, không phải tệp được publish cùng repo. Ví dụ chạy lại: `node /workspace/cloudSetup/bridgeValidation/v020/bridgeGuardChecks.cjs`; bản nền dùng biến BRIDGE_SOURCE trỏ tới bridgeContentBaseline.js. Backend harness dùng Bun `--tsconfig-override apps/server/tsconfig.json` và TOONFLOW_DATA_DIR riêng.
 
 **Còn BLOCKED/NOT TESTED:** DOM/selector hiện tại của tài khoản AI thật, nhận video thực hoàn chỉnh và codec/duration của file tải, Render WSS/HTTPS thật, Mac Ventura thật. Sau cập nhật phải Reload Extension và tab AI, chọn lại tab; xem packages/chromeCompanion/readme.md. Không tự retry UNKNOWN.
+
+Bằng chứng code Bridge 0.2.0: [commit aed9389](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/aed93891bc2f60aaa7fc95c2b18f72f472652a92).

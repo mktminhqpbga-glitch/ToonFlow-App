@@ -229,6 +229,38 @@
 - **Kiểm tra:** đối chiếu SHA, danh sách tệp từ git show, kết quả lệnh và git diff --check. Không ghi thêm kết quả AI chưa thực hiện.
 - **Trạng thái:** đã ghi tài liệu; các blocker ứng dụng không thay đổi.
 
+
+### DONE-0016 — Chrome Companion 0.2.0 giữ phiên tab và ràng buộc kết quả tác vụ
+
+- **Ngày/người trực tiếp thực hiện:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Bằng chứng:** [commit aed9389](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/aed93891bc2f60aaa7fc95c2b18f72f472652a92).
+- **Đã sửa:** pin documentToken/URL/Task/Provider/Tab/frame 0 ở Local và Remote; không tự đổi/active tab; kiểm lại trước gửi và sau upload/download; giữ anchor/receipt đúng prompt; chặn lượt user khác, bản nháp, trang busy và media URL cũ; decode ảnh thật để lấy kích thước; validate output kind/MIME/base64/metadata ở backend. Ledger chung Local/Remote tuần tự và bền qua restart, UNKNOWN không tự retry.
+- **Tái hiện trước/sau:** 8 trường hợp không an toàn FAIL ở a3b72a3, PASS sau sửa; 2 trường hợp văn bản/ảnh đúng tiếp tục PASS. Có thêm kiểm tra reload cùng URL, race worker, iframe/docToken, ledger/restart, backend và WebSocket Local thật qua loopback Linux.
+- **Kiểm tra:** Companion JS syntax, Server/Web typecheck, Server/Web build, ZIP HTTP/CRC/whitelist/source/hash đều PASS. ZIP phiên bản 0.2.0; cập nhật backend/Extension cùng nhau và tải lại tab AI.
+- **Chưa nghiệm thu:** site AI đăng nhập thực, Render thật, video/codecs đầu ra thực và Mac Ventura. Không gộp kiểm tra DOM/worker giả lập với E2E provider. Không sửa hoặc đóng các hạng mục toàn dự án chưa làm.
+- **Vấn đề:** ISSUE-0025 sửa phần có thể tái hiện; vẫn mở phần nghiệm thu thực. NOTE-0026 ghi protocol/cutover và giới hạn.
+- **Tệp thực sửa:**
+  - `apps/server/src/utils/chromeBridge/remote.ts`
+  - `apps/server/src/utils/chromeBridge/runtime.ts`
+  - `docs/aiNotes/e2eAcceptance.md`
+  - `docs/aiNotes/implementationStatus.md`
+  - `docs/aiNotes/importantNotes.md`
+  - `docs/aiNotes/openIssues.md`
+  - `packages/chromeCompanion/background.js`
+  - `packages/chromeCompanion/content.js`
+  - `packages/chromeCompanion/manifest.json`
+  - `packages/chromeCompanion/readme.md`
+
+- **Trạng thái:** code đã kiểm tra trong phạm vi ghi trên; E2E provider BLOCKED/NOT TESTED.
+
+### DONE-0017 — Lưu bằng chứng tối ưu Bridge
+
+- **Ngày/người:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Tệp:** `docs/aiNotes/completedWork.md`, `docs/aiNotes/e2eAcceptance.md`.
+- **Đã làm/kiểm tra:** ghi SHA triển khai, tệp sửa, kết quả đỏ/xanh thực chạy, giới hạn và hướng dẫn cập nhật; đối chiếu git show và git diff --check.
+- **Bằng chứng tài liệu:** [lịch sử nhật ký nhánh tích hợp](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/independentToonFlowFullIntegration/docs/aiNotes/completedWork.md).
+- **Trạng thái:** tài liệu đã ghi; không thêm kết quả AI hoặc Mac chưa chạy.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn
