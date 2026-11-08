@@ -328,7 +328,7 @@ function loadModels() {
     models.value = items.filter((item) => item.type === "image");
     // ACT: 只给空配置选默认模型，保留暂时不可用的旧选择及其参数。
     if (!data.value.model) {
-      const first = modelGroups.value[0]?.models[0];
+      const first = models.value.find(model => model.availability !== "needsConfiguration");
       data.value.model = first ? getNodeModelKey(first) : "";
     }
   }).finally(() => {
