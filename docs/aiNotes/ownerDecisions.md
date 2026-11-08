@@ -5,6 +5,17 @@
 
 Phần có thể sửa không cần hỏi: khắc phục lỗi có thể tái hiện, dịch UI/prompt hệ thống có kiểm soát, kiểm tra build/typecheck, tránh gửi model chưa sẵn sàng, bảo vệ dữ liệu, giữ Canvas và định dạng lưu có sẵn.
 
+## Quyết định đã được chủ dự án chốt — 2026-11-09
+
+- **HD-01:** Hiện tất cả model; model chưa kết nối/chưa cấu hình phải bị khóa. Không coi "có API key" là bằng chứng mạng/tài khoản/model thật sẵn sàng.
+- **HD-02:** Chip reference có **thumbnail nhỏ + tên tài nguyên**, không lấy media giả; vị trí chèn khớp caret/drop, Undo/Redo và lưu mở lại giữ được.
+- **HD-03:** Nhấn mục Thư viện vật liệu phải **tạo node có prompt preset**, dùng hệ thống node gốc và prompt ẩn nếu tác vụ AI yêu cầu.
+- **HD-04:** **Một nhân vật chỉ có một bộ ảnh cố định**; không tạo phiên bản trang phục/diện mạo phụ tự động. Có thể dùng bộ ba góc máy trong bộ ảnh gốc.
+- **HD-05:** Batch tiếp tục xử lý **những cảnh độc lập** nếu một cảnh thất bại; cảnh lỗi được đánh dấu. Cảnh phụ thuộc / UNKNOWN không tự retry và không chạy tiếp sai thứ tự.
+- **Quy tắc kiểm thử:** Mỗi mục phải có kết quả riêng, phân biệt source inspection, typecheck/build, UI và E2E AI thật; mục BLOCKED không được coi PASS.
+
+Các quyết định này thay thế những đề xuất A/B/C cũ bên dưới; không hỏi lại cùng nội dung.
+
 ## HD-01 — Model chưa khả dụng sẽ hiện thế nào?
 
 - **Đã chốt:** ưu tiên model thực sự sẵn sàng, tùy chọn "Hiện tất cả model"; model không sẵn sàng không được phép gửi tác vụ.
