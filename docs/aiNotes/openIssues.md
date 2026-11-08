@@ -255,3 +255,12 @@
 - **Điều kiện đóng phần code:** ca tái hiện từ đỏ sang xanh, kiểm transport Local/Remote và build/typecheck liên quan. E2E Chrome/Render/account thật vẫn phải nghiệm thu riêng.
 
 - **Cập nhật ISSUE-0025 — Codex (GPT-6), 2026-11-08:** 8 ca không an toàn đã đối chiếu FAIL ở bản nền và PASS sau sửa; 2 ca kết quả đúng tiếp tục PASS. Đã xác minh thêm reload cùng URL, khóa tab đồng thời, frame/document, ledger/restart, backend và Local WS. Server/Web typecheck/build và ZIP 0.2.0 PASS. **Phần lỗi tái hiện có kiểm soát đã sửa; ISSUE vẫn Mở/chờ nghiệm thu website AI, Render và Mac thật.** Không khẳng định adapter production đã hoạt động đầy đủ.
+
+
+### ISSUE-0026 — Prompt editor/reference picker chưa nghiệm thu locale và kéo thả caret
+
+- **Ngày/người cập nhật:** 2026-11-09 (UTC+7), ChatGPT (GPT-6).
+- **Trạng thái:** Mở / PARTIAL; **NOT TESTED** runtime.
+- **Đã thử sửa:** bổ sung nhãn tiếng Việt vào `promptInput.vue` và `promptReferenceMenu.vue`, bảo toàn nhãn gốc cùng cơ chế reference, không thay đổi model, schema hoặc thao tác x-sender; các commit 6d02a4e, d3f94a8, 3f1cc0a.
+- **Vẫn chưa xác minh:** thay đổi locale trên UI, build/typecheck, drag media đúng tọa độ caret, lưu/khôi phục reference, Undo/Redo trong Chrome/Mac. Không đánh dấu phần drag-and-drop DONE.
+- **Bước tiếp theo:** chạy typecheck nodeShared; test chuyển locale; xác định định dạng drag hiện có ở Canvas/Asset Library trước khi chạm luồng insertion; test persistence và payload AI.
