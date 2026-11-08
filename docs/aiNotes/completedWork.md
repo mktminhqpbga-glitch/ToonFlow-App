@@ -120,6 +120,14 @@
 - **Chưa kiểm tra:** Web Ventura thật, tất cả upstream callers, Canvas lưu/mở, Extension trên máy ảo, Render WSS/HTTPS, phiên AI thật, CI status, macOS Desktop/installer. Không tuyên bố production-ready.
 - **Trạng thái:** Đã commit mã, kiểm chứng tĩnh một số luồng; **chưa nghiệm thu vận hành**.
 
+### DONE-0011 — Đồng bộ Bun lockfile và kiểm tra CI thật
+
+- **Ngày:** 2026-11-08 (UTC+7) · **Người sửa:** ChatGPT (GPT-6).
+- **File:** `bun.lock` — bổ sung workspace `apps/chromeRelay` và bản ghi `@toonflow/chromeRelay` đúng package manifest hiện có, không sửa phiên bản của dependency khác.
+- **Bằng chứng mã:** [commit lockfile](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/63e003c88089fc4ba1e541844d11b15b7a710619).
+- **CI đã chạy:** [lần 1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467297410) **FAIL** `bun install --frozen-lockfile` (lockfile sai workspace); [lần 2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467506307) **FAIL trước cài đặt** vì GitHub download Bun 1.4.3 trả 504; đã yêu cầu chạy lại các job fail. **Chưa có bằng chứng install/typecheck/build PASS sau khi sửa.**
+- **Trạng thái:** Đã ghi mã; lỗi CI đang chờ kết quả run tiếp theo; `ISSUE-0017` chưa đóng.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn

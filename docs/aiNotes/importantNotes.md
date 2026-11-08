@@ -143,6 +143,13 @@
 - **Phát hành:** dùng GitHub fork cho mã/issues/update fallback, giữ MIT và tác giả HBAI-Ltd, không gắn nhãn sở hữu độc quyền. `@toonflow/*` là namespace nội bộ hợp lệ, không cần đổi toàn bộ. Không merge PR Draft khi chưa test.
 - **Nguồn:** [báo cáo kiểm kê](../../docs/integrationAudit.md), [hàng chờ dịch](./translationApprovalQueue.md), [commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d1f4598993e7785a2ecfe348977fb94e0e0a9403).
 
+### NOTE-0021 — Kết quả kiểm thử GitHub Actions phải phân loại theo giai đoạn
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Phân biệt:** GitHub `setup-bun` tải thất bại do HTTP 504 **không** tương đương code không compile. Lỗi `bun install --frozen-lockfile` do thêm workspace `chromeRelay` mà chưa cập nhật lockfile đã được xử lý trong commit `63e003c8`, nhưng chỉ gọi là khắc phục khi run mới PASS.
+- **Kiểm thử:** GitHub Actions Linux không thay thế kiểm thử Web macOS Ventura Intel, Electrobun macOS14+ hay Chrome/Render/account AI thật.
+- **Nguồn:** [CI run #1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467297410), [CI run #2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467506307).
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý

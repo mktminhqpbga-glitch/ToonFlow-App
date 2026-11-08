@@ -169,6 +169,15 @@
 - **Thông tin máy người dùng cung cấp:** macOS Ventura 13 Intel, Bun 1.4.3/1.4.4, Web/Server mở được, Desktop crash C++/Bun. Đây là nguồn do người dùng báo, **chưa tái hiện ở môi trường này**.
 - **Điều kiện đóng:** CI PASS, Web Ventura runtime PASS và Desktop được chứng minh trên OS hỗ trợ; không hạ minimum macOS bằng sửa metadata giả.
 
+### ISSUE-0018 — GitHub Actions cài Bun và frozen lockfile chưa qua kiểm tra
+
+- **Ngày:** 2026-11-08 · **Người phát hiện/sửa lockfile gần nhất:** ChatGPT (GPT-6).
+- **Trạng thái:** Mở · **Mức độ:** Cao, chặn typecheck và build.
+- **Bằng chứng:** [run #1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467297410): Bun đã cài, `bun install --frozen-lockfile` trả `lockfile had changes, but lockfile is frozen`; [run #2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467506307): GitHub HTTP 504 tải Bun từ release, các bước sau bị skip.
+- **Đã thử:** đồng bộ `bun.lock` với `apps/chromeRelay/package.json` trong [commit 63e003c8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/63e003c88089fc4ba1e541844d11b15b7a710619); rerun failed workflow #2, không nới `--frozen-lockfile`.
+- **Còn tồn tại:** chưa có CI PASS sau thay đổi, chưa biết có lỗi compiler/typecheck nào phía sau. Không gộp lỗi 504 external với lỗi source code.
+- **Điều kiện đóng:** install frozen PASS, typecheck và build liên quan PASS trên workflow mới và kiểm chứng macOS riêng.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề
