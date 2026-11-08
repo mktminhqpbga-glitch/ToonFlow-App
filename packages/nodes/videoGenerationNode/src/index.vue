@@ -388,7 +388,7 @@ async function startGeneration() {
   const controller = new AbortController();
   const cameraSnapshot = normalizeCameraSettings(data.value.camera);
   const submittedPrompt = input.prompt;
-  const submittedRatio = input.ratio;
+  const submittedRatio = input.ratio ?? data.value.ratio;
   generationController = controller;
   // ACT: 工具立即返回；任务身份先保存，卸载只停止等待，重新打开后复查。
   generation = generationState.run(() => workspace
