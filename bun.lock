@@ -13,6 +13,10 @@
         "typescript": "^7.0.2",
       },
     },
+    "apps/chromeRelay": {
+      "name": "@toonflow/chromeRelay",
+      "version": "0.1.0",
+    },
     "apps/desktop": {
       "name": "@toonflow/desktop",
       "dependencies": {
@@ -1521,6 +1525,8 @@
     "@toonflow/asr": ["@toonflow/asr@workspace:packages/asr"],
 
     "@toonflow/assets": ["@toonflow/assets@workspace:packages/assets"],
+
+    "@toonflow/chromeRelay": ["@toonflow/chromeRelay@workspace:apps/chromeRelay"],
 
     "@toonflow/desktop": ["@toonflow/desktop@workspace:apps/desktop"],
 
