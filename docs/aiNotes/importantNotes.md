@@ -90,6 +90,31 @@
 - **Xác minh:** files trên GitHub và cú pháp JavaScript/JSON extension bằng parser.
 - **Chưa xác minh:** TypeScript/Vue typecheck, desktop build, 3 tab AI thật, bất kỳ media được tạo, lưu/mở project, toàn bộ UI light/dark và provider API cũ. Không được đánh dấu tính năng là hoàn thành khi chỉ mới được commit. Tiếp tục ở `ISSUE-0005`–`ISSUE-0008`.
 
+### NOTE-0013 — Phân tách Local/Remote đúng nguồn và giữ nguyên ba AI
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Kiến trúc:** `manager.ts` chuyển giữa Local Bridge `runtime.ts` trên `127.0.0.1` và Remote Bridge `remote.ts` qua Render; không thay node model/provider và output hiện có. Render chỉ làm Web Service, không chạy Chrome, không tạo ảnh/video. Chrome có thể ở Windows/macOS/Linux; Mac vẫn dùng Electrobun.
+- **Phạm vi:** Muse, Gemini, ChatGPT đã có trong PR #1; không dùng Electron, không có Canvas thứ hai, không sao chép GPL. PR #2 Việt hóa không bị merge/chỉnh sửa.
+- **Nguồn:** [commit Remote](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/0db8ec285034cd8b7779e3e029f1409c31c314d3).
+
+### NOTE-0014 — TLS khác mã hóa E2E, bí mật ghép nối và khóa lâu dài
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Thiết kế:** TLS/WSS dùng kênh mạng ra Render; AES-256-GCM được thực hiện giữa Mac và Chrome trước khi chuyển cipher frame qua Relay. Mã 32 byte ngẫu nhiên nằm trong fragment `#...` của pairing code, **không gửi Relay qua API**; Render chỉ biết pair ID, chủ sở hữu, token hash, tên và metadata. Mac lưu relay owner key/secret trong `settings.json` 0600, Chrome lưu device token+secret trong `chrome.storage.local` chỉ tin cậy của extension.
+- **Quy tắc:** không log prompt/media/password/cookie, không gửi key AES cho Render; phải review an toàn với phiên chạy thật và giới hạn lưu trữ.
+
+### NOTE-0015 — Durability và chính sách không tự gửi prompt lặp
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Thiết kế:** bảng token hash/thiết bị lưu SQLite. Khi `RELAY_DB_PATH` nằm trên đĩa persistent của Render sẽ lưu qua restart; Free ephemeral mất DB, cần ghép lại. Queue frame ở RAM có giới hạn và **không khôi phục sau restart**. `run` có request ID, Chrome lưu ledger trước khi gửi tab, transport chỉ retry khối bị từ chối do backpressure; trạng thái không chắc chắn sau ngắt phải tra tab chứ không tự gửi lại.
+- **Giới hạn:** bảo đảm hoạt động phải kiểm thử WSS/HTTPS thực tế, không gọi đây là đã chạy chỉ do parser/code qua kiểm tra.
+
+### NOTE-0016 — UI bản Remote chờ duyệt Việt hóa và không ảnh hưởng Local
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** thêm panel Render trong Settings Chrome Bridge đang có, dùng Element Plus + token/theme cũ. Không sửa bố cục Canvas, nhãn node, ngôn ngữ gốc. Chuỗi Remote UI chưa có bản dịch `vi` duyệt được ghi thành từng ID ở `remoteUiStringsPending.md`; không tự dịch. Khi nhánh Việt hóa PR #2 cần kết hợp, phải review/resolve riêng, không tự merge.
+- **Nguồn:** [bảng UI chờ duyệt](./remoteUiStringsPending.md), [PR #1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/pull/1), [PR #2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/pull/2).
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý

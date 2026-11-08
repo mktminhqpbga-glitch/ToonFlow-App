@@ -142,9 +142,10 @@ export class RemoteTransport {
     this.completed.set(key, Date.now() + 600000);
     try {
       const iv = encrypted.subarray(0, 12), body = encrypted.subarray(12);
-      const secret = await crypto.subtle.importKey("raw", Buffer.from(this.deviceSecret, "hex"),
+      const secret = await crypto.subtle.importKey("raw", new Uint8Array(Buffer.from(this.deviceSecret, "hex")),
         "AES-GCM", false, ["decrypt"]);
-      const decoded = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, secret, body);
+      const decoded = await crypto.subtle.decrypt({ name: "AES-GCM", iv: new Uint8Array(iv) },
+        secret, new Uint8Array(body));
       this.receive(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decoded)));
     } catch {
       this.lost("Remote encrypted message invalid; no automatic AI retry");
@@ -165,8 +166,9 @@ export class RemoteTransport {
     if (this.stopped || this.state === "offline") throw new Error("Render Relay offline");
     const text = new TextEncoder().encode(JSON.stringify(message));
     if (text.length > maxTransferBytes - 64) throw new Error("Remote AI message too large");
-    const key = await crypto.subtle.importKey("raw", Buffer.from(this.deviceSecret, "hex"), "AES-GCM", false, ["encrypt"]);
-    const iv = randomBytes(12);
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(Buffer.from(this.deviceSecret, "hex")),
+      "AES-GCM", false, ["encrypt"]);
+    const iv = new Uint8Array(randomBytes(12));
     const encrypted = Buffer.concat([iv,
       Buffer.from(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, text))]);
     const sha256 = createHash("sha256").update(encrypted).digest("hex");

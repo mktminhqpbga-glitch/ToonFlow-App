@@ -83,6 +83,20 @@
 - **Bằng chứng:** [lịch sử nhánh](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/chromeBridgeMuseGeminiChatgpt).
 - **Trạng thái:** Đã viết mã, chưa nghiệm thu; ISSUE-0005/0008 vẫn mở.
 
+### DONE-0008 — Thêm mã Render Relay và Remote Chrome Bridge trên nhánh PR riêng
+
+- **Ngày:** 2026-11-08 (UTC+7) · **Người trực tiếp thực hiện:** ChatGPT (GPT-6). Tài khoản dùng để commit không tự động được coi là người viết logic.
+- **Phạm vi:** Chỉ `Muse`, `Gemini`, `ChatGPT` qua Chrome cục bộ hoặc Chrome máy khác/VM. Kế thừa `feat/chromeBridgeMuseGeminiChatgpt`/PR #1; không đụng `main`, không merge PR #1 hay PR #2.
+- **Thêm:** `apps/chromeRelay/server.js`, `package.json`, `dockerfile`, `readme.md`, `render.yaml`, `apps/server/src/utils/chromeBridge/manager.ts`, `remote.ts`, `remoteTransport.ts`, `packages/chromeCompanion/remoteTransport.js`, `docs/aiNotes/remoteUiStringsPending.md`.
+- **Sửa:** `apps/server/src/utils/chromeBridge/router.ts`, `apps/server/src/app.ts`, `apps/server/src/utils/media/generation.ts`, `apps/server/src/utils/conf/index.ts`, `apps/server/package.json`, `apps/web/src/components/settings/panels/chromeBridge/index.vue`, `packages/chromeCompanion/background.js`, `manifest.json`, `popup.html`, `popup.js`.
+- **Đã viết trong mã:** WSS + HTTPS long-poll fallback hai kết nối ra Render; pairing 5 phút, owner phê duyệt, device token riêng và hash SQLite, chọn/đổi tên/thu hồi máy; AES-256-GCM khóa E2E chỉ Mac/Chrome biết; dữ liệu chia khối 12KiB, checksum SHA-256, hàng đợi bounded, backpressure và chống lặp ID; Chrome MV3 reconnect/keepalive; chọn Local/Remote bằng Settings gốc; node và media history dùng chung bridge manager/output gốc.
+- **Giữ nguyên:** Local bridge `apps/server/src/utils/chromeBridge/runtime.ts` sử dụng `127.0.0.1`, Local Mode không phụ thuộc Internet; không thay Canvas, không thêm model/provider hoặc AI mới, không sửa prompt hoặc repository Việt hóa.
+- **Bằng chứng:** [commit mã](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/0db8ec285034cd8b7779e3e029f1409c31c314d3), [nhánh Remote](https://github.com/mktminhqpbga-glitch/ToonFlow-App/tree/feat/remoteChromeBridgeRender), [hướng dẫn Render](../../apps/chromeRelay/readme.md).
+- **Kiểm tra thực hiện:** đọc AGENTS.md và 3 sổ; đối chiếu runtime/extension/nodes trước sửa; kiểm tra cây mã và diff GitHub 20 file thêm/sửa, 0 file cũ xóa; parse cú pháp `server.js`, `background.js`, `remoteTransport.js`, `popup.js` bằng JS parser; parse `manifest.json`; rà soát cấu trúc Vue, cấu hình Render, chữ ký mã hóa/khối, không hardcode Render URL.
+- **Chưa chạy hoặc chưa chứng minh:** Bun typecheck/Vite/Electrobun build; service Render thực; WSS/HTTPS đi giữa hai máy/VM; kết nối account AI thật; dữ liệu media; restart/cancel; UI sáng/tối, lưu/mở project, provider gốc. **Chỉ mã đã commit và kiểm tra tĩnh, chưa đủ nghiệm thu.**
+- **Vấn đề còn mở:** `ISSUE-0005`–`ISSUE-0008` từ PR #1, `ISSUE-0009`–`ISSUE-0012` của Remote.
+- **Trạng thái:** Đã ghi mã vào GitHub trên nhánh riêng; **chưa kiểm thử thực tế**.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn
