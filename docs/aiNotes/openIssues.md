@@ -95,7 +95,43 @@
 - **Mức độ:** Cao trước khi phát hành · **Trạng thái:** Mở.
 - **Đã làm:** chỉ cổng loopback, pairing token ngẫu nhiên, kiểm Origin, tab và hostname trong allowlist, giới hạn lệnh, không đọc cookie/password, không tự retry request đã gửi.
 - **Còn tồn tại:** chưa kiểm thử tấn công local, Chrome MV3, quyền website, lỗi bị đăng xuất, ứng xử giới hạn/CAPTCHA, điều kiện sử dụng dịch vụ; có ô soạn thảo không phải bằng chứng quyền sử dụng API hoặc chức năng tài khoản.
+- **Lịch sử sửa tiếp theo:** 2026-11-08 — ChatGPT (GPT-6) — thêm Render Relay Remote với E2E AES-GCM, thiết bị có token riêng; chưa penetration-test hoặc kiểm thử Chrome thật. [Commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/0db8ec285034cd8b7779e3e029f1409c31c314d3). Không đóng issue gốc.
 - **Cần làm / điều kiện đóng:** security review và chạy thử trường hợp ngắt, đổi tab, reload, tài khoản hết phiên và các giới hạn dịch vụ.
+
+### ISSUE-0009 — Chưa có Render Service thật và chưa thử WSS/HTTPS giữa hai máy
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6) · **Người viết Relay/Client lần cuối:** ChatGPT (GPT-6).
+- **Mức độ:** Cao · **Trạng thái:** Mở — chờ kết nối Render người dùng và môi trường Mac/Chrome VM.
+- **Đã làm:** Render Docker Web Service, `render.yaml`, HTTPS/WSS API, các transport đi ra từ hai phía; [commit mã](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/0db8ec285034cd8b7779e3e029f1409c31c314d3).
+- **Chưa thực hiện:** không có tài khoản/dịch vụ Render được kết nối vào phiên triển khai; không tạo/dùng service hoặc phí từ hệ thống bên ngoài, không có URL thật; không chạy GET `/healthz` hay chứng minh handshake WSS.
+- **Điều kiện đóng:** tạo đúng Render Web Service được người dùng cho phép, xác minh `/healthz`, 2 kết nối WSS, HTTPS fallback với WSS chủ động chặn và log an toàn, không mở cổng nội bộ.
+
+### ISSUE-0010 — Render Free không lưu được SQLite bền vững sau ngủ/redeploy
+
+- **Ngày:** 2026-11-08 · **Người ghi và người sửa thiết kế lần cuối:** ChatGPT (GPT-6).
+- **Mức độ:** Cao nếu muốn thiết bị giữ ghép nối qua restart · **Trạng thái:** Mở — phụ thuộc hạ tầng.
+- **Đã làm:** xác thực thiết bị bằng token hash trong SQLite `RELAY_DB_PATH`, không chỉ lưu danh tính thiết bị trong RAM; tài liệu cảnh báo Render Free.
+- **Còn tồn tại:** Render Free dùng filesystem tạm nên mất SQLite khi ngủ/redeploy, không đáp ứng bền vững. Render có persistent disk cho paid Web Service hoặc cơ sở dữ liệu ngoài, nhưng **chưa được cấp phép tạo dịch vụ trả phí**.
+- **Nguồn kiểm tra:** https://render.com/docs/free .
+- **Điều kiện đóng:** xác nhận phương án lưu bền vững được người dùng chấp thuận, mô phỏng restart/redeploy và kiểm chứng ghép nối giữ nguyên; nếu dùng Free, phải chấp nhận ghép lại.
+
+### ISSUE-0011 — Chưa test chunk media, idempotency, MV3 và độ bền kết nối
+
+- **Ngày:** 2026-11-08 · **Người ghi/viết lần cuối:** ChatGPT (GPT-6).
+- **Mức độ:** Cao · **Trạng thái:** Mở.
+- **Đã viết:** encrypted frame 12KiB + SHA-256, giới hạn RAM Relay, ack per frame, WSS/HTTPS retry khung khi backpressure, không tự phát lại logical `run`, ledger ID của Chrome, Chrome 116+ keepalive 22s và alarm 1 phút.
+- **Chưa chứng minh:** Bun Relay thực tế, nhiều frame hàng chục MB, WSS→HTTPS giữa job, 2 Chrome đồng thời, owner restart, mất frame/ack, VM giới hạn dịch vụ worker, cancel, timeout, gửi nhầm node, ảnh/video cũ.
+- **Ảnh hưởng:** sự cố mạng có thể làm trạng thái yêu cầu không chắc chắn, không có phục hồi file hay tác vụ sau Render restart.
+- **Điều kiện đóng:** test đầy đủ LAN/Internet/VM + video/image/text đúng node, chứng minh checksum và không gửi trùng, kiểm tra media history/lưu mở lại.
+
+### ISSUE-0012 — Chưa typecheck/build, duyệt UI tiếng Việt mới và security review
+
+- **Ngày:** 2026-11-08 · **Người ghi/viết code lần cuối:** ChatGPT (GPT-6).
+- **Mức độ:** Cao trước merge · **Trạng thái:** Mở.
+- **Kiểm tra:** parse JS relay/extension/manifest, rà soát Vue sơ bộ; chưa chạy `bun run typecheck`, build hoặc mở app thật do không có Bun/macOS và môi trường Chrome ảo.
+- **Cần làm:** TypeScript/Vue typecheck, build server/nodes/Desktop, kiểm thử UI light/dark và chi tiết nút; review origin/token/cancel, HTTPS/WSS/CORS/capability; xác minh Render chỉ chuyển ciphertext.
+- **Việt hóa:** chuỗi UI mới bằng tiếng Anh/thuật ngữ kỹ thuật chưa có bản dịch `vi` duyệt; danh sách `docs/aiNotes/remoteUiStringsPending.md`. **Không tự dịch và không thay PR #2**.
+- **Điều kiện đóng:** có log typecheck/build+test, chuỗi Việt được duyệt, kiểm thử bảo mật và runtime thành công.
 
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 

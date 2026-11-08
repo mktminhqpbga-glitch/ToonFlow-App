@@ -9,6 +9,14 @@ h1{font-size:16px;margin:0 0 10px}p{line-height:1.55}input{box-sizing:border-box
 <p>Mở ToonFlow Desktop → Cài đặt → AI Bridge. Sao chép mã ghép nối và dán vào đây. Chỉ chọn tab AI trong ToonFlow sau khi ghép nối.</p>
 <input id="code" type="password" autocomplete="off" spellcheck="false" placeholder="toonflow-bridge://127.0.0.1:...">
 <button id="connect">Ghép nối</button><button id="disconnect">Ngắt</button>
+
+<hr>
+<h2 style="font-size:14px">Remote via Render</h2>
+<p>Pair a remote Chrome device using the one-time code from ToonFlow Desktop.</p>
+<input id="remoteCode" type="password" spellcheck="false" placeholder="toonflow-remote://pair?...">
+<input id="remoteName" style="margin-top:8px" type="text" maxlength="80" placeholder="Device name">
+<button id="remoteConnect">Pair via Render</button><button id="remoteDisconnect">Disconnect Remote</button>
+<div id="remoteStatus" role="status"></div>
 <div id="status" role="status"></div>
 <p><small>Chỉ truy cập Muse, Gemini và ChatGPT. Không thu thập cookie, mật khẩu hoặc token đăng nhập.</small></p>
 <script src="popup.js"></script></body></html>

@@ -120,7 +120,7 @@ export async function createApp({
   // ACT: macOS desktop mới mở Chrome Bridge cục bộ; không lộ endpoint trên web/mobile/server.
   if (getRuntimePlatform().desktop && getRuntimePlatform().os === "darwin") {
     const [{ chromeBridge }, { default: chromeBridgeRouter }] = await Promise.all([
-      import("@/utils/chromeBridge/runtime"), import("@/utils/chromeBridge/router"),
+      import("@/utils/chromeBridge/manager"), import("@/utils/chromeBridge/router"),
     ]);
     chromeBridge.start();
     app.use("/api/desktop/chromeBridge", chromeBridgeRouter);
