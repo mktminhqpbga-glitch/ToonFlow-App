@@ -65,8 +65,8 @@
             :loading="modelsLoading"
             :disabled="generating || deleting"
             :placeholder="vietnamese ? 'Chọn mô hình' : '选择模型'"
-            aria-label="生成模型"
-            noDataText="请先在设置中添加视频模型"
+            :aria-label="vietnamese ? 'Mô hình tạo video' : '生成模型'"
+            :noDataText="vietnamese ? 'Chưa có model phù hợp. Hãy thêm trong Cài đặt.' : '请先在设置中添加视频模型'"
             placement="top-start"
             @update:modelValue="data.model = $event"
             @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, '模型读取失败'))">
@@ -77,8 +77,9 @@
                 v-for="item in provider.models"
                 :key="item.modelId"
                 :label="item.label"
+                :disabled="item.availability === 'needsConfiguration'"
                 :value="getNodeModelKey(item)">
-                <modelLabel :label="item.label" :providerId="item.providerId" :modelId="item.modelId" />
+                <modelLabel :label="item.label" :providerId="item.providerId" :modelId="item.modelId" /><span v-if="item.availability === 'needsConfiguration'" class="modelUnavailable">{{ vietnamese ? ' · Chưa cấu hình' : ' · 未配置' }}</span>
               </el-option>
             </el-option-group>
           </el-select>
@@ -92,14 +93,14 @@
             v-model:camera="data.camera"
             :ratios="ratioOptions"
             :model="selectedModel"
-            :disabled="generating || deleting || !selectedModel" />
+            :disabled="generating || deleting || !modelCanGenerate" />
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'video' }" :supported="selectedModel?.supportsPrice === true" />
             <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" title="放弃任务" aria-label="放弃任务" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
-              :disabled="cancelling || deleting || uploading || (!generating && !pendingRecovery && (!generationPrompt || !selectedModel))"
+              :disabled="cancelling || deleting || uploading || (!generating && !pendingRecovery && (!generationPrompt || !modelCanGenerate))"
               :title="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo video' : '生成视频')"
               :aria-label="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo video' : '生成视频')"
               @click="generating ? generationState.cancel().catch(error => showNodeError(error, '停止生成失败')) : startGeneration().catch((error) => showNodeError(error, '视频生成失败'))" />
@@ -238,6 +239,7 @@ watch([selectedModel, () => data.value.duration], ([choice]) => {
   if (choice.audio !== "optional") data.value.generateAudio = choice.audio === true;
 }, { flush: "sync" });
 const modelGroups = computed(() => groupNodeModels(models.value));
+const modelCanGenerate = computed(() => !!selectedModel.value && selectedModel.value.availability !== "needsConfiguration");
 function getGenerationPrompt(prompt: string, references = refList.value) {
   return [
     prompt.trim(),
@@ -373,6 +375,7 @@ async function startGeneration() {
     generation = generationState.resume().catch(error => showNodeError(error, "视频任务复查失败"));
     return { status: "generating" };
   }
+  if (!modelCanGenerate.value) throw new Error("Model chưa được cấu hình, hãy kiểm tra Cài đặt.");
   const choice = selectedModel.value;
   // ACT: 提交时按稳定 ID 解析，避免依赖编辑器挂载及异步重排同步。
   const references = referenceMentions.value;
