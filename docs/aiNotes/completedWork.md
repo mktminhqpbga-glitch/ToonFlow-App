@@ -153,6 +153,82 @@
 - **Chưa kiểm chứng:** camera UI và lưu/mở node trên Mac thật, hình chiếu FOV qua renderer và animation, 1:1/9:16 output thật, Render, Chrome có tài khoản, mẫu ảnh/video sinh AI, FFmpeg duration, Batch; các mục này là **BLOCKED/NOT TESTED**, không ghi PASS.
 - **Tài liệu nghiệm thu:** [cameraStudioAcceptance.md](./cameraStudioAcceptance.md). **PR #4 vẫn Draft; không merge `main`.**
 
+
+### DONE-0014 — Checkpoint bản độc lập: cài đặt, typography, locale và Extension ZIP
+
+- **Ngày:** 2026-11-08 (UTC+7). **Người trực tiếp thực hiện:** Codex (GPT-6).
+- **Bằng chứng:** [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).
+- **Đã thay đổi:** 1084 URL tarball sang npm HTTPS với version/checksum nguyên; runner typecheck tuần tự; font Be Vietnam Pro/SIL OFL local; mặc định vi nhưng giữ lựa chọn người dùng; nhãn builtin node tại render; cài đặt nâng cao và ẩn tài khoản upstream local; Bridge UI/popup vi, Local capability; ZIP Extension whitelist có checksum lặp lại; Camera prompt vi ở hai node; ba báo cáo checkpoint.
+- **Đã kiểm tra:** frozen install PASS; typecheck đủ 50 workspace với 48 PASS và 2 lỗi SDK desktop/mobile; các typecheck sau sửa ở Web/Server/nodeShared/ImageGeneration/VideoGeneration PASS; build Tools/Ext/Nodes/MCP/Web/Server PASS; Companion/Relay JS syntax PASS; ZIP/HTTP/integrity PASS; Chromium default vi/font/menu/advanced/light-dark/390px/Escape/no-pageerror/language persist PASS; Bun/assert Camera prompt và node label/alias PASS.
+- **Review:** rà input/capability, whitelist ZIP, bảo toàn lockfile, không có credential trong thay đổi, không đổi Node/Provider/Tool ID hoặc prompt người dùng. Lỗi desktop/mobile là prerequisite chưa giải quyết; không báo toàn repo typecheck xanh.
+- **Chưa hoàn tất:** Việt hóa toàn app/prompt; diagnostics Bridge đầy đủ; AI thật/Render/Mac; toolbar/Thư viện vật liệu/Studio nhân vật/Batch. Không merge main, không chuyển PR khỏi Draft.
+- **Vấn đề:** ISSUE-0022 đã khắc phục cài Linux; ISSUE-0023 và ISSUE-0024 mở; các ISSUE-0019..0021 tiếp tục mở.
+- **Trạng thái:** phần thay đổi có kiểm tra như trên; yêu cầu tổng thể PARTIAL.
+
+<details><summary>Danh sách chính xác 50 tệp trong commit</summary>
+
+- `.gitignore`
+- `apps/server/src/utils/chromeBridge/manager.ts`
+- `apps/web/package.json`
+- `apps/web/scripts/packChromeCompanion.ts`
+- `apps/web/src/assets/fonts/beVietnamProLatin400.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatin500.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatin600.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatin700.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatinExt400.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatinExt500.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatinExt600.woff2`
+- `apps/web/src/assets/fonts/beVietnamProLatinExt700.woff2`
+- `apps/web/src/assets/fonts/beVietnamProVietnamese400.woff2`
+- `apps/web/src/assets/fonts/beVietnamProVietnamese500.woff2`
+- `apps/web/src/assets/fonts/beVietnamProVietnamese600.woff2`
+- `apps/web/src/assets/fonts/beVietnamProVietnamese700.woff2`
+- `apps/web/src/assets/fonts/fontLicense.txt`
+- `apps/web/src/assets/fonts/fontSource.md`
+- `apps/web/src/assets/main.scss`
+- `apps/web/src/assets/typography.scss`
+- `apps/web/src/components/agent/index.vue`
+- `apps/web/src/components/settings/index.vue`
+- `apps/web/src/components/settings/panels/chromeBridge/index.vue`
+- `apps/web/src/components/settings/panels/general/nodeMenuSettings.vue`
+- `apps/web/src/components/settings/panels/general/ui.vue`
+- `apps/web/src/lib/defaultLanguage.ts`
+- `apps/web/src/lib/nodeDisplayLabel.ts`
+- `apps/web/src/main.ts`
+- `apps/web/src/pages/hello/index.vue`
+- `apps/web/src/pages/home/index.vue`
+- `apps/web/src/pages/workspace/panels/canvas/components/nodeMenuItems.vue`
+- `apps/web/src/stores/settings.ts`
+- `bun.lock`
+- `docs/aiNotes/e2eAcceptance.md`
+- `docs/aiNotes/implementationStatus.md`
+- `docs/aiNotes/importantNotes.md`
+- `docs/aiNotes/openIssues.md`
+- `docs/aiNotes/overview.md`
+- `docs/aiNotes/remoteUiStringsPending.md`
+- `docs/aiNotes/translationApprovalQueue.md`
+- `docs/aiNotes/vietnameseFullAudit.md`
+- `package.json`
+- `packages/chromeCompanion/popup.html`
+- `packages/chromeCompanion/popup.js`
+- `packages/i18n/src/locales/en.json`
+- `packages/i18n/src/locales/vi.json`
+- `packages/nodeShared/src/cameraStudio.ts`
+- `packages/nodes/imageGenerationNode/src/index.vue`
+- `packages/nodes/videoGenerationNode/src/index.vue`
+- `scripts/typecheckWorkspaces.ts`
+
+</details>
+
+### DONE-0015 — Ghi nhật ký và liên kết bằng chứng checkpoint
+
+- **Ngày/người thực hiện:** 2026-11-08 (UTC+7), Codex (GPT-6).
+- **Phạm vi:** tài liệu `docs/aiNotes/completedWork.md`, `implementationStatus.md`, `vietnameseFullAudit.md`, `e2eAcceptance.md`.
+- **Đã làm:** ghi commit triển khai, tệp thực thay đổi, kết quả thực chạy và phần chưa hoàn tất; giữ lịch sử cũ.
+- **Bằng chứng commit tài liệu:** [lịch sử nhật ký trên nhánh tích hợp](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits/feat/independentToonFlowFullIntegration/docs/aiNotes/completedWork.md).
+- **Kiểm tra:** đối chiếu SHA, danh sách tệp từ git show, kết quả lệnh và git diff --check. Không ghi thêm kết quả AI chưa thực hiện.
+- **Trạng thái:** đã ghi tài liệu; các blocker ứng dụng không thay đổi.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn

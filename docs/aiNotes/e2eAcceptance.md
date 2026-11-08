@@ -48,3 +48,5 @@ ZIP SHA256 sau pack cố định mtime: `2ce4e7c81a7444613acbff0819be872fece850f
 - Đối chiếu CAM-01..12 trong cameraStudioAcceptance và giữ PR #4 Draft đến khi build/regression/AI thật đạt.
 
 Không gửi cookie, pairing code, owner key, API key hoặc prompt riêng tư vào báo cáo công khai.
+
+Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).

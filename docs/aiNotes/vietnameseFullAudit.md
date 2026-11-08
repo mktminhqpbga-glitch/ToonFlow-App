@@ -42,3 +42,5 @@
 2. So sánh cấu trúc JSON/schema/tool name/placeholder trước-sau theo từng template; chạy định dạng phản hồi và tool calling thực tế.
 3. Gate chỉ kiểm chuỗi tự sinh thuộc luồng vi, có allowlist rõ ràng cho tên model/giao thức/nhãn ngôn ngữ; không quét mù rồi sửa nội dung người dùng.
 4. Đã chạy kiểm tra regression cụ thể ở menu và Camera; **chưa có gate tự động toàn ứng dụng**.
+
+Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).

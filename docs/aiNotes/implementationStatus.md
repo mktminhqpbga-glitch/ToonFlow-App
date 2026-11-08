@@ -61,3 +61,5 @@ bun run dev:server:local
 ```
 
 Terminal thứ hai: `bun run dev:web:local`. Mở địa chỉ Vite trên loopback, thường cổng 5173. Extension ZIP được tạo khi dev/build Web; tải trong Cài đặt → AI Bridge · Chrome. Không thay Electrobun hay hạ metadata yêu cầu macOS.
+
+Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).
