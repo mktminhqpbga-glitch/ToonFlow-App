@@ -12,7 +12,7 @@
     :plans="plans" :selectedPlanId="data.selectedPlanId ?? ''" :tasks="tasks"
     :exportingVideo="exportingVideo" :exportingImage="exportingImage" :exportProgress="exportProgress"
     @exportVideo="exportVideo" @exportImage="exportImage" @addMannequin="addMannequin"
-    @selectPlan="data.selectedPlanId = $event" @loadModels="loadModels" @generate="generate" @editInstruction="setPrompt" @close="editing = false">
+    @cameraChange="saveCameraStudio" @selectPlan="data.selectedPlanId = $event" @loadModels="loadModels" @generate="generate" @editInstruction="setPrompt" @close="editing = false">
     <template #input>
       <referenceItem v-if="refList.length" v-model="refList" @preview="setReferencePreview" @remove="removeReference" />
       <promptInput v-model="promptModel" v-model:text="prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" />
@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
+import { normalizeCameraSettings, type CameraSettings } from "@toonflow/node-shared/cameraStudio";
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import { IconCube3dSphere } from "@tabler/icons-vue";
@@ -148,6 +149,29 @@ async function openEditor() {
   if (!disposed && !modelError.value) editing.value = true;
 }
 
+async function saveCameraStudio(camera: CameraSettings, fov?: number) {
+  if (modelLoading.value || modelError.value || disposed) throw new Error("Không thể lưu camera khi scene đang lỗi");
+  const current = modelDocument.value;
+  const nextScene = sceneSchema.parse({
+    ...current.scene,
+    sceneConfig: {
+      ...current.scene.sceneConfig,
+      cameraStudio: normalizeCameraSettings(camera),
+      camera: fov === undefined ? current.scene.sceneConfig.camera
+        : { ...current.scene.sceneConfig.camera, fov },
+    },
+  });
+  const nextDocument: ModelDocument = { ...current, scene: nextScene };
+  const saving = modelSaving.then(async () => {
+    const path = await writeModel(files.getWorkspaceFiles(), nextDocument);
+    if (disposed) return;
+    modelDocument.value = nextDocument;
+    data.value.modelPath = path;
+  });
+  modelSaving = saving.catch(() => {});
+  try { await saving; }
+  catch (error) { if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không lưu được Camera Studio"); }
+}
 async function addMannequin() {
   if (modelLoading.value || modelError.value || addingMannequin.value || exportingVideo.value || exportingImage.value || tasks.value.some(task => !task.error)) return;
   addingMannequin.value = true;

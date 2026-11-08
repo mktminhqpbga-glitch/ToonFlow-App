@@ -46,7 +46,7 @@
           </div>
         </div>
         <div class="playbackBar">
-          <el-popover trigger="click" placement="top-start" :width="180">
+          <el-popover trigger="click" placement="top-start" :width="360">
             <template #reference>
               <el-button :icon="IconSettings" :disabled="!ready" aria-label="场景设置">设置</el-button>
             </template>
@@ -59,6 +59,7 @@
                 <span>天空盒</span>
                 <el-switch :modelValue="sceneSettings.skyVisible" aria-label="显示天空盒" @change="sceneSettings = { ...sceneSettings, skyVisible: $event === true }" />
               </div>
+              <cameraStudioPanel :modelValue="scene.sceneConfig.cameraStudio" :disabled="!ready || playing" @update:modelValue="applyStudio" />
               <el-button :icon="IconUserPlus" :loading="addingMannequin" :disabled="!ready || addingMannequin || exportingVideo || !!exportingImage || tasks.some(task => !task.error)" @click="emit('addMannequin')">添加人偶</el-button>
             </div>
           </el-popover>
@@ -173,6 +174,8 @@ import { PointerLockControls } from "three/examples/jsm/controls/PointerLockCont
 import type { SceneRuntime } from "threejson/core";
 import type { NodeAiModel } from "@toonflow/nodes-scaffold/runtime";
 import { applyLighting, applySceneSettings, captureCamera, createStage, disposeStage, type LightingSettings, type SceneDocument, type SceneSettings } from "./scene";
+import cameraStudioPanel from "@toonflow/node-shared/cameraStudioPanel";
+import { normalizeCameraSettings, type CameraSettings } from "@toonflow/node-shared/cameraStudio";
 import { anchorSchema, applyCamera, prepareMotion, sampleMotion, type CameraAnchor } from "./motion";
 import { prepareSceneAnimation, type DirectorPlan, type DirectorPlanItem, type DirectorGeneration } from "./sceneAnimation";
 
@@ -189,7 +192,7 @@ const props = defineProps<{
   exportingImage: string;
   exportProgress?: number;
 }>();
-const emit = defineEmits<{ editInstruction: [value: string]; selectPlan: [id: string]; generate: []; loadModels: []; close: []; addMannequin: []; exportVideo: [aspect: number]; exportImage: [anchor: CameraAnchor, aspect: number, time: number] }>();
+const emit = defineEmits<{ cameraChange: [camera: CameraSettings, fov?: number]; editInstruction: [value: string]; selectPlan: [id: string]; generate: []; loadModels: []; close: []; addMannequin: []; exportVideo: [aspect: number]; exportImage: [anchor: CameraAnchor, aspect: number, time: number] }>();
 const anchors = defineModel<CameraAnchor[]>("anchors", { default: () => [] });
 const lighting = defineModel<LightingSettings>("lighting", { required: true });
 const sceneSettings = defineModel<SceneSettings>("sceneSettings", { required: true });
@@ -369,6 +372,24 @@ function handleKeyUp(event: KeyboardEvent) {
     event.preventDefault();
     pressedKeys.delete(event.code);
   }
+}
+function applyStudio(value: CameraSettings | undefined) {
+  if (!runtime || !ready.value) return void ElMessage.warning("Chờ camera 3D sẵn sàng trước khi áp dụng preset");
+  pausePlayback();
+  exitControl();
+  const next = normalizeCameraSettings(value);
+  const previous = props.scene.sceneConfig.cameraStudio;
+  // Three.js PerspectiveCamera already implements focal length and FOV; no second renderer.
+  if (next.enabled && (!previous?.enabled || previous.focalLength !== next.focalLength)) {
+    manualCamera.value = true;
+    runtime.camera.setFocalLength(next.focalLength);
+    runtime.camera.updateProjectionMatrix();
+    focalLength.value = runtime.camera.getFocalLength();
+    activeAnchorId.value = "";
+  }
+  emit("cameraChange", next, next.enabled ? runtime.camera.fov : undefined);
+  // Aperture is saved as prompt metadata only: the scene renderer has no verified DOF pass.
+  runtime.invalidate();
 }
 function changeFocalLength(event: WheelEvent) {
   if (!runtime || !event.deltaY) return;
