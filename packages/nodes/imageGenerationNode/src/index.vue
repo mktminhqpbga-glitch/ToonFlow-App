@@ -72,7 +72,7 @@
             :disabled="generating || deleting"
             :placeholder="vietnamese ? 'Chọn mô hình' : '选择模型'"
             :aria-label="vietnamese ? 'Mô hình tạo nội dung' : '生成模型'"
-            noDataText="请先在设置中添加图片模型"
+            :noDataText="vietnamese ? 'Chưa có model phù hợp. Hãy thêm trong Cài đặt.' : '请先在设置中添加图片模型'"
             placement="top-start"
             @update:modelValue="data.model = $event"
             @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, '模型读取失败'))">
@@ -83,8 +83,9 @@
                 v-for="item in provider.models"
                 :key="item.modelId"
                 :label="item.label"
+                :disabled="item.availability === 'needsConfiguration'"
                 :value="getNodeModelKey(item)">
-                <modelLabel :label="item.label" :providerId="item.providerId" :modelId="item.modelId" />
+                <modelLabel :label="item.label" :providerId="item.providerId" :modelId="item.modelId" /><span v-if="item.availability === 'needsConfiguration'" class="modelUnavailable">{{ vietnamese ? ' · Chưa cấu hình' : ' · 未配置' }}</span>
               </el-option>
             </el-option-group>
           </el-select>
@@ -97,7 +98,7 @@
             :model="selectedModel"
             :sizes="sizeOptions"
             :ratios="ratioOptions"
-            :disabled="generating || deleting || !selectedModel" />
+            :disabled="generating || deleting || !modelCanGenerate" />
           <el-button v-if="editor?.mode === 'inpaint'" class="confirmButton" type="primary" :icon="IconCheck" :loading="editor.busy" :disabled="deleting || uploading || !generationPrompt" @click="confirmInpaint().catch(error => showNodeError(error, '重绘节点创建失败'))">确认</el-button>
           <div v-else class="generationActions">
             <mediaPrice v-if="priceInput" :input="{ ...priceInput, mediaType: 'image' }" :supported="selectedModel?.supportsPrice === true" />
@@ -105,7 +106,7 @@
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
-              :disabled="cancelling || deleting || uploading || (!generating && (editor?.busy || (!pendingRecovery && (!generationPrompt || !selectedModel))))"
+              :disabled="cancelling || deleting || uploading || (!generating && (editor?.busy || (!pendingRecovery && (!generationPrompt || !modelCanGenerate))))"
               :title="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo ảnh' : '生成图片')"
               :aria-label="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo ảnh' : '生成图片')"
               @click="generating ? generationState.cancel().catch(error => showNodeError(error, '停止生成失败')) : startGeneration().catch((error) => showNodeError(error, '图片生成失败'))" />
@@ -222,6 +223,7 @@ watch(generating, value => { if (!value && !disposed && !deleting.value && !mode
 const selectedModel = useNodeModelSelection(models, computed({ get: () => data.value.model, set: value => { data.value.model = value; } }));
 const { sizeOptions, ratioOptions } = useImageModelForm(data, selectedModel);
 const modelGroups = computed(() => groupNodeModels(models.value));
+const modelCanGenerate = computed(() => !!selectedModel.value && selectedModel.value.availability !== "needsConfiguration");
 const generationPrompt = computed(() =>
   [
     (editor.value?.mode === "inpaint" ? data.value.inpaintPrompt : data.value.prompt).trim(),
@@ -363,6 +365,7 @@ async function startGeneration() {
     generation = generationState.resume().catch(error => showNodeError(error, "图片任务复查失败"));
     return { status: "generating" };
   }
+  if (!modelCanGenerate.value) throw new Error("Model chưa được cấu hình, hãy kiểm tra Cài đặt.");
   const input = generationInput.value;
   if (!generationPrompt.value) throw new Error("请输入生成提示词");
   const references = refList.value.filter(item => !data.value.inpaint || item.dataType !== "IMAGE" || item.value?.url !== data.value.inpaint.source);
