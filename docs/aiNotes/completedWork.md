@@ -301,3 +301,15 @@
 - **Kiểm tra:** kiểm tra lại nội dung source qua GitHub, không chạy runtime, typecheck hoặc Mac trong phiên này; CI commit mới đang cần kiểm tra.
 - **Vấn đề:** ISSUE-0027 mở; tính năng tạo ảnh/video thật không được tuyên bố DONE.
 - **Trạng thái:** Đã ghi vào repo / NOT TESTED runtime.
+
+
+### DONE-0020 — HD-01: khóa model media thiếu cấu hình (triển khai từng phần)
+
+- **Ngày:** 2026-11-09 (UTC+7) · **Người trực tiếp thực hiện:** ChatGPT (GPT-6).
+- **Nguồn yêu cầu:** quyết định HD-01 của chủ dự án: hiện tất cả model, model chưa kết nối bị khóa. Không làm chéo HD-02 đến HD-05.
+- **Tệp mã sửa:** `apps/server/src/utils/media/generation.ts`, `packages/nodeScaffold/src/nodeAi.ts`, `packages/nodes/imageGenerationNode/src/index.vue`, `packages/nodes/videoGenerationNode/src/index.vue`.
+- **Đã làm:** thêm trạng thái cấu hình không chứa secret, giữ model có cấu hình là `configured` (không tự ghi `ready`), hiển thị model thiếu API key ở dropdown nhưng disabled, bảo vệ submit và chọn mặc định hợp lệ.
+- **Commit:** [backend](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/c051788523eb2e5973676bc798870b5e2061b2d3), [type](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/fec3e8e95b785cdeb47cacd36e3e84c9298ba682), [image](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/4253903b1ca60710bae2d4edbb3fa6284e791b76), [video](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/5fab792b84458e82a8c90cd2a657ac6407349bd7), [default image](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6f174cc7ce38df74043b3f2a96de15685d097f74), [default video](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/333261f324ad0dc7a32217155f147b73548efd0f).
+- **Đã kiểm tra:** đối chiếu source, xác minh CI run 42511358311 hoàn tất success trên commit `333261f`. Chưa xác minh CI cho tất cả commit tài liệu sau đó.
+- **Chưa kiểm tra:** UI trực tiếp và AI/provider thật. Model chưa cài không có trong catalog, provider chỉ có key chưa xác minh mạng/quota. Ghi rõ trong [bảng nghiệm thu](./hdAcceptance.md).
+- **Trạng thái:** Đã commit code, PARTIAL, chưa nghiệm thu end-to-end; issue vẫn mở.
