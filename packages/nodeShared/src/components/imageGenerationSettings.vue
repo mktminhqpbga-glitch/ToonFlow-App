@@ -3,7 +3,7 @@
     <template #reference>
       <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" aria-label="图片生成设置">
         <span class="ratioShape" :style="ratioStyle(ratio)" aria-hidden="true" />
-        <span>{{ ratio }} · {{ size }} · 1张</span>
+        <span>{{ ratio }} · {{ size }} · 1张{{ camera?.enabled ? " · Camera" : "" }}</span>
         <component :is="settingsVisible ? IconChevronDown : IconChevronUp" :size="14" aria-hidden="true" />
       </el-button>
     </template>
@@ -29,22 +29,27 @@
         </el-button>
       </div>
       <modelForm v-model="other" :rules="model?.rules" :disabled="disabled" />
+      <cameraStudioPanel v-model="camera" :disabled="disabled" />
+      <el-text v-if="model?.providerId === 'chromeBridge'" type="warning" size="small">Tỷ lệ Chrome là yêu cầu trong prompt, không được bảo đảm. Kiểm tra kích thước ảnh sau khi tạo.</el-text>
     </div>
   </el-popover>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { ElButton, ElPopover, ElRadioGroup, ElRadioButton } from "element-plus";
+import { ElButton, ElPopover, ElRadioGroup, ElRadioButton, ElText } from "element-plus";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-vue";
 import type { NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import modelForm from "./modelForm.vue";
+import cameraStudioPanel from "./cameraStudio.vue";
+import type { CameraSettings } from "../cameraStudio";
 
 defineProps<{ sizes: string[]; ratios: string[]; model?: NodeMediaModel; disabled?: boolean }>();
 const settingsVisible = ref(false);
 const size = defineModel<string>("size", { required: true });
 const ratio = defineModel<string>("ratio", { required: true });
 const other = defineModel<Record<string, unknown>>("other", { required: true });
+const camera = defineModel<CameraSettings | undefined>("camera");
 
 function ratioStyle(value: string) {
   const [width = 1, height = 1] = value.split(":").map(Number);

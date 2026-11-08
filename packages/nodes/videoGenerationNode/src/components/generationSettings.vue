@@ -3,7 +3,7 @@
     <template #reference>
       <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" aria-label="视频生成设置">
         <span class="ratioShape" :style="ratioStyle(ratio)" aria-hidden="true" />
-        <span>{{ [ratio, resolution, duration ? `${duration}秒` : ''].filter(Boolean).join(' · ') }}</span>
+        <span>{{ [ratio, resolution, duration ? `${duration}秒` : '', camera?.enabled ? "Camera" : ""].filter(Boolean).join(' · ') }}</span>
         <component :is="settingsVisible ? IconChevronDown : IconChevronUp" :size="14" aria-hidden="true" />
       </el-button>
     </template>
@@ -40,16 +40,20 @@
         <el-switch v-model="generateAudio" :disabled="disabled" aria-label="生成音频" />
       </div>
       <modelForm v-model="other" :rules="model?.rules" :disabled="disabled" />
+      <cameraStudioPanel v-model="camera" :disabled="disabled" />
+      <el-text v-if="model?.providerId === 'chromeBridge'" type="warning" size="small">Tỷ lệ video qua Chrome chỉ là yêu cầu trong prompt, không bảo đảm đúng tuyệt đối.</el-text>
     </div>
   </el-popover>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElButton, ElPopover, ElSelect, ElOption, ElSwitch } from "element-plus";
+import { ElButton, ElPopover, ElSelect, ElOption, ElSwitch, ElText } from "element-plus";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-vue";
 import type { NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import modelForm from "@toonflow/node-shared/modelForm";
+import cameraStudioPanel from "@toonflow/node-shared/cameraStudioPanel";
+import type { CameraSettings } from "@toonflow/node-shared/cameraStudio";
 
 const props = defineProps<{ model?: NodeMediaModel; disabled?: boolean; ratios: string[] }>();
 const settingsVisible = ref(false);
@@ -59,6 +63,7 @@ const ratio = defineModel<string>("ratio", { required: true });
 const mode = defineModel<string>("mode", { required: true });
 const generateAudio = defineModel<boolean>("generateAudio", { required: true });
 const other = defineModel<Record<string, unknown>>("other", { required: true });
+const camera = defineModel<CameraSettings | undefined>("camera");
 const modeLabels: Record<string, string> = {
   text: "文生视频", singleImage: "单图参考", startEndRequired: "首尾帧必填", endFrameOptional: "尾帧可选", startFrameOptional: "首帧可选",
 };
