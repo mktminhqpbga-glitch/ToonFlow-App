@@ -84,6 +84,7 @@
             v-model:size="data.size"
             v-model:ratio="data.ratio"
             v-model:other="data.other"
+            v-model:camera="data.camera"
             :model="selectedModel"
             :sizes="sizeOptions"
             :ratios="ratioOptions"
@@ -140,6 +141,7 @@ import imageLighting from "@toonflow/node-image/imageLighting";
 import imagePanorama from "@toonflow/node-image/imagePanorama";
 import imageMultiAngle from "@toonflow/node-image/imageMultiAngle";
 import imageGenerationSettings from "@toonflow/node-shared/imageGenerationSettings";
+import { appendCameraInstructions, normalizeCameraSettings, type CameraSettings } from "@toonflow/node-shared/cameraStudio";
 
 defineOptions({
   inheritAttrs: false,
@@ -164,7 +166,7 @@ watch(vietnamese, () => {
   if (imageHandle) imageHandle.label = nodeText("图片输出", "Ảnh đầu ra");
 }, { flush: "sync" });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; inpaint?: ImageInpaint });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; camera?: CameraSettings; cameraHistory?: Record<string, { camera: CameraSettings; ratio: string; submittedPrompt: string; savedAt: string; nodeId: string }>; inpaint?: ImageInpaint });
 data.value.prompt ??= "";
 data.value.promptModel ??= [];
 data.value.inpaintPrompt ??= "";
@@ -227,7 +229,7 @@ const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined
   const references = refList.value.filter(item => !inpaint || item.dataType !== "IMAGE" || item.value?.url !== inpaint.source);
   const input = {
     ...getNodeModelIdentity(choice),
-    prompt: generationPrompt.value,
+    prompt: inpaint ? generationPrompt.value : appendCameraInstructions(generationPrompt.value, data.value.camera),
     size: data.value.size,
     ratio: data.value.ratio,
     other: Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
@@ -359,6 +361,9 @@ async function startGeneration() {
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   const inpaintData = data.value.inpaint;
+  const cameraSnapshot = normalizeCameraSettings(data.value.camera);
+  const submittedPrompt = input.prompt;
+  const submittedRatio = input.ratio;
   generationController = controller;
   // ACT: 工具立即返回；任务身份先保存，卸载只停止等待，重新打开后复查。
   generation = generationState.run(() => workspace.list()
@@ -372,6 +377,9 @@ async function startGeneration() {
       controller.signal.throwIfAborted();
       if (!result) throw new Error("供应商未返回图片");
       outputs.value.image = { dataType: "IMAGE", value: { url: result.path, mimeType: result.mimeType } };
+      (data.value.cameraHistory ??= {})[result.path] = {
+        camera: cameraSnapshot, ratio: submittedRatio, submittedPrompt, savedAt: new Date().toISOString(), nodeId: id,
+      };
     }))
     .catch((error) => showNodeError(error, "图片生成失败"))
     .finally(() => {

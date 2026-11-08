@@ -84,6 +84,7 @@
             v-model:mode="data.mode"
             v-model:generateAudio="data.generateAudio"
             v-model:other="data.other"
+            v-model:camera="data.camera"
             :ratios="ratioOptions"
             :model="selectedModel"
             :disabled="generating || deleting || !selectedModel" />
@@ -126,6 +127,7 @@ import referenceItem from "@toonflow/node-shared/referenceItem";
 import mediaHistory from "@toonflow/node-shared/mediaHistory";
 import mediaPrice from "@toonflow/node-shared/mediaPrice";
 import generationSettings from "./components/generationSettings.vue";
+import { appendCameraInstructions, normalizeCameraSettings, type CameraSettings } from "@toonflow/node-shared/cameraStudio";
 
 defineOptions({
   inheritAttrs: false,
@@ -150,7 +152,7 @@ watch(vietnamese, () => {
   if (videoHandle) videoHandle.label = nodeText("视频输出", "Video đầu ra");
 }, { flush: "sync" });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean; other: Record<string, unknown> });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean; other: Record<string, unknown>; camera?: CameraSettings; cameraHistory?: Record<string, { camera: CameraSettings; ratio: string; submittedPrompt: string; savedAt: string; nodeId: string }> });
 data.value.prompt ??= "";
 data.value.promptModel ??= [];
 data.value.model ??= "";
@@ -268,7 +270,7 @@ function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory">
   const lastFrame = frameMode.value ? images[selectedMode.value === "startFrameOptional" && images.length === 1 ? 0 : 1] : undefined;
   return {
     ...getNodeModelIdentity(choice),
-    prompt: getGenerationPrompt(prompt, references),
+    prompt: appendCameraInstructions(getGenerationPrompt(prompt, references), data.value.camera),
     mode: selectedMode.value,
     duration: data.value.duration,
     resolution: data.value.resolution || undefined,
@@ -384,6 +386,9 @@ async function startGeneration() {
   if (choice.mode?.length && !matchingModes.value.length) throw new Error("当前模型没有适合这些参考素材的生成模式，请更换模型或调整引用");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
+  const cameraSnapshot = normalizeCameraSettings(data.value.camera);
+  const submittedPrompt = input.prompt;
+  const submittedRatio = input.ratio;
   generationController = controller;
   // ACT: 工具立即返回；任务身份先保存，卸载只停止等待，重新打开后复查。
   generation = generationState.run(() => workspace
@@ -396,6 +401,9 @@ async function startGeneration() {
       controller.signal.throwIfAborted();
       if (!result) throw new Error("供应商未返回视频");
       outputs.value.video = { dataType: "VIDEO", value: { url: result.path, mimeType: result.mimeType } };
+      (data.value.cameraHistory ??= {})[result.path] = {
+        camera: cameraSnapshot, ratio: submittedRatio, submittedPrompt, savedAt: new Date().toISOString(), nodeId: node.id,
+      };
     }))
     .catch((error) => showNodeError(error, "视频生成失败"))
     .finally(() => {
