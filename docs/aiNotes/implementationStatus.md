@@ -77,3 +77,11 @@ Phần code đã kiểm tra bằng Chromium có DOM kiểm soát, worker/API gi�
 - **Bằng chứng:** [6d02a4e](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6d02a4e3c82100f8ec407b5256b5bd70047628f2), [d3f94a8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d3f94a817f7054be62069e8954e77d236cedcf3f), [3f1cc0a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/3f1cc0a4661a1282228a9ebed766b0ee0b0ee529).
 - **NOT TESTED:** Bun typecheck/build, mở UI và chuyển ngôn ngữ trực tiếp trên Mac. Đây là thay đổi nhãn, không phải bằng chứng hoàn thành kéo media vào caret, lọc model kết nối hoặc Batch.
 - **Chưa sửa:** Batch Image/Video, Studio nhân vật, model readiness và drag/drop at caret tiếp tục PARTIAL/NOT STARTED theo mã thực tế; không tự coi là DONE.
+
+
+## Checkpoint 2026-11-09 — cài đặt tạo ảnh/video (ChatGPT GPT-6)
+
+- **PARTIAL (đã sửa code):** Hai bảng `imageGenerationSettings.vue` và `videoGenerationNode/src/components/generationSettings.vue` hiển thị nhãn tiếng Việt khi locale vi; giữ nhãn Trung cho locale khác. Các tham số ratio, size, resolution, duration, mode ID, audio và camera không đổi.
+- **Bằng chứng code:** [2302f60](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/2302f600c7ab30f2afbfb814a119725f8c6eb706) và [bccd1bd](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/bccd1bd10af5955160300adb5ab9ec332ce1bbd1).
+- **NOT TESTED:** chưa chạy typecheck/build hoặc kiểm thử ảnh/video thực ở phiên này; GitHub Actions của commit trước đạt success, không tự suy ra commit mới pass.
+- **Việc cần mô tả sản phẩm:** xem quyết định cần chủ dự án xác nhận ở `docs/aiNotes/ownerDecisions.md`; không dựng backend Batch/Studio giả.
