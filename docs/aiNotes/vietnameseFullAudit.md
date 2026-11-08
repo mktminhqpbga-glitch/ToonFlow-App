@@ -44,3 +44,11 @@
 4. Đã chạy kiểm tra regression cụ thể ở menu và Camera; **chưa có gate tự động toàn ứng dụng**.
 
 Bằng chứng triển khai checkpoint: [commit 412912a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/412912a62888209a040128c522ef085f6a7953dc).
+
+
+## Checkpoint 2026-11-09 — prompt editor và reference picker
+
+- ChatGPT (GPT-6) đã commit nhãn tiếng Việt có điều kiện cho tiêu đề mở rộng prompt, hộp soạn prompt, aria-label, placeholder, lỗi chọn reference và menu chọn tài nguyên (search, các nhóm ảnh/video/âm thanh/văn bản, thư viện chung).
+- Dùng cơ chế locale hiện có tại `packages/nodeShared/src/nodeLanguage.ts`; không dịch tên tài nguyên do người dùng nhập, model ID, JSON, khóa tham chiếu hoặc protocol. Nhãn nhóm dùng `computed` để theo thay đổi locale.
+- **Trạng thái PARTIAL / NOT TESTED:** chưa chạy Vue typecheck, chưa xác nhận trực quan đổi ngôn ngữ, chưa kiểm mọi chuỗi trong editor. Không đánh dấu 100%.
+- Commit code: [6d02a4e](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/6d02a4e3c82100f8ec407b5256b5bd70047628f2) · [d3f94a8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/d3f94a817f7054be62069e8954e77d236cedcf3f) · [3f1cc0a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/3f1cc0a4661a1282228a9ebed766b0ee0b0ee529).
