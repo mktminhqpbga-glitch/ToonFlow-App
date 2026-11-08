@@ -98,8 +98,10 @@ let timer: ReturnType<typeof setInterval> | undefined;
 function selected(provider: Provider) { return status.value.selected[provider]; }
 function currentState(provider: Provider) {
   if (!status.value.connected) return "disconnected";
+  if (busy.value === provider) return "connecting";
+  if (!selected(provider)) return "idle";
   const job = status.value.jobs.find(item => item.provider === provider);
-  return job?.state || (selected(provider) ? "ready" : "idle");
+  return job?.state || "ready";
 }
 async function api<T>(path: string, body?: object): Promise<T> {
   const response = await fetch("/api/desktop/chromeBridge/" + path, {

@@ -37,6 +37,8 @@ class ChromeBridgeRuntime {
   private selections = new Map<BridgeProvider, BridgeSelection>();
   private calls = new Map<string, Call>();
   private jobs = new Map<string, Job>();
+  // ACT: chỉ lưu metadata ngắn của các lần hoàn tất, không lưu prompt, ảnh, video hoặc thông tin đăng nhập.
+  private recentJobs: { id: string; provider: BridgeProvider; nodeId?: string; tabId: number; state: BridgeState }[] = [];
 
   get enabled() { const platform = getRuntimePlatform(); return platform.desktop && platform.os === "darwin"; }
   get connected() { return !!this.socket && this.socket.data.authenticated; }
@@ -124,7 +126,10 @@ class ChromeBridgeRuntime {
       enabled: this.enabled, connected: this.connected,
       pairingCode: this.enabled && this.server && !this.connected ? "toonflow-bridge://127.0.0.1:" + this.server.port + "/" + this.token : null,
       selected: Object.fromEntries([...this.selections].map(([id, selection]) => [id, selection])),
-      jobs: [...this.jobs.values()].map(job => ({ id: job.id, provider: job.provider, state: job.state, tabId: job.tabId, nodeId: job.nodeId })),
+      jobs: [
+        ...[...this.jobs.values()].map(job => ({ id: job.id, provider: job.provider, state: job.state, tabId: job.tabId, nodeId: job.nodeId })),
+        ...this.recentJobs,
+      ],
     };
   }
 
@@ -156,6 +161,7 @@ class ChromeBridgeRuntime {
     const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(capability => result.capabilities?.includes(capability));
     if (!capabilities.length) throw new Error("Tab không có chức năng đã được xác minh");
     this.selections.set(provider, { tab: found, capabilities });
+    this.recentJobs = this.recentJobs.filter(job => job.provider !== provider);
     return this.status();
   }
 
@@ -163,6 +169,7 @@ class ChromeBridgeRuntime {
     if (!allowedHosts[provider]) throw new Error("Nhà cung cấp không hợp lệ");
     if ([...this.jobs.values()].some(job => job.provider === provider)) throw new Error("Có tác vụ đang chạy; hãy hủy trước khi ngắt");
     this.selections.delete(provider);
+    this.recentJobs = this.recentJobs.filter(job => job.provider !== provider);
     return this.status();
   }
 
@@ -216,6 +223,11 @@ class ChromeBridgeRuntime {
   private finishJob(job: Job, failure?: Error, result?: BridgeResult) {
     if (this.jobs.get(job.id) !== job) return;
     this.jobs.delete(job.id); clearTimeout(job.timer); job.abort?.();
+    const state: BridgeState = failure
+      ? failure.name === "AbortError" ? "cancelled" : /ngắt kết nối|bị ngắt|disconnected/i.test(failure.message) ? "disconnected" : "failed"
+      : "completed";
+    this.recentJobs.unshift({ id: job.id, provider: job.provider, tabId: job.tabId, nodeId: job.nodeId, state });
+    if (this.recentJobs.length > 20) this.recentJobs.length = 20;
     if (failure) job.reject(failure);
     else if (result) job.resolve(result);
   }

@@ -70,7 +70,7 @@
 
 - **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
 - **Quy tắc:** mỗi request có UUID, provider/tab, nodeId; media còn có canvas/workspace gốc do `useNodeGeneration` quản lý. File media lưu bằng `writeWorkspaceFile` pipeline hiện có, không đưa base64 vào JSON Canvas; output cũ không mất khi tải file lỗi. Sau khi đã gửi mà mất kết nối/timeout: **không tự gửi lại**. Reopen media job bị gián đoạn phải yêu cầu người dùng xác minh tab.
-- **Giới hạn:** MV3 worker/job in-memory chưa chứng minh khả năng khôi phục sau restart; cần test thật.
+- **Giới hạn:** MV3 worker/job in-memory chưa chứng minh khả năng khôi phục sau restart; cần test thật. Bộ trạng thái gần nhất trong memory chỉ lưu ID, provider, tab, node ID và trạng thái, tối đa 20 mục; đóng app sẽ xóa.
 
 ### NOTE-0010 — Giữ giao diện, chủ đề và tài khoản
 
