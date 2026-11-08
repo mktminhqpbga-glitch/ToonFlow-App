@@ -158,6 +158,20 @@
 - **Quyết định kỹ thuật:** lỗi `FileNotFound` khi Bun `--filter` workspace camelCase được tránh bằng build từng thư mục, tương tự script `apps/server/scripts/buildStandalone.ts`. Script mới chỉ sửa generated build outputs, không thay đổi tool logic.
 - **Cần xác minh lại:** mọi lần thay script/build dependency, và khi kiểm thử Mac/Render thật.
 
+### NOTE-0023 — Camera Studio mặc định là chỉ dẫn AI; DOF 3D chưa hỗ trợ
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quy tắc:** `buildCameraInstructions` trả chuỗi trống khi disabled; không sửa `node.data.prompt`. Phong cách Sony/ARRI/RED/Blackmagic, lens, aperture là hướng dẫn visual, không mô phỏng máy vật lý. Preset dùng chung lưu trên localStorage của **chính browser**, không tự đồng bộ cloud hoặc các thiết bị. Snapshot sau khi asset lưu nằm trong `node.data.cameraHistory` theo đường dẫn file.
+- **Director 3D:** chỉ focalLength gọi `PerspectiveCamera.setFocalLength` và ghi FOV theo camera gốc; aperture không bật hiệu ứng chiều sâu renderer. Scene document thêm metadata tùy chọn và không gửi vào `threejson`. Runtime 3D và lưu scene chưa được nghiệm thu.
+- **Nguồn:** [Camera Studio source](../../packages/nodeShared/src/cameraStudio.ts), [3D editor](../../packages/nodes/director3dNode/src/sceneEditor.vue), [run CI](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42493990963).
+
+### NOTE-0024 — Tỷ lệ Chrome phải phân biệt ý định prompt với điều khiển native
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
+- **Quyết định:** Chrome imageRatios gồm năm tỷ lệ **mong muốn** sau kiểm tra type adapter, được gửi trong prompt, không điều khiển trực tiếp tỉ lệ nếu UI website không chứng minh được. Ảnh trả về phải kiểm kích thước sau khi tải thành file và mở preview; ratioMatched có dung sai 2.5%, không bảo đảm tuyệt đối. Video cần source `<video>`, MIME media hợp lệ, kích thước/positive duration, không nhận poster đơn thuần.
+- **An toàn:** Extension probe lại mode/tab và khóa `expectedUrl` bằng exact URL trước khi submit, không tự retry job không xác nhận. Kiểm chứng này là **code + CI**, chưa phải bằng chứng Chrome account thật.
+- **Nguồn:** `apps/server/src/utils/chromeBridge/ratio.ts`, `packages/chromeCompanion/{background.js,content.js}`; [bảng nghiệm thu](./cameraStudioAcceptance.md).
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý

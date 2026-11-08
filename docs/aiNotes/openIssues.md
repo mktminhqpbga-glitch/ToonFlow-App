@@ -181,6 +181,27 @@
 - **Cập nhật 2026-11-08 — ChatGPT (GPT-6):** nhờ [commit e02e4833](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/e02e4833a190626ecb649123a5b2cfa5db50b86d) và [GitHub Actions run #42481958013](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013), Bun/frozen lockfile/typecheck 7 workspace/build Tools-Ext-Nodes-MCP-Web-Server đều **PASS** (Linux CI); lỗi `FileNotFound` đã hết trong quy trình này. Các lỗi tải Bun 504 trước đây là lỗi hạ tầng. **Phần CI đã xác minh/đóng; thử nghiệm trên macOS không thuộc kết quả này và tiếp tục được theo dõi ở ISSUE-0017.**
 
 
+### ISSUE-0019 — Camera Studio cần nghiệm thu GUI và độ bền dữ liệu trên Mac Ventura
+
+- **Ngày:** 2026-11-08 · **Người phát hiện/sửa gần nhất:** ChatGPT (GPT-6). **Trạng thái:** MỞ, runtime chưa kiểm chứng. **Ưu tiên:** Cao.
+- **Đã làm:** shared Camera Studio, presets lưu browser localStorage, node.data.camera, node.data.cameraHistory theo path asset; Director3D sceneConfig.cameraStudio + PerspectiveCamera focal length; giữ prompt nguyên và chỉ thêm chỉ dẫn khi enabled.
+- **Chưa kiểm chứng:** bật/tắt nhanh, save/reopen Canvas, đổi nhiều preset liên tiếp, Scene 3D camera position/FOV/aspect/animation, mất quyền localStorage/ghi model.json, export lại asset. Đổi trường `sceneConfig.cameraStudio` phải không ảnh hưởng agent 3D cũ.
+- **Điều kiện đóng:** log GUI trên Mac Intel Ventura và scene 3D, ảnh/video thực; preset được đọc sau reload và ảnh kết quả hiển thị snapshot đúng.
+
+### ISSUE-0020 — Chrome aspect ratio chỉ là prompt intention; chưa có adapter chọn tỷ lệ native
+
+- **Ngày:** 2026-11-08 · **Người phát hiện/sửa gần nhất:** ChatGPT (GPT-6). **Trạng thái:** MỞ, chưa thể gọi tỷ lệ thật được xác minh. **Ưu tiên:** Cao.
+- **Đã làm:** tách `ratio.ts` với tập tỷ lệ prompt-only; gửi chỉ dẫn tỷ lệ và size vào AI request, UI thông báo không bảo đảm; extension từ chối tab/mode không sẵn sàng, URL cuộc trò chuyện đổi; readMedia trả kích thước thật và thời lượng từ phần tử media. Node ảnh ghi nhận ratioMatched khi tải ảnh đã lưu.
+- **Chưa kiểm chứng:** DOM của Muse/Gemini/ChatGPT đã đăng nhập thật, khả năng chọn tỷ lệ trực tiếp từng provider, ảnh JPEG/PNG/WebP thực với mọi tỷ lệ, tải WebM/MP4 và ffprobe, các trường hợp blob lỗi, ảnh thumbnail và 2 Chrome.
+- **Điều kiện đóng:** có nguồn capability đáng tin từ provider/tab, chạy thật và so tỷ lệ output bằng file đã tải. **Không tuyên bố chọn tỷ lệ native đã hoạt động.**
+
+### ISSUE-0021 — Batch camera snapshots chưa có Batch Engine được kiểm thử
+
+- **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6). **Trạng thái:** MỞ, chưa triển khai Batch Camera UI/Engine. **Ưu tiên:** Sau Bridge real.
+- **Đã làm:** `CameraSettings`, `normalizeCameraSettings`, `appendCameraInstructions` và lưu snapshot per output trong hai node để tái sử dụng ở engine hiện hữu.
+- **Còn tồn tại:** chưa chứng minh engine Batch Image/Video chạy được trong ToonFlow; không tạo UI giả hoặc copy MooZ Relay; cần hợp đồng Job/Scene/Task/Node/Asset và checkpoint đúng provider trước khi thêm Batch.
+- **Điều kiện đóng:** Batch Engine thật, queue/chrome idempotency và sản phẩm ảnh/video nhiều lượt được kiểm thử trên Chrome thật.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề

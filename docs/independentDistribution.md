@@ -72,3 +72,11 @@ Relay dùng WSS hai kết nối đi ra, HTTPS long-polling dự phòng. Render k
 ## Nếu gặp lỗi
 
 Sao chép log Terminal *đã che key* và tạo issue trên https://github.com/mktminhqpbga-glitch/ToonFlow-App/issues. Báo rõ: Mac Ventura 13 Intel, Bun version, lệnh typecheck/build, trạng thái Render/Chrome và bước nào chưa qua. Không gửi token pairing, `RELAY_OWNER_KEY`, cookie hay prompt riêng tư vào issue công khai.
+
+## Camera Studio (mã đã tích hợp; chưa kiểm thử runtime)
+
+Tại Image Generation Node và Video Generation Node → bảng thiết lập cạnh Model/Ratio → **Camera Studio**. Bật công tắc để thêm *chỉ dẫn* phong cách thân máy/ống kính/tiêu cự/khẩu độ vào **prompt gửi**. Khi tắt không thêm camera guidance. Có thể nhập tên và **Lưu preset** để dùng chung giữa các node **trên trình duyệt hiện tại**; preset không tự đồng bộ sang Chrome VM hoặc Render. Sau khi file đã được lưu thành công, node lưu và hiện snapshot camera áp dụng cho file đó.
+
+Director 3D dùng PerspectiveCamera hiện có để áp dụng tiêu cự, lưu preset như metadata trong `model.json` của scene. Khẩu độ **chưa** phải hiệu ứng DOF GPU; việc tương thích animation/aspect phải kiểm thử GUI.
+
+Các tỷ lệ 1:1, 16:9, 9:16, 4:3, 3:4 trên Chrome Bridge hiện chỉ là **yêu cầu trong prompt**; không có bằng chứng AI tab cho phép điều khiển native chính xác. Kích thước ảnh đã tải được so với tỷ lệ mong muốn và hiển thị trong node. Xem [bảng nghiệm thu Camera Studio](./aiNotes/cameraStudioAcceptance.md). **Không merge PR #4** cho đến khi CI, Canvas và tác vụ AI thật đạt yêu cầu.
