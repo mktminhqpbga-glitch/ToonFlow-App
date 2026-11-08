@@ -1,7 +1,7 @@
 <template>
-  <el-dialog v-model="visible" title="设置" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody>
+  <el-dialog v-model="visible" :title="translate('设置')" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody>
     <div class="settings">
-      <aside class="sidebar" aria-label="设置分类">
+      <aside class="sidebar" :aria-label="translate('设置分类')">
         <template v-for="item in settingsPanels" :key="item.id">
           <h3 v-if="item.groupLabel" class="settingsGroupLabel">{{ item.groupLabel }}</h3>
           <button
@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { translate } from "@toonflow/i18n/vue";
-import { computed, defineAsyncComponent, shallowRef, watch } from "vue";
+import { computed, defineAsyncComponent, onMounted, ref, shallowRef, watch } from "vue";
 import userAccount from "@toonflow/multi-tenant-user-web/account";
 import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 import { multiTenantEnabled } from "@/stores/settings";
@@ -99,13 +99,29 @@ const allSettingsPanels = [
   { id: "about", label: "关于", icon: IconInfoCircle, component: defineAsyncComponent(() => import("./panels/about/index.vue")) },
 ];
 const publicAccountPanel = { ...allSettingsPanels[0]!, get label() { return translate("账号"); } };
+const localWebBridgeAvailable = ref(false);
+onMounted(async () => {
+  if (actualPlatform.isLocalDesktop || !actualPlatform.isMac || publicWeb.value) return;
+  try {
+    const response = await fetch("/api/desktop/chromeBridge/status", {
+      cache: "no-store", headers: { "x-toonflow-desktop": "1", "x-toonflow-workspace": "1" },
+    });
+    if (response.ok) {
+      const body = await response.json();
+      localWebBridgeAvailable.value = body?.code === 200 && body?.data?.enabled === true;
+    }
+  } catch { /* Unavailable public or non-loopback Web server: keep remote controls hidden. */ }
+});
 const settingsPanels = computed(() => allSettingsPanels.filter(item => {
-  if (item.id === "chromeBridge" && !(actualPlatform.isLocalDesktop && actualPlatform.isMac)) return false;
+  if (item.id === "chromeBridge" && !(actualPlatform.isLocalDesktop && actualPlatform.isMac
+      || localWebBridgeAvailable.value && actualPlatform.isMac && !publicWeb.value)) return false;
+  // The upstream commercial plugin marketplace is not part of the independent local distribution.
+  if (item.id === "pluginMarket" && !publicWeb.value) return false;
   if (publicWeb.value && currentUser.value?.role === "user") return ["account", "general", "about"].includes(item.id);
   if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket"].includes(item.id)) return false;
   return !multiTenantEnabled.value || !["languageModel", "mediaModel", "developer"].includes(item.id);
 }).map(item => publicWeb.value && item.id === "account" ? publicAccountPanel : item));
-const activePanel = shallowRef(settingsPanels.value[0]!);
+const activePanel = shallowRef(settingsPanels.value.find(item => item.id === "general") ?? settingsPanels.value[0]!);
 const visible = defineModel<boolean>({ default: false });
 
 watch(settingsPanels, panels => {

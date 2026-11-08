@@ -1,12 +1,14 @@
 import conf from "@/utils/conf";
+import { isLocalWebBridgeEnabled } from "./access";
 import { chromeBridge as localBridge, type BridgeCapability, type BridgeProvider } from "./runtime";
 import { remoteBridge } from "./remote";
 
 // The original local loopback transport is retained unchanged and never depends on Render.
 class BridgeManager {
-  private mode: "local" | "remote" = conf.get("chromeBridgeMode", "local") === "remote" ? "remote" : "local";
+  private mode: "local" | "remote" = isLocalWebBridgeEnabled() || conf.get("chromeBridgeMode", "local") === "remote"
+    ? "remote" : "local";
   get currentMode() { return this.mode; }
-  get enabled() { return localBridge.enabled; }
+  get enabled() { return localBridge.enabled || isLocalWebBridgeEnabled(); }
   get connected() { return this.mode === "local" ? localBridge.connected : remoteBridge.connected; }
   start() {
     localBridge.start();
@@ -25,6 +27,8 @@ class BridgeManager {
     return this.status();
   }
   setMode(mode: "local" | "remote") {
+    if (isLocalWebBridgeEnabled() && mode !== "remote")
+      throw new Error("Local Web requires Remote Chrome via Render, not direct Chrome control");
     if (mode !== this.mode) {
       const current = this.status();
       if (current.jobs.some(job => job.state === "submitting" || job.state === "running"))

@@ -1,0 +1,42 @@
+name: ToonFlow independent integration validation
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/chromeBridgeMuseGeminiChatgpt
+      - feat/remoteChromeBridgeRender
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrationCheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - name: Install exact lockfile
+        run: bun install --frozen-lockfile
+      - name: Validate Chrome companion and Relay syntax
+        run: |
+          node --check packages/chromeCompanion/background.js
+          node --check packages/chromeCompanion/remoteTransport.js
+          node --check packages/chromeCompanion/content.js
+          node --check apps/chromeRelay/server.js
+          node -e "JSON.parse(require('node:fs').readFileSync('packages/chromeCompanion/manifest.json', 'utf8'))"
+      - name: Typecheck workspace
+        run: bun run typecheck
+      - name: Build node and tool plugins
+        run: |
+          bun run build:tools
+          bun run build:ext
+          bun run build:nodes
+      - name: Build Web and Server
+        run: |
+          bun run build
+          bun run build:mcp
+          bun run build:server

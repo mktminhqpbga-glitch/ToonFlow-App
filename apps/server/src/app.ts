@@ -12,6 +12,7 @@ import { getRuntimePlatform } from "@/lib/platform";
 import initializePlugins from "@/utils/plugins/initialize";
 import { languageRequest, setLocaleFallback, translateError, translateMessage } from "@/lib/i18n";
 import { detectLocale, normalizeLocale } from "@toonflow/i18n";
+import { isLocalWebBridgeEnabled } from "@/utils/chromeBridge/access";
 
 const autoInstallProviders = ["apiMart.ts", "metaso.ts", "compshare.ts"];
 
@@ -118,7 +119,7 @@ export async function createApp({
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
   app.use("/api/desktop", desktopRequest);
   // ACT: macOS desktop mới mở Chrome Bridge cục bộ; không lộ endpoint trên web/mobile/server.
-  if (getRuntimePlatform().desktop && getRuntimePlatform().os === "darwin") {
+  if ((getRuntimePlatform().desktop && getRuntimePlatform().os === "darwin") || isLocalWebBridgeEnabled()) {
     const [{ chromeBridge }, { default: chromeBridgeRouter }] = await Promise.all([
       import("@/utils/chromeBridge/manager"), import("@/utils/chromeBridge/router"),
     ]);
