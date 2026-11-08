@@ -38,6 +38,7 @@ jobs:
           bun run --cwd packages/nodes/textNode typecheck
           bun run --cwd packages/nodes/imageGenerationNode typecheck
           bun run --cwd packages/nodes/videoGenerationNode typecheck
+          bun run --cwd packages/nodes/director3dNode typecheck
       - name: Build Tools
         run: bun run build:tools
       - name: Build Extensions

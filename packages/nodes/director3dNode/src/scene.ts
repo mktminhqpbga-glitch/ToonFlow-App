@@ -13,7 +13,7 @@ export const sceneSchema = z.strictObject({
   version: z.literal("next"),
   sceneConfig: z.strictObject({
     scene: z.strictObject({ background: color }),
-    camera: z.strictObject({ position: vector, fov: z.number().min(10).max(120), near: z.number().min(0.01).max(10), far: z.number().min(20).max(10000) }),
+    camera: z.strictObject({ position: vector, fov: z.number().min(5).max(120), near: z.number().min(0.01).max(10), far: z.number().min(20).max(10000) }),
     // Metadata travels with the existing scene document; aperture is guidance only.
     cameraStudio: z.strictObject({
       enabled: z.boolean(),
