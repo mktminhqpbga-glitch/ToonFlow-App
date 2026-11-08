@@ -31,7 +31,7 @@ Canvas Vue Flow, node Text/Image/Video/Audio/3D/Frame Analysis, workspace read/w
 | Render Web Service | B/C | `render.yaml` + Docker + BYO Render secrets | Chưa deploy; Free SQLite không bền vững |
 | User-managed Muse/Gemini/ChatGPT tabs | C | Extension ghép nối, không dùng API key hoặc cookie | Website DOM/capability chưa kiểm thử |
 | Source, issues, README, releases/update fallback | B | Đổi các điểm nhận diện GitHub fork, giữ tác giả MIT | Release CI/DMG/updater thật chưa nghiệm thu |
-| `.github_temp/workflows` | B | Không di chuyển mù quáng; thêm workflow kiểm tra mới dưới `.github/workflows` | CI thực tế và release workflows cũ chưa kiểm chứng |
+| `.github_temp/workflows` | B | Không di chuyển mù quáng; thêm workflow kiểm tra mới dưới `.github/workflows` | [CI tích hợp Linux đã PASS](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013); release workflows cũ chưa kiểm chứng |
 | Electrobun runtime Desktop macOS 14+ | D | Không giả lập Ventura Desktop; hỗ trợ Web cục bộ cho Ventura | Crash C++ trên máy Ventura do người dùng báo, chưa tái hiện tại đây |
 | UI/Node Việt hóa | A | Hợp nhất 127 ID V1 và 10 tên node/menu đã duyệt; nối Home/Settings với `vi.json` | Chuỗi còn thiếu ghi hàng chờ duyệt, chưa scan hết |
 | Marketplace và thanh toán upstream | C | Không mount marketplace trong Settings cục bộ, chặn `channelRequest` | Backend/module vẫn tồn tại dạng legacy opt-in |
@@ -47,7 +47,7 @@ Canvas Vue Flow, node Text/Image/Video/Audio/3D/Frame Analysis, workspace read/w
 | Web Ventura 13 Intel mở Home, không đăng nhập | NOT TESTED | Chưa chạy trên Mac |
 | Banner không mount, route không gọi upstream | PASS (phân tích mã) | UI Home và route |
 | Canvas/Node/3D/audio/video hoạt động hồi quy | NOT TESTED | Chưa chạy GUI |
-| Typecheck Bun và build Web/Server/Nodes/MCP | NOT TESTED | Chờ GitHub Actions |
+| Typecheck Bun và build Web/Server/Nodes/MCP | PASS (CI Linux) | [run #42481958013](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013), typecheck 7 workspace + build Tools/Ext/Nodes/MCP/Web/Server; **chưa test runtime** |
 | Render `/healthz` và WSS hai phía | NOT TESTED | Chưa có URL dịch vụ thật |
 | HTTPS fallback khi WSS bị chặn | NOT TESTED | Chưa có Chrome VM |
 | Chrome 2 thiết bị, tab đúng, tránh tác vụ trùng | NOT TESTED | Chưa có tài khoản/tab thực |

@@ -1,6 +1,6 @@
 # ToonFlow-App độc lập — Web trên macOS Ventura 13 Intel
 
-**Trạng thái (2026-11-08):** đã có mã tích hợp, nhưng chưa build/test runtime hoặc chạy Render thật. Đây là hướng dẫn cho nhánh `feat/independentToonFlowFullIntegration`, **không phải xác nhận đã nghiệm thu**.
+**Trạng thái (2026-11-08):** mã tích hợp đã [build PASS trên GitHub Actions Linux](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013), nhưng **chưa test runtime trên Mac Ventura hoặc chạy Render thật**. Đây là hướng dẫn cho nhánh `feat/independentToonFlowFullIntegration`, **không phải xác nhận đã nghiệm thu**.
 
 ## Nguyên tắc hệ thống
 

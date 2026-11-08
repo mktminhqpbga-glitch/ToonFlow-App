@@ -150,6 +150,14 @@
 - **Kiểm thử:** GitHub Actions Linux không thay thế kiểm thử Web macOS Ventura Intel, Electrobun macOS14+ hay Chrome/Render/account AI thật.
 - **Nguồn:** [CI run #1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467297410), [CI run #2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467506307).
 
+### NOTE-0022 — CI Linux đã đạt, không đồng nghĩa kết nối AI hoặc macOS đã nghiệm thu
+
+- **Ngày:** 2026-11-08 (UTC+7) · **Người ghi:** ChatGPT (GPT-6).
+- **Thực tế xác minh:** PR #4 có [CI PASS run #42481958013](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013) tại [commit e02e4833](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/e02e4833a190626ecb649123a5b2cfa5db50b86d), với Bun frozen install, cú pháp Companion/Relay, typecheck 7 workspace và build từng nhóm Tools/Ext/Nodes/MCP/Web/Server.
+- **Ranh giới:** build Linux và typecheck không kiểm chứng ứng dụng Web thực chạy trên macOS 13 Intel, lưu Canvas/Nodes/media, Render Relay WSS/HTTPS, Muse/ChatGPT/Gemini login/account/adapter, hay DMG. **Không chuyển PR #4 khỏi Draft và không merge main** trước khi các bài thử end-to-end đạt.
+- **Quyết định kỹ thuật:** lỗi `FileNotFound` khi Bun `--filter` workspace camelCase được tránh bằng build từng thư mục, tương tự script `apps/server/scripts/buildStandalone.ts`. Script mới chỉ sửa generated build outputs, không thay đổi tool logic.
+- **Cần xác minh lại:** mọi lần thay script/build dependency, và khi kiểm thử Mac/Render thật.
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý

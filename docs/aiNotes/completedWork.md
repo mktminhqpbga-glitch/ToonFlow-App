@@ -128,6 +128,18 @@
 - **CI đã chạy:** [lần 1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467297410) **FAIL** `bun install --frozen-lockfile` (lockfile sai workspace); [lần 2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467506307) **FAIL trước cài đặt** vì GitHub download Bun 1.4.3 trả 504; đã yêu cầu chạy lại các job fail. **Chưa có bằng chứng install/typecheck/build PASS sau khi sửa.**
 - **Trạng thái:** Đã ghi mã; lỗi CI đang chờ kết quả run tiếp theo; `ISSUE-0017` chưa đóng.
 
+### DONE-0012 — Sửa FileNotFound trong build:tools và xác minh toàn bộ CI tích hợp
+
+- **Ngày:** 2026-11-08 (UTC+7). **Người trực tiếp sửa và kiểm tra:** ChatGPT (GPT-6).
+- **Nguồn yêu cầu:** tiếp tục nhánh `feat/independentToonFlowFullIntegration` từ SHA `894efc53`, không đụng các tính năng đã commit, giữ PR #4 Draft.
+- **Nguyên nhân xác nhận qua mã và CI:** root `build:tools` gọi `bun run --filter './packages/tools/*' build` và lỗi `FileNotFound` khi chạy Bun 1.4.3 trên GitHub Actions Linux. Cách tránh `--filter` đã được ghi trong `apps/server/scripts/buildStandalone.ts`; không liên quan đến code logic riêng của 11 tool.
+- **Các tệp đã thay đổi:** `package.json`, `apps/server/scripts/buildPackageGroup.ts` (script build group mới), `.github/workflows/integrationCheck.yml`. Script build theo thư mục từng workspace, giống phương pháp có sẵn, giữ `NODE_ENV=production`; chỉ dọn thư mục đầu ra build được sinh ra, **không xóa mã nguồn**. CI chia các nhóm Tools/Extensions/Nodes/MCP/Web/Server thành từng bước.
+- **Bằng chứng mã:** [commit e02e4833](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/e02e4833a190626ecb649123a5b2cfa5db50b86d); **bằng chứng chạy CI thật:** [GitHub Actions run #42481958013](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013), `head_sha=e02e4833a190626ecb649123a5b2cfa5db50b86d`, **conclusion=success**.
+- **PASS:** Bun 1.4.3 từ npm; `bun install --frozen-lockfile`; syntax Chrome Companion/Relay; typecheck 7 workspace (Server, Web, nodeShared, nodeScaffold, textNode, imageGenerationNode, videoGenerationNode); Build Tools (11 gói), Extensions (5), Nodes (9), MCP, Web, Server.
+- **Chưa kiểm thử:** chạy GUI/Web/macOS Ventura 13 Intel thực tế, runtime server + proxy, lưu/mở Canvas và lịch sử media, Muse/ChatGPT/Gemini đăng nhập thật qua Render WSS/HTTPS fallback, thiết bị thứ hai, bảo mật mạng, macOS DMG/installer. CI Linux không đại diện cho các thử nghiệm này.
+- **Vấn đề còn tồn tại:** `ISSUE-0014`, `ISSUE-0015`, `ISSUE-0016`, `ISSUE-0017`; PR #4 vẫn Draft, không merge `main`.
+- **Trạng thái:** Đã commit, **đã xác minh CI Linux PASS**; **chưa nghiệm thu toàn ứng dụng**.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn

@@ -168,15 +168,18 @@
 - **Chưa thực hiện:** không có Bun/dependencies/macOS trong môi trường trực tiếp nên không chạy lệnh; chưa đọc log CI thực tế; chưa có DMG, chưa chạy Desktop macOS14+ hoặc Ventura.
 - **Thông tin máy người dùng cung cấp:** macOS Ventura 13 Intel, Bun 1.4.3/1.4.4, Web/Server mở được, Desktop crash C++/Bun. Đây là nguồn do người dùng báo, **chưa tái hiện ở môi trường này**.
 - **Điều kiện đóng:** CI PASS, Web Ventura runtime PASS và Desktop được chứng minh trên OS hỗ trợ; không hạ minimum macOS bằng sửa metadata giả.
+- **Cập nhật kiểm thử 2026-11-08 — ChatGPT (GPT-6):** [commit e02e4833](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/e02e4833a190626ecb649123a5b2cfa5db50b86d) dùng build từng thư mục để tránh Bun `--filter`; [CI run #42481958013](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013) PASS toàn bộ nhóm Tools, Ext, Nodes, MCP, Web và Server cùng typecheck đã chọn. Đây là **xác minh build trên Linux**, không phải test runtime Ventura/Desktop. Vẫn **MỞ** cho đến khi nghiệm thu Mac Ventura và bản Desktop hợp lệ, không có DMG mới được xác nhận.
 
-### ISSUE-0018 — GitHub Actions cài Bun và frozen lockfile chưa qua kiểm tra
+### ISSUE-0018 — GitHub Actions cài Bun và frozen lockfile (CI Linux đã xác minh)
 
 - **Ngày:** 2026-11-08 · **Người phát hiện/sửa lockfile gần nhất:** ChatGPT (GPT-6).
-- **Trạng thái:** Mở · **Mức độ:** Cao, chặn typecheck và build.
+- **Trạng thái:** Đã xác minh và đóng phạm vi CI Linux ngày 2026-11-08 · **Mức độ trước sửa:** Cao, chặn typecheck và build.
 - **Bằng chứng:** [run #1](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467297410): Bun đã cài, `bun install --frozen-lockfile` trả `lockfile had changes, but lockfile is frozen`; [run #2](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42467506307): GitHub HTTP 504 tải Bun từ release, các bước sau bị skip.
 - **Đã thử:** đồng bộ `bun.lock` với `apps/chromeRelay/package.json` trong [commit 63e003c8](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/63e003c88089fc4ba1e541844d11b15b7a710619); rerun failed workflow #2, không nới `--frozen-lockfile`.
 - **Còn tồn tại:** chưa có CI PASS sau thay đổi, chưa biết có lỗi compiler/typecheck nào phía sau. Không gộp lỗi 504 external với lỗi source code.
-- **Điều kiện đóng:** install frozen PASS, typecheck và build liên quan PASS trên workflow mới và kiểm chứng macOS riêng.
+- **Điều kiện đóng:** install frozen PASS, typecheck và build liên quan PASS trên workflow mới; kiểm chứng macOS là việc độc lập còn mở trong ISSUE-0017.
+- **Cập nhật 2026-11-08 — ChatGPT (GPT-6):** nhờ [commit e02e4833](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/e02e4833a190626ecb649123a5b2cfa5db50b86d) và [GitHub Actions run #42481958013](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42481958013), Bun/frozen lockfile/typecheck 7 workspace/build Tools-Ext-Nodes-MCP-Web-Server đều **PASS** (Linux CI); lỗi `FileNotFound` đã hết trong quy trình này. Các lỗi tải Bun 504 trước đây là lỗi hạ tầng. **Phần CI đã xác minh/đóng; thử nghiệm trên macOS không thuộc kết quả này và tiếp tục được theo dõi ở ISSUE-0017.**
+
 
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
