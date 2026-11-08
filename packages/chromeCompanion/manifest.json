@@ -9,6 +9,7 @@
   ],
   "host_permissions": [
     "https://muse.ai/*",
+    "https://*.muse.ai/*",
     "https://gemini.google.com/*",
     "https://chatgpt.com/*",
     "https://www.chatgpt.com/*",
@@ -26,6 +27,7 @@
     {
       "matches": [
         "https://muse.ai/*",
+        "https://*.muse.ai/*",
         "https://gemini.google.com/*",
         "https://chatgpt.com/*",
         "https://www.chatgpt.com/*",

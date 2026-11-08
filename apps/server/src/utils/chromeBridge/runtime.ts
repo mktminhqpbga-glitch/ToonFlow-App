@@ -23,6 +23,8 @@ export function providerForUrl(value: string): BridgeProvider | undefined {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || url.port) return;
+    // Muse sử dụng cả subdomain riêng; chỉ nới trong miền muse.ai.
+    if (url.hostname === "muse.ai" || url.hostname.endsWith(".muse.ai")) return "muse";
     return (Object.entries(allowedHosts) as [BridgeProvider, string[]][]).find(([, hosts]) =>
       hosts.includes(url.hostname))?.[0];
   } catch { return; }

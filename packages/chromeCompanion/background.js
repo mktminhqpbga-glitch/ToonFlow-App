@@ -12,6 +12,7 @@ function providerFor(url) {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" || parsed.port || parsed.username || parsed.password) return null;
+    if (parsed.hostname === "muse.ai" || parsed.hostname.endsWith(".muse.ai")) return "muse";
     return Object.keys(serviceHosts).find(name => serviceHosts[name].has(parsed.hostname)) || null;
   } catch { return null; }
 }

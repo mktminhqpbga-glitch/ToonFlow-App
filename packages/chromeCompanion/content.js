@@ -4,7 +4,7 @@
   if (window.__toonflowChromeCompanion) return;
   window.__toonflowChromeCompanion = true;
   const jobs = new Map();
-  const provider = location.hostname === "muse.ai" ? "muse"
+  const provider = (location.hostname === "muse.ai" || location.hostname.endsWith(".muse.ai")) ? "muse"
     : location.hostname === "gemini.google.com" ? "gemini"
     : ["chatgpt.com", "www.chatgpt.com", "chat.openai.com"].includes(location.hostname) ? "chatgpt" : null;
   if (!provider) return;
@@ -50,7 +50,7 @@
       ? ['button[data-testid="send-button"]', 'button[aria-label="Send prompt"]', 'button[aria-label="Send message"]']
       : provider === "gemini"
         ? ['button[aria-label="Send message"]', 'button[aria-label="Send"]', "button.send-button", "button[mattooltip*=Send]"]
-        : ['button[aria-label="Send"]', 'button[aria-label="Generate"]', "button[type=submit]"];
+        : ['button[data-testid="hatch-composer-send-button"]', 'button[aria-label="Send"]', 'button[aria-label="Generate"]', "button[type=submit]"];
     return find(selectors);
   }
   function modeButton(kind) {
@@ -100,7 +100,7 @@
     void chrome.runtime.sendMessage({ command: "job", id, provider, state, ...(result ? { result } : {}), ...(error ? { error } : {}) }).catch(() => {});
   }
   function busy() {
-    return !!find(['button[data-testid="stop-button"]', 'button[aria-label="Stop generating"]',
+    return !!find(['button[data-testid="hatch-composer-stop-button"]', 'button[data-testid="stop-button"]', 'button[aria-label="Stop generating"]',
       'button[aria-label="Stop response"]', '[aria-busy=true]', '.result-streaming']);
   }
   async function readMedia(element, kind, signal) {

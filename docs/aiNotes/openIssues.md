@@ -69,6 +69,7 @@
 - **Mức độ:** Cao · **Trạng thái:** Mở · **Người nghiệm thu:** Chưa chỉ định.
 - **Đã thử sửa:** viết extension chỉ nhận tab đã chọn, kiểm composer/mode, đối chiếu câu hỏi mới và kết quả phía sau, không dùng ảnh lịch sử. [Commit mã](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/df9ab12fc93c385660a2f850507566f3a4e63a8d).
 - **Còn tồn tại:** giao diện web có thể đổi DOM; Muse có thể không lộ nút ảnh/video; Gemini/ChatGPT image chưa chứng minh; CORS/download media chưa kiểm chứng; chưa có lần tạo văn bản/ảnh/video thành công thật.
+- **Lịch sử sửa:** 2026-11-08 — ChatGPT (GPT-6) — bổ sung allowlist `*.muse.ai` và nút gửi/dừng Muse dựa trên manifest tham khảo; **chưa được thực nghiệm**, không đóng issue.
 - **Cần làm / điều kiện đóng:** chạy extension trên Chrome có đăng nhập hợp lệ; thử lần lượt từng loại chức năng; chứng minh kết quả mới đúng node và đúng tệp; ghi màn hình/log không chứa thông tin nhạy cảm.
 
 ### ISSUE-0006 — Chưa typecheck/build và kiểm thử ToonFlow Desktop macOS

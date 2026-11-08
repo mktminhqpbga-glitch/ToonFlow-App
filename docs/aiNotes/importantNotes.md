@@ -81,7 +81,7 @@
 ### NOTE-0011 — Bảo mật và phạm vi macOS
 
 - **Ngày:** 2026-11-08 · **Người ghi:** ChatGPT (GPT-6).
-- **Quy tắc:** chỉ bật Bridge khi host desktop macOS, không mở listener ở server/Web/Android/Windows/Linux. WebSocket chỉ `127.0.0.1`; Origin extension + mã ghép nối ngẫu nhiên; chỉ domain Muse/Gemini/ChatGPT; không thu cookie, token, mật khẩu hoặc dữ liệu đăng nhập; không ghi token pairing vào log/repo.
+- **Quy tắc:** chỉ bật Bridge khi host desktop macOS, không mở listener ở server/Web/Android/Windows/Linux. WebSocket chỉ `127.0.0.1`; Origin extension + mã ghép nối ngẫu nhiên; chỉ domain Muse (gồm `*.muse.ai`), Gemini và ChatGPT; không thu cookie, token, mật khẩu hoặc dữ liệu đăng nhập; không ghi token pairing vào log/repo.
 - **Giới hạn:** cần kiểm toán bảo mật và điều khoản sử dụng khi phát hành.
 
 ### NOTE-0012 — Chưa có nghiệm thu thực tế
