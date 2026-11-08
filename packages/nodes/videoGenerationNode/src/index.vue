@@ -15,12 +15,12 @@
       <el-button :icon="IconScissors" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('trim')">截取片段</el-button>
       <el-button :icon="IconMovie" text :loading="actions?.creatingAnalysis" :disabled="!outputFile || generating || deleting || uploading || actions?.processing || actions?.creatingAnalysis" @click.stop="actions?.createFrameAnalysis()">逐帧拉片</el-button>
       <mediaHistory mediaType="video" :current="outputFile" :disabled="generating || deleting || uploading" @select="outputs.video = { dataType: 'VIDEO', value: $event }" />
-      <el-button :icon="IconTransfer" :loading="uploading" :disabled="generating || deleting" text title="替换视频" aria-label="替换视频" @click.stop="fileInput?.click()">替换视频</el-button>
+      <el-button :icon="IconTransfer" :loading="uploading" :disabled="generating || deleting" text :title="vietnamese ? 'Thay video' : '替换视频'" :aria-label="vietnamese ? 'Thay video' : '替换视频'" @click.stop="fileInput?.click()">{{ vietnamese ? 'Thay video' : '替换视频' }}</el-button>
       <input ref="fileInput" type="file" accept="video/*" hidden aria-label="选择替换视频" :disabled="generating || deleting || uploading" @change="replaceOutput" />
     </template>
     <template #topRightActions>
       <el-dropdown trigger="click" placement="bottom-end" :disabled="!player?.ready || player?.capturing || generating || deleting || uploading" @command="player?.captureFrame($event)">
-        <el-button :icon="IconPhotoScan" :loading="player?.capturing" :disabled="!player?.ready || player?.capturing || generating || deleting || uploading" text title="截取视频帧" aria-label="截取视频帧" />
+        <el-button :icon="IconPhotoScan" :loading="player?.capturing" :disabled="!player?.ready || player?.capturing || generating || deleting || uploading" text :title="vietnamese ? 'Trích xuất khung hình' : '截取视频帧'" :aria-label="vietnamese ? 'Trích xuất khung hình' : '截取视频帧'" />
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="current" :icon="IconPhotoScan">截取当前帧</el-dropdown-item>
@@ -35,9 +35,9 @@
         v-if="previewUrl"
         ref="player"
         :src="previewUrl"
-        label="生成视频"
+        :label="vietnamese ? 'Tạo video' : '生成视频'"
         @loadedmetadata="resizeVideo" />
-      <div v-else class="videoEmpty" role="img" aria-label="暂无生成视频">
+      <div v-else class="videoEmpty" role="img" :aria-label="vietnamese ? 'Chưa có video được tạo' : '暂无生成视频'">
         <icon-camera-ai :size="48" stroke="1.25" aria-hidden="true" />
       </div>
     </div>
@@ -59,7 +59,7 @@
             filterable
             :loading="modelsLoading"
             :disabled="generating || deleting"
-            placeholder="选择模型"
+            :placeholder="vietnamese ? 'Chọn mô hình' : '选择模型'"
             aria-label="生成模型"
             noDataText="请先在设置中添加视频模型"
             placement="top-start"
@@ -94,8 +94,8 @@
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || (!generating && !pendingRecovery && (!generationPrompt || !selectedModel))"
-              :title="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成视频'"
-              :aria-label="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成视频'"
+              :title="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo video' : '生成视频')"
+              :aria-label="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo video' : '生成视频')"
               @click="generating ? generationState.cancel().catch(error => showNodeError(error, '停止生成失败')) : startGeneration().catch((error) => showNodeError(error, '视频生成失败'))" />
           </div>
         </div>
@@ -111,6 +111,7 @@ import { ElButton, ElCard, ElSelect, ElOption, ElOptionGroup, ElLoading, ElDropd
 import { IconCameraAi, IconSparkles, IconArrowUp, IconPlayerStop, IconTransfer, IconMusic, IconLayersSubtract, IconScissors, IconMovie, IconPhotoScan, IconPlayerSkipBack, IconPlayerSkipForward } from "@tabler/icons-vue";
 import { findNodeModel, getNodeModelIdentity, getNodeModelKey, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeMediaModel, type NodeVideoRequest, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import modelLabel from "@toonflow/node-shared/modelLabel";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { useNodeGeneration } from "@toonflow/node-shared/useNodeGeneration";
@@ -130,15 +131,24 @@ defineOptions({
   inheritAttrs: false,
   icon: IconCameraAi,
   handles: [
-    { id: "in", type: "target", dataType: ["IMAGE", "VIDEO", "AUDIO", "STRING"], label: "图片、视频、音频、文本输入" },
-    { id: "video", type: "source", dataType: "VIDEO", label: "视频输出" },
+    { id: "in", type: "target", dataType: ["IMAGE", "VIDEO", "AUDIO", "STRING"], label: nodeText("图片、视频、音频、文本输入", "Đầu vào ảnh, video, âm thanh hoặc văn bản") },
+    { id: "video", type: "source", dataType: "VIDEO", label: nodeText("视频输出", "Video đầu ra") },
   ] satisfies NodeHandle[],
 });
 const vLoading = ElLoading.directive;
-const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({
-  label: "视频生成",
+const { id, node, nodeProps, handles, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({
+  label: () => { void vietnamese.value; return nodeText("视频生成", "Tạo video"); },
   onModelsChanged: () => void refreshProviderModels(),
 });
+const vietnamese = useNodeVietnamese();
+
+watch(vietnamese, () => {
+  // Đổi nhãn hiển thị theo ngôn ngữ, không thay ID, kiểu dữ liệu hoặc cấu trúc kết nối.
+  const inHandle = handles.value.find(item => item.id === "in");
+  if (inHandle) inHandle.label = nodeText("图片、视频、音频、文本输入", "Đầu vào ảnh, video, âm thanh hoặc văn bản");
+  const videoHandle = handles.value.find(item => item.id === "video");
+  if (videoHandle) videoHandle.label = nodeText("视频输出", "Video đầu ra");
+}, { flush: "sync" });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean; other: Record<string, unknown> });
 data.value.prompt ??= "";
@@ -437,7 +447,7 @@ function getConfig() {
 
 nodeTools.register({
   name: "getConfig",
-  description: "读取此视频生成节点的当前配置、自定义配置 other、可选视频模型能力、通用比例及适合当前引用的模式，models 中的 rules 声明自定义字段，不含密钥；时长与分辨率须符合 durationResolutionMap",
+  description: () => nodeText("读取此视频生成节点的当前配置、自定义配置 other、可选视频模型能力、通用比例及适合当前引用的模式，models 中的 rules 声明自定义字段，不含密钥；时长与分辨率须符合 durationResolutionMap", "Đọc cấu hình hiện tại, cấu hình tùy chỉnh other, khả năng các model video có thể chọn, tỷ lệ khung hình chung và những chế độ phù hợp với tư liệu tham chiếu hiện có của node tạo video này. rules trong models mô tả các trường tùy chỉnh, không chứa khóa bí mật; thời lượng và độ phân giải phải phù hợp durationResolutionMap."),
   parameters: z.strictObject({}),
   async execute(_args, { signal }) {
     signal?.throwIfAborted();
@@ -449,7 +459,7 @@ nodeTools.register({
 
 nodeTools.register({
   name: "setConfig",
-  description: "修改此视频生成节点的模型、时长、分辨率、比例、模式、声音或自定义配置 other；先用 getConfig 查询能力，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；mode 使用返回的原始字符串或数组，须匹配当前引用；不修改提示词、不启动生成",
+  description: () => nodeText("修改此视频生成节点的模型、时长、分辨率、比例、模式、声音或自定义配置 other；先用 getConfig 查询能力，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；mode 使用返回的原始字符串或数组，须匹配当前引用；不修改提示词、不启动生成", "Thay model, thời lượng, độ phân giải, tỷ lệ, chế độ, âm thanh hoặc cấu hình tùy chỉnh other của node tạo video này. Trước tiên dùng getConfig để tra khả năng; bắt buộc có đồng thời providerId và modelId. Điền other theo field và giá trị trong rules của model đích; chỉ cập nhật trường được truyền vào, giữ nguyên phần còn lại; khi đổi model thì dùng mặc định của model mới. mode phải giữ đúng chuỗi hoặc mảng gốc được trả về và phải tương thích với tư liệu tham chiếu hiện có. Không sửa prompt và không bắt đầu tạo video."),
   parameters: z.strictObject({
     providerId: z.string().min(1).optional(),
     modelId: z.string().min(1).optional(),
@@ -491,7 +501,7 @@ nodeTools.register({
 
 nodeTools.register({
   name: "setPrompt",
-  description: "修改此节点的视频生成提示词，仅接收 prompt，支持 {{ref 1}} 等参考标记；时长 duration、分辨率等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成",
+  description: () => nodeText("修改此节点的视频生成提示词，仅接收 prompt，支持 {{ref 1}} 等参考标记；时长 duration、分辨率等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成", "Thay prompt tạo video của node này; chỉ nhận trường prompt và hỗ trợ các dấu tham chiếu như {{ref 1}}. Với cấu hình như thời lượng duration và độ phân giải, phải kiểm tra khả năng bằng node:getConfig trước rồi gọi riêng node:setConfig. Không bắt đầu tạo video."),
   parameters: z.strictObject({ prompt: z.string() }),
   execute({ prompt: value }) {
     if (deleting.value) throw new Error("节点正在删除，请稍后修改");
@@ -503,7 +513,7 @@ nodeTools.register({
 
 nodeTools.register({
   name: "generateVideo",
-  description: "启动此节点的后台视频生成，使用当前提示词、模型、模式、时长、分辨率、比例和参考素材；立即返回已开始，用 getGenerationStatus 查询完成结果，cancelGeneration 停止生成",
+  description: () => nodeText("启动此节点的后台视频生成，使用当前提示词、模型、模式、时长、分辨率、比例和参考素材；立即返回已开始，用 getGenerationStatus 查询完成结果，cancelGeneration 停止生成", "Bắt đầu tác vụ nền để tạo video trên node này, sử dụng prompt, model, chế độ, thời lượng, độ phân giải, tỷ lệ và tư liệu tham chiếu hiện tại. Trả ngay trạng thái 'đã bắt đầu'; dùng getGenerationStatus để kiểm tra kết quả hoàn tất và cancelGeneration để dừng."),
   parameters: z.strictObject({}),
   execute(_args, { signal }) {
     signal?.throwIfAborted();

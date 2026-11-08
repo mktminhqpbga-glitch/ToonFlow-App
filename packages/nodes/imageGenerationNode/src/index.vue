@@ -11,13 +11,13 @@
     :style="{ width: (previewUrl || inpaintGuideUrl) && imageWidth ? `${imageWidth + 18}px` : undefined }">
     <template v-if="editor?.mode" #top><div ref="paintToolbar" /></template>
     <template #topActions>
-      <el-button class="panoramaButton" :icon="IconPanoramaHorizontal" :disabled="generating || deleting || uploading || editor?.busy || lighting?.generating || multiAngle?.generating || gridSplit?.splitting || panorama?.busy || !previewUrl" text title="全景图" aria-label="全景图" @click.stop="panorama?.open($event)">全景图<icon-chevron-down class="menuChevron" :size="14" /></el-button>
-      <el-button :icon="IconBrush" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="局部重绘" aria-label="局部重绘" @click.stop="startEditor('inpaint')">局部重绘</el-button>
-      <el-button :icon="IconSun" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="打光" aria-label="打光" @click.stop="openLighting">打光</el-button>
-      <el-button :icon="IconCameraRotate" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="多角度" aria-label="多角度" @click.stop="openMultiAngle">多角度</el-button>
-      <el-button :icon="IconLayoutGrid" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl" :loading="gridSplit?.splitting" text title="宫格切分" aria-label="宫格切分" @click.stop="gridSplit?.open($event)">宫格切分</el-button>
+      <el-button class="panoramaButton" :icon="IconPanoramaHorizontal" :disabled="generating || deleting || uploading || editor?.busy || lighting?.generating || multiAngle?.generating || gridSplit?.splitting || panorama?.busy || !previewUrl" text :title="vietnamese ? 'Ảnh toàn cảnh' : '全景图'" :aria-label="vietnamese ? 'Ảnh toàn cảnh' : '全景图'" @click.stop="panorama?.open($event)">{{ vietnamese ? 'Ảnh toàn cảnh' : '全景图' }}<icon-chevron-down class="menuChevron" :size="14" /></el-button>
+      <el-button :icon="IconBrush" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text :title="vietnamese ? 'Vẽ lại một phần' : '局部重绘'" :aria-label="vietnamese ? 'Vẽ lại một phần' : '局部重绘'" @click.stop="startEditor('inpaint')">{{ vietnamese ? 'Vẽ lại một phần' : '局部重绘' }}</el-button>
+      <el-button :icon="IconSun" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text :title="vietnamese ? 'Điều chỉnh ánh sáng' : '打光'" :aria-label="vietnamese ? 'Điều chỉnh ánh sáng' : '打光'" @click.stop="openLighting">{{ vietnamese ? 'Điều chỉnh ánh sáng' : '打光' }}</el-button>
+      <el-button :icon="IconCameraRotate" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text :title="vietnamese ? 'Nhiều góc nhìn' : '多角度'" :aria-label="vietnamese ? 'Nhiều góc nhìn' : '多角度'" @click.stop="openMultiAngle">{{ vietnamese ? 'Nhiều góc nhìn' : '多角度' }}</el-button>
+      <el-button :icon="IconLayoutGrid" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl" :loading="gridSplit?.splitting" text :title="vietnamese ? 'Chia ảnh thành ô' : '宫格切分'" :aria-label="vietnamese ? 'Chia ảnh thành ô' : '宫格切分'" @click.stop="gridSplit?.open($event)">{{ vietnamese ? 'Chia ảnh thành ô' : '宫格切分' }}</el-button>
       <mediaHistory mediaType="image" :current="outputFile" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @select="outputs.image = { dataType: 'IMAGE', value: $event }" />
-      <el-button :icon="IconTransfer" :loading="uploading" :disabled="generating || deleting || lighting?.generating || multiAngle?.generating || panorama?.busy" text title="替换图片" aria-label="替换图片" @click.stop="fileInput?.click()">替换图片</el-button>
+      <el-button :icon="IconTransfer" :loading="uploading" :disabled="generating || deleting || lighting?.generating || multiAngle?.generating || panorama?.busy" text :title="vietnamese ? 'Thay ảnh' : '替换图片'" :aria-label="vietnamese ? 'Thay ảnh' : '替换图片'" @click.stop="fileInput?.click()">{{ vietnamese ? 'Thay ảnh' : '替换图片' }}</el-button>
       <input ref="fileInput" type="file" accept="image/*" hidden aria-label="选择替换图片" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @change="replaceOutput" />
     </template>
     <template #topRightActions>
@@ -30,14 +30,14 @@
         :src="previewUrl"
         :toolbarTarget="paintToolbar"
         :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy"
-        alt="生成图片"
+        :alt="vietnamese ? 'Tạo ảnh' : '生成图片'"
         @load="resizeImage"
         @error="showNodeError('无法预览该图片', '图片预览失败')" />
       <div v-else-if="inpaintGuideUrl" class="inpaintGuide">
         <img :src="inpaintGuideUrl" alt="局部重绘标注图" draggable="false" @load="resizeImage" @error="showNodeError('无法读取重绘标注图', '重绘标注读取失败')" />
         <span>红色标注为重绘区域</span>
       </div>
-      <div v-else class="imageEmpty" role="img" aria-label="暂无生成图片">
+      <div v-else class="imageEmpty" role="img" :aria-label="vietnamese ? 'Chưa có ảnh được tạo' : '暂无生成图片'">
         <icon-photo-ai :size="48" stroke="1.25" aria-hidden="true" />
       </div>
     </div>
@@ -61,8 +61,8 @@
             filterable
             :loading="modelsLoading"
             :disabled="generating || deleting"
-            placeholder="选择模型"
-            aria-label="生成模型"
+            :placeholder="vietnamese ? 'Chọn mô hình' : '选择模型'"
+            :aria-label="vietnamese ? 'Mô hình tạo nội dung' : '生成模型'"
             noDataText="请先在设置中添加图片模型"
             placement="top-start"
             @update:modelValue="data.model = $event"
@@ -91,13 +91,13 @@
           <el-button v-if="editor?.mode === 'inpaint'" class="confirmButton" type="primary" :icon="IconCheck" :loading="editor.busy" :disabled="deleting || uploading || !generationPrompt" @click="confirmInpaint().catch(error => showNodeError(error, '重绘节点创建失败'))">确认</el-button>
           <div v-else class="generationActions">
             <mediaPrice v-if="priceInput" :input="{ ...priceInput, mediaType: 'image' }" :supported="selectedModel?.supportsPrice === true" />
-            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" title="放弃任务" aria-label="放弃任务" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
+            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" :title="vietnamese ? 'Hủy tác vụ' : '放弃任务'" :aria-label="vietnamese ? 'Hủy tác vụ' : '放弃任务'" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || (!generating && (editor?.busy || (!pendingRecovery && (!generationPrompt || !selectedModel))))"
-              :title="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成图片'"
-              :aria-label="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成图片'"
+              :title="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo ảnh' : '生成图片')"
+              :aria-label="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo ảnh' : '生成图片')"
               @click="generating ? generationState.cancel().catch(error => showNodeError(error, '停止生成失败')) : startGeneration().catch((error) => showNodeError(error, '图片生成失败'))" />
           </div>
         </div>
@@ -122,6 +122,7 @@ import { ElButton, ElCard, ElSelect, ElOption, ElOptionGroup, ElLoading, ElImage
 import { IconCheck, IconPhotoAi, IconSparkles, IconArrowUp, IconPlayerStop, IconTransfer, IconLayoutGrid, IconBrush, IconPencil, IconSun, IconCameraRotate, IconPanoramaHorizontal, IconChevronDown } from "@tabler/icons-vue";
 import { findNodeModel, getNodeModelIdentity, getNodeModelKey, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeMediaModel, type NodeImageRequest, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { getMediaMimeType } from "@toonflow/node-shared/mediaTypes";
 import modelLabel from "@toonflow/node-shared/modelLabel";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
@@ -144,15 +145,24 @@ defineOptions({
   inheritAttrs: false,
   icon: IconPhotoAi,
   handles: [
-    { id: "in", type: "target", dataType: ["IMAGE", "STRING"], label: "图片、文本输入" },
-    { id: "image", type: "source", dataType: "IMAGE", label: "图片输出" },
+    { id: "in", type: "target", dataType: ["IMAGE", "STRING"], label: nodeText("图片、文本输入", "Đầu vào ảnh hoặc văn bản") },
+    { id: "image", type: "source", dataType: "IMAGE", label: nodeText("图片输出", "Ảnh đầu ra") },
   ] satisfies NodeHandle[],
 });
 const vLoading = ElLoading.directive;
-const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({
-  label: "图片生成",
+const { id, node, nodeProps, handles, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({
+  label: () => { void vietnamese.value; return nodeText("图片生成", "Tạo ảnh"); },
   onModelsChanged: () => void refreshProviderModels(),
 });
+const vietnamese = useNodeVietnamese();
+
+watch(vietnamese, () => {
+  // Đổi nhãn hiển thị theo ngôn ngữ, không thay ID, kiểu dữ liệu hoặc cấu trúc kết nối.
+  const inHandle = handles.value.find(item => item.id === "in");
+  if (inHandle) inHandle.label = nodeText("图片、文本输入", "Đầu vào ảnh hoặc văn bản");
+  const imageHandle = handles.value.find(item => item.id === "image");
+  if (imageHandle) imageHandle.label = nodeText("图片输出", "Ảnh đầu ra");
+}, { flush: "sync" });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; inpaint?: ImageInpaint });
 data.value.prompt ??= "";
@@ -210,6 +220,7 @@ const generationPrompt = computed(() =>
     .join("\n\n")
 );
 const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined>(() => {
+  void vietnamese.value;
   const choice = selectedModel.value;
   if (!choice) return;
   const inpaint = data.value.inpaint;
@@ -226,8 +237,8 @@ const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined
   if (inpaint) {
     let imageIndex = 3 + (inpaint.images?.length ?? 0);
     const mapping = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value
-      ? [`参考 ${index + 1} / {{ref ${index + 1}}} 对应第 ${item.value.url === inpaint.source ? 1 : imageIndex++} 张图`] : []);
-    if (mapping.length) input.prompt += `\n当前节点参考编号对应关系：${mapping.join("；")}。`;
+      ? [`参考 ${index + 1} / {{ref ${index + 1}}}${nodeText(" 对应第 ", " tương ứng với ảnh thứ ")}${item.value.url === inpaint.source ? 1 : imageIndex++} 张图`] : []);
+    if (mapping.length) input.prompt += `\n${nodeText("当前节点参考编号对应关系：", "Quy chiếu số thứ tự tham chiếu của node hiện tại:")}${mapping.join("；")}。`;
   }
   return input;
 });
@@ -319,10 +330,10 @@ async function confirmInpaint() {
   if (inpaintEditor.busy || generating.value || deleting.value || uploading.value) return;
   if (!generationPrompt.value) throw new Error("请输入重绘提示词");
   if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
-  let prompt = generationPrompt.value.replace(/\{\{ref (\d+)\}\}/g, "重绘参考 $1").replace(/^参考 (\d+)：/gm, "重绘参考 $1：");
+  let prompt = generationPrompt.value.replace(/\{\{ref (\d+)\}\}/g, nodeText("重绘参考 $1", "Tham chiếu vẽ lại $1")).replace(/^参考 (\d+)：/gm, nodeText("重绘参考 $1", "Tham chiếu vẽ lại $1") + "：");
   const images = refList.value.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []);
   const imageReferences = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value ? [index + 1] : []);
-  if (imageReferences.length) prompt += `\n重绘参考编号对应关系（前两张为原图和区域引导图）：${imageReferences.map((reference, index) => `重绘参考 ${reference} 对应第 ${index + 3} 张图`).join("；")}。`;
+  if (imageReferences.length) prompt += `\n${nodeText("重绘参考编号对应关系（前两张为原图和区域引导图）：", "Quy chiếu số thứ tự tham chiếu vẽ lại (hai ảnh đầu tiên là ảnh gốc và ảnh hướng dẫn vùng chỉnh sửa):")}${imageReferences.map((reference, index) => `${nodeText("重绘参考 ", "Tham chiếu vẽ lại ")}${reference}${nodeText(" 对应第 ", " tương ứng với ảnh thứ ")}${index + 3} 张图`).join("；")}。`;
   await inpaintEditor.createInpaint({ prompt, images }, new AbortController().signal);
 }
 
@@ -434,7 +445,7 @@ function getConfig() {
 
 nodeTools.register({
   name: "getConfig",
-  description: "读取此图片生成节点的当前模型、分辨率、比例、自定义配置 other 及可选图片模型能力，models 中的 rules 声明自定义字段，不含密钥；未声明分辨率或比例时分别使用 2K、16:9",
+  description: () => nodeText("读取此图片生成节点的当前模型、分辨率、比例、自定义配置 other 及可选图片模型能力，models 中的 rules 声明自定义字段，不含密钥；未声明分辨率或比例时分别使用 2K、16:9", "Đọc model hiện tại, độ phân giải, tỷ lệ ảnh, cấu hình tùy chỉnh other và các khả năng model ảnh có thể chọn của node tạo ảnh này. rules trong models mô tả các trường tùy chỉnh và không chứa khóa bí mật. Nếu chưa khai báo độ phân giải hoặc tỷ lệ, lần lượt dùng 2K và 16:9."),
   parameters: z.strictObject({}),
   async execute(_args, { signal }) {
     signal?.throwIfAborted();
@@ -446,7 +457,7 @@ nodeTools.register({
 
 nodeTools.register({
   name: "setConfig",
-  description: "修改此图片生成节点的模型、分辨率、比例或自定义配置 other；先用 getConfig 查询可选能力，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；不修改提示词、不启动生成",
+  description: () => nodeText("修改此图片生成节点的模型、分辨率、比例或自定义配置 other；先用 getConfig 查询可选能力，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；不修改提示词、不启动生成", "Thay model, độ phân giải, tỷ lệ hoặc cấu hình tùy chỉnh other của node tạo ảnh này. Trước hết dùng getConfig để tra khả năng có thể chọn; bắt buộc cung cấp đồng thời providerId và modelId. Điền other theo field và giá trị được quy định trong rules của model đích. Chỉ cập nhật những trường được truyền vào, giữ nguyên các trường khác; khi đổi model thì dùng giá trị mặc định của model mới. Không sửa prompt và không bắt đầu tạo ảnh."),
   parameters: z.strictObject({
     providerId: z.string().min(1).optional(),
     modelId: z.string().min(1).optional(),
@@ -478,7 +489,7 @@ nodeTools.register({
 
 nodeTools.register({
   name: "setPrompt",
-  description: "修改此节点的普通图片生成提示词，仅接收 prompt，支持 {{ref 1}} 等参考标记；分辨率 size、比例 ratio 等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不修改局部重绘提示词，不启动生成",
+  description: () => nodeText("修改此节点的普通图片生成提示词，仅接收 prompt，支持 {{ref 1}} 等参考标记；分辨率 size、比例 ratio 等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不修改局部重绘提示词，不启动生成", "Thay prompt tạo ảnh thông thường của node này; chỉ nhận trường prompt và hỗ trợ các dấu tham chiếu như {{ref 1}}. Với cấu hình như độ phân giải size hoặc tỷ lệ ratio, phải tra khả năng bằng node:getConfig trước rồi gọi riêng node:setConfig. Không sửa prompt vẽ lại cục bộ và không bắt đầu tạo ảnh."),
   parameters: z.strictObject({ prompt: z.string() }),
   execute({ prompt: value }) {
     if (deleting.value) throw new Error("节点正在删除，请稍后修改");
@@ -490,7 +501,7 @@ nodeTools.register({
 
 nodeTools.register({
   name: "generateImage",
-  description: "启动此节点的后台普通图片生成，使用普通生成提示词、模型、分辨率、比例和参考图片；局部重绘模式下须先退出；立即返回已开始，用 getGenerationStatus 查询完成结果，cancelGeneration 停止生成",
+  description: () => nodeText("启动此节点的后台普通图片生成，使用普通生成提示词、模型、分辨率、比例和参考图片；局部重绘模式下须先退出；立即返回已开始，用 getGenerationStatus 查询完成结果，cancelGeneration 停止生成", "Bắt đầu tác vụ nền để tạo ảnh thông thường trên node này, sử dụng prompt tạo ảnh, model, độ phân giải, tỷ lệ và ảnh tham chiếu đang có. Nếu đang ở chế độ vẽ lại cục bộ thì phải thoát chế độ đó trước. Trả về trạng thái 'đã bắt đầu' ngay; dùng getGenerationStatus để kiểm tra kết quả hoàn tất và cancelGeneration để dừng."),
   parameters: z.strictObject({}),
   execute(_args, { signal }) {
     signal?.throwIfAborted();

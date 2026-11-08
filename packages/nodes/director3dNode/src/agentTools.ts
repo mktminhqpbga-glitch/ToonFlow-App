@@ -112,7 +112,7 @@ export function createDirectorDraft(scene: SceneDocument, plan?: DirectorPlan, p
 
   const tools: NodeAiTool[] = [{
     name: "readDocument",
-    description: "读取本轮独立草稿的 scene / plan；objectId 选择场景物体或方案轨道，joint 选择人偶关节轨道，path 为相对字段路径。history 只读且必须提供 planId。schema 可用 path ['scene'] / ['plan'] 读取 JSON Schema。按需读取，避免反复读取完整文档。",
+    description: document.documentElement.lang === "vi" ? "Đọc scene / plan của bản nháp độc lập trong lượt này. objectId chọn đối tượng trong scene hoặc track của plan; joint chọn track khớp mannequin; path là đường dẫn trường tương đối. history chỉ cho đọc và phải cung cấp planId. Với schema, có thể dùng path ['scene'] / ['plan'] để đọc JSON Schema. Chỉ đọc phần cần thiết, tránh đọc lặp lại toàn bộ tài liệu." : "读取本轮独立草稿的 scene / plan；objectId 选择场景物体或方案轨道，joint 选择人偶关节轨道，path 为相对字段路径。history 只读且必须提供 planId。schema 可用 path ['scene'] / ['plan'] 读取 JSON Schema。按需读取，避免反复读取完整文档。",
     parameters: z.toJSONSchema(readSchema),
     execute(args, signal) {
       signal?.throwIfAborted();
@@ -131,7 +131,7 @@ export function createDirectorDraft(scene: SceneDocument, plan?: DirectorPlan, p
     },
   }, {
     name: "editDocument",
-    description: "原子批量修改本轮 scene / plan 草稿，不修改历史和磁盘。objectId / joint 按稳定 ID 选择现有物体/轨道，path 为相对路径。add 添加新字段或插入数组，数组下标 '-' 表示追加；replace / remove 必须命中已有路径。添加物体用 scene 的 ['objectList','-']，添加轨道用 plan 的 ['tracks','-']。任何非法操作整批撤销。返回 valid=false 时只保存了未完成草稿，必须依据 issues 补齐，直到 valid=true。",
+    description: document.documentElement.lang === "vi" ? "Chỉnh sửa hàng loạt bản nháp scene / plan của lượt này theo cơ chế nguyên tử; không sửa lịch sử hoặc dữ liệu trên đĩa. Dùng ID ổn định objectId / joint để chọn đối tượng hoặc track hiện có; path là đường dẫn tương đối. add thêm trường mới hoặc chèn vào mảng; chỉ số mảng '-' nghĩa là thêm vào cuối. replace / remove chỉ hợp lệ với đường dẫn đã tồn tại. Để thêm đối tượng, dùng ['objectList','-'] trong scene; để thêm track, dùng ['tracks','-'] trong plan. Bất kỳ thao tác không hợp lệ nào cũng khiến cả đợt bị hủy. Khi trả về valid=false, mới chỉ lưu bản nháp chưa hoàn chỉnh; phải dựa vào issues để bổ sung cho đến khi valid=true." : "原子批量修改本轮 scene / plan 草稿，不修改历史和磁盘。objectId / joint 按稳定 ID 选择现有物体/轨道，path 为相对路径。add 添加新字段或插入数组，数组下标 '-' 表示追加；replace / remove 必须命中已有路径。添加物体用 scene 的 ['objectList','-']，添加轨道用 plan 的 ['tracks','-']。任何非法操作整批撤销。返回 valid=false 时只保存了未完成草稿，必须依据 issues 补齐，直到 valid=true。",
     parameters: z.toJSONSchema(editSchema),
     execute(args, signal) {
       signal?.throwIfAborted();

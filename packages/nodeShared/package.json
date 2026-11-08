@@ -20,7 +20,8 @@
     "./useNodeGeneration": "./src/useNodeGeneration.ts",
     "./useModelForm": "./src/useModelForm.ts",
     "./useAudioTranscription": "./src/useAudioTranscription.ts",
-    "./groupNodeModels": "./src/groupNodeModels.ts"
+    "./groupNodeModels": "./src/groupNodeModels.ts",
+    "./nodeLanguage": "./src/nodeLanguage.ts"
   },
   "scripts": {
     "typecheck": "vue-tsc --noEmit"
