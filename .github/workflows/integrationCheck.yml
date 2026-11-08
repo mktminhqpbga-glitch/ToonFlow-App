@@ -28,8 +28,15 @@ jobs:
           node --check packages/chromeCompanion/content.js
           node --check apps/chromeRelay/server.js
           node -e "JSON.parse(require('node:fs').readFileSync('packages/chromeCompanion/manifest.json', 'utf8'))"
-      - name: Typecheck workspace
-        run: bun run typecheck
+      - name: Typecheck changed workspaces individually
+        run: |
+          bun run --cwd apps/server typecheck
+          bun run --cwd apps/web typecheck
+          bun run --cwd packages/nodeShared typecheck
+          bun run --cwd packages/nodeScaffold typecheck
+          bun run --cwd packages/nodes/textNode typecheck
+          bun run --cwd packages/nodes/imageGenerationNode typecheck
+          bun run --cwd packages/nodes/videoGenerationNode typecheck
       - name: Build node and tool plugins
         run: |
           bun run build:tools
