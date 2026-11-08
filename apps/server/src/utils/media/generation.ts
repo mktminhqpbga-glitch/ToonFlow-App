@@ -11,6 +11,7 @@ import { lockWorkspaceFiles, resolveWorkspacePath, writeWorkspaceFile } from "@/
 import { beginGeneration, getProviderPrice } from "@/utils/media/billing";
 import { detectMimeType, readPriceReference } from "@/utils/media/priceReference";
 import { modelGateway } from "@/utils/multiTenant/gateway";
+import { chromeBridge, type BridgeProvider } from "@/utils/chromeBridge/runtime";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
@@ -64,7 +65,7 @@ export async function listMediaModels(): Promise<MediaModel[]> {
   if (modelGateway.enabled()) return modelGateway.catalog(["image", "video", "audio"]);
   const installedProviders = await listMediaProviders();
   installedProviders.sort((left, right) => Number(right.id === "toonflow") - Number(left.id === "toonflow"));
-  return installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => provider.models.flatMap(model => {
+  const installedModels = installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => provider.models.flatMap(model => {
     if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
     const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
     return [{
@@ -79,6 +80,8 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       } : {}),
     } as MediaModel];
   }));
+  // ACT: chỉ hiện nguồn AI theo khả năng được tab Chrome đã chọn xác nhận; provider gốc giữ nguyên.
+  return [...installedModels, ...chromeBridge.models("image"), ...chromeBridge.models("video")] as MediaModel[];
 }
 
 export async function readReference(cwd: string, reference: MediaReference, mediaType: string, signal?: AbortSignal): Promise<Extract<MediaInput, { type: "base64" }>> {
@@ -229,6 +232,7 @@ async function preparePriceRequest(directory: string | undefined, mediaType: "im
 
 export async function getMediaPrice(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest, signal?: AbortSignal) {
   signal?.throwIfAborted();
+  if (request.providerId === "chromeBridge") return null;
   if (modelGateway.enabled()) {
     const quote = await modelGateway.quoteRequest(mediaType, request.providerId, request.modelId, request);
     return { ...quote, price: `${quote.amount} ${quote.currency}`, tips: translateMessage("平台售价，按实际用量结算") };
@@ -307,7 +311,33 @@ async function executeMedia(
   try {
     signal?.throwIfAborted();
     let assets: MediaAsset[] | undefined;
-    if (task?.resume) {
+    if (request.providerId === "chromeBridge") {
+      if (task?.resume) invalid("Tác vụ Chrome đã bị gián đoạn; không được tự gửi lại. Hãy kiểm tra tab trước khi chủ động tạo yêu cầu mới");
+      if (mediaType === "audio") invalid("Chrome Bridge không hỗ trợ sinh âm thanh");
+      const provider = request.modelId.replace(/_(image|video)$/, "") as BridgeProvider;
+      if (!["muse", "gemini", "chatgpt"].includes(provider) || request.modelId !== provider + "_" + mediaType)
+        invalid("Nguồn AI không phù hợp với loại media");
+      if (mediaType === "video" && provider !== "muse") invalid("Chỉ Muse có adapter video");
+      if (mediaType === "video" && (request.videos?.length || request.audios?.length || request.lastFrame))
+        invalid("Chrome Bridge hiện chỉ nhận prompt hoặc tối đa một ảnh đầu vào cho video");
+      const references = [...(request.images ?? []), ...(request.firstFrame ? [request.firstFrame] : [])];
+      if (references.length > (mediaType === "video" ? 1 : 4)) invalid("Số lượng ảnh tham chiếu vượt giới hạn Chrome Bridge");
+      const images = await Promise.all(references.map(async reference => {
+        const file = await readReference(directory, reference, "image", signal);
+        return { data: file.data, mimeType: file.mimeType };
+      }));
+      signal?.throwIfAborted();
+      if (!chromeBridge.models(mediaType).some(model => model.modelId === request.modelId))
+        invalid("Tab Chrome chưa sẵn sàng hoặc chức năng hiện không được hỗ trợ");
+      // ACT: đánh dấu gửi trước hành động không thể khôi phục; timeout/mất kết nối không tự retry.
+      markSubmitted();
+      const result = await chromeBridge.run(provider, mediaType, request.prompt, images,
+        { ratio: request.ratio, ...("size" in request ? { size: request.size } : {}),
+          ...("duration" in request ? { duration: request.duration } : {}) },
+        signal, task?.taskId);
+      if (result.kind !== mediaType || !result.data || !result.mimeType) invalid("AI trả media không đúng loại");
+      assets = [{ type: "base64", mediaType, data: result.data, mimeType: result.mimeType }];
+    } else if (task?.resume) {
       assets = checkpoint?.assets ?? await resumeAssets();
     } else {
       const { provider, request: upstreamRequest } = await configuredProvider(request, mediaType, signal, directory,

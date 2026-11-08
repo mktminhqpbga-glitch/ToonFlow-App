@@ -63,6 +63,40 @@
 - **Điều kiện đóng:** báo cáo kiểm thử với phiên bản, môi trường và kết quả xác minh có thể đối chiếu.
 - **Lịch sử sửa:** Chưa có.
 
+### ISSUE-0005 — Muse/Gemini/ChatGPT chưa kiểm thử DOM và tài khoản thật
+
+- **Phát hiện:** 2026-11-08 · **Người phát hiện / viết code lần cuối:** ChatGPT (GPT-6).
+- **Mức độ:** Cao · **Trạng thái:** Mở · **Người nghiệm thu:** Chưa chỉ định.
+- **Đã thử sửa:** viết extension chỉ nhận tab đã chọn, kiểm composer/mode, đối chiếu câu hỏi mới và kết quả phía sau, không dùng ảnh lịch sử. [Commit mã](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/df9ab12fc93c385660a2f850507566f3a4e63a8d).
+- **Còn tồn tại:** giao diện web có thể đổi DOM; Muse có thể không lộ nút ảnh/video; Gemini/ChatGPT image chưa chứng minh; CORS/download media chưa kiểm chứng; chưa có lần tạo văn bản/ảnh/video thành công thật.
+- **Lịch sử sửa:** 2026-11-08 — ChatGPT (GPT-6) — thêm stop-button best effort và phát hiện thông báo usage/rate limit bằng DOM; **chưa kiểm thử thật**.
+- **Lịch sử sửa:** 2026-11-08 — ChatGPT (GPT-6) — bổ sung allowlist `*.muse.ai` và nút gửi/dừng Muse dựa trên manifest tham khảo; **chưa được thực nghiệm**, không đóng issue.
+- **Cần làm / điều kiện đóng:** chạy extension trên Chrome có đăng nhập hợp lệ; thử lần lượt từng loại chức năng; chứng minh kết quả mới đúng node và đúng tệp; ghi màn hình/log không chứa thông tin nhạy cảm.
+
+### ISSUE-0006 — Chưa typecheck/build và kiểm thử ToonFlow Desktop macOS
+
+- **Phát hiện:** 2026-11-08 · **Người thực hiện code / ghi nhận:** ChatGPT (GPT-6).
+- **Mức độ:** Cao · **Trạng thái:** Mở · **Người kiểm thử:** Chưa chỉ định.
+- **Đã kiểm tra:** cú pháp JS riêng của extension và JSON manifest bằng parser; cấu trúc tệp, import, node pipeline bằng đọc mã.
+- **Còn tồn tại:** không có Bun, dependency của repo hoặc macOS trong môi trường chạy hiện tại; chưa typecheck/build thật; chưa kiểm giao diện sáng/tối, timeout, hủy, reload, Chrome disconnect, lưu/mở lại, model/provider cũ.
+- **Cần làm / điều kiện đóng:** `bun install --frozen-lockfile`, `bun run typecheck`, các lệnh build liên quan và chạy trên macOS; ghi log/hình bằng chứng trước khi công nhận.
+
+### ISSUE-0007 — Chưa xác minh đường dẫn và cách cài extension từ bản .app/DMG
+
+- **Phát hiện:** 2026-11-08 · **Người đã sửa/ghi nhận:** ChatGPT (GPT-6).
+- **Mức độ:** Trung bình · **Trạng thái:** Mở.
+- **Đã làm:** copy `packages/chromeCompanion` qua cấu hình Electrobun, README hướng dẫn `chrome://extensions` → Load unpacked.
+- **Còn tồn tại:** chưa có build .app thực để xác minh thư mục resource hoặc cài thật trên Chrome; chưa có cơ chế cài một chạm.
+- **Cần làm / điều kiện đóng:** đóng gói DMG macOS và cài extension từ tài nguyên được đóng gói, kiểm tra ghép nối.
+
+### ISSUE-0008 — Đánh giá bảo mật và TOS chưa nghiệm thu
+
+- **Phát hiện:** 2026-11-08 · **Người đã sửa/ghi nhận:** ChatGPT (GPT-6).
+- **Mức độ:** Cao trước khi phát hành · **Trạng thái:** Mở.
+- **Đã làm:** chỉ cổng loopback, pairing token ngẫu nhiên, kiểm Origin, tab và hostname trong allowlist, giới hạn lệnh, không đọc cookie/password, không tự retry request đã gửi.
+- **Còn tồn tại:** chưa kiểm thử tấn công local, Chrome MV3, quyền website, lỗi bị đăng xuất, ứng xử giới hạn/CAPTCHA, điều kiện sử dụng dịch vụ; có ô soạn thảo không phải bằng chứng quyền sử dụng API hoặc chức năng tài khoản.
+- **Cần làm / điều kiện đóng:** security review và chạy thử trường hợp ngắt, đổi tab, reload, tài khoản hết phiên và các giới hạn dịch vụ.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề

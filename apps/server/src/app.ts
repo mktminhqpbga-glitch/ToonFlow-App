@@ -117,6 +117,14 @@ export async function createApp({
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
   app.use("/api/desktop", desktopRequest);
+  // ACT: macOS desktop mới mở Chrome Bridge cục bộ; không lộ endpoint trên web/mobile/server.
+  if (getRuntimePlatform().desktop && getRuntimePlatform().os === "darwin") {
+    const [{ chromeBridge }, { default: chromeBridgeRouter }] = await Promise.all([
+      import("@/utils/chromeBridge/runtime"), import("@/utils/chromeBridge/router"),
+    ]);
+    chromeBridge.start();
+    app.use("/api/desktop/chromeBridge", chromeBridgeRouter);
+  }
 
   const router = await import("@/router");
   router.default(app);

@@ -51,6 +51,8 @@ export default {
       "build/ext": "ext",
       "packages/providers/src": "providers",
       "packages/skills": "skills",
+      // Đóng gói companion extension nguyên bản để người dùng chủ động cài trong Chrome.
+      "packages/chromeCompanion": "chromeCompanion",
       ...(startupTarget ? {
         "packages/startup/assets/startup.json": "startup/startup.json",
         "packages/startup/assets/license.txt": "startup/license.txt",

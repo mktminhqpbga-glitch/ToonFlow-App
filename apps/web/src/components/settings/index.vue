@@ -60,6 +60,7 @@ import {
   IconUserCircle,
   IconUsersGroup,
 } from "@tabler/icons-vue";
+import { actualPlatform } from "@/lib/platform";
 
 const allSettingsPanels = [
   { id: "account", label: "账号与余额", icon: IconUserCircle, component: defineAsyncComponent(() => import("./panels/account/index.vue")) },
@@ -72,6 +73,8 @@ const allSettingsPanels = [
     component: defineAsyncComponent(() => import("./panels/languageModel/index.vue")),
   },
   { id: "mediaModel", label: "媒体模型", icon: IconPhotoVideo, component: defineAsyncComponent(() => import("./panels/mediaModel/index.vue")) },
+  { id: "chromeBridge", label: "AI Bridge · Chrome", icon: IconPlugConnected,
+    component: defineAsyncComponent(() => import("./panels/chromeBridge/index.vue")) },
   {
     id: "pluginMarket",
     label: "插件市场",
@@ -97,6 +100,7 @@ const allSettingsPanels = [
 ];
 const publicAccountPanel = { ...allSettingsPanels[0]!, get label() { return translate("账号"); } };
 const settingsPanels = computed(() => allSettingsPanels.filter(item => {
+  if (item.id === "chromeBridge" && !(actualPlatform.isLocalDesktop && actualPlatform.isMac)) return false;
   if (publicWeb.value && currentUser.value?.role === "user") return ["account", "general", "about"].includes(item.id);
   if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket"].includes(item.id)) return false;
   return !multiTenantEnabled.value || !["languageModel", "mediaModel", "developer"].includes(item.id);

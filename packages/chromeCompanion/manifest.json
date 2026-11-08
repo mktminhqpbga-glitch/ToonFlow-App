@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "ToonFlow Chrome Companion",
+  "version": "0.1.0",
+  "description": "Ghép nối tab Muse, Gemini và ChatGPT đã đăng nhập với ToonFlow Desktop, theo sự đồng ý của người dùng.",
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://muse.ai/*",
+    "https://*.muse.ai/*",
+    "https://gemini.google.com/*",
+    "https://chatgpt.com/*",
+    "https://www.chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ToonFlow Chrome Companion"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://muse.ai/*",
+        "https://*.muse.ai/*",
+        "https://gemini.google.com/*",
+        "https://chatgpt.com/*",
+        "https://www.chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
