@@ -273,3 +273,11 @@
 - **Đã thử:** Việt hóa nhãn và aria-label hai bảng cài đặt (commit 2302f60 và bccd1bd). Bảo toàn giá trị mode/duration/ratio/size và model.
 - **Còn lại:** typecheck/build ở commit mới, test chuyển locale vi/en lúc popover mở, thử chọn ratio và mode ảnh/video với model thật, xác nhận cảnh báo Chrome.
 - **Điều kiện đóng:** CI pass trên commit mới và kiểm tra UI liên quan; E2E với provider chỉ đóng khi có kết quả thực.
+
+
+### ISSUE-0028 — HD-01 model disabled chưa có catalog và readiness đầy đủ
+
+- **Ngày/người sửa cuối:** 2026-11-09 (UTC+7), ChatGPT (GPT-6). **Trạng thái:** Mở / PARTIAL.
+- **Đã sửa code:** backend phân biệt `needsConfiguration` và `configured` cho media provider đang cài; model Chrome đang probe có `ready`; image/video không cho chọn/gửi model thiếu cấu hình. Commit c051788, fec3e8e, 4253903, 5fab792, 6f174cc, 333261f.
+- **Chưa đạt:** các provider chưa cài chưa được liệt kê; config có API key chưa chứng minh kết nối hoặc quota; cần test mode multiTenant; cần test Mac/Chrome/Render thực. Đừng hiểu nhãn `configured` là `connected`.
+- **Kiểm tra:** CI integrationCheck run 42511358311 đã thành công; source review và E2E khác nhau. Tham khảo [bảng kiểm riêng](./hdAcceptance.md).
