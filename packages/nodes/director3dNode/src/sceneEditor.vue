@@ -380,14 +380,16 @@ function applyStudio(value: CameraSettings | undefined) {
   const next = normalizeCameraSettings(value);
   const previous = props.scene.sceneConfig.cameraStudio;
   // Three.js PerspectiveCamera already implements focal length and FOV; no second renderer.
+  let updatedFov: number | undefined;
   if (next.enabled && (!previous?.enabled || previous.focalLength !== next.focalLength)) {
     manualCamera.value = true;
     runtime.camera.setFocalLength(next.focalLength);
     runtime.camera.updateProjectionMatrix();
     focalLength.value = runtime.camera.getFocalLength();
     activeAnchorId.value = "";
+    updatedFov = runtime.camera.fov;
   }
-  emit("cameraChange", next, next.enabled ? runtime.camera.fov : undefined);
+  emit("cameraChange", next, updatedFov);
   // Aperture is saved as prompt metadata only: the scene renderer has no verified DOF pass.
   runtime.invalidate();
 }

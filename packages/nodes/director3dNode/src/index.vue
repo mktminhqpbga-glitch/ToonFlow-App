@@ -162,15 +162,19 @@ async function saveCameraStudio(camera: CameraSettings, fov?: number) {
     },
   });
   const nextDocument: ModelDocument = { ...current, scene: nextScene };
+  // Update the component model immediately, so successive preset edits use the latest snapshot.
+  // Persist through the existing serialized write queue rather than overlapping writes.
+  modelDocument.value = nextDocument;
   const saving = modelSaving.then(async () => {
     const path = await writeModel(files.getWorkspaceFiles(), nextDocument);
-    if (disposed) return;
-    modelDocument.value = nextDocument;
-    data.value.modelPath = path;
+    if (!disposed) data.value.modelPath = path;
   });
   modelSaving = saving.catch(() => {});
   try { await saving; }
-  catch (error) { if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không lưu được Camera Studio"); }
+  catch (error) {
+    if (modelDocument.value === nextDocument) modelDocument.value = current;
+    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không lưu được Camera Studio");
+  }
 }
 async function addMannequin() {
   if (modelLoading.value || modelError.value || addingMannequin.value || exportingVideo.value || exportingImage.value || tasks.value.some(task => !task.error)) return;
