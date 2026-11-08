@@ -76,6 +76,8 @@ class ChromeBridgeRuntime {
             if (!correct || this.connected) { socket.close(1008, "Pairing rejected"); return; }
             socket.data.authenticated = true;
             clearTimeout(socket.data.authTimer);
+            // ACT: mã ghép nối cũ hết hiệu lực ngay sau khi được chấp nhận; ngắt kết nối phải ghép nối lại.
+            this.token = randomBytes(32).toString("hex");
             this.socket = socket;
             socket.send(JSON.stringify({ type: "ready" }));
             return;
