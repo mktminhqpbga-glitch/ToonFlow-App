@@ -52,6 +52,11 @@
           {{ selectedMode === "startFrameOptional" ? "仅一张图片时作为尾帧；两张图片按顺序作为首帧、尾帧" : "图片引用按顺序作为首帧、尾帧" }}
         </div>
         <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
+        <div v-if="outputCameraSnapshot" class="cameraSnapshot">
+          Camera đã dùng cho video này: {{ outputCameraSnapshot.camera.enabled
+            ? [outputCameraSnapshot.camera.body || 'Cinema camera', outputCameraSnapshot.camera.lens || 'Lens mặc định', outputCameraSnapshot.camera.focalLength + ' mm', 'f/' + outputCameraSnapshot.camera.aperture].join(' · ')
+            : 'Tắt Camera Studio' }} · {{ outputCameraSnapshot.savedAt }}
+        </div>
         <div class="promptFooter">
           <el-select
             :modelValue="selectedModel ? data.model : ''"
@@ -288,6 +293,7 @@ function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory">
   };
 }
 const outputFile = computed(() => outputs.value.video?.dataType === "VIDEO" ? outputs.value.video.value : undefined);
+const outputCameraSnapshot = computed(() => outputFile.value ? data.value.cameraHistory?.[outputFile.value.url] : undefined);
 const previewUrl = files.useFileUrl(
   outputFile,
   (error) => showNodeError(error, "视频读取失败")
@@ -531,6 +537,7 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.cameraSnapshot { font-size: 12px; color: var(--el-text-color-secondary); margin: 6px 0; }
 .videoContent {
   .nodeSkeleton.resized & {
     height: 100%;

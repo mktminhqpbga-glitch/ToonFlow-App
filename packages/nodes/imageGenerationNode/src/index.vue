@@ -53,6 +53,11 @@
           @remove="removeReference" />
         <promptInput v-if="editor?.mode === 'inpaint'" v-model="data.inpaintPromptModel" v-model:text="data.inpaintPrompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
         <promptInput v-else v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
+        <div v-if="ratioReport" class="cameraSnapshot">
+          Camera đã dùng cho ảnh này: {{ ratioReport.camera.enabled
+            ? [ratioReport.camera.body || 'Cinema camera', ratioReport.camera.lens || 'Lens mặc định', ratioReport.camera.focalLength + ' mm', 'f/' + ratioReport.camera.aperture].join(' · ')
+            : 'Tắt Camera Studio' }} · {{ ratioReport.savedAt }}
+        </div>
         <div v-if="ratioReport?.actualWidth" class="ratioFeedback" :class="{ mismatch: ratioReport.ratioMatched === false }">
           Ảnh đầu ra: {{ ratioReport.actualWidth }} × {{ ratioReport.actualHeight }} px · Yêu cầu {{ ratioReport.ratio }} ·
           {{ ratioReport.ratioMatched ? 'Khớp gần đúng' : 'Không khớp — tỷ lệ trong prompt không được bảo đảm' }}
@@ -533,6 +538,7 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.cameraSnapshot { font-size: 12px; color: var(--el-text-color-secondary); margin: 6px 0; }
 .ratioFeedback { font-size: 12px; color: var(--el-color-success); margin-top: 6px;
   &.mismatch { color: var(--el-color-warning); }
 }

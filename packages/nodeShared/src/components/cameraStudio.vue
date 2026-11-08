@@ -14,7 +14,11 @@
       <el-option v-for="item in cameraLenses" :key="item" :value="item" :label="item || 'Không chỉ định'" />
     </el-select>
     <div class="cameraPair">
-      <div><label>Tiêu cự · mm</label><el-input-number :modelValue="camera?.focalLength ?? 35" :min="12" :max="200" :step="1" :disabled="disabled" aria-label="Tiêu cự (12–200 mm)" @update:modelValue="$event != null && update('focalLength', $event)" /></div>
+      <div><label>Tiêu cự · mm</label>
+        <el-select :modelValue="camera?.focalLength ?? 35" :disabled="disabled" aria-label="Tiêu cự phổ biến" @update:modelValue="update('focalLength', Number($event))">
+          <el-option v-for="item in focalPresets" :key="item" :label="`${item} mm`" :value="item" />
+        </el-select>
+        <el-input-number :modelValue="camera?.focalLength ?? 35" :min="12" :max="200" :step="1" :disabled="disabled" aria-label="Tiêu cự (12–200 mm)" @update:modelValue="$event != null && update('focalLength', $event)" /></div>
       <div><label>Khẩu độ mô phỏng</label>
         <el-select :modelValue="camera?.aperture ?? 2.8" :disabled="disabled" aria-label="Khẩu độ" @update:modelValue="update('aperture', Number($event))">
           <el-option v-for="item in aperturePresets" :key="item" :value="item" :label="`f/${item}`" />
@@ -36,7 +40,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { ElButton, ElInput, ElInputNumber, ElMessage, ElOption, ElSelect, ElSwitch, ElText } from "element-plus";
-import { aperturePresets, cameraBodies, cameraLenses, normalizeCameraSettings, type CameraSettings } from "../cameraStudio";
+import { aperturePresets, cameraBodies, cameraLenses, focalPresets, normalizeCameraSettings, type CameraSettings } from "../cameraStudio";
 defineProps<{ disabled?: boolean }>();
 const camera = defineModel<CameraSettings | undefined>({ default: undefined });
 const savedPresets = ref<{ name: string; camera: CameraSettings }[]>([]);
