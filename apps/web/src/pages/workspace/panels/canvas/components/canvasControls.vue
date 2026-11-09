@@ -27,6 +27,11 @@
             <icon-photo :size="18" />
           </el-button>
         </el-tooltip>
+        <el-tooltip :showArrow="false" content="Studio nhân vật" placement="top" :hideAfter="0">
+          <el-button class="toolButton" text aria-label="Studio nhân vật" :disabled="!canvasId" @click="characterStudioVisible = true">
+            <icon-user :size="18" />
+          </el-button>
+        </el-tooltip>
         <!-- trigger 用 contextmenu 是为了让整理按钮只由 arrangeNodes 控制显隐，同时仍保留点击外部自动关闭 -->
         <el-tooltip :showArrow="false" content="整理画布" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="undoPopoverVisible">
           <span class="toolTrigger">
@@ -120,14 +125,16 @@
     </el-card>
   </panel>
   <materialPresets v-model="materialPresetsVisible" :availableNodes="availableNodes" :createNode="createPresetNode" />
+  <characterStudio v-model="characterStudioVisible" :directory="directory" :addCharacter="addCharacterToCanvas" />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Panel, useVueFlow, type XYPosition } from "@vue-flow/core";
 import { MiniMap } from "@vue-flow/minimap";
-import { IconMap, IconMagnet, IconFocusCentered, IconPhoto } from "@tabler/icons-vue";
+import { IconMap, IconMagnet, IconFocusCentered, IconPhoto, IconUser } from "@tabler/icons-vue";
 import materialPresets from "./materialPresets.vue";
+import characterStudio, { type CharacterRecord } from "./characterStudio.vue";
 import { ElMessage } from "element-plus";
 import { currentUser } from "@/stores/multiTenant";
 import { arrangeCanvas } from "../arrangeCanvas";
@@ -137,6 +144,7 @@ const props = defineProps<{
   directory: string | undefined;
   availableNodes: { type: string; label: string }[];
   createPresetNode: (preset: { nodeType: string; title: string; prompt: string }) => Promise<boolean>;
+  addCharacterToCanvas: (character: CharacterRecord) => Promise<boolean>;
   batchHistory: (action: () => Promise<void>) => Promise<void>;
 }>();
 const snapEnabled = defineModel<boolean>("snapEnabled", { required: true });
@@ -144,6 +152,7 @@ const showEdges = defineModel<boolean>("showEdges", { required: true });
 const assetsVisible = defineModel<boolean>("assetsVisible", { default: false });
 const showMap = ref(false);
 const materialPresetsVisible = ref(false);
+const characterStudioVisible = ref(false);
 const zoomMenuVisible = ref(false);
 const flow = useVueFlow();
 const { viewport, zoomTo, zoomIn, zoomOut, fitView, setCenter, getNodes, updateNode } = flow;
@@ -171,6 +180,7 @@ watch(
     layoutSnapshot.value = undefined;
     undoPopoverVisible.value = false;
     materialPresetsVisible.value = false;
+    characterStudioVisible.value = false;
   },
   { flush: "sync" }
 );
