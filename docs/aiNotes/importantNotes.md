@@ -217,3 +217,10 @@
 - Node UMD dựng sẵn chạy plugin i18n độc lập; đồng bộ locale chọn trên host từ `documentElement.lang`; bản dịch khác giữ nguyên khi không phải `vi`. Không tùy tiện dịch tên/logic plugin bên ngoài.
 - Không tự đổi `ui.language` đã lưu `zh-CN` sang `vi` vì chưa thể biết đó là lựa chọn chủ động hay di sản default cũ. Điều này là lựa chọn bảo toàn dữ liệu; muốn khởi chạy bằng tiếng Việt, người dùng chọn Tiếng Việt trong Cài đặt. Khi UI không lưu tùy chọn, đó là bug cần kiểm trực tiếp.
 - Kiểm toán `auditVietnamese.ts` tính các Chinese display candidates từ AST trong phạm vi chỉ định; missing dictionary entries khác với số Hán tự còn xuất hiện trên màn hình thật. Phải báo cả số missing và giới hạn; CI PASS (non-strict) không phải bằng chứng 100%, `--strict` mới chặn hết các mục chưa dịch trong phạm vi scan.
+
+
+### NOTE-0028 — HD-08: phạm vi dịch và an toàn dữ liệu
+
+- **Ngày ghi:** 2026-11-09, ChatGPT (GPT-6), theo lệnh Việt hóa của chủ dự án.
+- Chỉ Việt hóa **chuỗi hiển thị và chỉ dẫn ẩn do ứng dụng viết** theo locale `vi`; không dịch model ID, providerId, tên hàm, nhãn JSON, schema, số tọa độ 3D, các giá trị enum truyền API, nội dung text người dùng, mã nguồn hay dữ liệu dự án. Với frame analysis, thay đổi ngôn ngữ hướng dẫn nhưng giữ nguyên các khóa `shotSize`, `cameraAngle`, `movement`, `description`, `summary`, `narrative`, `rhythm`, `editing`, `focusResponse`.
+- Giữ bản Trung Quốc/Anh ở nhánh locale khác; mặc định vi không được phá lựa chọn ngôn ngữ người dùng thiết lập chủ động. Audit `packages/i18n/src/auditVietnamese.ts --strict` chỉ kiểm các ứng viên UI máy nhận diện trong các thư mục đã công bố; không được suy diễn 0 missing UI thành hoàn tất prompt ẩn hoặc nghiệm thu E2E.
