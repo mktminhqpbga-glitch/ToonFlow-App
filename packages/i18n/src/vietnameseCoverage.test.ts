@@ -1,9 +1,25 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import vi from "./locales/vi.json";
 import { translate, setLocale } from "./index";
 import { collectMessages, transformSource } from "./transform";
 
 describe("HD-08 Vietnamese display transform safety", () => {
+  test("all nine built-in node UMD bundles opt in to Vietnamese Vite transform", () => {
+    const root = resolve(import.meta.dirname, "../../..");
+    for (const name of [
+      "audioGenerationNode", "audioNode", "director3dNode", "frameAnalysisNode",
+      "imageGenerationNode", "imageNode", "textNode", "videoGenerationNode", "videoNode",
+    ]) {
+      const config = readFileSync(resolve(root, "packages/nodes", name, "vite.config.ts"), "utf8");
+      expect(config).toContain("localizeBuiltIn: true");
+    }
+    const vite = readFileSync(resolve(root, "packages/nodeScaffold/index.ts"), "utf8");
+    expect(vite).toContain("toonflowBuiltInNodeI18n");
+    expect(vite).toContain("return transformSource(source, path)");
+  });
+
   test("shared media UI strings resolve to Vietnamese; original IDs remain unchanged", () => {
     const dictionary = vi as Record<string, string>;
     for (const [zh, expected] of [
