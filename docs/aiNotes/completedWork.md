@@ -442,3 +442,10 @@
 - **Thay đổi:** chuyển hai nút từ panel dưới-trái vào `toolMenuContent`, thứ tự [+] [hand] [search] [Shapes: vật liệu] [smile: nhân vật] [help]. Giữ nguyên 2 dialog và callback thêm node/ảnh qua instance Canvas hiện tại, không tạo nút thứ hai.
 - **Commit mã:** [17262ce](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/17262ce1b474b4ad65ecfdd9dab58567d6e377e7).
 - **Kiểm thử:** source/static replacement PASS; [CI cho commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591076127) đã khởi chạy (xem GitHub để xác minh kết luận cuối). UI click, tạo node thật, lưu/reload và Mac Ventura **NOT TESTED**; không đánh dấu DONE nghiệm thu.
+
+
+### DONE-0032 — Regression đường nối toolbar Canvas và Home Batch (kiểm thử tĩnh + CI, chưa nghiệm thu UI)
+- **Ngày/người thực hiện:** 2026-11-09, ChatGPT (GPT-6). Nhánh tích hợp PR #4 Draft.
+- **Lỗi CI trước đó:** run [42591076127](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591076127) FAILED do TS2724: Tabler không export `IconShapes`. Đã sửa bằng `IconShape` trong [4aa196f](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/4aa196f661a0df1559b229a34ede4242a8631982); run [42591313409](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591313409) SUCCESS.
+- **Regression mới:** `apps/web/tests/workspaceNavigation.test.ts` kiểm tra hợp đồng nguồn thứ tự các nút, một cặp dialog, phương thức qua Canvas Host, chọn dự án và route Batch, các payload có directory; bổ sung chạy trong `.github/workflows/integrationCheck.yml`. [Commit 8293dc3](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/8293dc3cbe3843b23a44048df01de434a0c46c3f), [CI #42591976160](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591976160) **SUCCESS** (typecheck, regression suite, build).
+- **Giới hạn:** test nguồn không thay thế click thật; click mở dialog, tạo preset node, upload ảnh nhân vật, lưu/reload và Mac Ventura **UI NOT TESTED**. Batch/Muse AI E2E **BLOCKED** do không có trình duyệt/VM và tài khoản kết nối trong môi trường kiểm thử.
