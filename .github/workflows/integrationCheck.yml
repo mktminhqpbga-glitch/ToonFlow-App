@@ -1,5 +1,8 @@
 name: ToonFlow independent integration validation
 on:
+  push:
+    branches:
+      - feat/toonflow-functional-completion
   pull_request:
     branches:
       - main
