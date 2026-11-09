@@ -1,6 +1,7 @@
 import { readdir, readFile } from "@toonflow/file";
 import { resolve, relative } from "node:path";
 import { collectMessages } from "./transform";
+import vi from "./locales/vi.json";
 
 const root = resolve(import.meta.dirname, "../../..");
 const sources = ["apps/web/src", "apps/server/src", "packages/nodeShared/src",
@@ -10,6 +11,7 @@ const chinese = /[\u3400-\u9fff]/;
 const quoted = /(["'`])([^"'\r\n]*[\u3400-\u9fff][^"'\r\n]*)\1/g;
 const report = { auditedFiles: 0, sourceChineseLiteralOccurrences: 0, guardedOrTranslated: 0,
   needsManualReview: 0, promptRelatedCandidates: 0, parseFailures: 0 };
+const residual = { dictionaryCoveredUnverified: 0, noVietnameseDictionaryKey: 0 };
 const byFile = new Map<string, number>();
 const reviewByScope: Record<string, number> = { web: 0, nodes: 0, nodeShared: 0, nodeScaffold: 0, server: 0 };
 for (const source of sources) await walk(resolve(root, source));
@@ -44,6 +46,8 @@ async function walk(directory: string) {
           continue;
         }
         report.needsManualReview++;
+        if (Object.hasOwn(vi, key)) residual.dictionaryCoveredUnverified++;
+        else residual.noVietnameseDictionaryKey++;
         byFile.set(path, (byFile.get(path) ?? 0) + 1);
         const scope = path.startsWith("apps/web/") ? "web" : path.startsWith("apps/server/") ? "server"
           : path.startsWith("packages/nodeShared/") ? "nodeShared"
@@ -55,7 +59,7 @@ async function walk(directory: string) {
   }
 }
 console.log("[VI RESIDUAL REVIEW] " + JSON.stringify({
-  ...report, reviewByScope,
+  ...report, ...residual, reviewByScope,
   metric: "Lexical candidates, NOT proven visible untranslated strings",
   topFiles: [...byFile.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([file,count])=>({file,count})),
 }));
