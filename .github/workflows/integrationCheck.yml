@@ -44,7 +44,7 @@ jobs:
           ffmpeg -version
           ffprobe -version
       - name: Run HD-02/03/05 regression tests (FFmpeg fixtures, no AI providers)
-        run: bun test apps/server/src/utils/media/batchTransitions.test.ts apps/server/src/utils/media/batchFfmpeg.test.ts apps/web/src/pages/workspace/panels/canvas/materialPresetCatalog.test.ts packages/nodeShared/src/promptDrop.test.ts
+        run: bun test apps/server/src/utils/media/batchTransitions.test.ts apps/server/src/utils/media/batchFfmpeg.test.ts apps/web/src/pages/workspace/panels/canvas/materialPresetCatalog.test.ts packages/nodeShared/src/promptDrop.test.ts apps/web/src/pages/workspace/panels/canvas/characterRecords.test.ts
       - name: Build Tools
         run: bun run build:tools
       - name: Build Extensions
