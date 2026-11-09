@@ -93,7 +93,8 @@
             v-model:camera="data.camera"
             :ratios="ratioOptions"
             :model="selectedModel"
-            :disabled="generating || deleting || !modelCanGenerate" />
+            :disabled="generating || deleting" />
+          <span v-if="!modelCanGenerate" class="modelUnavailable" role="status">{{ vietnamese ? "Chưa có mô hình video sẵn sàng; có thể chọn tỷ lệ dự kiến, nhưng chưa thể gửi tạo video. Hãy mở Cài đặt AI Bridge / Model AI." : "尚无可用视频模型：可以预选比例，但不能提交生成，请在设置中连接模型。" }}</span>
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'video' }" :supported="selectedModel?.supportsPrice === true" />
             <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" title="放弃任务" aria-label="放弃任务" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
