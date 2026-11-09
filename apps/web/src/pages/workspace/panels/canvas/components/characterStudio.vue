@@ -47,9 +47,9 @@ import { IconUser } from "@tabler/icons-vue";
 import axios from "axios";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { uploadNodeFile } from "@toonflow/nodes-scaffold/workspaceFiles";
+import { omitCharacter, parseCharacterRecords, upsertCharacter, type CharacterImage, type CharacterRecord } from "../characterRecords";
+export type { CharacterImage, CharacterRecord } from "../characterRecords";
 
-export type CharacterImage = { path: string; name: string; mimeType: string };
-export type CharacterRecord = { id: string; name: string; description: string; images: CharacterImage[]; updatedAt: string };
 const storePath = "characters/index.json";
 const props = defineProps<{ directory?: string; addCharacter: (character: CharacterRecord) => Promise<boolean> }>();
 const visible = defineModel<boolean>({ default: false });
@@ -102,11 +102,7 @@ async function loadCharacters() {
     let loaded: typeof snapshot;
     try {
       const current = await files.readTextSnapshot(storePath);
-      const parsed: unknown = JSON.parse(current.text);
-      if (!Array.isArray(parsed) || !parsed.every(item => item && typeof item.id === "string" && typeof item.name === "string" && Array.isArray(item.images)
-        && item.images.every((image: CharacterImage) => image && typeof image.path === "string" && typeof image.name === "string" && typeof image.mimeType === "string")))
-        throw new Error("Dữ liệu nhân vật không hợp lệ; không ghi đè tệp cũ");
-      contents = parsed as CharacterRecord[];
+      contents = parseCharacterRecords(JSON.parse(current.text));
       loaded = { revision: current.revision, encoding: current.encoding };
     } catch (error) {
       if (!missing(error)) throw error;
@@ -122,6 +118,7 @@ async function loadCharacters() {
   }
 }
 async function persist(next: CharacterRecord[], directory = props.directory) {
+  next = parseCharacterRecords(next);
   if (directory !== props.directory) throw new Error("Workspace đã thay đổi; hãy mở lại Studio nhân vật");
   if (!directory) throw new Error("Chưa có workspace");
   const files = useWorkspaceFiles(directory);
@@ -177,7 +174,7 @@ async function saveCharacter() {
       id, name: draftName.value.trim(), description: draftDescription.value.trim(),
       images, updatedAt: new Date().toISOString(),
     };
-    await persist(existing ? characters.value.map(item => item.id === id ? record : item) : [...characters.value, record], directory);
+    await persist(upsertCharacter(characters.value, record), directory);
     editVisible.value = false;
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "Không thể lưu nhân vật");
@@ -190,7 +187,7 @@ async function deleteCharacter(character: CharacterRecord) {
   try { await ElMessageBox.confirm(`Xóa hồ sơ "${character.name}" khỏi danh sách? Ảnh gốc trên workspace vẫn được giữ lại.`, "Xác nhận xóa", { type: "warning" }); }
   catch { return; }
   saving.value = true;
-  try { await persist(characters.value.filter(item => item.id !== character.id)); }
+  try { await persist(omitCharacter(characters.value, character.id)); }
   catch (error) { ElMessage.error(error instanceof Error ? error.message : "Không thể xóa hồ sơ"); }
   finally { saving.value = false; }
 }
