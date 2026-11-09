@@ -516,7 +516,7 @@ export async function inspect(cwd: string, taskIds: string[], owner?: AuthIdenti
     const key = taskPath(cwd, taskId);
     return locked(key, async () => {
       const task = await load(cwd, taskId, key, owner);
-      return task ? snapshot(task, owner) : { taskId, state: "unknown" as const, resumable: false };
+      return task ? { ...await snapshot(task, owner), active: task.active } : { taskId, state: "unknown" as const, resumable: false, active: false };
     });
   }));
 }
