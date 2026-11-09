@@ -326,3 +326,12 @@
 - **Chưa hoàn tất:** Browser thao tác thực Undo/Redo/caret/payload ảnh-video, HTTP server và dự án reload, task backend restart có provider thật, concurrency đa thiết bị/tab/đa tiến trình, thử FFmpeg xuất MP4 bằng app, Chrome Muse/Gemini/ChatGPT đã đăng nhập, Render Relay, Mac Intel macOS 13; AI Center HD-07, Việt hóa 100% HD-08, desktop packaging HD-09.
 - **Bảo vệ dữ liệu:** không xóa hồ sơ/canvas/cấu hình của người dùng; tất cả fixture/test ghi thư mục tạm. Kết quả E2E **NOT TESTED** khi chưa có log Mac/Chrome xác thực.
 - **Bước kế tiếp:** theo [checklist Mac](./hd06MacAcceptance.md); chạy Web/Server local, test giao diện thật, tạo video provider thật, load/reload, kiểm hàng đợi thực và bổ sung unit/integration HTTP routes trên workspace thử nghiệm độc lập. Không tự retry UNKNOWN.
+
+
+### ISSUE-0035 — HD-07 Chrome Bridge và một ảnh/video thật vẫn chưa được nghiệm thu
+
+- **Ngày/người sửa mới nhất:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái: PARTIAL / E2E BLOCKED**.
+- **Đã sửa thực tế:** `chromeBridge/dispatchGuard.ts` + local/remote run chống cùng tab; quarantine UNKNOWN và cancelled chưa xác nhận; reset selections khi mất relay; rollback sai owner key; `chromeBridge/mediaSignature.ts` kiểm bytes trước ghi workspace; `chromeBridge/access.ts` test lại an toàn loopback/Origin; `/diagnostics` kết hợp trạng thái thực (Relay/Device/Extension/Tab/Model/task); UI trong AI Bridge.
+- **Tests mới:** `dispatchGuard.test.ts`, `bridgeValidation.test.ts`, `mediaSignature.test.ts`, `access.test.ts` chạy trong GitHub Actions; phân biệt unit/security logic với E2E.
+- **E2E chưa làm được:** Chrome Companion đã đăng nhập Muse/Gemini/ChatGPT thật; Render WSS/HTTPS owner pairing thật; 1 ảnh + 1 video file thật và checksum; Batch 5 ảnh 3 video và FFmpeg với clip AI; tab reload/Chrome mất mạng, snapshot dự án sau Mac restart. Cần dùng [quy trình Mac](./hd07MacAcceptance.md) và lưu log đã che token.
+- **Cần tiếp tục:** integration HTTP/WS qua Relay thực, kiểm sống từng selector của website, xác nhận người dùng chọn model/chip và trạng thái online/bận/offline, test crash recovery, xác minh FFprobe codec/duration trên file tạo từ provider. Không đánh dấu DONE trước bằng chứng.
