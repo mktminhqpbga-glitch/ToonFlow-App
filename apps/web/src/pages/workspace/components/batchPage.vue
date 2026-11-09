@@ -39,6 +39,10 @@
         <el-button size="small" :disabled="batch.state !== 'running' || controlling === batch.id" @click="control(batch, 'pause')">Tạm dừng</el-button>
         <el-button size="small" :disabled="batch.state !== 'paused' || controlling === batch.id" @click="control(batch, 'resume')">Tiếp tục</el-button>
         <el-button size="small" type="danger" plain :disabled="['completed','cancelled'].includes(batch.state) || controlling === batch.id" @click="control(batch, 'cancel')">Hủy</el-button>
+        <el-button v-if="batch.kind === 'video' && batch.scenes.length > 1" size="small" type="primary"
+          :loading="joining === batch.id" :disabled="joining !== '' || batch.state !== 'completed' || batch.scenes.some(scene => scene.state !== 'succeeded')"
+          @click="mergeVideo(batch)">Ghép MP4 (FFmpeg)</el-button>
+        <el-button v-if="batch.merged" size="small" link type="success" @click="download({ ...batch.merged, mediaType: 'video' })">Tải MP4 đã ghép</el-button>
       </div>
       <div class="sceneList">
         <div v-for="scene in batch.scenes" :key="scene.id" class="sceneRow">
@@ -63,7 +67,7 @@ type Kind = "image" | "video";
 type Model = { providerId: string; providerLabel: string; modelId: string; routeId?: string; label: string; type: Kind | "audio"; availability?: "ready" | "configured" | "needsConfiguration" };
 type Result = { path: string; mimeType: string; mediaType: Kind };
 type Scene = { id: string; taskId: string; index: number; request: { prompt: string }; state: string; result?: Result[]; error?: string };
-type Batch = { id: string; kind: Kind; state: string; scenes: Scene[]; createdAt: number };
+type Batch = { id: string; kind: Kind; state: string; scenes: Scene[]; createdAt: number; merged?: { path: string; mimeType: string } };
 const props = defineProps<{ kind: Kind; directory?: string; active: boolean }>();
 const ratios = ["16:9", "9:16", "1:1", "4:3", "3:4"];
 const modelKey = ref("");
@@ -78,6 +82,7 @@ const referenceFiles = ref<File[]>([]);
 const creating = ref(false);
 const loading = ref(false);
 const controlling = ref("");
+const joining = ref("");
 const batches = ref<Batch[]>([]);
 const visibleBatches = computed(() => batches.value.filter(batch => batch.kind === props.kind));
 const filteredModels = computed(() => models.value.filter(model => model.type === props.kind));
@@ -156,6 +161,17 @@ async function control(batch: Batch, action: "pause" | "resume" | "cancel") {
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "Không thể thay đổi hàng đợi");
   } finally { controlling.value = ""; }
+}
+async function mergeVideo(batch: Batch) {
+  if (!props.directory || joining.value || batch.kind !== "video") return;
+  joining.value = batch.id;
+  try {
+    await axios.post("/api/ai/media/batches/merge", { directory: props.directory, id: batch.id });
+    await refresh();
+    ElMessage.success("Đã ghép video từ các cảnh được FFprobe xác nhận");
+  } catch (error) {
+    ElMessage.error(axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message || error.message : "Không thể ghép MP4");
+  } finally { joining.value = ""; }
 }
 async function download(result: Result) {
   if (!props.directory) return;
