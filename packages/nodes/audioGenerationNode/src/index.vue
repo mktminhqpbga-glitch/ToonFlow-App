@@ -38,7 +38,7 @@
             noDataText="请先在设置中添加音频模型"
             placement="top-start"
             @update:modelValue="data.model = $event"
-            @visible-change="visible => visible && loadModels().catch(error => showNodeError(error, '模型读取失败'))">
+            @visible-change="visible => visible && loadModels().catch(error => showNodeError(error, nodeText("模型读取失败", "Không tải được danh sách model")))">
             <template v-if="!selectedModel" #prefix><icon-music-bolt :size="17" /></template>
             <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
             <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
@@ -50,14 +50,14 @@
           <generationSettings v-model:language="data.language" v-model:sampleRate="data.sampleRate" v-model:format="data.format" v-model:other="data.other" :model="selectedModel" :disabled="busy || !selectedModel" />
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'audio' }" :supported="selectedModel?.supportsPrice === true" />
-            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" title="放弃任务" aria-label="放弃任务" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
+            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" title=nodeText("放弃任务", "Bỏ tác vụ") aria-label=nodeText("放弃任务", "Bỏ tác vụ") @click="generationState.cancel().catch(error => showNodeError(error, nodeText("停止生成失败", "Không dừng được tác vụ tạo")))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || transcribing || actions?.processing || (!generating && !pendingRecovery && (!generationPrompt || !selectedModel))"
               :title="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成音频'"
               :aria-label="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成音频'"
-              @click="generating ? generationState.cancel().catch(error => showNodeError(error, '停止生成失败')) : startGeneration().catch(error => showNodeError(error, '音频生成失败'))" />
+              @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText("停止生成失败", "Không dừng được tác vụ tạo"))) : startGeneration().catch(error => showNodeError(error, nodeText("音频生成失败", "Tạo âm thanh thất bại")))" />
           </div>
         </div>
       </el-card>
@@ -152,7 +152,7 @@ const generationInput = computed<Omit<NodeAudioRequest, "directory"> | undefined
     audios: refList.value.flatMap(item => item.dataType === "AUDIO" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
   };
 });
-const previewUrl = files.useFileUrl(outputFile, error => showNodeError(error, "音频读取失败"));
+const previewUrl = files.useFileUrl(outputFile, error => showNodeError(error, nodeText("音频读取失败", "Không đọc được âm thanh")));
 
 function referencesAllowed(values: NodeInputValue[]) {
   return values.filter(item => isTypeCompatible(item.dataType, ["IMAGE", "AUDIO"])).length <= 1;
@@ -187,7 +187,7 @@ async function refreshProviderModels(event?: Event) {
     modelsRefreshPending = false;
     await loadModels();
   } catch (error) {
-    if (!disposed) showNodeError(error, "模型读取失败");
+    if (!disposed) showNodeError(error, nodeText("模型读取失败", "Không tải được danh sách model"));
   }
 }
 
@@ -214,18 +214,18 @@ function loadModels() {
 }
 
 async function startGeneration() {
-  if (cancelling.value) throw new Error("任务正在取消，请稍后重试");
-  if (busy.value || disposed) throw new Error("音频正在处理或节点已关闭，请稍后重试");
+  if (cancelling.value) throw new Error(nodeText("任务正在取消，请稍后重试", "Đang hủy tác vụ, hãy thử lại sau"));
+  if (busy.value || disposed) throw new Error(nodeText("音频正在处理或节点已关闭，请稍后重试", "Âm thanh đang được xử lý hoặc node đã đóng, hãy thử lại sau"));
   if (pendingRecovery.value) {
-    generation = generationState.resume().catch(error => showNodeError(error, "音频任务复查失败"));
+    generation = generationState.resume().catch(error => showNodeError(error, nodeText("音频任务复查失败", "Không kiểm tra lại được tác vụ âm thanh")));
     return { status: "generating" };
   }
   const input = generationInput.value;
-  if (!input) throw new Error("请先选择音频模型");
-  if (!generationPrompt.value) throw new Error("请输入生成提示词或待朗读文本");
-  if (!referencesAllowed(refList.value)) throw new Error("图片和音频不能同时引用，且合计最多引用一个；文本数量不限");
-  if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
-  if (!languageOptions.some(item => item.value === data.value.language) || !sampleRateOptions.includes(data.value.sampleRate) || !formatOptions.includes(data.value.format)) throw new Error("请重新选择有效的语种、采样率和输出格式");
+  if (!input) throw new Error(nodeText("请先选择音频模型", "Hãy chọn model âm thanh trước"));
+  if (!generationPrompt.value) throw new Error(nodeText("请输入生成提示词或待朗读文本", "Hãy nhập prompt tạo âm thanh hoặc văn bản cần đọc"));
+  if (!referencesAllowed(refList.value)) throw new Error(nodeText("图片和音频不能同时引用，且合计最多引用一个；文本数量不限", "Không thể tham chiếu ảnh và âm thanh đồng thời; tổng tối đa một tệp, không giới hạn số tham chiếu văn bản"));
+  if (refList.value.some(item => item.value === undefined)) throw new Error(nodeText("引用节点暂无内容，请先补充引用内容", "Node tham chiếu chưa có nội dung; hãy bổ sung trước"));
+  if (!languageOptions.some(item => item.value === data.value.language) || !sampleRateOptions.includes(data.value.sampleRate) || !formatOptions.includes(data.value.format)) throw new Error(nodeText("请重新选择有效的语种、采样率和输出格式", "Hãy chọn lại ngôn ngữ, tần số lấy mẫu và định dạng đầu ra hợp lệ"));
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   generationController = controller;
@@ -234,9 +234,9 @@ async function startGeneration() {
     controller.signal.throwIfAborted();
     const [result] = await generationState.generate("audio", { ...input, directory }, controller.signal);
     controller.signal.throwIfAborted();
-    if (!result) throw new Error("供应商未返回音频");
+    if (!result) throw new Error(nodeText("供应商未返回音频", "Nhà cung cấp không trả về âm thanh"));
     outputs.value.audio = { dataType: "AUDIO", value: { url: result.path, mimeType: result.mimeType } };
-  }).catch(error => showNodeError(error, "音频生成失败")).finally(() => {
+  }).catch(error => showNodeError(error, nodeText("音频生成失败", "Tạo âm thanh thất bại"))).finally(() => {
     generationController = undefined;
   });
   return { status: "generating" };
@@ -248,8 +248,8 @@ async function replaceOutput(event: Event) {
   input.value = "";
   if (!file || busy.value || disposed) return;
   const mimeType = getMediaMimeType(file);
-  if (!mimeType.startsWith("audio/")) return void showNodeError("请选择音频文件", "音频替换失败");
-  if (!file.size || file.size > 100 * 1024 * 1024) return void showNodeError("音频不能为空且不能超过 100 MB", "音频替换失败");
+  if (!mimeType.startsWith("audio/")) return void showNodeError(nodeText("请选择音频文件", "Hãy chọn tệp âm thanh"), nodeText("音频替换失败", "Không thay được âm thanh"));
+  if (!file.size || file.size > 100 * 1024 * 1024) return void showNodeError(nodeText("音频不能为空且不能超过 100 MB", "Âm thanh không được trống và không được vượt quá 100 MB"), nodeText("音频替换失败", "Không thay được âm thanh"));
   uploading.value = true;
   try {
     const workspace = files.getWorkspaceFiles();
@@ -261,17 +261,17 @@ async function replaceOutput(event: Event) {
     // ACT: 替换不删除旧音频，保留复制节点与撤销记录的文件引用。
     outputs.value.audio = { dataType: "AUDIO", value: { url, mimeType } };
   } catch (error) {
-    showNodeError(error, "音频替换失败");
+    showNodeError(error, nodeText("音频替换失败", "Không thay được âm thanh"));
   } finally {
     uploading.value = false;
   }
 }
 
 nodeEvent.on("save", reason => {
-  if (uploading.value || (reason === "reload" && busy.value)) throw new Error("音频处理中，请完成或取消后再刷新节点");
+  if (uploading.value || (reason === "reload" && busy.value)) throw new Error(nodeText("音频处理中，请完成或取消后再刷新节点", "Đang xử lý âm thanh; hãy hoàn tất hoặc hủy trước khi làm mới node"));
 });
 nodeEvent.on("delete", async () => {
-  if (uploading.value) throw new Error("音频正在替换，请稍后删除节点");
+  if (uploading.value) throw new Error(nodeText("音频正在替换，请稍后删除节点", "Đang thay âm thanh; hãy xóa node sau khi hoàn tất"));
   deleting.value = true;
   try {
     await generationState.cancel(false);
@@ -314,18 +314,18 @@ nodeTools.register({
     sampleRate: z.number().int().positive().optional(),
     format: z.string().optional(),
     other: z.record(z.string(), z.json()).optional(),
-  }).refine(args => (args.providerId === undefined) === (args.modelId === undefined), "providerId 与 modelId 必须同时提供"),
+  }).refine(args => (args.providerId === undefined) === (args.modelId === undefined), nodeText("providerId 与 modelId 必须同时提供", "Phải cung cấp đồng thời providerId và modelId")),
   async execute(args, { signal }) {
     signal?.throwIfAborted();
-    if (busy.value || disposed) throw new Error("音频正在处理或节点已关闭，请稍后修改配置");
+    if (busy.value || disposed) throw new Error(nodeText("音频正在处理或节点已关闭，请稍后修改配置", "Đang xử lý âm thanh hoặc node đã đóng; hãy chỉnh cấu hình sau"));
     await loadModels();
     signal?.throwIfAborted();
-    if (busy.value || disposed) throw new Error("音频正在处理或节点已关闭，请稍后修改配置");
+    if (busy.value || disposed) throw new Error(nodeText("音频正在处理或节点已关闭，请稍后修改配置", "Đang xử lý âm thanh hoặc node đã đóng; hãy chỉnh cấu hình sau"));
     const choice = args.modelId === undefined ? selectedModel.value : findNodeModel(models.value, { providerId: args.providerId ?? "", modelId: args.modelId });
-    if (!choice) throw new Error("请选择 getConfig 返回的有效音频模型");
-    if (args.language !== undefined && !languageOptions.some(item => item.value === args.language)) throw new Error("请选择 getConfig 返回的有效语种");
-    if (args.sampleRate !== undefined && !sampleRateOptions.includes(args.sampleRate)) throw new Error("请选择 getConfig 返回的有效采样率");
-    if (args.format !== undefined && !formatOptions.includes(args.format)) throw new Error("请选择 getConfig 返回的有效输出格式");
+    if (!choice) throw new Error(nodeText("请选择 getConfig 返回的有效音频模型", "Hãy chọn model âm thanh hợp lệ từ getConfig"));
+    if (args.language !== undefined && !languageOptions.some(item => item.value === args.language)) throw new Error(nodeText("请选择 getConfig 返回的有效语种", "Hãy chọn ngôn ngữ hợp lệ từ getConfig"));
+    if (args.sampleRate !== undefined && !sampleRateOptions.includes(args.sampleRate)) throw new Error(nodeText("请选择 getConfig 返回的有效采样率", "Hãy chọn tần số lấy mẫu hợp lệ từ getConfig"));
+    if (args.format !== undefined && !formatOptions.includes(args.format)) throw new Error(nodeText("请选择 getConfig 返回的有效输出格式", "Hãy chọn định dạng đầu ra hợp lệ từ getConfig"));
     const other = getModelFormValues(choice, choice === selectedModel.value ? data.value.other : {}, args.other);
     data.value.model = getNodeModelKey(choice);
     if (args.language !== undefined) data.value.language = args.language;
@@ -340,7 +340,7 @@ nodeTools.register({
   description: () => nodeText("修改此节点的音频生成提示词或待朗读文本，仅接收 prompt，支持 {{ref 1}} 等参考标记；语种 language、采样率 sampleRate、格式 format 等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成", "Chỉnh sửa prompt tạo âm thanh hoặc văn bản cần đọc của node này. Chỉ nhận trường prompt và dấu tham chiếu {{ref 1}}. Với language, sampleRate, format, hãy tra khả năng bằng node:getConfig trước khi gọi node:setConfig riêng. Không tự chạy tạo âm thanh."),
   parameters: z.strictObject({ prompt: z.string() }),
   execute({ prompt }) {
-    if (deleting.value || disposed) throw new Error("节点正在删除或已关闭，请稍后修改");
+    if (deleting.value || disposed) throw new Error(nodeText("节点正在删除或已关闭，请稍后修改", "Node đang xóa hoặc đã đóng; hãy chỉnh sau"));
     data.value.prompt = prompt;
     data.value.promptModel = prompt.split("\n").map(text => [{ type: "Write", text }]);
     return { prompt };
