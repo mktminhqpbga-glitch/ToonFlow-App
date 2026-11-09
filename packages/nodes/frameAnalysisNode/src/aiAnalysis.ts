@@ -3,6 +3,8 @@ import { analysisPath, runFfmpeg } from "./videoAnalysis";
 import { overviewPromptVi, overviewSystemPromptVi, shotPromptVi, shotSystemPromptVi } from "./aiPromptVi";
 import type { AnalysisResult, AnalysisScene } from "./videoAnalysis";
 
+const localized = (zh: string, vi: string) => typeof document !== "undefined" && document.documentElement.lang === "vi" ? vi : zh;
+
 export type AiAnalysisOptions = {
   ai: { generate(input: NodeAiRequest): Promise<NodeAiResult> };
   model: Pick<NodeAiModel, "providerId" | "modelId" | "routeId" | "contextWindow" | "maxOutputTokens">;
@@ -17,16 +19,16 @@ export type AiAnalysisOptions = {
 };
 
 function readFields<T extends Record<string, number>>(text: string, limits: T, allowEmpty: (keyof T)[] = []): Record<keyof T, string> {
-  if (typeof text !== "string" || text.length > 16000) throw new Error("AI 返回的拉片描述格式无效");
+  if (typeof text !== "string" || text.length > 16000) throw new Error(localized("AI 返回的拉片描述格式无效", "Dữ liệu phân tích video do AI trả về không hợp lệ"));
   const content = text.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, "$1");
   let parsed: unknown;
-  try { parsed = JSON.parse(content); } catch { throw new Error("AI 未返回有效 JSON，请重新进行 AI 辅助拉片"); }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("AI 返回的拉片描述格式无效");
+  try { parsed = JSON.parse(content); } catch { throw new Error(localized("AI 未返回有效 JSON，请重新进行 AI 辅助拉片", "AI không trả về JSON hợp lệ, hãy chạy lại phân tích video")); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(localized("AI 返回的拉片描述格式无效", "Dữ liệu phân tích video do AI trả về không hợp lệ"));
   const value = parsed as Record<string, unknown>;
   const keys = Object.keys(limits) as (keyof T & string)[];
   if (Object.keys(value).length !== keys.length || keys.some(key => typeof value[key] !== "string"
     || (!allowEmpty.includes(key) && !value[key].trim()) || value[key].length > limits[key])) {
-    throw new Error("AI 返回的描述字段缺失或过长，请重新进行 AI 辅助拉片");
+    throw new Error(localized("AI 返回的描述字段缺失或过长，请重新进行 AI 辅助拉片", "Dữ liệu mô tả thiếu trường hoặc quá dài, hãy phân tích lại video"));
   }
   return Object.fromEntries(keys.map(key => [key, (value[key] as string).replace(/\s+/g, " ").trim()])) as Record<keyof T, string>;
 }
@@ -45,28 +47,28 @@ export async function analyzeSceneDescriptions(options: AiAnalysisOptions): Prom
   const previousManifest = analysisPath(result.manifest);
   const separator = previousManifest.lastIndexOf("/");
   const directory = separator > 0 ? previousManifest.slice(0, separator) : "";
-  if (!directory || !/^(?:[a-z]:[\\/]|\/|\\\\)/i.test(workspaceDirectory)) throw new Error("请先选择有效工作区并完成本地拉片");
-  if (!model.providerId || !model.modelId) throw new Error("请先选择支持图片输入的 AI 模型");
-  if (!Number.isFinite(result.duration) || result.duration <= 0 || !result.scenes.length) throw new Error("没有可供 AI 分析的分镜");
-  if (typeof options.focus !== "undefined" && typeof options.focus !== "string") throw new Error("分析重点必须是文字");
+  if (!directory || !/^(?:[a-z]:[\\/]|\/|\\\\)/i.test(workspaceDirectory)) throw new Error(localized("请先选择有效工作区并完成本地拉片", "Hãy chọn workspace hợp lệ và hoàn tất phân tích video cục bộ trước"));
+  if (!model.providerId || !model.modelId) throw new Error(localized("请先选择支持图片输入的 AI 模型", "Hãy chọn model AI hỗ trợ đầu vào ảnh"));
+  if (!Number.isFinite(result.duration) || result.duration <= 0 || !result.scenes.length) throw new Error(localized("没有可供 AI 分析的分镜", "Không có cảnh nào để AI phân tích"));
+  if (typeof options.focus !== "undefined" && typeof options.focus !== "string") throw new Error(localized("分析重点必须是文字", "Trọng tâm phân tích phải là văn bản"));
   const focus = options.focus?.trim() ?? "";
-  if (focus.length > 2000) throw new Error("分析重点最多填写 2000 字");
+  if (focus.length > 2000) throw new Error(localized("分析重点最多填写 2000 字", "Trọng tâm phân tích tối đa 2.000 ký tự"));
   // ACT: 首版整段归纳采用单次请求，最多分析 200 个镜头；更长影片应先分段，避免静默漏掉镜头。
-  if (result.scenes.length > 200) throw new Error("AI 辅助拉片每次最多分析 200 个镜头，请先将长视频分段；本地拉片结果已保留");
+  if (result.scenes.length > 200) throw new Error(localized("AI 辅助拉片每次最多分析 200 个镜头，请先将长视频分段；本地拉片结果已保留", "Mỗi lần AI chỉ phân tích tối đa 200 cảnh; hãy chia video dài, dữ liệu cục bộ vẫn được giữ"));
   const offset = result.sourceVideoOffset ?? 0;
-  if (!Number.isFinite(offset) || offset < 0) throw new Error("视频时间信息无效，请重新执行本地拉片");
+  if (!Number.isFinite(offset) || offset < 0) throw new Error(localized("视频时间信息无效，请重新执行本地拉片", "Thông tin thời gian video không hợp lệ, hãy chạy lại phân tích cục bộ"));
   const streamIndex = result.sourceVideoStreamIndex;
-  if (streamIndex !== undefined && (!Number.isInteger(streamIndex) || streamIndex < 0)) throw new Error("视频流信息无效，请重新执行本地拉片");
+  if (streamIndex !== undefined && (!Number.isInteger(streamIndex) || streamIndex < 0)) throw new Error(localized("视频流信息无效，请重新执行本地拉片", "Luồng video không hợp lệ, hãy chạy lại phân tích cục bộ"));
   const plans = result.scenes.map(scene => {
     if (!Number.isFinite(scene.start) || !Number.isFinite(scene.end) || scene.start < 0 || scene.end <= scene.start
-      || scene.end > result.duration + 0.001) throw new Error("分镜时间信息无效，请重新执行本地拉片");
+      || scene.end > result.duration + 0.001) throw new Error(localized("分镜时间信息无效，请重新执行本地拉片", "Thời gian của cảnh không hợp lệ, hãy chạy lại phân tích cục bộ"));
     const times = scene.sampleTimes;
     if (times?.length) {
       if (times.length > 3 || times.some((time, index) => !Number.isFinite(time) || time < scene.start || time >= scene.end
-        || (index > 0 && time <= times[index - 1]))) throw new Error("分镜采样信息无效，请重新执行本地拉片");
+        || (index > 0 && time <= times[index - 1]))) throw new Error(localized("分镜采样信息无效，请重新执行本地拉片", "Dữ liệu lấy mẫu cảnh không hợp lệ, hãy chạy lại phân tích cục bộ"));
       return { times, image: undefined };
     }
-    if (!scene.image) throw new Error("该结果没有时序采样信息，请先开启分镜或动态并重新执行本地拉片");
+    if (!scene.image) throw new Error(localized("该结果没有时序采样信息，请先开启分镜或动态并重新执行本地拉片", "Kết quả thiếu mẫu theo thời gian; hãy bật phân cảnh hoặc chuyển động rồi phân tích lại"));
     return { times: [], image: analysisPath(scene.image) };
   });
   signal.throwIfAborted();
@@ -85,7 +87,7 @@ export async function analyzeSceneDescriptions(options: AiAnalysisOptions): Prom
     }
   }
   if (scenes.length) {
-    onProgress(80, "复用已保存的逐镜头分析");
+    onProgress(80, localized("复用已保存的逐镜头分析", "Đang sử dụng lại phân tích từng cảnh đã lưu"));
   } else {
     await workspace.mkdir(temporary);
     let failure: unknown;
@@ -97,7 +99,7 @@ export async function analyzeSceneDescriptions(options: AiAnalysisOptions): Prom
         const paths: string[] = [];
         const sampleCount = plan.image ? 1 : plan.times.length;
         for (let sample = 0; sample < sampleCount; sample++) {
-          onProgress(index / result.scenes.length * 80, `抽取 AI 参考画面 · ${index + 1}/${result.scenes.length}`);
+          onProgress(index / result.scenes.length * 80, localized(`抽取 AI 参考画面 · ${index + 1}/${result.scenes.length}`, `Đang trích khung hình tham chiếu · ${index + 1}/${result.scenes.length}`));
           const path = `${temporary}/scene${index + 1}Frame${sample + 1}.jpg`;
           const command = ffmpeg(plan.image ?? source);
           if (!plan.image) {
@@ -108,7 +110,7 @@ export async function analyzeSceneDescriptions(options: AiAnalysisOptions): Prom
             .outputOptions("-q:v", "4").frames(1).output(path), signal);
           signal.throwIfAborted();
           const image = new Uint8Array(await workspace.read(path));
-          if (image.length < 4 || image[0] !== 0xff || image[1] !== 0xd8) throw new Error(`第 ${index + 1} 个镜头的 AI 参考画面生成失败`);
+          if (image.length < 4 || image[0] !== 0xff || image[1] !== 0xd8) throw new Error(localized(`第 ${index + 1} 个镜头的 AI 参考画面生成失败`, `Không tạo được khung hình tham chiếu AI của cảnh ${index + 1}`));
           paths.push(path);
         }
         const timeDescription = vietnamese
@@ -116,7 +118,7 @@ export async function analyzeSceneDescriptions(options: AiAnalysisOptions): Prom
             : `Có ${paths.length} khung hình theo thứ tự thời gian, tại ${plan.times.map(time => `${(time - scene.start).toFixed(3)} giây`).join(", ")} so với đầu cảnh.`
           : plan.image ? "仅提供这个镜头的一张关键帧，没有时序信息。"
             : `按时间顺序提供 ${paths.length} 张画面，时间分别为 ${plan.times.map(time => `${(time - scene.start).toFixed(3)} 秒`).join("、")}，相对于本镜头起点。`;
-        onProgress((index + 0.35) / result.scenes.length * 80, `AI 分析镜头 · ${index + 1}/${result.scenes.length}`);
+        onProgress((index + 0.35) / result.scenes.length * 80, localized(`AI 分析镜头 · ${index + 1}/${result.scenes.length}`, `AI đang phân tích cảnh · ${index + 1}/${result.scenes.length}`));
         const response = await ai.generate({
           ...getNodeModelIdentity(model),
           directory: workspaceDirectory,
@@ -135,13 +137,13 @@ ${focus ? `用户指定的分析重点：${JSON.stringify(focus)}。在现有四
         signal.throwIfAborted();
         scenes.push({ ...scene, annotation: readAnnotation(response.text, paths.length, vietnamese) });
         for (const path of paths) await workspace.remove(path);
-        onProgress((index + 1) / result.scenes.length * 80, `已分析镜头 · ${index + 1}/${result.scenes.length}`);
+        onProgress((index + 1) / result.scenes.length * 80, localized(`已分析镜头 · ${index + 1}/${result.scenes.length}`, `Đã phân tích cảnh · ${index + 1}/${result.scenes.length}`));
       }
     } catch (error) {
       failure = error;
     } finally {
       try { await workspace.remove(temporary, true); } catch (error) {
-        failure = failure ? new AggregateError([failure, error], "AI 拉片未完成，临时画面清理也失败，请检查工作区连接") : error;
+        failure = failure ? new AggregateError([failure, error], localized("AI 拉片未完成，临时画面清理也失败，请检查工作区连接", "Chưa hoàn tất phân tích AI và không thể xóa ảnh tạm, hãy kiểm tra kết nối workspace")) : error;
       }
     }
     if (failure) throw failure;
@@ -174,9 +176,9 @@ ${JSON.stringify(observations)}`;
     const availableContext = model.contextWindow && Number.isFinite(model.contextWindow)
       ? model.contextWindow - Math.min(model.maxOutputTokens ?? 4096, 8000) : undefined;
     if (availableContext !== undefined && overviewPrompt.length > availableContext) {
-      throw new Error("逐镜头资料超出所选模型的上下文预算，请选择上下文更大的模型或先将视频分段");
+      throw new Error(localized("逐镜头资料超出所选模型的上下文预算，请选择上下文更大的模型或先将视频分段", "Thông tin các cảnh vượt giới hạn ngữ cảnh của model; hãy chọn model có ngữ cảnh lớn hơn hoặc chia video"));
     }
-    onProgress(82, "语言模型归纳叙事、节奏与剪辑");
+    onProgress(82, localized("语言模型归纳叙事、节奏与剪辑", "AI đang tổng hợp nội dung, nhịp điệu và dựng phim"));
     const response = await ai.generate({
       ...getNodeModelIdentity(model),
       directory: workspaceDirectory,
@@ -189,10 +191,10 @@ ${JSON.stringify(observations)}`;
     if (!focus) overview.focusResponse = "";
   } catch (error) {
     signal.throwIfAborted();
-    overviewError = error instanceof Error && error.message.trim() ? error.message.slice(0, 1000) : "整段归纳未完成，请重试";
+    overviewError = error instanceof Error && error.message.trim() ? error.message.slice(0, 1000) : localized("整段归纳未完成，请重试", "Chưa tổng hợp được toàn video, hãy thử lại");
   }
   signal.throwIfAborted();
-  onProgress(96, overviewError ? "保存已完成的逐镜头分析" : "保存整段视频拉片分析");
+  onProgress(96, overviewError ? localized("保存已完成的逐镜头分析", "Đang lưu các cảnh đã phân tích") : localized("保存整段视频拉片分析", "Đang lưu phân tích toàn video"));
   const annotated: AnalysisResult = {
     ...result,
     scenes,
@@ -205,6 +207,6 @@ ${JSON.stringify(observations)}`;
     await workspace.remove(annotated.manifest);
     signal.throwIfAborted();
   }
-  onProgress(98, "更新 AI 拉片描述");
+  onProgress(98, localized("更新 AI 拉片描述", "Đang cập nhật mô tả phân tích AI"));
   return annotated;
 }
