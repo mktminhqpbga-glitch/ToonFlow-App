@@ -60,6 +60,12 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
   return defineConfig({
     root,
     css: { postcss: postcssConfig },
+    // Built-in UMD nodes bundle their own scoped UI translator; the package is
+    // resolved to the existing workspace source without changing external plugin dependencies.
+    ...(options.localizeBuiltIn ? { resolve: { alias: {
+      "@toonflow/i18n/vue": fileURLToPath(new URL("../i18n/src/vue.ts", import.meta.url)),
+    } } } : {}),
+
     plugins: [
       ...(options.localizeBuiltIn ? [{
         name: "toonflowBuiltInNodeI18n",
