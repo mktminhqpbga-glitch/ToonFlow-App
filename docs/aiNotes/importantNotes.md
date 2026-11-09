@@ -224,3 +224,11 @@
 - **Ngày ghi:** 2026-11-09, ChatGPT (GPT-6), theo lệnh Việt hóa của chủ dự án.
 - Chỉ Việt hóa **chuỗi hiển thị và chỉ dẫn ẩn do ứng dụng viết** theo locale `vi`; không dịch model ID, providerId, tên hàm, nhãn JSON, schema, số tọa độ 3D, các giá trị enum truyền API, nội dung text người dùng, mã nguồn hay dữ liệu dự án. Với frame analysis, thay đổi ngôn ngữ hướng dẫn nhưng giữ nguyên các khóa `shotSize`, `cameraAngle`, `movement`, `description`, `summary`, `narrative`, `rhythm`, `editing`, `focusResponse`.
 - Giữ bản Trung Quốc/Anh ở nhánh locale khác; mặc định vi không được phá lựa chọn ngôn ngữ người dùng thiết lập chủ động. Audit `packages/i18n/src/auditVietnamese.ts --strict` chỉ kiểm các ứng viên UI máy nhận diện trong các thư mục đã công bố; không được suy diễn 0 missing UI thành hoàn tất prompt ẩn hoặc nghiệm thu E2E.
+
+
+### NOTE-0029 — HD-08: cách hiểu số liệu kiểm toán tiếng Trung, không phá contract
+
+- **Ghi 2026-11-09, ChatGPT (GPT-6)** từ code audit và CI run 42587671929.
+- Chuỗi tiếng Trung trong nguồn có thể là: UI chưa qua compiler, nhánh locale zh-CN cố ý giữ, bản gốc của `localized/nodeText`, chuỗi trong dữ liệu API/JSON/schema, hoặc prompt gốc dùng ở locale khác. Vì vậy metric `needsManualReview` **không phải** số lượng nhãn chắc chắn còn tiếng Trung khi chọn vi; chỉ ghi nhận ứng viên kiểm tra.
+- `vi.json` chứa 4.896 khóa ở run nêu trên, AST UI quét 3.129 chuỗi với 0 key thiếu; phạm vi AST gồm Web, NodeShared, NodeScaffold, Nodes, không suy ra toàn bộ backend/Extension/skill prompts. Mọi thay đổi từ sau run phải kiểm lại.
+- Không dịch user text, `providerId`, `modelId`, enum video/image, Tool ID, JSON keys, token `{{ref N}}` và nội dung dự án. Chỉ dịch phần hướng dẫn AI nội bộ khi locale vi; phải giữ ngữ nghĩa và schema đầu ra.
