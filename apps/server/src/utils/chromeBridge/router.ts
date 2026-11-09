@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { getRuntimePlatform } from "@/lib/platform";
-import { isLocalWebBridgeEnabled } from "./access";
+import { authorizeBridgeRequest, isLocalWebBridgeEnabled } from "./access";
 import u from "@/utils";
 import { readReference } from "@/utils/media/generation";
 import { type BridgeProvider } from "./runtime";
@@ -22,14 +22,12 @@ function authorized(req: Request, res: Response, next: NextFunction) {
   const localWebAllowed = isLocalWebBridgeEnabled() && ["localhost", "127.0.0.1"].includes(req.hostname);
   const loopback = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress ?? "");
   const expectedOrigin = "http://" + req.get("host");
-  // Vite proxies requests from its dev listener; only requests Vite marked as loopback-originating are eligible.
-  // The proxy overwrites this header from the browser, preventing a remote LAN browser from passing it through.
-  if (localWebAllowed && req.get("x-toonflow-local-client") === "0") { res.sendStatus(403); return; }
-  if (!(desktopAllowed || localWebAllowed) || !loopback
-    || req.method === "POST" && req.get("x-toonflow-desktop") !== "1"
-    || supplied !== undefined && supplied !== expectedOrigin
-    || referer !== undefined && !referer.startsWith(expectedOrigin + "/")
-    || !supplied && !referer) { res.sendStatus(403); return; }
+  // Preserve desktop, loopback, Origin, Referer and Vite proxy safety gates.
+  if (!authorizeBridgeRequest({
+    desktopAllowed, localWebAllowed, loopback, method: req.method,
+    desktopHeader: req.get("x-toonflow-desktop"), localClientHeader: req.get("x-toonflow-local-client"),
+    origin: supplied, referer, expectedOrigin,
+  })) { res.sendStatus(403); return; }
   res.set("Cache-Control", "no-store");
   next();
 }
