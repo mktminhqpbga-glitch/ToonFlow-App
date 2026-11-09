@@ -348,3 +348,11 @@
 - **Chưa thể đánh dấu DONE:** audit --strict còn fail; bản dịch thủ công còn thiếu ở nhiều phần Director/Video/Image/Camera Studio, hệ thống prompt khác, giao diện tùy biến/third-party plugin. `providerPromptVi` cần nghiệm thu hành vi thật bằng provider-agent UI; run trước có lỗi cú pháp, đã sửa ở b788552, cần chứng minh CI mới.
 - **Ngôn ngữ lưu cũ:** cấu hình có thể lưu `ui.language = zh-CN` do người dùng từng chọn hoặc bản cũ; KHÔNG tự ghi đè lựa chọn lưu này khi chưa phân biệt được ý muốn, vì yêu cầu không thay dữ liệu người dùng. Trên Mac cần chủ động chọn Tiếng Việt tại Cài đặt một lần; lần sau giữ tùy chọn.
 - **Việc tiếp theo:** tiếp tục xử lý danh sách `bun packages/i18n/src/auditVietnamese.ts`, bổ sung dịch còn thiếu và UI E2E, audit prompt ẩn riêng, đưa strict audit về 0 khi thực sự đủ. Không nhận 100% trước bằng chứng.
+
+
+### ISSUE-0036 — HD-08 cần nghiệm thu UI runtime và khảo sát toàn bộ prompt ngoài phạm vi audit
+
+- **Ngày/người sửa gần nhất:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái: MỞ / PARTIAL.**
+- **Đã kiểm tra và sửa:** 536 khóa UI thiếu tiếng Việt tại mốc audit ban đầu; cập nhật từ điển lên 4.884 mục, audit `--strict` toàn bộ `apps/web/src`, `packages/nodeShared/src`, `packages/nodeScaffold/src`, `packages/nodes`. CI #42567345816 PASS với 0 ứng viên UI thiếu, 0 giá trị dịch chứa chữ Hán, 0 lỗi parse. Việt hóa các prompt tạo media, phân tích video, vẽ lại, panorama, góc máy, ánh sáng và sub-agent; thêm regression tests.
+- **Giới hạn cần nói rõ:** 0 **khóa còn thiếu trong tập ứng viên UI do máy phân tích nhận biết**, không phải 0 ký tự tiếng Trung trong repository. Nhánh ngôn ngữ Trung Quốc vẫn phải giữ để hỗ trợ người dùng chọn zh-CN. Không có cách đáng tin để kết luận mọi chuỗi UI/prompt ẩn tùy biến đều đã được phát hiện và dịch chỉ dựa trên kiểm thử tĩnh.
+- **Cần nghiệm thu tiếp:** trên Mac Intel Ventura mở Web/Server; chuyển giữa `vi` → `en` → `vi`, kiểm tra giao diện từng node, thông báo lỗi, tooltip, lịch sử, Audio Generation, camera, thư viện vật liệu, Studio, lưu/mở lại; kiểm tra request gửi tới model thật với locale vi và payload user prompt không bị thay đổi. Phần browser và provider thật **NOT TESTED/BLOCKED**.
