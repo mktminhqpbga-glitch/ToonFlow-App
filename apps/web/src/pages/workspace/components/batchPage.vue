@@ -43,6 +43,7 @@
           :loading="joining === batch.id" :disabled="joining !== '' || batch.state !== 'completed' || batch.scenes.some(scene => scene.state !== 'succeeded')"
           @click="mergeVideo(batch)">Ghép MP4 (FFmpeg)</el-button>
         <el-button v-if="batch.merged" size="small" link type="success" @click="download({ ...batch.merged, mediaType: 'video' })">Tải MP4 đã ghép</el-button>
+        <el-button v-if="batch.merged" size="small" link type="primary" @click="emit('importMedia', { ...batch.merged, mediaType: 'video' })">Đưa MP4 vào Canvas</el-button>
       </div>
       <div class="sceneList">
         <div v-for="scene in batch.scenes" :key="scene.id" class="sceneRow">
@@ -50,6 +51,7 @@
           <span class="scenePrompt" :title="scene.request.prompt">{{ scene.request.prompt }}</span>
           <span :class="['sceneState', scene.state]">{{ scene.state }}</span>
           <el-button v-if="scene.result?.length" link type="primary" @click="download(scene.result[0])">Tải kết quả</el-button>
+          <el-button v-if="scene.result?.length" link type="success" @click="emit('importMedia', scene.result[0])">Đưa vào Canvas</el-button>
           <small v-if="scene.error" :title="scene.error">{{ scene.error }}</small>
         </div>
       </div>
@@ -69,6 +71,7 @@ type Result = { path: string; mimeType: string; mediaType: Kind };
 type Scene = { id: string; taskId: string; index: number; request: { prompt: string }; state: string; result?: Result[]; error?: string };
 type Batch = { id: string; kind: Kind; state: string; scenes: Scene[]; createdAt: number; merged?: { path: string; mimeType: string } };
 const props = defineProps<{ kind: Kind; directory?: string; active: boolean }>();
+const emit = defineEmits<{ importMedia: [result: Result] }>();
 const ratios = ["16:9", "9:16", "1:1", "4:3", "3:4"];
 const modelKey = ref("");
 const models = ref<Model[]>([]);
