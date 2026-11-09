@@ -33,6 +33,12 @@ describe("HD-07 Chrome Bridge safety and diagnostic regressions", () => {
     expect(data.pendingJobs).toBe(1);
     expect(JSON.stringify(data)).not.toContain("render.example");
   });
+  test("an older UNKNOWN job on another tab does not mislabel the freshly selected tab", () => {
+    const result = bridgeDiagnosis({ enabled: true, connected: true, mode: "local",
+      selected: { muse: { tab: { id: 9 }, capabilities: ["image"] } },
+      jobs: [{ provider: "muse", tabId: 7, state: "unknown" }] });
+    expect(result.providers.find(item => item.provider === "muse")?.state).toBe("ready");
+  });
   test("missing relay/device/extension and tab capability have distinct reasons", () => {
     const offline = bridgeDiagnosis({ enabled: true, connected: false, mode: "remote",
       remote: { configured: false, transport: "offline", selectedDeviceId: "", devices: [] } });
