@@ -3,6 +3,7 @@ import conf from "@/utils/conf";
 import { isBridgeResult, isBridgeDocumentToken, providerForUrl, type BridgeProbe, type BridgeCapability, type BridgeProvider, type BridgeResult, type BridgeSelection, type BridgeState } from "./runtime";
 import { RemoteTransport } from "./remoteTransport";
 import { prepareChromePrompt, requestedRatios } from "./ratio";
+import { assertTabDispatchAvailable } from "./dispatchGuard";
 
 type RemoteSettings = { url: string; ownerKey: string; deviceId: string; secrets: Record<string, string> };
 type RemoteDevice = { id: string; name: string; online: boolean; createdAt: number };
@@ -177,6 +178,7 @@ class RemoteBridge {
       probe.capabilities?.includes(kind) && (provider === "muse" ? kind !== "text" : kind !== "video"));
     if (!capabilities.length) throw new Error("No capability verified in remote tab");
     this.selected.set(provider, { tab, capabilities, documentToken: probe.documentToken });
+    this.recent = this.recent.filter(job => job.tabId !== tabId || job.state !== "unknown");
     return this.status();
   }
   async refresh(provider: BridgeProvider) {
@@ -205,7 +207,7 @@ class RemoteBridge {
     if (!prompt.trim() || prompt.length > 100000 || !/^[0-9a-f-]{36}$/i.test(requestId)
       || images.length > 4 || images.some(img => !/^image\/(png|jpeg|webp)$/.test(img.mimeType)
         || img.data.length > 20 * 1024 * 1024)) throw new Error("Invalid remote AI prompt or reference image");
-    if (this.jobs.has(requestId)) throw new Error("Duplicate AI request");
+    assertTabDispatchAvailable(provider, choice.tab.id, requestId, this.jobs, this.recent);
     const preparedPrompt = prepareChromePrompt(kind, prompt, options);
     return new Promise((resolve, reject) => {
       const tabId = choice.tab.id;
