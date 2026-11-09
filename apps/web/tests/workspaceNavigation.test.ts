@@ -59,6 +59,17 @@ describe("workspace toolbar and Batch routing source contracts", () => {
     expect(workspace).toContain(':directory="workspaceStore.project?.directory"');
   });
 
+  test("stale AI model fetch cannot overwrite the next workspace selection", async () => {
+    const page = await source("../src/pages/workspace/components/batchPage.vue");
+    expect(page).toContain("let modelsRunToken = 0");
+    expect(page).toContain("const token = ++modelsRunToken");
+    expect(page).toContain("if (token !== modelsRunToken || !props.active) return");
+    expect(page).toContain("if (token === modelsRunToken) modelsLoading.value = false");
+    expect(page).toContain("models.value = []");
+    expect(page).toContain('modelKey.value = ""');
+    expect(page.match(/\+\+modelsRunToken/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
   test("Batch operations remain scoped to the active workspace", async () => {
     const page = await source("../src/pages/workspace/components/batchPage.vue");
     expect(page).toContain('"/api/ai/media/batches/list", { directory }');
