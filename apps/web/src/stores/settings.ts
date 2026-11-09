@@ -1,4 +1,4 @@
-import { defaultLanguage } from "@/lib/defaultLanguage";
+import { defaultLanguage, resolveUiLanguage } from "@/lib/defaultLanguage";
 import axios from "axios";
 import { normalizeLocale } from "@toonflow/i18n";
 import { computed, nextTick, ref, watch } from "vue";
@@ -53,7 +53,7 @@ export const uiSettings = computed(() => {
   const raw = settings.value.ui;
   const ui = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   return {
-    language: normalizeLocale(ui.language) ?? (ui.language === "system" ? "system" as const : defaultLanguage),
+    language: resolveUiLanguage(ui.language, ui.languageChosen === true),
     theme: ui.theme === "light" || ui.theme === "dark" || ui.theme === "system" ? ui.theme : defaultUiSettings.theme,
     primaryColor: typeof ui.primaryColor === "string" && /^#[\da-f]{6}$/i.test(ui.primaryColor) ? ui.primaryColor : defaultUiSettings.primaryColor,
     fontScale: typeof ui.fontScale === "number" && Number.isFinite(ui.fontScale) ? Math.min(125, Math.max(85, ui.fontScale)) : defaultUiSettings.fontScale,
@@ -65,7 +65,7 @@ export const uiSettings = computed(() => {
 
 export function updateUiSettings(patch: Partial<typeof defaultUiSettings>) {
   const current = settings.value.ui;
-  settings.value = { ...settings.value, ui: { ...(current && typeof current === "object" && !Array.isArray(current) ? current : {}), ...patch } };
+  settings.value = { ...settings.value, ui: { ...(current && typeof current === "object" && !Array.isArray(current) ? current : {}), ...patch, ...(Object.hasOwn(patch, "language") ? { languageChosen: true } : {}) } };
 }
 
 export const generalSettings = computed(() => {
