@@ -22,8 +22,8 @@ describe("HD-02 prompt drag/drop guards (no DOM/AI mock)", () => {
   });
   test("drop at middle of sentence keeps exact caret offset", () => {
     const text = "Người đàn ông đi về phía xa";
-    expect(clampPromptCaretOffset(text, 12)).toBe(12);
-    expect(text.slice(0, 12) + "[ref]" + text.slice(12)).toBe("Người đàn [ref]ông đi về phía xa");
+    expect(clampPromptCaretOffset(text, 10)).toBe(10);
+    expect(text.slice(0, 10) + "[ref]" + text.slice(10)).toBe("Người đàn [ref]ông đi về phía xa");
     expect(clampPromptCaretOffset(text, -10)).toBe(0);
     expect(clampPromptCaretOffset(text, 1000)).toBe(text.length);
   });
