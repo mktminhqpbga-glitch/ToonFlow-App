@@ -19,13 +19,13 @@
     </template>
     <div v-loading="generating || uploading" class="audioContent nopan" :aria-busy="generating || uploading">
       <audioPlayer v-if="previewUrl" ref="player" v-model:pcmOptions="pcmOptions" class="audioPreview" :src="previewUrl" :mimeType="outputFile?.mimeType" @loadedmetadata="updateNodeInternals" />
-      <div v-else class="audioEmpty" role="img" aria-label="暂无生成音频"><icon-music-bolt :size="48" stroke="1.25" aria-hidden="true" /></div>
+      <div v-else class="audioEmpty" role="img"  :aria-label="localized('暂无生成音频', 'Chưa có âm thanh được tạo')"><icon-music-bolt :size="48" stroke="1.25" aria-hidden="true" /></div>
     </div>
     <template #bottom>
       <div v-if="actions?.mode === 'speed'" ref="speedTarget" />
       <el-card v-else class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
         <referenceItem v-if="refList.length" v-model="refList" @preview="setReferencePreview" @remove="removeReference" />
-        <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" placeholder="描述您想要的音频效果或输入待朗读文本" expandable />
+        <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference"  :placeholder="localized('描述您想要的音频效果或输入待朗读文本', 'Mô tả âm thanh mong muốn hoặc nhập văn bản cần đọc')" expandable />
         <div class="promptFooter">
           <el-select
             :modelValue="selectedModel ? data.model : ''"
@@ -33,9 +33,9 @@
             filterable
             :loading="modelsLoading"
             :disabled="busy"
-            placeholder="选择模型"
-            aria-label="音频生成模型"
-            noDataText="请先在设置中添加音频模型"
+            :placeholder="localized('选择模型', 'Chọn model')"
+            :aria-label="localized('音频生成模型', 'Model tạo âm thanh')"
+            :noDataText="localized('请先在设置中添加音频模型', 'Hãy thêm model âm thanh trong Cài đặt')"
             placement="top-start"
             @update:modelValue="data.model = $event"
             @visible-change="visible => visible && loadModels().catch(error => showNodeError(error, nodeText('模型读取失败', 'Không tải được danh sách model')))">
@@ -50,13 +50,13 @@
           <generationSettings v-model:language="data.language" v-model:sampleRate="data.sampleRate" v-model:format="data.format" v-model:other="data.other" :model="selectedModel" :disabled="busy || !selectedModel" />
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'audio' }" :supported="selectedModel?.supportsPrice === true" />
-            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" title=nodeText('放弃任务', 'Bỏ tác vụ') aria-label=nodeText('放弃任务', 'Bỏ tác vụ') @click="generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo')))" />
+            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" :title="localized('放弃任务', 'Bỏ tác vụ')" :aria-label="localized('放弃任务', 'Bỏ tác vụ')" @click="generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo')))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || transcribing || actions?.processing || (!generating && !pendingRecovery && (!generationPrompt || !selectedModel))"
-              :title="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成音频'"
-              :aria-label="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成音频'"
+               :title="generating ? localized('停止生成', 'Dừng tạo') : pendingRecovery ? localized('复查任务', 'Kiểm tra lại tác vụ') : localized('生成音频', 'Tạo âm thanh')"
+               :aria-label="generating ? localized('停止生成', 'Dừng tạo') : pendingRecovery ? localized('复查任务', 'Kiểm tra lại tác vụ') : localized('生成音频', 'Tạo âm thanh')"
               @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo'))) : startGeneration().catch(error => showNodeError(error, nodeText('音频生成失败', 'Tạo âm thanh thất bại')))" />
           </div>
         </div>
@@ -93,8 +93,8 @@ defineOptions({
   inheritAttrs: false,
   icon: IconMusicBolt,
   handles: [
-    { id: "in", type: "target", dataType: ["IMAGE", "AUDIO", "STRING"], label: "图片或音频限1个，文本不限" },
-    { id: "audio", type: "source", dataType: "AUDIO", label: "音频输出" },
+    { id: "in", type: "target", dataType: ["IMAGE", "AUDIO", "STRING"], label: nodeText("图片或音频限1个，文本不限", "Tối đa 1 ảnh hoặc âm thanh; không giới hạn văn bản") },
+    { id: "audio", type: "source", dataType: "AUDIO", label: nodeText("音频输出", "Đầu ra âm thanh") },
   ] satisfies NodeHandle[],
 });
 const vLoading = ElLoading.directive;
