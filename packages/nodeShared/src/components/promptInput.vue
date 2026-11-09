@@ -156,7 +156,8 @@ async function dropMaterialReference(event: DragEvent) {
   const materialId = transfer.getData(materialDragType);
   const assetPath = transfer.getData(assetDragType);
   const material = props.materials?.find(item => item.id === materialId && !item.disabled);
-  if (!material && !assetPath) return;
+  const existing = props.references.find(item => item.id === materialId);
+  if (!material && !assetPath && !existing) return;
   const instance = sender;
   if (!material || !instance || selectingReference.value) return;
   const editor = instance.chatElement.richText;
@@ -179,7 +180,7 @@ async function dropMaterialReference(event: DragEvent) {
   selectingReference.value = true;
   closeMentionMenu();
   try {
-    const reference = material ? await props.selectMaterial?.(material.id) : await props.selectAssetPath?.(assetPath);
+    const reference = existing ?? (material ? await props.selectMaterial?.(material.id) : await props.selectAssetPath?.(assetPath));
     await nextTick();
     await instance.nextTick();
     if (resetTask) await resetTask;
