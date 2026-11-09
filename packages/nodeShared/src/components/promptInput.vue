@@ -36,6 +36,7 @@ import "x-sender/lib/XSender.css";
 import type { MaterialMention, ReferenceMention } from "../useNodeReferences";
 import { getPromptText } from "../promptText";
 import { useNodeVietnamese } from "../nodeLanguage";
+import { clampPromptCaretOffset, resolvePromptDrop } from "../promptDrop";
 import promptReferenceMenu from "./promptReferenceMenu.vue";
 
 type Reference = ReferenceMention;
@@ -155,9 +156,8 @@ async function dropMaterialReference(event: DragEvent) {
   event.stopPropagation();
   const materialId = transfer.getData(materialDragType);
   const assetPath = transfer.getData(assetDragType);
-  const material = props.materials?.find(item => item.id === materialId && !item.disabled);
-  const existing = props.references.find(item => item.id === materialId);
-  if (!material && !assetPath && !existing) return;
+  const candidate = resolvePromptDrop(materialId, assetPath, props.references, props.materials ?? []);
+  if (candidate.kind === "none") return;
   const instance = sender;
   // Global Asset Library drops and already-linked media are valid without a new material mention.
   if (!instance || selectingReference.value) return;
@@ -181,7 +181,9 @@ async function dropMaterialReference(event: DragEvent) {
   selectingReference.value = true;
   closeMentionMenu();
   try {
-    const reference = existing ?? (material ? await props.selectMaterial?.(material.id) : await props.selectAssetPath?.(assetPath));
+    const reference = candidate.kind === "existing" ? candidate.reference
+      : candidate.kind === "material" ? await props.selectMaterial?.(candidate.material.id)
+      : await props.selectAssetPath?.(candidate.path);
     await nextTick();
     await instance.nextTick();
     if (resetTask) await resetTask;
@@ -189,7 +191,7 @@ async function dropMaterialReference(event: DragEvent) {
     const resolved = props.references.find(item => item.id === reference.id);
     if (!resolved) return;
     const target = savedCaret && instance.chatEditor.NODES[savedCaret.gridIndex]?.children[savedCaret.childIndex];
-    if (target?.type === "Write" && target.text === savedCaret?.text) target.focus(Math.min(savedCaret.offset, target.text.length));
+    if (target?.type === "Write" && target.text === savedCaret?.text) target.focus(clampPromptCaretOffset(target.text, savedCaret.offset));
     else { const last = instance.chatEditor.NODES.at(-1)?.children.at(-1); if (last?.type === "Write") last.focus(-1); }
     if (sender === instance) await instance.setHtml(referenceHtml(resolved));
   } catch (error) {
