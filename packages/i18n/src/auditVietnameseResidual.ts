@@ -32,8 +32,12 @@ async function walk(directory: string) {
       for (const match of line.matchAll(quoted)) {
         report.sourceChineseLiteralOccurrences++;
         const key = match[2]!;
-        if (extracted.has(key) ||
-          /\b(?:nodeText|localized|toonflowTranslate|translate|i18n\.t)\s*\(/.test(line) ||
+        if (extracted.has(key)
+          // Dedicated map is verified by mediaErrorVi.test.ts; Chinese keys must remain
+          // for compatibility with old error IDs, but all values are Vietnamese.
+          || path === "apps/server/src/utils/media/mediaErrorVi.ts"
+          || /\bmsg\s*`/.test(line)
+          || /\b(?:nodeText|localized|localText|toonflowTranslate|translate|i18n\.t)\s*\(/.test(line) ||
           /\b(?:vietnamese\.value|document\.documentElement\.lang|\bgetLocale\(\)\s*===?\s*["']vi["'])/.test(line) ||
           /\b(?:promptVi|systemPromptVi|instructionVi|directorPromptVi)\b/.test(line)) {
           report.guardedOrTranslated++;
