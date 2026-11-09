@@ -391,3 +391,5 @@
 - `dispatchGuard.ts` đã sửa để offline ưu tiên stale task, và tab không có capability sẽ không được báo ready; regression mới trong `dispatchGuard.test.ts`. CI từng commit mã: [42607487305](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42607487305) và [42607808516](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42607808516) SUCCESS.
 - Smoke GET read-only cho Web, Workspace, Bridge ở `bun scripts/smokeLocal.ts` (chỉ chạy sau khi mở server/web trên Mac). Không phải Playwright và không chứng minh tương tác thật.
 - **Cần tái hiện/kiểm chứng trên máy chủ sở hữu:** Ngắt rồi nối lại Extension/VM, xác nhận offline/ready, tab/capability và task UNKNOWN, tạo thử media chỉ với đồng ý riêng của chủ tài khoản. Mac browser, Media node reload và queue restart vẫn NOT TESTED.
+
+- **Bổ sung 2026-11-09, ChatGPT (GPT-6):** Chỉnh script smoke HTML regex có lang bằng [3544133](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/35441338e880161c4076af531342c56b14b46cac); CI run [42608340985](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42608340985). Vẫn không đánh dấu browser/VM thật đã test.
