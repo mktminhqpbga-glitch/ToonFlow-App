@@ -57,6 +57,37 @@ describe("HD-08 Vietnamese hidden prompts are truly selected, not just documente
     expect(sourceText).toContain("return prompt");
     expect(sourceText).toContain("Yêu cầu vẽ lại:");
   });
+  test("team agent internal tool prompts and remote statuses select Vietnamese without rewriting JSON schema", () => {
+    const team = source("apps/server/src/agent/teams/index.ts");
+    const remote = source("apps/server/src/agent/teams/remote.ts");
+    expect(team).toContain('getLocale() === "vi"');
+    expect(team).toContain("Phạm vi tài liệu riêng của thành viên");
+    expect(team).toContain("Không chỉnh sửa đồng thời cùng một tệp hoặc Canvas");
+    expect(team).toContain("Những trách nhiệm này chỉ phục vụ nhiệm vụ được cấp quyền");
+    expect(team).toContain('name: "teamResources"');
+    expect(team).toContain('name: "delegate"');
+    expect(team).toContain('z.toJSONSchema(resourceSchema)');
+    expect(remote).toContain('getLocale() === "vi"');
+    expect(remote).toContain("Đang kết nối nhóm từ xa");
+    expect(remote).toContain("Task ID");
+    expect(remote).toContain('messageId: randomUUID()');
+  });
+  test("image, video and audio runtime errors have Vietnamese branches", () => {
+    const image = source("packages/nodes/imageGenerationNode/src/index.vue");
+    const video = source("packages/nodes/videoGenerationNode/src/index.vue");
+    const audio = source("packages/nodes/audioGenerationNode/src/index.vue");
+    expect(image).toContain("Không đọc được danh sách model");
+    expect(image).toContain("Không xem trước được ảnh này");
+    expect(video).toContain("Không kiểm tra lại được tác vụ video");
+    expect(video).toContain("Không đọc được video");
+    expect(audio).toContain("Chưa có âm thanh được tạo");
+    expect(audio).toContain("Mô tả âm thanh mong muốn hoặc nhập văn bản cần đọc");
+    for (const code of [image, video, audio]) {
+      expect(code).toContain("muse");
+      expect(code).toContain("providerId");
+      expect(code).toContain("modelId");
+    }
+  });
   test("generation nodes and audio node select Vietnamese reference labels in AI prompts", () => {
     for (const path of [
       "packages/nodes/imageGenerationNode/src/index.vue",
