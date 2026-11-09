@@ -1,6 +1,6 @@
 import type { BridgeProvider, BridgeState } from "./runtime";
 
-type Job = { provider: BridgeProvider; tabId: number; state?: BridgeState };
+type Job = { id?: string; provider: BridgeProvider; tabId: number; state?: BridgeState };
 type Selection = { tab: { id: number }; capabilities: readonly string[] };
 
 export function assertTabDispatchAvailable(
@@ -8,10 +8,10 @@ export function assertTabDispatchAvailable(
   activeJobs: ReadonlyMap<string, Job>,
   recentJobs: readonly Job[],
 ) {
-  if (activeJobs.has(requestId) || recentJobs.some(job => "id" in job && job.id === requestId))
+  if (activeJobs.has(requestId) || recentJobs.some(job => job.id === requestId))
     throw new Error("Task ID đã được sử dụng. Không gửi trùng yêu cầu AI.");
   if ([...activeJobs.values()].some(job => job.tabId === tabId))
-    throw new Error("Tab Chrome này đang chạy tác vụ khác. Không gửi chồng prompt.");
+    throw new Error("Tab " + provider + " đang chạy tác vụ khác. Không gửi chồng prompt.");
   if (recentJobs.some(job => job.tabId === tabId && job.state === "unknown"))
     throw new Error("Tab có tác vụ UNKNOWN. Kiểm tra kết quả trên Chrome và chủ động chọn lại tab trước khi tạo việc mới.");
 }
