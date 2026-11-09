@@ -41,3 +41,20 @@
 - Video: [5fab792](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/5fab792b84458e82a8c90cd2a657ac6407349bd7), [333261f](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/333261f324ad0dc7a32217155f147b73548efd0f).
 
 Không đánh dấu PASS E2E khi chỉ typecheck/build. Không sửa hay xóa dữ liệu người dùng.
+
+
+## HD-06 — Bằng chứng hồi quy tự động (2026-11-09, ChatGPT GPT-6)
+
+**Nhánh:** `feat/independentToonFlowFullIntegration` · **PR #4:** Draft, không merge.
+
+| Phạm vi | Kiểm thử đã thực thi (Bun/FFmpeg trên GitHub Actions) | Runtime UI / AI thật |
+| --- | --- | --- |
+| HD-02 | Kiểm tra Node ID+handle tham chiếu ảnh/video đã kết nối, nguồn Canvas mới, asset path, nhiều tham chiếu và caret offset giữa câu | **NOT TESTED**: thả chuột, Undo/Redo, Preview, payload provider, save/reload |
+| HD-03 | Catalog preset storyboard, 9 góc máy, 3 góc nhìn; khóa khi thiếu node ảnh/video thật, prompt sửa không làm thay đổi bản mẫu | **NOT TESTED**: mở popup, tạo node, lưu/reload, provider |
+| HD-04 | Đọc/ghi JSON nhân vật qua `@toonflow/file` trên thư mục temp thật; giữ ID; xóa hồ sơ không xóa file; từ chối JSON/đường dẫn sai | **NOT TESTED**: upload/trình duyệt/concurrent edit/Character AI |
+| HD-05 | Trạng thái FAILED tiếp tục độc lập, orphan running→UNKNOWN, pause/cancel/restart, không dispatch trùng, COMPLETED chỉ khi tất cả cảnh thành công, Chrome offline không tiêu thụ queued; FFmpeg tạo và ghép clip MP4 thật, FFprobe kiểm tra duration, codec/ratio và từ chối PNG poster | **NOT TESTED/BLOCKED**: chạy HTTP queue + Chrome/Render thật, FFmpeg trong app Mac |
+| Batch → Canvas | Code import `batchResults` qua workspace, tạo node media thật và flush save; có nút nhập từng cảnh hoặc MP4 ghép | **NOT TESTED**: click, lưu/mở lại Canvas bằng UI |
+
+- **CI xác thực:** [run #42556447168](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42556447168) và [run #42556832767](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42556832767): **PASS** typecheck, regression Bun, FFmpeg fixture, build Web/Server/Nodes/Tools/MCP. Run #42556832767 đã gồm test Chrome offline guard; đây không phải provider E2E.
+- **Hướng dẫn Mac và cách tái chạy:** [hd06MacAcceptance.md](./hd06MacAcceptance.md). Lệnh test đã được tích hợp trong `.github/workflows/integrationCheck.yml`.
+- **Còn mở:** browser/Web runtime, Chrome đăng nhập thực, Render, multi-device concurrency, FFmpeg ghép video provider trong app và Mac Intel Ventura; không tự tuyên bố E2E PASS.
