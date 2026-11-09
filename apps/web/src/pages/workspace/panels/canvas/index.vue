@@ -1084,8 +1084,8 @@ async function importWorkspaceMedia(path: string, mimeType: string): Promise<boo
   const directory = project.value?.directory;
   const position = pastePosition();
   if (!props.active || props.settingsVisible || !canvasReady.value || !directory || !position) return false;
-  if (!/^batchResults\\/[0-9a-f-]{36}\\/(?:scene-\\d+\\/|joined-)[^\\/]+$/i.test(path)
-    || !/^(image\\/(png|jpeg|webp)|video\\/(mp4|webm|quicktime))$/i.test(mimeType)) {
+  if (!new RegExp("^batchResults/[0-9a-f-]{36}/(?:scene-[0-9]+/|joined-)[^/]+$", "i").test(path)
+    || !new RegExp("^(image/(png|jpeg|webp)|video/(mp4|webm|quicktime))$", "i").test(mimeType)) {
     throw new Error("Đường dẫn hoặc định dạng kết quả batch không hợp lệ");
   }
   const signal = canvasController.signal;
