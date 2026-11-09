@@ -22,6 +22,11 @@
             <icon-folders :size="18" />
           </el-button>
         </el-tooltip>
+        <el-tooltip :showArrow="false" content="Thư viện vật liệu" placement="top" :hideAfter="0">
+          <el-button class="toolButton" text aria-label="Thư viện vật liệu" :disabled="!canvasId" @click="materialPresetsVisible = true">
+            <icon-photo :size="18" />
+          </el-button>
+        </el-tooltip>
         <!-- trigger 用 contextmenu 是为了让整理按钮只由 arrangeNodes 控制显隐，同时仍保留点击外部自动关闭 -->
         <el-tooltip :showArrow="false" content="整理画布" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="undoPopoverVisible">
           <span class="toolTrigger">
@@ -114,13 +119,15 @@
       </div>
     </el-card>
   </panel>
+  <materialPresets v-model="materialPresetsVisible" :availableNodes="availableNodes" :createNode="createPresetNode" />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Panel, useVueFlow, type XYPosition } from "@vue-flow/core";
 import { MiniMap } from "@vue-flow/minimap";
-import { IconMap, IconMagnet, IconFocusCentered } from "@tabler/icons-vue";
+import { IconMap, IconMagnet, IconFocusCentered, IconPhoto } from "@tabler/icons-vue";
+import materialPresets from "./materialPresets.vue";
 import { ElMessage } from "element-plus";
 import { currentUser } from "@/stores/multiTenant";
 import { arrangeCanvas } from "../arrangeCanvas";
@@ -128,12 +135,15 @@ import { arrangeCanvas } from "../arrangeCanvas";
 const props = defineProps<{
   canvasId: string;
   directory: string | undefined;
+  availableNodes: { type: string; label: string }[];
+  createPresetNode: (preset: { nodeType: string; title: string; prompt: string }) => Promise<boolean>;
   batchHistory: (action: () => Promise<void>) => Promise<void>;
 }>();
 const snapEnabled = defineModel<boolean>("snapEnabled", { required: true });
 const showEdges = defineModel<boolean>("showEdges", { required: true });
 const assetsVisible = defineModel<boolean>("assetsVisible", { default: false });
 const showMap = ref(false);
+const materialPresetsVisible = ref(false);
 const zoomMenuVisible = ref(false);
 const flow = useVueFlow();
 const { viewport, zoomTo, zoomIn, zoomOut, fitView, setCenter, getNodes, updateNode } = flow;
@@ -160,6 +170,7 @@ watch(
     arrangeController?.abort();
     layoutSnapshot.value = undefined;
     undoPopoverVisible.value = false;
+    materialPresetsVisible.value = false;
   },
   { flush: "sync" }
 );
