@@ -199,3 +199,12 @@
 - **Chống lặp:** lịch sử Task ID của Extension dùng chung Local/Remote, ghi tuần tự trước dispatch, không tự hết hạn. Giới hạn 20.000 bản ghi thì chặn gửi; không tự xóa lịch sử để tiếp tục. Chỉ lưu ID/thời điểm, không lưu nội dung hay credential.
 - **Tương thích:** backend và Extension 0.2.0 phải cập nhật cùng nhau; tải lại tab AI sau Reload Extension. Extension cũ không có documentToken bị từ chối an toàn.
 - **Giới hạn:** các kiểm tra DOM kiểm soát, worker giả lập và Local WS không thay thế AI/Render/Mac E2E. Không cam kết ngăn người dùng tự đổi tab; cam kết phần mềm không tự đổi và không tiếp tục nhận kết quả khi mất dấu phiên.
+
+
+### NOTE-0027 — Quy tắc HD-07: UNKNOWN, chữ ký file và an toàn chẩn đoán
+
+- **Ghi 2026-11-09, ChatGPT (GPT-6)** theo yêu cầu HD-07.
+- Khi tác vụ đang chạy hoặc UNKNOWN trên một Chrome tab, backend phải chặn yêu cầu mới cùng tab. Refresh trạng thái thụ động **không** mở khóa. Chỉ lựa chọn lại tab có chủ đích sau khi người dùng kiểm tra kết quả cũ mới được phép gửi tác vụ mới; Task ID cũ không bao giờ được tự gửi lại.
+- Abort/cancel phát tới website chưa đồng nghĩa website đã dừng. Đánh dấu UNKNOWN nếu không có xác nhận, giữ thông tin cảnh báo; không gọi đây là failed/retry an toàn.
+- Trước khi ghi file từ Chrome Companion, kiểm tra bytes khớp MIME thật; header đúng chưa đủ chứng minh duration/codec, do đó FFprobe và phát lại là bước bắt buộc khi nghiệm thu video thật.
+- Chẩn đoán API/UI chỉ trả trạng thái tầng kết nối, capability và việc đang chạy; không trả owner key, pairing secret, cookie, prompt hay bytes media. Giữ middleware loopback+Origin/Referer và header ý định thao tác, không tự bật Local Web Bridge.
