@@ -6,6 +6,8 @@ describe("standalone Vietnamese locale migration", () => {
     expect(defaultLanguage).toBe("vi");
     expect(resolveUiLanguage(undefined, false)).toBe("vi");
     expect(resolveUiLanguage("system", false)).toBe("vi");
+    expect(resolveUiLanguage("zh-CN", false)).toBe("vi");
+    expect(resolveUiLanguage("en", false)).toBe("vi");
   });
   test("explicit choices survive a reload without silently changing locale", () => {
     expect(resolveUiLanguage("system", true)).toBe("system");
