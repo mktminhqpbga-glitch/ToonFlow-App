@@ -313,3 +313,36 @@
 - **Đã kiểm tra:** đối chiếu source, xác minh CI run 42511358311 hoàn tất success trên commit `333261f`. Chưa xác minh CI cho tất cả commit tài liệu sau đó.
 - **Chưa kiểm tra:** UI trực tiếp và AI/provider thật. Model chưa cài không có trong catalog, provider chỉ có key chưa xác minh mạng/quota. Ghi rõ trong [bảng nghiệm thu](./hdAcceptance.md).
 - **Trạng thái:** Đã commit code, PARTIAL, chưa nghiệm thu end-to-end; issue vẫn mở.
+
+
+### DONE-0021 — HD-02: kéo tham chiếu media Canvas/Asset Library vào prompt (code, chưa E2E)
+
+- **Ngày:** 2026-11-09 · **Người thực hiện:** ChatGPT (GPT-6).
+- **Mã nguồn:** `packages/nodeShared/src/useNodeReferences.ts`, `packages/nodeShared/src/components/promptInput.vue`, `packages/nodeShared/src/components/promptReferenceMenu.vue`, `packages/nodes/imageGenerationNode/src/index.vue`, `packages/nodes/videoGenerationNode/src/index.vue`, `apps/web/src/pages/workspace/panels/canvas/index.vue`.
+- **Thực hiện:** drag/dropped material bằng định danh node+handle thực; hỗ trợ asset library path qua import & connect node; nhúng tên nguồn/thumbnail nếu có ảnh xem trước; chèn ở caret khi xác định được, tránh tạo edge trùng; dùng mô hình prompt lưu hiện tại. Commit mã từ `be6ac4d` đến `086f34c` (xem log GitHub).
+- **Kiểm tra:** GitHub Actions `integrationCheck` run [42549399300](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42549399300) **PASS** (typecheck/build).
+- **Chưa nghiệm thu:** vị trí drop qua nhiều trường hợp DOM, Undo/Redo bằng chuột, khôi phục project, gửi media thực tới provider: **NOT TESTED**. **Trạng thái: PARTIAL.**
+
+### DONE-0022 — HD-03: Canvas Thư viện vật liệu tạo node thật có preset (code, chưa UI E2E)
+
+- **Ngày:** 2026-11-09 · **Người thực hiện:** ChatGPT (GPT-6).
+- **Mã nguồn:** `apps/web/src/pages/workspace/panels/canvas/components/materialPresets.vue`, `canvasControls.vue`, `apps/web/src/pages/workspace/panels/canvas/index.vue`.
+- **Thực hiện:** hai cột preset, sửa prompt trước khi tạo, tự ẩn preset nếu node loại tương ứng chưa cài, tạo node image/video qua VueFlow và lưu dữ liệu promptModel; không gửi AI trước khi người dùng yêu cầu.
+- **Commits:** [207bf0d](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/207bf0dac877030bad241d4a4278c7df2a78ce88), [5474ecd](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/5474ecd25955cce28e94ec0faa2b3b209f5dabef), [f9f464a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/f9f464a1b2916f3236f23b3f4c0993b6792c75a9).
+- **Kiểm tra:** GitHub Actions `integrationCheck` run [42549924812](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42549924812) **PASS**. UI/actual save reopen: **NOT TESTED**. **Trạng thái PARTIAL.**
+
+### DONE-0023 — HD-04: Studio nhân vật, Character ID và bộ ảnh cố định trong workspace (code)
+
+- **Ngày:** 2026-11-09 · **Người thực hiện:** ChatGPT (GPT-6).
+- **Mã nguồn:** `apps/web/src/pages/workspace/panels/canvas/components/characterStudio.vue`, `canvasControls.vue`, `apps/web/src/pages/workspace/panels/canvas/index.vue`.
+- **Thực hiện:** tạo/sửa/xóa hồ sơ (ảnh gốc không bị xóa), tìm kiếm, lưu JSON workspace + optimistic revision; upload ảnh thật, import các ảnh vào Canvas với Character ID; phòng chống ghi sang workspace khác khi chuyển project.
+- **Commits:** [c52a7da](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/c52a7dae7263dbe776046edaef39a6bccf87a8ec), [78eabe0](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/78eabe0b722f4b00db004e843cf1aba57a409ac2), [0d081ab](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/0d081ab3b2475396954811ed20871ab29c4aaa85), [0089264](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/008926452fb4e07ccd8590a68019113b045a0219).
+- **Kiểm tra:** GitHub Actions `integrationCheck` run [42550662370](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42550662370) **PASS**. Khôi phục dữ liệu trên Mac, upload vật lý, Character AI: **NOT TESTED**. **Trạng thái PARTIAL.**
+
+### DONE-0024 — HD-05: hàng đợi batch lưu trạng thái và trang image/video (code nền)
+
+- **Ngày:** 2026-11-09 · **Người thực hiện:** ChatGPT (GPT-6).
+- **Mã nguồn:** `apps/server/src/utils/media/batches.ts`, bốn route `apps/server/src/routes/ai/media/batches/{create,list,status,control}.ts`, `apps/web/src/pages/workspace/components/batchPage.vue`, `apps/web/src/pages/workspace/index.vue`.
+- **Thực hiện:** batch scene có UUID + taskId bền vững, lưu workspace, điều phối tuần tự để không chồng job Chrome, tái sử dụng media task thật, tiếp tục cảnh độc lập sau FAILED, UNKNOWN dừng/không tự gửi lại, API tạo/đọc/list/điều khiển, UI chọn model/prompt/media thật, trạng thái từng cảnh, tải kết quả; mở 2 trang từ Workspace.
+- **Kiểm tra:** CI trước đó run 42551209546 FAIL do mismatch type kết quả audio, đã sửa commit [f3a9e7a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/f3a9e7ae5c5c2e3ad32082911e642fd6d8a91c58). Run [42551746997](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42551746997) **PASS** (typecheck/build) sau wiring UI commit [585e9bb](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/585e9bbac8afd5fc77b8c99fbb1740171b0641a5).
+- **Chưa làm/xác nhận:** FFmpeg ghép MP4, map Device/Tab và queue đa thiết bị chính xác, đưa kết quả Batch lên Canvas, phục hồi/restart thật, E2E Muse/Gemini/video thật. Không coi CI là E2E. **Trạng thái PARTIAL**.
