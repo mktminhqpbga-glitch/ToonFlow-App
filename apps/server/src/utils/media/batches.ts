@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { lstat, mkdir, readdir, readFile, realpath } from "@toonflow/file";
 import { createWorkspaceFfmpeg } from "@/utils/ffmpeg";
 import { chromeBridge } from "@/utils/chromeBridge/manager";
-import { canDispatchBatch, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
+import { areConcatStreamsCompatible, canDispatchBatch, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
 import { z } from "zod";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
 import { imageGenerationSchema, videoGenerationSchema } from "./schemas";
@@ -280,17 +280,20 @@ export async function mergeBatchVideos(cwd: string, id: string, owner?: AuthIden
   // Validate actual video streams, not generated metadata or poster files.
   const probes = await Promise.all(sources.map(source => new Promise<{
     codec: string; width: number; height: number; hasAudio: boolean;
+    fps?: string; pixelFormat?: string; audioCodec?: string; audioSampleRate?: string;
   }>((resolve, reject) => {
     ffmpeg.ffprobe(source, (error, data) => {
       if (error) return reject(error);
       const video = data.streams?.find(stream => stream.codec_type === "video");
       if (!video?.codec_name || !video.width || !video.height || data.format?.duration === undefined || Number(data.format.duration) <= 0)
         return reject(new Error("FFprobe không xác minh được luồng video, kích thước và thời lượng"));
-      resolve({ codec: video.codec_name, width: video.width, height: video.height, hasAudio: data.streams.some(stream => stream.codec_type === "audio") });
+      const audio = data.streams.find(stream => stream.codec_type === "audio");
+      resolve({ codec: video.codec_name, width: video.width, height: video.height, hasAudio: !!audio,
+        fps: video.avg_frame_rate, pixelFormat: video.pix_fmt,
+        audioCodec: audio?.codec_name, audioSampleRate: audio?.sample_rate });
     });
   })));
-  const first = probes[0]!;
-  if (probes.some(item => item.codec !== first.codec || item.width !== first.width || item.height !== first.height || item.hasAudio !== first.hasAudio))
+  if (!areConcatStreamsCompatible(probes))
     invalid("Các cảnh chưa tương thích codec/độ phân giải/âm thanh; cần chuẩn hóa trước khi ghép", 409);
   const manifest = (await resolveWorkspacePath(cwd, `batchJobs/${id}-concat.txt`, true)).path;
   // Explicit filenames are taken only from workspace-validated, existing files.
