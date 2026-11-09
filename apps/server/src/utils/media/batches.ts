@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { lstat, mkdir, readdir, readFile, realpath } from "@toonflow/file";
 import { createWorkspaceFfmpeg } from "@/utils/ffmpeg";
 import { chromeBridge } from "@/utils/chromeBridge/manager";
-import { areConcatStreamsCompatible, canDispatchBatch, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
+import { areConcatStreamsCompatible, canDispatchBatch, finishedBatchState, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
 import { z } from "zod";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
 import { imageGenerationSchema, videoGenerationSchema } from "./schemas";
@@ -12,7 +12,7 @@ import { resolveWorkspacePath, writeWorkspaceFile } from "@/utils/workspace/file
 
 const kindSchema = z.enum(["image", "video"]);
 const sceneState = z.enum(["queued", "running", "succeeded", "failed", "unknown", "cancelled"]);
-const batchState = z.enum(["running", "paused", "completed", "cancelled"]);
+const batchState = z.enum(["running", "paused", "completed", "partial", "cancelled"]);
 const sceneSchema = z.object({
   id: z.uuid(), taskId: z.uuid(), index: z.number().int().nonnegative(),
   deviceId: z.string().max(256).optional(), tabId: z.number().int().nonnegative().optional(),
@@ -141,7 +141,7 @@ async function processBatch(cwd: string, id: string, owner?: AuthIdentity | null
     const next = nextIndex < 0 ? undefined : batch.scenes[nextIndex];
     if (!next) {
       await mutateBatch(cwd, id, owner, current => {
-        if (current.state === "running") current.state = "completed";
+        if (current.state === "running") current.state = finishedBatchState(current.scenes);
       });
       return;
     }
@@ -244,7 +244,7 @@ export async function controlBatch(cwd: string, id: string, action: "pause" | "r
   const state = await mutateBatch(cwd, id, owner, batch => {
     if (action === "pause" && batch.state === "running") batch.state = "paused";
     if (action === "resume" && mayResumeBatch(batch.state, batch.scenes)) batch.state = "running";
-    if (action === "cancel" && !["completed", "cancelled"].includes(batch.state)) {
+    if (action === "cancel" && !["completed", "partial", "cancelled"].includes(batch.state)) {
       batch.state = "cancelled";
       for (const scene of batch.scenes) if (scene.state === "queued") scene.state = "cancelled";
     }
