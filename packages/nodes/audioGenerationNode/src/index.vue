@@ -135,7 +135,7 @@ const selectedModel = useNodeModelSelection(models, computed({ get: () => data.v
 useModelForm(data, selectedModel);
 const modelGroups = computed(() => groupNodeModels(models.value));
 const generationPrompt = computed(() => [data.value.prompt.trim(), ...refList.value.flatMap((item, index) =>
-  item.dataType === "STRING" && item.value?.trim() ? [`参考 ${index + 1}：\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n"));
+  item.dataType === "STRING" && item.value?.trim() ? [`${nodeText("参考", "Tham chiếu")} ${index + 1}:\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n"));
 const generationInput = computed<Omit<NodeAudioRequest, "directory"> | undefined>(() => {
   const choice = selectedModel.value;
   if (!choice) return;
