@@ -134,8 +134,8 @@ watch(busy, value => { if (!value && modelsRefreshPending) void refreshProviderM
 const selectedModel = useNodeModelSelection(models, computed({ get: () => data.value.model, set: value => { data.value.model = value; } }));
 useModelForm(data, selectedModel);
 const modelGroups = computed(() => groupNodeModels(models.value));
-const generationPrompt = computed(() => [data.value.prompt.trim(), ...refList.value.flatMap((item, index) =>
-  item.dataType === "STRING" && item.value?.trim() ? [`${nodeText("参考", "Tham chiếu")} ${index + 1}:\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n"));
+const generationPrompt = computed(() => { void vietnamese.value; return [data.value.prompt.trim(), ...refList.value.flatMap((item, index) =>
+  item.dataType === "STRING" && item.value?.trim() ? [`${nodeText("参考", "Tham chiếu")} ${index + 1}:\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n"); });
 const generationInput = computed<Omit<NodeAudioRequest, "directory"> | undefined>(() => {
   const choice = selectedModel.value;
   if (!choice) return;
@@ -336,7 +336,7 @@ nodeTools.register({
 });
 nodeTools.register({
   name: "setPrompt",
-  description: "修改此节点的音频生成提示词或待朗读文本，仅接收 prompt，支持 {{ref 1}} 等参考标记；语种 language、采样率 sampleRate、格式 format 等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成",
+  description: () => nodeText("修改此节点的音频生成提示词或待朗读文本，仅接收 prompt，支持 {{ref 1}} 等参考标记；语种 language、采样率 sampleRate、格式 format 等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成", "Chỉnh sửa prompt tạo âm thanh hoặc văn bản cần đọc của node này. Chỉ nhận trường prompt và dấu tham chiếu {{ref 1}}. Với language, sampleRate, format, hãy tra khả năng bằng node:getConfig trước khi gọi node:setConfig riêng. Không tự chạy tạo âm thanh."),
   parameters: z.strictObject({ prompt: z.string() }),
   execute({ prompt }) {
     if (deleting.value || disposed) throw new Error("节点正在删除或已关闭，请稍后修改");
@@ -347,7 +347,7 @@ nodeTools.register({
 });
 nodeTools.register({
   name: "generateAudio",
-  description: "使用当前提示词、模型、语种、采样率、格式和可选参考图片或音频启动后台生成；图片与音频互斥且合计最多一个，文本不限；立即返回已开始，用 getGenerationStatus 查询结果、cancelGeneration 停止",
+  description: () => nodeText("使用当前提示词、模型、语种、采样率、格式和可选参考图片或音频启动后台生成；图片与音频互斥且合计最多一个，文本不限；立即返回已开始，用 getGenerationStatus 查询结果、cancelGeneration 停止", "Bắt đầu tạo âm thanh nền bằng prompt, model, ngôn ngữ, tần số lấy mẫu và định dạng hiện tại, có thể kèm ảnh hoặc âm thanh tham chiếu. Ảnh và âm thanh loại trừ nhau, tối đa một tệp; số tham chiếu văn bản không giới hạn. Trả về trạng thái đã bắt đầu; kiểm tra bằng getGenerationStatus và dừng bằng cancelGeneration."),
   parameters: z.strictObject({}),
   execute(_args, { signal }) {
     signal?.throwIfAborted();
