@@ -231,7 +231,7 @@ class RemoteBridge {
       };
       const onAbort = () => {
         void this.call("cancel", { id: requestId, tabId }).catch(() => {});
-        this.finishJob(job, new DOMException("Remote cancel requested", "AbortError"));
+        this.finishJob(job, new DOMException("Remote cancel requested; website may still run", "AbortError"), undefined, "unknown");
       };
       job.cleanup = () => signal?.removeEventListener("abort", onAbort);
       this.jobs.set(requestId, job);
