@@ -183,7 +183,7 @@ const generationState = useNodeGeneration(outputs, () => generationController?.a
 const { generating, pendingRecovery, cancelling } = generationState;
 let generation: Promise<void> | undefined;
 let modelsRequest: Promise<void> | undefined;
-watch(generating, value => { if (!value && !disposed && !deleting.value && !models.value.length) void loadModels().catch(error => showNodeError(error, "模型读取失败")); });
+watch(generating, value => { if (!value && !disposed && !deleting.value && !models.value.length) void loadModels().catch(error => showNodeError(error, nodeText("模型读取失败", "Không đọc được danh sách model"))); });
 // ACT: 供应商未声明视频比例范围，沿用界面的通用比例，具体支持范围由供应商校验。
 const ratioOptions = ["16:9", "9:16", "1:1", "4:3", "3:4"];
 const selectedModel = useNodeModelSelection(models, computed({ get: () => data.value.model, set: value => { data.value.model = value; } }));
@@ -306,13 +306,13 @@ const outputFile = computed(() => outputs.value.video?.dataType === "VIDEO" ? ou
 const outputCameraSnapshot = computed(() => outputFile.value ? data.value.cameraHistory?.[outputFile.value.url] : undefined);
 const previewUrl = files.useFileUrl(
   outputFile,
-  (error) => showNodeError(error, "视频读取失败")
+  (error) => showNodeError(error, nodeText("视频读取失败", "Không đọc được video"))
 );
 
 onMounted(() => {
   window.addEventListener("toonflow:plugin-installed", refreshProviderModels);
   window.addEventListener("toonflow:provider-config-changed", refreshProviderModels);
-  void loadModels().catch(error => { if (!disposed) showNodeError(error, "模型读取失败"); });
+  void loadModels().catch(error => { if (!disposed) showNodeError(error, nodeText("模型读取失败", "Không đọc được danh sách model")); });
 });
 onScopeDispose(() => {
   disposed = true;
@@ -327,7 +327,7 @@ async function refreshProviderModels(event?: Event) {
     await generation;
     if (!disposed && !deleting.value) await loadModels();
   } catch (error) {
-    if (!disposed) showNodeError(error, "模型读取失败");
+    if (!disposed) showNodeError(error, nodeText("模型读取失败", "Không đọc được danh sách model"));
   }
 }
 
@@ -337,8 +337,8 @@ async function replaceOutput(event: Event) {
   input.value = "";
   if (!file || generating.value || deleting.value || uploading.value || disposed) return;
   const mimeType = getMediaMimeType(file);
-  if (!mimeType.startsWith("video/")) return void showNodeError("请选择视频文件", "视频替换失败");
-  if (!file.size || file.size > 100 * 1024 * 1024) return void showNodeError("视频不能为空且不能超过 100 MB", "视频替换失败");
+  if (!mimeType.startsWith("video/")) return void showNodeError(nodeText("请选择视频文件", "Hãy chọn tệp video"), nodeText("视频替换失败", "Không thể thay video"));
+  if (!file.size || file.size > 100 * 1024 * 1024) return void showNodeError(nodeText("视频不能为空且不能超过 100 MB", "Video phải có dữ liệu và không vượt quá 100 MB"), nodeText("视频替换失败", "Không thể thay video"));
   uploading.value = true;
   try {
     const workspace = files.getWorkspaceFiles();
@@ -350,7 +350,7 @@ async function replaceOutput(event: Event) {
     // ACT: 保留历史输出文件，避免破坏撤销记录和复制节点的引用。
     outputs.value.video = { dataType: "VIDEO", value: { url, mimeType } };
   } catch (error) {
-    showNodeError(error, "视频替换失败");
+    showNodeError(error, nodeText("视频替换失败", "Không thể thay video"));
   } finally {
     uploading.value = false;
   }
@@ -375,12 +375,12 @@ function loadModels() {
 }
 
 async function startGeneration() {
-  if (cancelling.value) throw new Error("任务正在取消，请稍后重试");
-  if (generating.value) throw new Error("视频正在生成，请等待完成");
-  if (uploading.value) throw new Error("视频正在替换，请等待完成");
-  if (deleting.value) throw new Error("节点正在删除");
+  if (cancelling.value) throw new Error(nodeText("任务正在取消，请稍后重试", "Tác vụ đang được hủy, hãy thử lại sau"));
+  if (generating.value) throw new Error(nodeText("视频正在生成，请等待完成", "Video đang được tạo, hãy chờ hoàn tất"));
+  if (uploading.value) throw new Error(nodeText("视频正在替换，请等待完成", "Đang thay video, hãy chờ hoàn tất"));
+  if (deleting.value) throw new Error(nodeText("节点正在删除", "Node đang được xóa"));
   if (pendingRecovery.value) {
-    generation = generationState.resume().catch(error => showNodeError(error, "视频任务复查失败"));
+    generation = generationState.resume().catch(error => showNodeError(error, nodeText("视频任务复查失败", "Không kiểm tra lại được tác vụ video")));
     return { status: "generating" };
   }
   if (!modelCanGenerate.value) throw new Error("Model chưa được cấu hình, hãy kiểm tra Cài đặt.");
@@ -389,18 +389,18 @@ async function startGeneration() {
   const references = referenceMentions.value;
   const prompt = data.value.promptModel.length ? getPromptText(data.value.promptModel, referenceId => {
     const value = references.find(reference => reference.id === referenceId)?.value;
-    if (value === undefined) throw new Error("提示词引用的素材已失效，请重新选择引用");
+    if (value === undefined) throw new Error(nodeText("提示词引用的素材已失效，请重新选择引用", "Tài nguyên được tham chiếu trong prompt đã không còn hợp lệ, hãy chọn lại"));
     return value;
   }) : data.value.prompt;
   const input = getGenerationInput(prompt);
-  if (!choice || !input) throw new Error("请先选择视频模型");
-  if (!input.prompt) throw new Error("请输入生成提示词");
-  if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
+  if (!choice || !input) throw new Error(nodeText("请先选择视频模型", "Hãy chọn model video trước"));
+  if (!input.prompt) throw new Error(nodeText("请输入生成提示词", "Hãy nhập prompt tạo nội dung"));
+  if (refList.value.some(item => item.value === undefined)) throw new Error(nodeText("引用节点暂无内容，请先补充引用内容", "Node tham chiếu chưa có nội dung, hãy bổ sung trước"));
   for (const match of input.prompt.matchAll(/\{\{ref (\d+)\}\}/g)) {
     const reference = refList.value[Number(match[1]) - 1];
-    if (reference?.dataType === "STRING" && !reference.value?.trim()) throw new Error(`参考 ${match[1]} 的文本为空，请补充内容或移除提示词中的引用`);
+    if (reference?.dataType === "STRING" && !reference.value?.trim()) throw new Error(nodeText(`参考 ${match[1]} 的文本为空，请补充内容或移除提示词中的引用`, `Văn bản tham chiếu ${match[1]} trống; hãy bổ sung hoặc xóa tham chiếu khỏi prompt`));
   }
-  if (choice.mode?.length && !matchingModes.value.length) throw new Error("当前模型没有适合这些参考素材的生成模式，请更换模型或调整引用");
+  if (choice.mode?.length && !matchingModes.value.length) throw new Error(nodeText("当前模型没有适合这些参考素材的生成模式，请更换模型或调整引用", "Model hiện tại không có chế độ phù hợp với tài nguyên tham chiếu; hãy đổi model hoặc tài nguyên"));
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   const cameraSnapshot = normalizeCameraSettings(data.value.camera);
@@ -416,13 +416,13 @@ async function startGeneration() {
     })
     .then(([result]) => {
       controller.signal.throwIfAborted();
-      if (!result) throw new Error("供应商未返回视频");
+      if (!result) throw new Error(nodeText("供应商未返回视频", "Nhà cung cấp không trả về video"));
       outputs.value.video = { dataType: "VIDEO", value: { url: result.path, mimeType: result.mimeType } };
       (data.value.cameraHistory ??= {})[result.path] = {
         camera: cameraSnapshot, ratio: submittedRatio, submittedPrompt, savedAt: new Date().toISOString(), nodeId: node.id,
       };
     }))
-    .catch((error) => showNodeError(error, "视频生成失败"))
+    .catch((error) => showNodeError(error, nodeText("视频生成失败", "Tạo video thất bại")))
     .finally(() => {
       generationController = undefined;
     });
@@ -430,10 +430,10 @@ async function startGeneration() {
 }
 
 nodeEvent.on("save", (reason) => {
-  if (reason === "reload" && (generating.value || uploading.value || deleting.value)) throw new Error("视频处理中，请完成后再刷新节点");
+  if (reason === "reload" && (generating.value || uploading.value || deleting.value)) throw new Error(nodeText("视频处理中，请完成后再刷新节点", "Video đang được xử lý, hãy chờ xong trước khi làm mới node"));
 });
 nodeEvent.on("delete", async () => {
-  if (uploading.value) throw new Error("视频正在替换，请稍后删除节点");
+  if (uploading.value) throw new Error(nodeText("视频正在替换，请稍后删除节点", "Đang thay video, hãy xóa node sau"));
   deleting.value = true;
   try {
     await generationState.cancel(false);
@@ -494,24 +494,24 @@ nodeTools.register({
     mode: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]).optional(),
     generateAudio: z.boolean().optional(),
     other: z.record(z.string(), z.json()).optional(),
-  }).refine((args) => (args.providerId === undefined) === (args.modelId === undefined), "providerId 与 modelId 必须同时提供"),
+  }).refine((args) => (args.providerId === undefined) === (args.modelId === undefined), nodeText("providerId 与 modelId 必须同时提供", "Phải cung cấp đồng thời providerId và modelId")),
   async execute(args, { signal }) {
     signal?.throwIfAborted();
-    if (generating.value || deleting.value) throw new Error("节点正在生成或删除，请稍后修改配置");
+    if (generating.value || deleting.value) throw new Error(nodeText("节点正在生成或删除，请稍后修改配置", "Node đang tạo nội dung hoặc bị xóa, hãy sửa cấu hình sau"));
     await loadModels();
     signal?.throwIfAborted();
-    if (generating.value || deleting.value) throw new Error("节点正在生成或删除，请稍后修改配置");
+    if (generating.value || deleting.value) throw new Error(nodeText("节点正在生成或删除，请稍后修改配置", "Node đang tạo nội dung hoặc bị xóa, hãy sửa cấu hình sau"));
     const choice = args.modelId === undefined ? selectedModel.value
       : findNodeModel(models.value, { providerId: args.providerId ?? "", modelId: args.modelId });
-    if (!choice) throw new Error("请选择 getConfig 返回的有效视频模型");
+    if (!choice) throw new Error(nodeText("请选择 getConfig 返回的有效视频模型", "Hãy chọn model video hợp lệ do getConfig trả về"));
     const durations = getDurations(choice);
-    if (args.duration !== undefined && !durations.includes(args.duration)) throw new Error(`当前模型不支持时长 ${args.duration}，可选：${durations.join("、")}`);
+    if (args.duration !== undefined && !durations.includes(args.duration)) throw new Error(nodeText(`当前模型不支持时长 ${args.duration}，可选：${durations.join("、")}`, `Model không hỗ trợ thời lượng ${args.duration}; các giá trị: ${durations.join(", ")}`));
     const duration = args.duration ?? (durations.includes(data.value.duration!) ? data.value.duration : durations[0]);
     const resolutions = getResolutions(choice, duration);
-    if (args.resolution !== undefined && !resolutions.includes(args.resolution)) throw new Error(`当前时长不支持分辨率 ${args.resolution}，可选：${resolutions.join("、")}`);
+    if (args.resolution !== undefined && !resolutions.includes(args.resolution)) throw new Error(nodeText(`当前时长不支持分辨率 ${args.resolution}，可选：${resolutions.join("、")}`, `Thời lượng hiện tại không hỗ trợ độ phân giải ${args.resolution}; các giá trị: ${resolutions.join(", ")}`));
     const resolution = args.resolution ?? (resolutions.includes(data.value.resolution) ? data.value.resolution : resolutions[0] ?? "");
-    if (args.mode !== undefined && !getMatchingModes(choice).some((item) => JSON.stringify(item) === JSON.stringify(args.mode))) throw new Error("所选模式不受当前模型支持或不适用于当前引用，请根据模型能力及已连接素材选择");
-    if (args.generateAudio !== undefined && choice.audio !== "optional" && args.generateAudio !== (choice.audio === true)) throw new Error("当前模型不支持切换声音，请查看 getConfig 返回的 audio 能力");
+    if (args.mode !== undefined && !getMatchingModes(choice).some((item) => JSON.stringify(item) === JSON.stringify(args.mode))) throw new Error(nodeText("所选模式不受当前模型支持或不适用于当前引用，请根据模型能力及已连接素材选择", "Model không hỗ trợ chế độ này hoặc không phù hợp tài nguyên đang nối; hãy chọn theo khả năng model"));
+    if (args.generateAudio !== undefined && choice.audio !== "optional" && args.generateAudio !== (choice.audio === true)) throw new Error(nodeText("当前模型不支持切换声音，请查看 getConfig 返回的 audio 能力", "Model không hỗ trợ bật/tắt âm thanh; xem khả năng audio trong getConfig"));
     const other = getModelFormValues(choice, choice === selectedModel.value ? data.value.other : {}, args.other);
     data.value.model = getNodeModelKey(choice);
     data.value.duration = duration;
@@ -529,7 +529,7 @@ nodeTools.register({
   description: () => nodeText("修改此节点的视频生成提示词，仅接收 prompt，支持 {{ref 1}} 等参考标记；时长 duration、分辨率等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成", "Thay prompt tạo video của node này; chỉ nhận trường prompt và hỗ trợ các dấu tham chiếu như {{ref 1}}. Với cấu hình như thời lượng duration và độ phân giải, phải kiểm tra khả năng bằng node:getConfig trước rồi gọi riêng node:setConfig. Không bắt đầu tạo video."),
   parameters: z.strictObject({ prompt: z.string() }),
   execute({ prompt: value }) {
-    if (deleting.value) throw new Error("节点正在删除，请稍后修改");
+    if (deleting.value) throw new Error(nodeText("节点正在删除，请稍后修改", "Node đang bị xóa, hãy chỉnh sửa sau"));
     data.value.prompt = value;
     data.value.promptModel = value.split("\n").map((text) => [{ type: "Write", text }]);
     return { prompt: value };
