@@ -32,7 +32,7 @@
         :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy"
         :alt="vietnamese ? 'Tạo ảnh' : '生成图片'"
         @load="resizeImage"
-        @error="showNodeError(nodeText("无法预览该图片", "Không xem trước được ảnh này"), nodeText("图片预览失败", "Không thể xem trước ảnh"))" />
+        @error="showNodeError(nodeText('无法预览该图片', 'Không xem trước được ảnh này'), nodeText('图片预览失败', 'Không thể xem trước ảnh'))" />
       <div v-else-if="inpaintGuideUrl" class="inpaintGuide">
         <img :src="inpaintGuideUrl"  :alt="vietnamese ? 'Ảnh đánh dấu vùng cần vẽ lại' : '局部重绘标注图'" draggable="false" @load="resizeImage" @error="showNodeError('无法读取重绘标注图', '重绘标注读取失败')" />
         <span>{{ vietnamese ? "Vùng tô đỏ là khu vực cần vẽ lại" : "红色标注为重绘区域" }}</span>
@@ -75,7 +75,7 @@
             :noDataText="vietnamese ? 'Chưa có model phù hợp. Hãy thêm trong Cài đặt.' : '请先在设置中添加图片模型'"
             placement="top-start"
             @update:modelValue="data.model = $event"
-            @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, nodeText("模型读取失败", "Không đọc được danh sách model")))">
+            @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, nodeText('模型读取失败', 'Không đọc được danh sách model')))">
             <template v-if="!selectedModel" #prefix><icon-sparkles :size="17" /></template>
             <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
             <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
@@ -109,7 +109,7 @@
               :disabled="cancelling || deleting || uploading || (!generating && (editor?.busy || (!pendingRecovery && (!generationPrompt || !modelCanGenerate))))"
               :title="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo ảnh' : '生成图片')"
               :aria-label="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo ảnh' : '生成图片')"
-              @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText("停止生成失败", "Không dừng được tác vụ tạo"))) : startGeneration().catch((error) => showNodeError(error, nodeText("图片生成失败", "Tạo ảnh thất bại")))" />
+              @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo'))) : startGeneration().catch((error) => showNodeError(error, nodeText('图片生成失败', 'Tạo ảnh thất bại')))" />
           </div>
         </div>
       </el-card>
