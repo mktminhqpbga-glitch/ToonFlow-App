@@ -13,7 +13,7 @@ RUN bun install --frozen-lockfile
 
 RUN bun run build:server \
     && mkdir -p data/workspaces/myProject \
-    && chown -R bun:bun data
+    && chown -R bun:bun data build
 
 ENV NODE_ENV=production
 ENV TOONFLOW_DATA_DIR=/app/data

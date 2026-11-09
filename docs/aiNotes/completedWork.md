@@ -33,6 +33,20 @@
 - **Vấn đề sau khi sửa:** `ISSUE-0001` đến `ISSUE-0004` vẫn chưa xử lý.
 - **Trạng thái:** Đã ghi vào repo; chưa kiểm thử ứng dụng.
 
+### DONE-0003 — Sửa quyền đọc thư mục `build/` trong Dockerfile để server chạy được trên Render
+
+- **Ngày:** 2026-11-09 16:16 (UTC+7)
+- **Người trực tiếp sửa:** Muse (Muse Spark)
+- **Người yêu cầu:** chủ repository (yêu cầu đưa ToonFlow-App lên Render để có link cố định, rồi đồng ý sửa Dockerfile và deploy lại)
+- **Phạm vi:** sửa lỗi deploy Render (ISSUE-0005); không thay đổi logic ứng dụng.
+- **Các tệp thực sự sửa:** `Dockerfile`, `docs/aiNotes/openIssues.md`, `docs/aiNotes/completedWork.md`, `docs/aiNotes/importantNotes.md`.
+- **Đã làm:** đổi dòng `chown -R bun:bun data` trong `Dockerfile` thành `chown -R bun:bun data build`, vì file `build/tools/pluginDeveloper.tool.js` có quyền `600` thuộc root (các file tool khác `640` thuộc root) mà server chạy bằng user `bun` nên không đọc được để copy sang thư mục dữ liệu; thêm `ISSUE-0005` vào `openIssues.md` và ghi chú `NOTE-0008` vào `importantNotes.md`.
+- **Bằng chứng:** commit sẽ có URL sau khi push lên nhánh `main` (xem lịch sử `Dockerfile`); log lỗi Render `EACCES: permission denied, copyfile '/app/build/tools/pluginDeveloper.tool.js' -> '/app/data/tools/pluginDeveloper.tool.js'`.
+- **Đã kiểm tra:** kiểm chứng cơ chế lỗi trên máy ảo: user thường copy file `600` thuộc root thì bị `Permission denied`, sau `chown` cho user đó thì copy thành công; chưa có Docker trên máy ảo nên chưa build thử image.
+- **Chưa kiểm tra:** deploy lại trên Render và mở URL https://toonflow-app-hy9r.onrender.com.
+- **Vấn đề sau khi sửa:** `ISSUE-0005` vẫn mở, chờ xác minh bằng deploy lại.
+- **Trạng thái:** Đã ghi vào repo (chờ push); chưa kiểm thử bằng deploy.
+
 ## Mẫu thêm mục mới — AI/người sửa phải điền đủ
 
 ### DONE-xxxx — Tên thay đổi ngắn gọn

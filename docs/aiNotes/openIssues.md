@@ -63,6 +63,22 @@
 - **Điều kiện đóng:** báo cáo kiểm thử với phiên bản, môi trường và kết quả xác minh có thể đối chiếu.
 - **Lịch sử sửa:** Chưa có.
 
+### ISSUE-0005 — Deploy Render crash vì server không đọc được file tool trong `build/tools` (EACCES)
+
+- **Mức độ:** Cao (triển khai).
+- **Trạng thái:** Đang sửa — đã sửa `Dockerfile`, chờ xác minh bằng deploy lại trên Render.
+- **Phát hiện:** 2026-11-09 16:13 (UTC+7) · **Người ghi nhận:** Muse (Muse Spark).
+- **Người chịu trách nhiệm sửa:** Muse (Muse Spark).
+- **Người sửa lần cuối:** Muse (Muse Spark), 2026-11-09 16:16 (UTC+7).
+- **Cách tái hiện hoặc bằng chứng:** deploy Web Service `toonflow-app` trên Render (Docker, Free, Singapore, commit `ddd0667`): build Docker thành công, server crash khi khởi động với lỗi `EACCES: permission denied, copyfile '/app/build/tools/pluginDeveloper.tool.js' -> '/app/data/tools/pluginDeveloper.tool.js'`, `Exited with status 1`, `No open ports detected`; thử lại sau khi đặt `TOONFLOW_DATA_DIR=/tmp/toonflow-data` vẫn crash đúng lỗi đó. URL https://toonflow-app-hy9r.onrender.com chỉ hiện màn hình "APPLICATION LOADING" của Render.
+- **Nguyên nhân đã xác nhận:** file `build/tools/pluginDeveloper.tool.js` trong bản build có quyền `600` thuộc root, các file tool khác là `640` thuộc root; `Dockerfile` chỉ `chown -R bun:bun data` rồi chạy server bằng user `bun`, nên user `bun` không đọc được file nguồn để copy — lỗi ở file nguồn, không phải thư mục đích. Đã kiểm chứng cơ chế trên máy ảo: user thường copy file `600` thuộc root thì bị `Permission denied`, sau `chown` cho user đó thì copy thành công.
+- **Ảnh hưởng:** server không khởi động được trên Render, chưa có link public nào hoạt động.
+- **Đã thử sửa:** 2026-11-09 — đổi `TOONFLOW_DATA_DIR` sang `/tmp/toonflow-data` trên Render (không hiệu quả, vì lỗi ở file nguồn). 2026-11-09 — sửa `Dockerfile`: `chown -R bun:bun data` thành `chown -R bun:bun data build` (commit chờ push, xem `DONE-0003`).
+- **Còn tồn tại sau lần sửa cuối:** chờ deploy lại trên Render để xác minh server khởi động và URL mở được trang Toonflow.
+- **Bước tiếp theo:** push commit lên nhánh `main`, Render tự build lại; kiểm tra log deploy và URL https://toonflow-app-hy9r.onrender.com; gỡ biến môi trường tạm `TOONFLOW_DATA_DIR=/tmp/toonflow-data` trên service Render để dùng lại `/app/data` mặc định.
+- **Điều kiện đóng:** service Render ở trạng thái Live và URL mở được trang Toonflow.
+- **Lịch sử sửa:** 2026-11-09 — Muse (Muse Spark) sửa `Dockerfile` (chown thêm thư mục `build`), chưa xác minh bằng deploy.
+
 ## Mẫu thêm vấn đề mới hoặc ghi lại lần sửa
 
 ### ISSUE-xxxx — Tên vấn đề

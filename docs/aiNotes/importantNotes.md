@@ -59,6 +59,14 @@
 - **Phạm vi:** phân phối / phát hành.
 - **Nguồn:** [LICENSE](../../LICENSE), [package.json](../../package.json).
 
+### NOTE-0008 — Dockerfile: mọi file server cần đọc lúc chạy phải thuộc user `bun`
+
+- **Ngày:** 2026-11-09 16:16 (UTC+7) · **Người ghi:** Muse (Muse Spark).
+- **Quy tắc:** `Dockerfile` chạy server bằng user `bun` (`USER bun`), nên sau bước build phải `chown` cho `bun` toàn bộ thư mục server đọc lúc chạy (`data` và `build`), không chỉ `data`. File build sinh ra có thể mang quyền `600`/`640` thuộc root và user `bun` sẽ không đọc được.
+- **Lý do:** deploy Render 2026-11-09 crash vì `EACCES` khi copy `build/tools/pluginDeveloper.tool.js` (xem `ISSUE-0005`); đổi thư mục đích sang `/tmp` không sửa được vì lỗi nằm ở file nguồn.
+- **Phạm vi:** `Dockerfile`, triển khai Docker/Render.
+- **Nguồn:** log deploy Render ngày 2026-11-09 và kiểm tra quyền file trong `build/tools/`.
+
 ## Mẫu lưu ý mới
 
 ### NOTE-xxxx — Tên lưu ý
