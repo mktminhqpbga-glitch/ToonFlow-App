@@ -46,3 +46,14 @@ export function bridgeDiagnosis(status: {
   });
   return { stages, providers, pendingJobs: status.jobs?.filter(job => ["submitting", "running"].includes(job.state)).length ?? 0 };
 }
+
+export function verifyProbeCapabilities(
+  provider: BridgeProvider,
+  current: { tab: { url: string }; documentToken: string },
+  probe: { ready?: boolean; documentToken?: string; url?: string; capabilities?: readonly string[] } | undefined,
+) {
+  if (!probe?.ready || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(probe.documentToken ?? "")
+    || current.documentToken !== probe.documentToken || current.tab.url !== probe.url) return [];
+  return (["text", "image", "video"] as const).filter(kind => probe.capabilities?.includes(kind)
+    && (provider === "muse" ? kind !== "text" : kind !== "video"));
+}
