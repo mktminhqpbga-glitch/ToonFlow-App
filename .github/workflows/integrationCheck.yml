@@ -25,6 +25,8 @@ jobs:
           bun --version
       - name: Install exact lockfile
         run: bun install --frozen-lockfile
+      - name: Validate read-only local smoke harness (not Mac E2E)
+        run: bun build scripts/smokeLocal.ts --target=bun --outfile=/tmp/toonflow-smoke-check.js
       - name: Validate Chrome companion and Relay syntax
         run: |
           node --check packages/chromeCompanion/background.js
