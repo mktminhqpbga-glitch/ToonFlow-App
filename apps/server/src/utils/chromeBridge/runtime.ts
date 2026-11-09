@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { getRuntimePlatform } from "@/lib/platform";
 import { prepareChromePrompt, requestedRatios } from "./ratio";
-import { assertTabDispatchAvailable } from "./dispatchGuard";
+import { assertTabDispatchAvailable, verifyProbeCapabilities } from "./dispatchGuard";
 
 export type BridgeProvider = "muse" | "gemini" | "chatgpt";
 export type BridgeCapability = "text" | "image" | "video";
@@ -207,14 +207,9 @@ class ChromeBridgeRuntime {
       if ([...this.jobs.values()].some(job => job.provider === provider)) continue;
       try {
         const probe = await this.call("probe", { tabId: selection.tab.id, provider }) as BridgeProbe;
-        if (!probe?.ready || !isBridgeDocumentToken(probe.documentToken)
-          || probe.documentToken !== selection.documentToken || probe.url !== selection.tab.url) {
-          this.selections.delete(provider);
-        } else {
-          const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(kind => probe.capabilities?.includes(kind));
-          if (!capabilities.length) this.selections.delete(provider);
-          else this.selections.set(provider, { ...selection, capabilities });
-        }
+        const capabilities = verifyProbeCapabilities(provider, selection, probe);
+        if (!capabilities.length) this.selections.delete(provider);
+        else this.selections.set(provider, { ...selection, capabilities });
       } catch { this.selections.delete(provider); }
     }
   }
