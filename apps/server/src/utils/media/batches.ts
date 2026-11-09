@@ -27,6 +27,7 @@ const batchSchema = z.object({
   state: batchState, createdAt: z.number().int(), updatedAt: z.number().int(),
   scenes: z.array(sceneSchema).min(1).max(100),
   merged: z.object({ path: z.string(), mimeType: z.literal("video/mp4") }).optional(),
+  pauseReason: z.string().max(1000).optional(),
 });
 type Batch = z.infer<typeof batchSchema>;
 type Kind = z.infer<typeof kindSchema>;
@@ -150,9 +151,19 @@ async function processBatch(cwd: string, id: string, owner?: AuthIdentity | null
     const bridge = chromeBridge.status();
     const provider = next.request.providerId === "chromeBridge"
       ? next.request.modelId.replace(/_(image|video)$/, "") : undefined;
-    const selection = provider ? (bridge.selected as Record<string, { tab?: { id: number } }>)[provider] : undefined;
+    const selection = provider ? (bridge.selected as Record<string, { tab?: { id: number }; capabilities?: string[] }>)[provider] : undefined;
     const deviceId = provider && bridge.connected
       ? ("remote" in bridge && bridge.remote?.selectedDeviceId ? bridge.remote.selectedDeviceId : "local") : undefined;
+    if (provider && (!bridge.connected || !selection?.tab?.id || !deviceId || !selection.capabilities?.includes(batch.kind))) {
+      // The prompt has NOT been submitted. Keep the original queued Task ID for manual resume.
+      await mutateBatch(cwd, id, owner, current => {
+        if (current.state === "running") {
+          current.state = "paused";
+          current.pauseReason = "Chrome chưa ghép nối hoặc tab đã chọn không hỗ trợ tạo media. Kết nối lại rồi bấm Tiếp tục; cảnh chờ được giữ nguyên.";
+        }
+      });
+      return;
+    }
     await mutateBatch(cwd, id, owner, current => {
       const scene = current.scenes[next.index];
       if (current.state === "running" && scene?.state === "queued") {
@@ -243,7 +254,7 @@ export async function controlBatch(cwd: string, id: string, action: "pause" | "r
   cwd = await realpath(cwd);
   const state = await mutateBatch(cwd, id, owner, batch => {
     if (action === "pause" && batch.state === "running") batch.state = "paused";
-    if (action === "resume" && mayResumeBatch(batch.state, batch.scenes)) batch.state = "running";
+    if (action === "resume" && mayResumeBatch(batch.state, batch.scenes)) { batch.state = "running"; batch.pauseReason = undefined; }
     if (action === "cancel" && !["completed", "partial", "cancelled"].includes(batch.state)) {
       batch.state = "cancelled";
       for (const scene of batch.scenes) if (scene.state === "queued") scene.state = "cancelled";
