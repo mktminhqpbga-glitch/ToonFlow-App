@@ -114,6 +114,8 @@
       </div>
     </el-card>
   </panel>
+  <materialPresets v-model="materialPresetsVisible" :availableNodes="availableNodes" :createNode="createPresetNode" />
+  <characterStudio v-model="characterStudioVisible" :directory="directory" :addCharacter="addCharacterToCanvas" />
 </template>
 
 <script setup lang="ts">
@@ -121,6 +123,8 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Panel, useVueFlow, type XYPosition } from "@vue-flow/core";
 import { MiniMap } from "@vue-flow/minimap";
 import { IconMap, IconMagnet, IconFocusCentered } from "@tabler/icons-vue";
+import materialPresets from "./materialPresets.vue";
+import characterStudio, { type CharacterRecord } from "./characterStudio.vue";
 import { ElMessage } from "element-plus";
 import { currentUser } from "@/stores/multiTenant";
 import { arrangeCanvas } from "../arrangeCanvas";
@@ -128,12 +132,17 @@ import { arrangeCanvas } from "../arrangeCanvas";
 const props = defineProps<{
   canvasId: string;
   directory: string | undefined;
+  availableNodes: { type: string; label: string }[];
+  createPresetNode: (preset: { nodeType: string; title: string; prompt: string }) => Promise<boolean>;
+  addCharacterToCanvas: (character: CharacterRecord) => Promise<boolean>;
   batchHistory: (action: () => Promise<void>) => Promise<void>;
 }>();
 const snapEnabled = defineModel<boolean>("snapEnabled", { required: true });
 const showEdges = defineModel<boolean>("showEdges", { required: true });
 const assetsVisible = defineModel<boolean>("assetsVisible", { default: false });
 const showMap = ref(false);
+const materialPresetsVisible = ref(false);
+const characterStudioVisible = ref(false);
 const zoomMenuVisible = ref(false);
 const flow = useVueFlow();
 const { viewport, zoomTo, zoomIn, zoomOut, fitView, setCenter, getNodes, updateNode } = flow;
@@ -152,7 +161,11 @@ const canArrange = computed(() => {
     nodes.every((node) => node.dimensions.width > 0 && node.dimensions.height > 0)
   );
 });
-defineExpose({ arrangeNodes });
+defineExpose({
+  arrangeNodes,
+  openMaterialPresets: () => { if (props.canvasId && props.directory) materialPresetsVisible.value = true; },
+  openCharacterStudio: () => { if (props.canvasId && props.directory) characterStudioVisible.value = true; },
+});
 
 watch(
   () => [props.canvasId, props.directory],
@@ -160,6 +173,8 @@ watch(
     arrangeController?.abort();
     layoutSnapshot.value = undefined;
     undoPopoverVisible.value = false;
+    materialPresetsVisible.value = false;
+    characterStudioVisible.value = false;
   },
   { flush: "sync" }
 );

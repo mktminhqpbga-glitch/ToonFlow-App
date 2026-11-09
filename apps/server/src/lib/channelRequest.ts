@@ -10,6 +10,10 @@ export default async function channelRequest(
   authenticated = false,
 ) {
   res.set("Cache-Control", "no-store");
+  // Legacy Toonflow commercial channel is opt-in; do not send user data upstream
+  // just because a legacy panel/route is present in the independent fork.
+  if (process.env.TOONFLOW_LEGACY_CHANNEL !== "1")
+    throw Object.assign(new Error("Legacy Toonflow commercial services are disabled; enable explicitly to use your own account"), { status: 503 });
   u.mcpControl.assertAppRequest(req);
   const token = authenticated ? u.ai.getAccountToken() : "";
   if (authenticated && (!token || req.get("authorization") !== `Bearer ${token}`)) {

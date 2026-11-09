@@ -23,7 +23,7 @@ async function scan(directory: string) {
     // 工具自身的文案由工具维护，不纳入宿主字典。
     if (/apps[\\/]server[\\/]src[\\/](?:agent[\\/](?:tools[\\/](?!index\.ts$)|bridge[\\/]question\.ts$)|routes[\\/]browser[\\/])/.test(path)) continue;
     const source = await readFile(path, "utf8");
-    if (/(?:apps[\\/]web|packages[\\/](?:multiTenant[\\/](?:adminWeb|userWeb)|providerWeb))/.test(path)) {
+    if (/(?:apps[\\/]web|packages[\\/](?:multiTenant[\\/](?:adminWeb|userWeb)|providerWeb|nodeShared|nodes[\\/](?:imageGenerationNode|videoGenerationNode|audioGenerationNode)))/.test(path)) {
       for (const message of collectMessages(source, path)) add(message, path);
     }
     const scripts = item.name.endsWith(".vue")
@@ -57,7 +57,7 @@ async function scan(directory: string) {
     }
   }
 }
-for (const path of ["apps/web/src", "apps/server/src", "apps/desktop/src", "apps/mobile/src", "packages/mcp/src", "packages/ffmpeg/src", "packages/multiTenant", "packages/providerWeb"]) await scan(resolve(root, path));
+for (const path of ["apps/web/src", "apps/server/src", "apps/desktop/src", "apps/mobile/src", "packages/mcp/src", "packages/ffmpeg/src", "packages/multiTenant", "packages/providerWeb", "packages/nodeShared/src", "packages/nodes/imageGenerationNode/src", "packages/nodes/videoGenerationNode/src", "packages/nodes/audioGenerationNode/src"]) await scan(resolve(root, path));
 const messages = Object.fromEntries([...catalog].sort(([left], [right]) => left.localeCompare(right, "zh-CN")).map(([message]) => [message, message]));
 await mkdir(resolve(import.meta.dirname, "locales"), { recursive: true });
 await writeAtomic(resolve(import.meta.dirname, "locales/zhCn.json"), JSON.stringify(messages, null, 2) + "\n");

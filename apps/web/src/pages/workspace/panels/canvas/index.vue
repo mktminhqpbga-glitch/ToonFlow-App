@@ -77,6 +77,9 @@
       <canvasControls
         v-if="canvasId"
         ref="canvasControlsRef"
+        :availableNodes="availableNodes"
+        :createPresetNode="createPresetNode"
+        :addCharacterToCanvas="addCharacterToCanvas"
         v-model:assetsVisible="assetsVisible"
         v-model:snapEnabled="snapEnabled"
         v-model:showEdges="showEdges"
@@ -177,6 +180,7 @@ import canvasControls from "./components/canvasControls.vue";
 import canvasEmpty from "./components/canvasEmpty.vue";
 import canvasViewportHint from "./components/canvasViewportHint.vue";
 import assetLibrary from "./components/assetLibrary.vue";
+import type { CharacterRecord } from "./components/characterStudio.vue";
 import groupNode from "./components/groupNode.vue";
 import selectionToolbar from "./components/selectionToolbar.vue";
 import nodeSearch from "./components/nodeSearch.vue";
@@ -294,7 +298,7 @@ type AssetReference = { source: string; sourceHandle: string };
 type AssetSelection = { target: GraphNode; targetHandleId: string; directory: string; sourceId: string; controller: AbortController; signal: AbortSignal; resolve: (reference?: AssetReference) => void };
 const assetSelection = shallowRef<AssetSelection>();
 const assetSelecting = ref(false);
-provide("selectNodeAsset", (targetId: string, targetHandleId: string) => {
+provide("selectNodeAsset", (targetId: string, targetHandleId: string, assetPath?: string) => {
   finishAssetSelection();
   const target = findNode(targetId);
   const directory = project.value?.directory;
@@ -303,6 +307,15 @@ provide("selectNodeAsset", (targetId: string, targetHandleId: string) => {
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, canvasController.signal, workspaceController.signal]);
     assetSelection.value = { target, targetHandleId, directory, sourceId: crypto.randomUUID(), controller, signal, resolve };
+    if (assetPath !== undefined) {
+      const name = assetPath.split("/").pop() ?? "";
+      const entry = { name, path: assetPath, type: "file" };
+      if (canSelectAsset(entry)) {
+        void selectAsset(entry).finally(() => {
+          if (assetSelection.value?.signal === signal) finishAssetSelection();
+        });
+      } else finishAssetSelection();
+    }
     signal.addEventListener("abort", () => {
       if (assetSelection.value?.signal === signal) finishAssetSelection();
     }, { once: true });
@@ -427,7 +440,9 @@ provide("nodePersistence", () => {
     },
   };
 });
-defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, importWorkspaceMedia,
+  openMaterialPresets: () => { if (props.active && !props.settingsVisible && canvasReady.value) canvasControlsRef.value?.openMaterialPresets(); },
+  openCharacterStudio: () => { if (props.active && !props.settingsVisible && canvasReady.value) canvasControlsRef.value?.openCharacterStudio(); }, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
   openNodeSearch: () => nodeSearchRef.value?.open(),
   getCanvases: (signal?: AbortSignal) => {
     if (!canvasMenuRef.value) throw new Error("画布菜单尚未就绪");
@@ -656,6 +671,61 @@ function selectFiles(position: { x: number; y: number }) {
 
 function openNodeMenu(event: MouseEvent) {
   if (event.target instanceof Element && event.target.classList.contains("vue-flow__pane")) nodeMenuRef.value?.openMenu(event, true);
+}
+
+async function addCharacterToCanvas(character: CharacterRecord): Promise<boolean> {
+  const directory = project.value?.directory;
+  if (!props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !directory || !character.images.length) return false;
+  const rect = canvasElement.value?.getBoundingClientRect();
+  if (!rect) return false;
+  const origin = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  const files = useWorkspaceFiles(directory);
+  const imported: string[] = [];
+  await canvasHistory.batch(async () => {
+    for (const [index, image] of character.images.entries()) {
+      canvasController.signal.throwIfAborted();
+      const data = await files.read(image.path);
+      const createdIds = await importCanvasFiles([new File([data], image.name, { type: image.mimeType })],
+        { x: origin.x - 200 + index * 40, y: origin.y - 160 + index * 50 },
+        { directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow });
+      for (const id of createdIds) {
+        const created = findNode(id);
+        if (created) Object.assign(created.data, { characterId: character.id, characterReferencePath: image.path });
+        imported.push(id);
+      }
+    }
+  });
+  if (!imported.length) return false;
+  flow.removeSelectedElements();
+  const nodes = imported.map(id => findNode(id)).filter((node): node is NonNullable<typeof node> => !!node);
+  if (nodes.length) flow.addSelectedNodes(nodes);
+  return true;
+}
+
+async function createPresetNode(preset: { nodeType: string; title: string; prompt: string }): Promise<boolean> {
+  const directory = project.value?.directory;
+  if (!props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !directory
+    || !availableNodes.value.some(node => node.type === preset.nodeType) || !preset.prompt.trim()) return false;
+  const rect = canvasElement.value?.getBoundingClientRect();
+  if (!rect) return false;
+  const center = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  const id = crypto.randomUUID();
+  const prompt = preset.prompt.trim();
+  await canvasHistory.batch(async () => {
+    addNodes({
+      id,
+      type: preset.nodeType,
+      position: { x: center.x - 200, y: center.y - 140 },
+      data: { label: preset.title, prompt, promptModel: [[{ type: "Write", text: prompt }]] },
+    });
+    await nextTick();
+    if (!findNode(id)) throw new Error("Không thể tạo node từ thư viện vật liệu");
+  });
+  const created = findNode(id);
+  if (!created) return false;
+  flow.removeSelectedElements();
+  flow.addSelectedNodes([created]);
+  return true;
 }
 
 function createEmptyNode(type: string) {
@@ -1009,6 +1079,31 @@ function pastePosition() {
 async function pasteNodeAtCenter(command?: string) {
   const position = pastePosition();
   if (position) await pasteClipboardNode(position, command);
+}
+
+// Import a real persisted batch result, not a preview URL or a temporary fake node.
+async function importWorkspaceMedia(path: string, mimeType: string): Promise<boolean> {
+  const directory = project.value?.directory;
+  const position = pastePosition();
+  if (!props.active || props.settingsVisible || !canvasReady.value || !directory || !position) return false;
+  if (!new RegExp("^batchResults/[0-9a-f-]{36}/(?:scene-[0-9]+/|joined-)[^/]+$", "i").test(path)
+    || !new RegExp("^(image/(png|jpeg|webp)|video/(mp4|webm|quicktime))$", "i").test(mimeType)) {
+    throw new Error("Đường dẫn hoặc định dạng kết quả batch không hợp lệ");
+  }
+  const signal = canvasController.signal;
+  const content = await useWorkspaceFiles(directory).read(path);
+  signal.throwIfAborted();
+  if (directory !== project.value?.directory) throw new Error("Workspace đã thay đổi trong khi tải kết quả");
+  const name = path.split("/").pop()!;
+  const file = new File([content], name, { type: mimeType });
+  let importedIds: string[] = [];
+  await canvasHistory.batch(async () => {
+    importedIds = await importCanvasFiles([file], position,
+      { directory, availableNodes: availableNodes.value, signal, flow });
+    if (!importedIds.length) throw new Error("Không thể tạo node media từ kết quả batch");
+  });
+  await flushCanvasSave();
+  return importedIds.length > 0;
 }
 
 async function importCanvasContent(files: File[], position: { x: number; y: number }) {

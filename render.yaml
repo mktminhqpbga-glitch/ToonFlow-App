@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: toonflow-chrome-relay
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/chromeRelay/dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: RELAY_OWNER_KEY
+        sync: false
+      - key: RELAY_DB_PATH
+        value: /tmp/chromeRelay.sqlite

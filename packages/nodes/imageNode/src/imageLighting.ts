@@ -89,5 +89,30 @@ export function buildLightingPrompt(value: LightingSettings) {
     : "";
   const lightColorPrompt = settings.lightColor ? `tint the key illumination toward ${settings.lightColor}, keeping the subject's original surface colors recognizable` : "";
   const lightingMeta = `[relight key azimuth:${Math.round(settings.azimuth)}deg elevation:${Math.round(settings.elevation)}deg intensity:${Math.round(settings.brightness)}% rim:${settings.rimLight ? `on azimuth:${Math.round(settings.rimAzimuth)}deg elevation:${Math.round(settings.rimElevation)}deg intensity:${Math.round(settings.rimBrightness)}% color:${settings.rimColor || "neutral"}` : "off"}]`;
+  if (typeof document !== "undefined" && document.documentElement.lang === "vi") {
+    const descriptions: Record<string, string> = {
+      film: "Ánh sáng high-key thoáng đãng, vùng sáng dịu, chiếu sáng mềm rộng, chất ảnh phim tương tự tinh tế",
+      blue: "Ánh sáng nền xanh lam lạnh tách đường viền chủ thể, ánh sáng bù phía trước nhẹ và mép sáng có không khí",
+      portrait: "Nguồn sáng chính chân dung từ trên và lệch một bên, vùng sáng tam giác nhỏ trên má phía tối, sắc độ đậm có chiều sâu",
+      neon: "Ánh sáng neon cyan và hồng tương phản trên bề mặt có sẵn, màu đêm sống động, không khí đô thị hiện đại",
+      sunset: "Ánh sáng hoàng hôn hổ phách thấp, bóng mềm kéo dài, gam ấm hoài niệm",
+      noir: "Ánh sáng low-key tiết chế, vùng bóng tối sâu, chỉ điểm sáng chọn lọc, không khí điện ảnh đen trắng căng thẳng",
+      golden: "Ánh sáng vàng giờ chiều dịu, vùng sáng da tự nhiên, phản chiếu ấm tinh tế và bóng đổ giữ chi tiết",
+      steel: "Ánh sáng điện ảnh xanh thép và xám đá, màu ít bão hòa, tương phản sắc độ rõ và bóng lạnh",
+    };
+    const direction = (azimuth: number, elevation: number, role: string) =>
+      `${role}: góc ngang ${azimuth} độ, góc nâng ${elevation} độ, ánh sáng chiếu TỪ vị trí nguồn về tâm chủ thể; +X hướng về mép phải ảnh gốc, +Y hướng lên, +Z hướng về camera tham chiếu`;
+    return [
+      "Chiếu sáng lại ảnh tham chiếu {{ref 1}} nhưng giữ nguyên bối cảnh, bố cục, điểm nhìn, hình học nền, danh tính, khuôn mặt, kiểu tóc, trang phục, tư thế, hành động và số lượng chủ thể.",
+      "Chỉ điều chỉnh hướng sáng, cường độ, màu, bóng đổ, độ tương phản và không khí; không tự thêm hoặc xóa vật thể. Không vẽ đèn chiếu, softbox, phản quang, nến hoặc thiết bị chiếu sáng thành vật thể trong ảnh.",
+      descriptions[settings.preset] ?? "",
+      smartDesc,
+      direction(settings.azimuth, settings.elevation, "Nguồn sáng chính"),
+      `Cường độ sáng ${Math.round(settings.brightness)}%, giữ sắc độ và chi tiết phù hợp với độ sáng yêu cầu.`,
+      settings.rimLight ? `${direction(settings.rimAzimuth, settings.rimElevation, "Nguồn sáng viền độc lập")}; cường độ ${Math.round(settings.rimBrightness)}%, màu ${settings.rimColor || "trung tính"}. Không dời nguồn sáng qua phía đối diện chỉ để tạo viền.` : "",
+      settings.lightColor ? `Nghiêng màu nguồn sáng chính về ${settings.lightColor} nhưng giữ màu bề mặt gốc dễ nhận dạng.` : "",
+      lightingMeta,
+    ].filter(Boolean).join(". ");
+  }
   return [consistencyPrompt, presetPrompt, smartDesc, lightDirectionPrompt, brightnessPrompt, rimLightPrompt, lightColorPrompt, lightingMeta].filter(Boolean).join(", ");
 }

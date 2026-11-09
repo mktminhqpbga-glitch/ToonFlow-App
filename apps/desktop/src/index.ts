@@ -522,6 +522,10 @@ async function start() {
       isClosing = true;
       closeCreationWindow();
       void connection.close().catch(error => console.error("设备连接关闭失败：", error));
+      if (process.platform === "darwin") {
+        void import("@toonflow/server/chromeBridge").then(({ chromeBridge }) => chromeBridge.stop())
+          .catch(error => console.error("Chrome Bridge đóng thất bại:", error));
+      }
       void closeBrowsers().catch(error => console.error("浏览器关闭失败：", error));
       deliverInstall = undefined;
       pendingInstalls.length = 0;
@@ -545,6 +549,10 @@ async function start() {
     isClosing = true;
     closeCreationWindow();
     await desktopConnection?.close().catch(error => console.error("设备连接关闭失败：", error));
+    if (process.platform === "darwin") {
+      await import("@toonflow/server/chromeBridge").then(({ chromeBridge }) => chromeBridge.stop())
+        .catch(error => console.error("Chrome Bridge đóng thất bại:", error));
+    }
     splash?.close();
     console.error("桌面启动失败：", error);
     if (process.platform === "win32") {

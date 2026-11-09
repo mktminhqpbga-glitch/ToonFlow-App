@@ -17,6 +17,13 @@ export function getPanoramaViews(mode: PanoramaMode, count: 1 | 4 | 12, yaw: num
 }
 
 export function buildPanoramaPrompt(mode: PanoramaMode) {
+  if (typeof document !== "undefined" && document.documentElement.lang === "vi") return [
+    "Dựa trên ảnh tham chiếu {{ref 1}}, tái tạo và mở rộng cùng một không gian xung quanh vị trí camera cố định. Giữ thống nhất bối cảnh, chủ thể, vật liệu, màu sắc, ánh sáng và phong cách. Suy luận hợp lý những phần khung cảnh chưa nhìn thấy.",
+    mode === "sphere"
+      ? "Xuất một ảnh toàn cảnh hình cầu 720 độ (kinh độ đủ 360 độ và vĩ độ đủ 180 độ) theo phép chiếu equirectangular, tỷ lệ bắt buộc 2:1. Bao gồm đỉnh trời và điểm đáy, đường chân trời nằm chính giữa theo chiều dọc. Hai cạnh trái/phải phải ghép liền mạch. Đây là ảnh texture phẳng để dán vào mặt trong hình cầu."
+      : "Xuất một ảnh toàn cảnh trụ xoay ngang 360 độ, tỷ lệ bắt buộc 4:1. Bao phủ một vòng xoay trọn vẹn quanh camera, giữ đường chân trời thẳng và nằm chính giữa theo chiều dọc, hai cạnh trái/phải phải ghép liền mạch. Đây là texture trụ phẳng để dán vào mặt trong hình trụ.",
+    "Chỉ tạo một ảnh toàn cảnh liên tục, không chia ô, không khung, không viền nối, không chú thích, chữ, watermark, camera hoặc nút giao diện. Không tạo hiệu ứng hành tinh tí hon, mắt cá hay ảnh chụp màn hình trình xem toàn cảnh.",
+  ].join("\n");
   return [
     "Use reference image {{ref 1}} to reconstruct and extend the same environment around a single stationary camera position. Preserve the scene identity, subjects, materials, colors, lighting and visual style. Infer unseen surroundings consistently.",
     mode === "sphere"

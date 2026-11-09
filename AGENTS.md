@@ -1,3 +1,12 @@
+## Yêu cầu bắt buộc về ghi chú và bàn giao (dành cho mọi AI/người phát triển)
+
+- **Trước khi sửa bất kỳ chức năng nào**, đọc [sổ ghi chú dự án](docs/aiNotes/overview.md), [việc đã làm](docs/aiNotes/completedWork.md), [vấn đề tồn tại](docs/aiNotes/openIssues.md), [lưu ý quan trọng](docs/aiNotes/importantNotes.md).
+- **Sau mỗi thay đổi được commit**, ghi mã DONE, ngày, **tên người/AI và model trực tiếp thực hiện**, file đã sửa, URL commit và kiểm tra đã làm vào `docs/aiNotes/completedWork.md`. Không ghi sửa xong nếu chỉ phân tích, dự định hoặc chỉ thấy giao diện.
+- **Sau mỗi lần sửa**, rà soát/cập nhật `docs/aiNotes/openIssues.md`, ghi ai sửa gần nhất, thử thay đổi gì, vẫn còn lỗi gì, có bằng chứng xác minh hay chưa. Giữ lịch sử sửa cũ và để trạng thái mở nếu chưa kiểm tra đạt.
+- Những điều kiện kỹ thuật, cảnh báo hoặc quyết định mới ghi vào `docs/aiNotes/importantNotes.md` kèm tên người ghi, thời gian và nguồn.
+- Chủ repository phải đọc được tất cả ghi chú qua liên kết ngay đầu README. Đừng ghi thông tin bí mật vào file công khai; đừng mặc định tác giả một commit là người viết logic nếu không có bằng chứng.
+- Quy tắc này chỉ áp dụng tài liệu và công việc **trong repository hiện tại**; không lấy nội dung cuộc trò chuyện ngoài làm dữ liệu dự án.
+
 本规范适用于整个仓库。
 
 ## 多租户开发规范
