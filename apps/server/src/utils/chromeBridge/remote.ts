@@ -218,7 +218,8 @@ class RemoteBridge {
   }
   models(kind: BridgeCapability) {
     if (!this.connected) return [];
-    return [...this.selected.entries()].filter(([, choice]) => choice.capabilities.includes(kind))
+    return [...this.selected.entries()].filter(([, choice]) => choice.capabilities.includes(kind)
+      && !this.recent.some(job => job.tabId === choice.tab.id && job.state === "unknown"))
       .map(([provider]) => ({ providerId: "chromeBridge", providerLabel: "Chrome Companion",
         modelId: provider + "_" + kind, label: provider + " · Remote Chrome", type: kind,
         ...(kind === "image" ? { imageSizes: ["Default"], imageRatios: [...requestedRatios] } : {}),
