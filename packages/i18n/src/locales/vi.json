@@ -4882,5 +4882,7 @@
   "ZIP 压缩包条目大小或校验值不一致": "Kích thước hoặc giá trị kiểm tra của mục trong tệp ZIP không khớp",
   "ZIP 压缩包文件大小或校验值错误": "Kích thước hoặc giá trị kiểm tra tệp trong ZIP không đúng",
   "ZIP 压缩包文件大小无效": "Kích thước tệp trong ZIP không hợp lệ",
-  "ZIP 压缩包文件头无效": "Tiêu đề tệp ZIP không hợp lệ"
+  "ZIP 压缩包文件头无效": "Tiêu đề tệp ZIP không hợp lệ",
+  "图片或音频限1个，文本不限": "Tối đa 1 ảnh hoặc âm thanh; không giới hạn văn bản",
+  "正在估价…": "Đang ước tính chi phí…"
 }
