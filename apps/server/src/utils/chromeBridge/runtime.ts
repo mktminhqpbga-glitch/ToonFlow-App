@@ -169,7 +169,7 @@ class ChromeBridgeRuntime {
       .map(tab => ({ id: tab.id, title: String(tab.title ?? "").slice(0, 200), url: tab.url, provider: providerForUrl(tab.url)! }));
   }
 
-  async select(provider: BridgeProvider, id: number) {
+  async select(provider: BridgeProvider, id: number, confirmUnknown = true) {
     if (!allowedHosts[provider] || !Number.isInteger(id) || id < 0) throw new Error("Nhà cung cấp hoặc tab không hợp lệ");
     if ([...this.jobs.values()].some(job => job.provider === provider)) throw new Error("Tab này đang có tác vụ; hãy hủy trước khi đổi tab");
     const found = (await this.tabs()).find(tab => tab.id === id && tab.provider === provider);
@@ -182,7 +182,7 @@ class ChromeBridgeRuntime {
     if (!capabilities.length) throw new Error("Tab không có chức năng đã được xác minh");
     this.selections.set(provider, { tab: found, capabilities, documentToken: result.documentToken });
     // A deliberate re-selection follows user review of an UNKNOWN tab; ordinary status refresh never clears it.
-    this.recentJobs = this.recentJobs.filter(job => job.tabId !== id || job.state !== "unknown");
+    if (confirmUnknown) this.recentJobs = this.recentJobs.filter(job => job.tabId !== id || job.state !== "unknown");
     this.recentJobs = this.recentJobs.filter(job => job.provider !== provider);
     return this.status();
   }
@@ -198,7 +198,7 @@ class ChromeBridgeRuntime {
   async refresh(provider: BridgeProvider) {
     const selection = this.selections.get(provider);
     if (!selection) throw new Error("Chưa chọn tab " + provider);
-    return this.select(provider, selection.tab.id);
+    return this.select(provider, selection.tab.id, false);
   }
 
   models(kind: BridgeCapability) {
