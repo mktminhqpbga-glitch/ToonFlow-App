@@ -15,6 +15,19 @@ let localeFallback = () => detectLocale([Intl.DateTimeFormat().resolvedOptions()
 // ACT: 仅注册一次分派器；每次校验读取当前异步上下文，绝不按请求改写全局语言。
 z.config({ localeError: issue => validationLocales[getLocale()].localeError(issue) });
 
+/** Legacy persisted locale was often inferred from OS, not selected by the user.
+ * Use Vietnamese in standalone unless the user made an explicit language choice. */
+export function resolveServerLocalePreference(
+  ui: { language?: unknown; languageChosen?: unknown } | undefined,
+  systemLanguage: string,
+): Locale {
+  if (ui?.languageChosen === true) {
+    if (ui.language === "system") return detectLocale([systemLanguage]);
+    return normalizeLocale(ui.language) ?? "vi";
+  }
+  return "vi";
+}
+
 export function setLocaleFallback(resolve: () => Locale) { localeFallback = resolve; }
 export function getLocale(): Locale { return requestLocale.getStore() ?? localeFallback(); }
 export function runWithLocale<T>(locale: Locale, operation: () => T): T { return requestLocale.run(locale, operation); }
