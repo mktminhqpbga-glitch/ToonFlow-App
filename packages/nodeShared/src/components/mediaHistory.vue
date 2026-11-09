@@ -1,12 +1,12 @@
 <template>
-  <el-button :icon="IconHistory" :disabled="disabled" text title="历史记录" aria-label="历史记录" @click.stop="visible = true">历史记录</el-button>
-  <el-dialog v-model="visible" :title="`${mediaType === 'image' ? '图片' : '视频'}历史记录`" width="min(760px, calc(100vw - 32px))" appendToBody destroyOnClose>
+  <el-button :icon="IconHistory" :disabled="disabled" text :title="localized("历史记录", "Lịch sử")" :aria-label="localized("历史记录", "Lịch sử")" @click.stop="visible = true">{{ localized("历史记录", "Lịch sử") }}</el-button>
+  <el-dialog v-model="visible" :title="`${mediaType === 'image' ? localized('图片', 'Ảnh') : localized('视频', 'Video')} ${localized('历史记录', 'Lịch sử')}`" width="min(760px, calc(100vw - 32px))" appendToBody destroyOnClose>
     <div v-loading="loading" class="mediaHistory nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop>
       <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
-      <el-empty v-else-if="!loading && !items.length" description="暂无历史记录" />
+      <el-empty v-else-if="!loading && !items.length" :description="localized("暂无历史记录", "Chưa có lịch sử")" />
       <template v-else-if="items.length">
         <div class="historyContent">
-          <div class="historyList" aria-label="历史文件">
+          <div class="historyList" :aria-label="localized("历史文件", "Tệp lịch sử")">
             <button
               v-for="item in pageItems"
               :key="item.url"
@@ -17,21 +17,21 @@
               :title="item.url"
               @click="selected = item">
               <span class="fileName">{{ item.url.split('/').at(-1) }}</span>
-              <span v-if="item.url === current?.url.replaceAll('\\', '/')" class="currentLabel">当前结果</span>
+              <span v-if="item.url === current?.url.replaceAll('\\', '/')" class="currentLabel">{{ localized("当前结果", "Kết quả hiện tại") }}</span>
             </button>
           </div>
           <div class="historyPreview" v-loading="!!selected && !previewReady && !previewError" :aria-busy="preparingPreview">
             <el-alert v-if="previewError" :title="previewError" type="error" :closable="false" />
-            <img v-else-if="mediaSrc && mediaType === 'image'" :src="mediaSrc" alt="历史图片预览" @load="readPreview" @error="previewFailed" />
-            <video v-else-if="mediaSrc" :src="mediaSrc" controls playsinline preload="auto" aria-label="历史视频预览" @loadeddata="readPreview" @error="previewFailed" />
+            <img v-else-if="mediaSrc && mediaType === 'image'" :src="mediaSrc" :alt="localized("历史图片预览", "Xem trước ảnh lịch sử")" @load="readPreview" @error="previewFailed" />
+            <video v-else-if="mediaSrc" :src="mediaSrc" controls playsinline preload="auto" :aria-label="localized("历史视频预览", "Xem trước video lịch sử")" @loadeddata="readPreview" @error="previewFailed" />
           </div>
         </div>
         <el-pagination v-model:currentPage="page" :pageSize="pageSize" :total="items.length" layout="prev, pager, next" hideOnSinglePage />
       </template>
     </div>
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
-      <el-button type="primary" :disabled="disabled || loading || !selected || !previewUrl || !previewReady || !!previewError" @click="selectOutput">设为当前结果</el-button>
+      <el-button @click="visible = false">{{ localized("关闭", "Đóng") }}</el-button>
+      <el-button type="primary" :disabled="disabled || loading || !selected || !previewUrl || !previewReady || !!previewError" @click="selectOutput">{{ localized("设为当前结果", "Dùng làm kết quả hiện tại") }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -45,7 +45,10 @@ import { useNodeFiles } from "@toonflow/nodes-scaffold/workspaceFiles";
 import type { NodeMediaValue } from "@toonflow/nodes-scaffold/values";
 import { useMediaPreview } from "../mediaPreview";
 import { getMediaMimeType } from "../mediaTypes";
+import { useNodeVietnamese } from "../nodeLanguage";
 
+const vietnamese = useNodeVietnamese();
+const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 const props = defineProps<{ mediaType: "image" | "video"; current?: NodeMediaValue; disabled?: boolean }>();
 const emit = defineEmits<{ select: [value: NodeMediaValue] }>();
 const vLoading = ElLoading.directive;
@@ -64,7 +67,7 @@ const pageItems = computed(() => items.value.slice((page.value - 1) * pageSize, 
 const previewFile = computed(() => visible.value ? selected.value : undefined);
 watch(previewFile, () => { previewReadError.value = ""; }, { flush: "sync" });
 // ACT: 目录列表仅保存路径，每页显示 20 条，只读取选中文件；海量目录需服务端分页时再扩展 list。
-const previewUrl = files.useFileUrl(previewFile, () => { previewReadError.value = "历史文件读取失败，文件可能已被移动或删除"; });
+const previewUrl = files.useFileUrl(previewFile, () => { previewReadError.value = localized("历史文件读取失败，文件可能已被移动或删除", "Không đọc được tệp lịch sử; tệp có thể đã được chuyển hoặc xóa"); });
 const { src: mediaSrc, preparing: preparingPreview, error: mediaError, handleError, handleLoaded } = useMediaPreview(previewUrl, () => props.mediaType);
 const previewError = computed(() => previewReadError.value || mediaError.value);
 watch([previewFile, mediaSrc], () => { previewReady.value = false; }, { flush: "sync" });
@@ -102,7 +105,7 @@ watch(visible, async (open, _previous, onCleanup) => {
   } catch (error) {
     if (!cancelled) {
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      loadError.value = message || (error instanceof Error ? error.message : "历史记录读取失败");
+      loadError.value = message || (error instanceof Error ? error.message : localized("历史记录读取失败", "Không tải được lịch sử"));
     }
   } finally {
     if (!cancelled) loading.value = false;
