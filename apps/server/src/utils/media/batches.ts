@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { lstat, mkdir, readdir, readFile, realpath } from "@toonflow/file";
 import { createWorkspaceFfmpeg } from "@/utils/ffmpeg";
 import { chromeBridge } from "@/utils/chromeBridge/manager";
-import { areConcatStreamsCompatible, canDispatchBatch, finishedBatchState, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
+import { areConcatStreamsCompatible, canDispatchBatch, canDispatchChromeScene, finishedBatchState, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
 import { z } from "zod";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
 import { imageGenerationSchema, videoGenerationSchema } from "./schemas";
@@ -154,7 +154,7 @@ async function processBatch(cwd: string, id: string, owner?: AuthIdentity | null
     const selection = provider ? (bridge.selected as Record<string, { tab?: { id: number }; capabilities?: string[] }>)[provider] : undefined;
     const deviceId = provider && bridge.connected
       ? ("remote" in bridge && bridge.remote?.selectedDeviceId ? bridge.remote.selectedDeviceId : "local") : undefined;
-    if (provider && (!bridge.connected || !selection?.tab?.id || !deviceId || !selection.capabilities?.includes(batch.kind))) {
+    if (!canDispatchChromeScene(!!provider, bridge.connected, selection?.tab?.id, deviceId, selection?.capabilities, batch.kind)) {
       // The prompt has NOT been submitted. Keep the original queued Task ID for manual resume.
       await mutateBatch(cwd, id, owner, current => {
         if (current.state === "running") {
