@@ -20,6 +20,19 @@
 4. **Giới hạn:** API hiện mới liệt kê provider đã cài và Chrome Bridge khi khả dụng, không phải catalog đầy đủ của provider chưa cài; không được tuyên bố HD-01 hoàn thành 100%. Xác thực tài khoản, quota và mạng của model `configured` không được suy ra từ API key.
 5. **Kiểm thử UI cần thực hiện:** A thiếu key → disabled và nút tạo không gửi; B key có nhưng mạng lỗi → báo lỗi, không tạo output giả; C Chrome mất tab → không gửi; D đổi model/locale, save/reload không mất selection; E provider cũ vẫn tạo được khi cấu hình hợp lệ.
 
+## Cập nhật nghiệm thu HD-02 → HD-05 (2026-11-09, GPT-6)
+
+| HD | Code thay đổi | Static/typecheck/build | Unit/integration thực thi độc lập | UI runtime | AI/Chrome/FFmpeg E2E | Kết luận |
+| --- | --- | --- | --- | --- | --- | --- |
+| HD-02 | Kéo ảnh/video từ output Canvas hoặc Asset Library vào prompt; tên nguồn, liên kết node/handle, caret-drop | **PASS** run 42549399300 | Chưa có test drag/undo/persistence tự động riêng | NOT TESTED | BLOCKED | PARTIAL |
+| HD-03 | Bảng preset hai cột; sửa prompt trước khi tạo node image/video thực | **PASS** run 42549924812 | Chưa có test tạo node/lưu và reload riêng | NOT TESTED | BLOCKED | PARTIAL |
+| HD-04 | Studio nhân vật workspace, UUID, một bộ ảnh, upload/edit/search/import Canvas | **PASS** run 42550662370; run 42551746997 cũng PASS sau code HD-05 | Chưa có test filesystem/concurrent edit riêng | NOT TESTED | BLOCKED | PARTIAL |
+| HD-05 | Durable batch Task ID, 5 routes, 2 trang batch, fail riêng theo cảnh, UNKNOWN không auto-retry; FFprobe + FFmpeg concat có guard | **PASS** run 42551746997 trước chức năng ghép; run 42552231169 PASS sau ghép | Chưa có bài test giả lập crash/reload hay scene state transitions | NOT TESTED | BLOCKED | PARTIAL |
+
+**Chú ý:** mỗi CI run chỉ chứng minh các bước thực sự có trong workflow (typecheck và build). Không có hành vi giao diện click/drag/drop hoặc tác vụ AI thật được thử bằng Chrome đã đăng nhập. Bản build mới hơn có thêm lưu thiết bị/tab lúc dispatch; cần đối chiếu run CI tương ứng trước khi công nhận PASS cho commit cuối.
+
+**Các checkpoint còn lại:** chạy runtime UI và phục hồi dữ liệu trên Mac Intel macOS 13; thêm unit test độc lập cho queue; đóng gói/khởi chạy FFmpeg đúng phiên bản; xác thực video thực và kết quả ghép; tối ưu nhiều thiết bị/tab thay vì serial toàn server; thiết kế chuyển kết quả batch lên Canvas; hoàn thiện Studio AI và Việt hóa.
+
 ## Log bằng chứng
 
 - Mã backend: [c051788](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/c051788523eb2e5973676bc798870b5e2061b2d3).
