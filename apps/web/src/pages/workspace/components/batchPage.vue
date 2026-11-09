@@ -34,6 +34,7 @@
         <strong>{{ batch.kind === "image" ? "Ảnh" : "Video" }} · {{ batch.scenes.length }} cảnh</strong>
         <span>ID {{ batch.id }}</span>
         <span>{{ batch.state }}</span>
+        <span v-if="batch.pauseReason" class="pauseReason" :title="batch.pauseReason">{{ batch.pauseReason }}</span>
       </div>
       <div class="batchActions">
         <el-button size="small" :disabled="batch.state !== 'running' || controlling === batch.id" @click="control(batch, 'pause')">Tạm dừng</el-button>
@@ -69,7 +70,7 @@ type Kind = "image" | "video";
 type Model = { providerId: string; providerLabel: string; modelId: string; routeId?: string; label: string; type: Kind | "audio"; availability?: "ready" | "configured" | "needsConfiguration" };
 type Result = { path: string; mimeType: string; mediaType: Kind };
 type Scene = { id: string; taskId: string; index: number; request: { prompt: string }; state: string; result?: Result[]; error?: string };
-type Batch = { id: string; kind: Kind; state: string; scenes: Scene[]; createdAt: number; merged?: { path: string; mimeType: string } };
+type Batch = { id: string; kind: Kind; state: string; scenes: Scene[]; createdAt: number; merged?: { path: string; mimeType: string }; pauseReason?: string };
 const props = defineProps<{ kind: Kind; directory?: string; active: boolean }>();
 const emit = defineEmits<{ importMedia: [result: Result] }>();
 const ratios = ["16:9", "9:16", "1:1", "4:3", "3:4"];
@@ -216,6 +217,7 @@ onBeforeUnmount(() => { ++runToken; if (pollTimer) clearInterval(pollTimer); });
 .batchSubmit { margin-top: 20px; }
 .batchTitle { flex-wrap: wrap; }
 .batchTitle span { font-size: 12px; color: var(--el-text-color-secondary); }
+.batchTitle .pauseReason { color: var(--el-color-warning); flex-basis: 100%; }
 .batchActions { margin: 12px 0; }
 .sceneRow { display: grid; grid-template-columns: 65px minmax(180px,1fr) 100px auto; gap: 8px; align-items: center; border-top: 1px solid var(--el-border-color-lighter); padding: 9px 0; }
 .scenePrompt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
