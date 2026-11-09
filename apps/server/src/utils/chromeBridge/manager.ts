@@ -25,7 +25,10 @@ class BridgeManager {
   diagnostics() { return bridgeDiagnosis(this.status()); }
   async refreshStatus() {
     if (this.mode === "remote") {
-      try { await remoteBridge.refreshDevices(); } catch { /* Keep last verified state, render disconnection. */ }
+      try { await remoteBridge.refreshDevices(); } catch { /* Existing verified tokens still expire on transport loss. */ }
+      await remoteBridge.verifySelections();
+    } else {
+      await localBridge.verifySelections();
     }
     return this.status();
   }
