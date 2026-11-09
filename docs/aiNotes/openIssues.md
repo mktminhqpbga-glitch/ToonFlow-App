@@ -306,3 +306,12 @@
 - **Ngày/người trực tiếp sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** PARTIAL, mở.
 - **Đã làm:** lưu batch state và Task ID bền vững; chỉ một batch job đang chạy toàn server, trang batch ảnh/video, tiếp tục cảnh độc lập sau FAILED, UNKNOWN không tự retry. Initial CI run 42551209546 FAIL TS, sửa ở f3a9e7a; CI 42551746997 PASS.
 - **Chưa làm:** FFmpeg MP4 nối cảnh, test actual provider E2E, map thiết bị/tab thật, resume sau restart/timeout, nhập batch output vào Canvas, bộ test queue/negative. `interrupted` cần xử lý thận trọng, không tự submit job mới cho UNKNOWN.
+
+
+### ISSUE-0033 — HD-05 FFmpeg nối MP4 và ánh xạ Device/Tab cần nghiệm thu thật
+
+- **Ngày/người sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** PARTIAL.
+- **Đã sửa mã:** `apps/server/src/utils/media/batches.ts`, `apps/server/src/routes/ai/media/batches/merge.ts`, `apps/web/src/pages/workspace/components/batchPage.vue`.
+- **Đã làm:** FFprobe xác minh nguồn rồi chỉ concat các cảnh MP4/MOV có codec/kích thước/kiểu audio tương thích; không ghi đè file; FFprobe lại file mới; lưu kết quả MP4 của batch. Ghi Device ID và Tab ID thực khi dispatch cho Chrome Bridge theo selection; serial global nên không chồng batch vào một tab.
+- **Commit:** 2189906, 42adb19, 879c83a, 724aade, 4619c55.
+- **Chưa nghiệm thu:** đoạn clip thực, codec/frame rate audio, hoạt động FFmpeg trên Mac Ventura, nhiều Chrome song song, xử lý hai người dùng/tiến trình, queue trạng thái task hiện tại cho Dashboard. E2E **BLOCKED** do chưa có môi trường Chrome/Render/FFmpeg thực.
