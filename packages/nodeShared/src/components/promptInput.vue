@@ -2,7 +2,7 @@
   <div class="promptInputWrap nodrag nopan nowheel">
     <el-button v-if="expandable" class="expandButton" :icon="IconMaximize" text circle :title="localized('展开编辑提示词', 'Mở rộng trình soạn prompt')" :aria-label="localized('展开编辑提示词', 'Mở rộng trình soạn prompt')" @mousedown.prevent @click.stop="expanded = true" />
     <teleport :to="expandedTarget || 'body'" :disabled="!expanded || !expandedTarget">
-      <div ref="senderElement" class="promptInput nodrag nopan nowheel" :class="{ expandedInput: expanded }" @keydown.capture="handleMentionKey" @click.capture="previewReference" />
+      <div ref="senderElement" class="promptInput nodrag nopan nowheel" :class="{ expandedInput: expanded }" @keydown.capture="handleMentionKey" @click.capture="previewReference" @dragover.capture="allowMaterialDrop" @drop.capture="dropMaterialReference" />
     </teleport>
   </div>
   <el-dialog v-if="expandable" v-model="expanded" class="promptEditorDialog" :title="localized('生成提示词', 'Soạn prompt tạo nội dung')" width="80%" alignCenter appendToBody :closeOnClickModal="false" @opened="sender?.focus('mark')" @close="expanded = false" @closed="sender?.focus('mark')">
@@ -130,6 +130,62 @@ async function chooseReference(select: () => Reference | undefined | Promise<Ref
     if (sender === instance) await instance.setHtml(referenceHtml(resolved));
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : localized("引用素材失败", "Không thể thêm tài nguyên tham chiếu"));
+  } finally {
+    selectingReference.value = false;
+  }
+}
+
+const materialDragType = "application/toonflow-material-reference";
+
+function allowMaterialDrop(event: DragEvent) {
+  if (!props.selectMaterial || !event.dataTransfer?.types.includes(materialDragType)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = "copy";
+}
+
+async function dropMaterialReference(event: DragEvent) {
+  const transfer = event.dataTransfer;
+  if (!props.selectMaterial || !transfer?.types.includes(materialDragType)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const materialId = transfer.getData(materialDragType);
+  const material = props.materials?.find(item => item.id === materialId && !item.disabled);
+  const instance = sender;
+  if (!material || !instance || selectingReference.value) return;
+  const editor = instance.chatElement.richText;
+  const documentAtPoint = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+  };
+  const caret = documentAtPoint.caretPositionFromPoint?.(event.clientX, event.clientY);
+  const range = caret ? { node: caret.offsetNode, offset: caret.offset } : (() => {
+    const legacy = documentAtPoint.caretRangeFromPoint?.(event.clientX, event.clientY);
+    return legacy ? { node: legacy.startContainer, offset: legacy.startOffset } : undefined;
+  })();
+  const grids = instance.chatEditor.NODES;
+  const gridIndex = range ? grids.findIndex(grid => grid.$el.contains(range.node)) : -1;
+  const children = gridIndex >= 0 ? grids[gridIndex]?.children : undefined;
+  const childIndex = range && children ? children.findIndex(child => child.$el.contains(range.node)) : -1;
+  const child = childIndex >= 0 ? children?.[childIndex] : undefined;
+  // Native file/media drops never alter prompt text. A reference is created only from a real Canvas output.
+  const savedCaret = child?.type === "Write" ? { gridIndex, childIndex, offset: range!.offset, text: child.text } : undefined;
+  selectingReference.value = true;
+  closeMentionMenu();
+  try {
+    const reference = await props.selectMaterial(material.id);
+    await nextTick();
+    await instance.nextTick();
+    if (resetTask) await resetTask;
+    if (sender !== instance || !editor.isConnected || !reference) return;
+    const resolved = props.references.find(item => item.id === reference.id);
+    if (!resolved) return;
+    const target = savedCaret && instance.chatEditor.NODES[savedCaret.gridIndex]?.children[savedCaret.childIndex];
+    if (target?.type === "Write" && target.text === savedCaret?.text) target.focus(Math.min(savedCaret.offset, target.text.length));
+    else instance.chatEditor.NODES.at(-1)?.children.at(-1)?.focus(-1);
+    if (sender === instance) await instance.setHtml(referenceHtml(resolved));
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : localized("引用素材失败", "Không thể thả tài nguyên vào prompt"));
   } finally {
     selectingReference.value = false;
   }
