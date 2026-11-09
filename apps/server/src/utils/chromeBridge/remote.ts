@@ -179,7 +179,7 @@ class RemoteBridge {
     if (!Array.isArray(result)) throw new Error("Invalid remote tab list");
     return result.filter(item => Number.isInteger(item.id) && providerForUrl(item.url) === item.provider);
   }
-  async select(provider: BridgeProvider, tabId: number) {
+  async select(provider: BridgeProvider, tabId: number, confirmUnknown = true) {
     if (!providers.includes(provider)) throw new Error("Unsupported provider");
     if ([...this.jobs.values()].some(x => x.provider === provider)) throw new Error("AI task already running");
     const tab = (await this.tabs()).find(tab => tab.provider === provider && tab.id === tabId);
@@ -192,13 +192,13 @@ class RemoteBridge {
       probe.capabilities?.includes(kind) && (provider === "muse" ? kind !== "text" : kind !== "video"));
     if (!capabilities.length) throw new Error("No capability verified in remote tab");
     this.selected.set(provider, { tab, capabilities, documentToken: probe.documentToken });
-    this.recent = this.recent.filter(job => job.tabId !== tabId || job.state !== "unknown");
+    if (confirmUnknown) this.recent = this.recent.filter(job => job.tabId !== tabId || job.state !== "unknown");
     return this.status();
   }
   async refresh(provider: BridgeProvider) {
     const tab = this.selected.get(provider)?.tab;
     if (!tab) throw new Error("No selected AI tab");
-    return this.select(provider, tab.id);
+    return this.select(provider, tab.id, false);
   }
   unselect(provider: BridgeProvider) {
     if (this.jobs.size) throw new Error("Cancel active tasks first");
