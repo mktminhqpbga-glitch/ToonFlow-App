@@ -1,6 +1,5 @@
 import { defaultLanguage, resolveUiLanguage } from "@/lib/defaultLanguage";
 import axios from "axios";
-import { normalizeLocale } from "@toonflow/i18n";
 import { computed, nextTick, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { getNodeModelKey, invalidateNodeModels, readNodeModels, subscribeNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
