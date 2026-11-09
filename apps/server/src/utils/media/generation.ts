@@ -13,6 +13,7 @@ import { detectMimeType, readPriceReference } from "@/utils/media/priceReference
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { type BridgeProvider } from "@/utils/chromeBridge/runtime";
 import { chromeBridge } from "@/utils/chromeBridge/manager";
+import { verifyChromeMediaSignature } from "@/utils/chromeBridge/mediaSignature";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
@@ -136,7 +137,7 @@ async function downloadAsset(url: string, signal?: AbortSignal) {
   return { bytes: Buffer.concat(chunks, size), mimeType: response.headers.get("content-type") ?? "" };
 }
 
-async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "audio", signal?: AbortSignal) {
+async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "audio", signal?: AbortSignal, strictChrome = false) {
   if (!asset || asset.mediaType !== mediaType) invalid("供应商返回的媒体类型不正确");
   let bytes: Uint8Array;
   let mimeType = asset.mimeType ?? "";
@@ -156,6 +157,7 @@ async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "aud
   } else { return invalid("供应商返回了无效的媒体结果"); }
   if (!bytes.byteLength || bytes.byteLength > maxMediaSize) invalid("生成文件为空或超过 100 MB");
   mimeType = detectMimeType(bytes, mimeType);
+  if (strictChrome) verifyChromeMediaSignature(bytes, mimeType);
   if (!mimeType.startsWith(`${mediaType}/`) || !mediaExtensions[mimeType]) invalid("生成结果不是支持的图片、视频或音频格式");
   return { bytes, mimeType };
 }
@@ -375,7 +377,7 @@ async function executeMedia(
       const existing = saved.get(index);
       if (existing) { result.push(existing); continue; }
       let content: Awaited<ReturnType<typeof assetBytes>>;
-      try { content = await assetBytes(assets[index]!, mediaType, signal); }
+      try { content = await assetBytes(assets[index]!, mediaType, signal, request.providerId === "chromeBridge"); }
       catch (cause) {
         if (refreshed || !checkpoint?.providerData || (cause as { code?: string } | null)?.code !== "MEDIA_ASSET_URL_EXPIRED") throw cause;
         // 下载地址过期时只重新查询原任务一次，不重提生成，也不无限重试同一失效地址。
@@ -383,7 +385,7 @@ async function executeMedia(
         refreshed = true;
         if (!Array.isArray(assets) || assets.length !== checkpoint.assetCount) invalid("恢复任务的结果数量发生变化");
         await task!.save({ assets: resumableAssets(assets, mediaType) });
-        content = await assetBytes(assets[index]!, mediaType, signal);
+        content = await assetBytes(assets[index]!, mediaType, signal, request.providerId === "chromeBridge");
       }
       const { bytes, mimeType } = content;
       signal?.throwIfAborted();
