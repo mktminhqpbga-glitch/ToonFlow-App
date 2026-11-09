@@ -136,7 +136,7 @@
 <script setup lang="ts">
 import { translate } from "@toonflow/i18n/vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onScopeDispose, provide, ref, shallowRef, watch, type ComponentPublicInstance } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
+import { onBeforeRouteLeave, useRoute } from "vue-router";
 import axios from "axios";
 import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase, IconPhoto, IconVideo } from "@tabler/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -154,7 +154,12 @@ import floatingAgent from "./components/floatingAgent.vue";
 
 const documentPanel = defineAsyncComponent(() => import("./panels/document/index.vue"));
 
-const activePanel = ref<"canvas" | "document" | "batchImage" | "batchVideo">("canvas");
+// Home sidebar can deep-link directly to the selected project's batch page.
+const route = useRoute();
+const requestedPanel = route.query.panel;
+const activePanel = ref<"canvas" | "document" | "batchImage" | "batchVideo">(
+  requestedPanel === "batchImage" || requestedPanel === "batchVideo" ? requestedPanel : "canvas"
+);
 const selectedTool = ref<"move" | "hand">("move");
 const sideButtonEvents = ["mousedown", "mouseup", "auxclick"] as const;
 // 鼠标侧键会直接触发原生历史导航，需在 DOM 事件阶段拦截，避免生成中的工作区被误关闭。
