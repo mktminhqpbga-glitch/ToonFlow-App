@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
-import { mkdir, readdir, readFile, realpath } from "@toonflow/file";
+import { lstat, mkdir, readdir, readFile, realpath } from "@toonflow/file";
+import { createWorkspaceFfmpeg } from "@/utils/ffmpeg";
 import { z } from "zod";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
 import { imageGenerationSchema, videoGenerationSchema } from "./schemas";
@@ -21,6 +22,7 @@ const batchSchema = z.object({
   version: z.literal(1), id: z.uuid(), kind: kindSchema, ownerUserId: z.uuid().optional(),
   state: batchState, createdAt: z.number().int(), updatedAt: z.number().int(),
   scenes: z.array(sceneSchema).min(1).max(100),
+  merged: z.object({ path: z.string(), mimeType: z.literal("video/mp4") }).optional(),
 });
 type Batch = z.infer<typeof batchSchema>;
 type Kind = z.infer<typeof kindSchema>;
@@ -230,4 +232,68 @@ export async function controlBatch(cwd: string, id: string, action: "pause" | "r
   }
   if (action === "resume" && state === "running") schedule(cwd, id, owner);
   return getBatch(cwd, id, owner);
+}
+
+export async function mergeBatchVideos(cwd: string, id: string, owner?: AuthIdentity | null) {
+  cwd = await realpath(cwd);
+  const batch = await readBatch(cwd, id, owner);
+  if (batch.kind !== "video" || batch.state !== "completed"
+    || batch.scenes.length < 2 || batch.scenes.some(scene => scene.state !== "succeeded" || scene.result?.length !== 1))
+    invalid("Chỉ ghép batch video khi tất cả cảnh đã tạo thành công và có đúng một video mỗi cảnh", 409);
+  if (batch.merged) return batch.merged;
+  const sources = [];
+  for (const scene of batch.scenes) {
+    const file = scene.result![0]!;
+    if (file.mediaType !== "video" || !/^video\/(mp4|quicktime)$/i.test(file.mimeType))
+      invalid("Chỉ có thể ghép các video MP4/MOV hợp lệ", 400);
+    const source = (await resolveWorkspacePath(cwd, file.path)).path;
+    const info = await lstat(source);
+    if (!info.isFile() || info.size < 256) invalid("Tệp video nguồn bị thiếu hoặc quá nhỏ", 409);
+    sources.push(source);
+  }
+  const ffmpeg = await createWorkspaceFfmpeg(cwd);
+  // Validate actual video streams, not generated metadata or poster files.
+  const probes = await Promise.all(sources.map(source => new Promise<{
+    codec: string; width: number; height: number; hasAudio: boolean;
+  }>((resolve, reject) => {
+    ffmpeg.ffprobe(source, (error, data) => {
+      if (error) return reject(error);
+      const video = data.streams?.find(stream => stream.codec_type === "video");
+      if (!video?.codec_name || !video.width || !video.height || data.format?.duration === undefined || Number(data.format.duration) <= 0)
+        return reject(new Error("FFprobe không xác minh được luồng video, kích thước và thời lượng"));
+      resolve({ codec: video.codec_name, width: video.width, height: video.height, hasAudio: data.streams.some(stream => stream.codec_type === "audio") });
+    });
+  })));
+  const first = probes[0]!;
+  if (probes.some(item => item.codec !== first.codec || item.width !== first.width || item.height !== first.height || item.hasAudio !== first.hasAudio))
+    invalid("Các cảnh chưa tương thích codec/độ phân giải/âm thanh; cần chuẩn hóa trước khi ghép", 409);
+  const manifest = (await resolveWorkspacePath(cwd, `batchJobs/${id}-concat.txt`, true)).path;
+  // Explicit filenames are taken only from workspace-validated, existing files.
+  const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
+  await writeWorkspaceFile(manifest, sources.map(source => "file " + quote(source)).join("\\n") + "\\n");
+  const outputName = `batchResults/${id}/joined-${randomUUID()}.mp4`;
+  const output = (await resolveWorkspacePath(cwd, outputName, true)).path;
+  await mkdir(dirname(output), { recursive: true });
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg().input(manifest).inputOptions(["-f concat", "-safe 0"])
+      .outputOptions(["-c copy", "-movflags +faststart"])
+      .output(output).once("end", () => resolve()).once("error", reject).run();
+  });
+  const result = await lstat(output);
+  if (!result.isFile() || result.size < 256) invalid("FFmpeg không tạo video MP4 hợp lệ", 409);
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg.ffprobe(output, (error, data) => {
+      if (error) return reject(error);
+      if (!data.streams?.some(stream => stream.codec_type === "video") || Number(data.format?.duration) <= 0)
+        return reject(new Error("Video ghép không có luồng video/thời lượng hợp lệ"));
+      resolve();
+    });
+  });
+  const merged = { path: outputName, mimeType: "video/mp4" as const };
+  return mutateBatch(cwd, id, owner, current => {
+    if (current.kind !== "video" || current.scenes.some(scene => scene.state !== "succeeded"))
+      invalid("Trạng thái batch đã thay đổi trong lúc ghép", 409);
+    current.merged ??= merged;
+    return current.merged;
+  });
 }
