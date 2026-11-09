@@ -1,8 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="设置" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody>
+  <el-dialog v-model="visible" :title="translate('设置')" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody>
     <div class="settings">
-      <aside class="sidebar" aria-label="设置分类">
-        <template v-for="item in settingsPanels" :key="item.id">
+      <aside class="sidebar" :aria-label="translate('设置分类')">
+        <template v-for="item in visibleSettingsPanels" :key="item.id">
           <h3 v-if="item.groupLabel" class="settingsGroupLabel">{{ item.groupLabel }}</h3>
           <button
             class="settingsItem"
@@ -16,6 +16,11 @@
             <span>{{ item.label }}</span>
           </button>
         </template>
+        <button v-if="independentMode && advancedPanels.length" class="settingsItem" type="button"
+          :aria-expanded="showAdvanced" :aria-label="translate('Advanced settings')" :title="translate('Advanced settings')" @click="showAdvanced = !showAdvanced">
+          <icon-settings :size="18" aria-hidden="true" />
+          <span>{{ translate('Advanced settings') }} {{ showAdvanced ? '▴' : '▾' }}</span>
+        </button>
       </aside>
       <section class="content" :aria-label="activePanel.label" tabindex="0">
         <h2 class="panelTitle">{{ activePanel.label }}</h2>
@@ -39,7 +44,7 @@
 
 <script setup lang="ts">
 import { translate } from "@toonflow/i18n/vue";
-import { computed, defineAsyncComponent, shallowRef, watch } from "vue";
+import { computed, defineAsyncComponent, onMounted, ref, shallowRef, watch } from "vue";
 import userAccount from "@toonflow/multi-tenant-user-web/account";
 import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 import { multiTenantEnabled } from "@/stores/settings";
@@ -60,6 +65,7 @@ import {
   IconUserCircle,
   IconUsersGroup,
 } from "@tabler/icons-vue";
+import { actualPlatform } from "@/lib/platform";
 
 const allSettingsPanels = [
   { id: "account", label: "账号与余额", icon: IconUserCircle, component: defineAsyncComponent(() => import("./panels/account/index.vue")) },
@@ -72,6 +78,8 @@ const allSettingsPanels = [
     component: defineAsyncComponent(() => import("./panels/languageModel/index.vue")),
   },
   { id: "mediaModel", label: "媒体模型", icon: IconPhotoVideo, component: defineAsyncComponent(() => import("./panels/mediaModel/index.vue")) },
+  { id: "chromeBridge", label: "AI Bridge · Chrome", icon: IconPlugConnected,
+    component: defineAsyncComponent(() => import("./panels/chromeBridge/index.vue")) },
   {
     id: "pluginMarket",
     label: "插件市场",
@@ -96,12 +104,36 @@ const allSettingsPanels = [
   { id: "about", label: "关于", icon: IconInfoCircle, component: defineAsyncComponent(() => import("./panels/about/index.vue")) },
 ];
 const publicAccountPanel = { ...allSettingsPanels[0]!, get label() { return translate("账号"); } };
+const localWebBridgeAvailable = ref(false);
+const independentMode = computed(() => !publicWeb.value && import.meta.env.VITE_TOONFLOW_LEGACY_UI !== "1");
+const showAdvanced = ref(false);
+const advancedIds = new Set(["mcp", "pluginMarket", "developer", "network", "deviceLink", "multiTenant", "personalization"]);
+onMounted(async () => {
+  if (actualPlatform.isLocalDesktop || !actualPlatform.isMac || publicWeb.value) return;
+  try {
+    const response = await fetch("/api/desktop/chromeBridge/status", {
+      cache: "no-store", headers: { "x-toonflow-desktop": "1", "x-toonflow-workspace": "1" },
+    });
+    if (response.ok) {
+      const body = await response.json();
+      localWebBridgeAvailable.value = body?.code === 200 && body?.data?.enabled === true;
+    }
+  } catch { /* Unavailable public or non-loopback Web server: keep remote controls hidden. */ }
+});
 const settingsPanels = computed(() => allSettingsPanels.filter(item => {
+  if (independentMode.value && item.id === "account") return false;
+  if (item.id === "chromeBridge" && !(actualPlatform.isLocalDesktop && actualPlatform.isMac
+      || localWebBridgeAvailable.value && actualPlatform.isMac && !publicWeb.value)) return false;
+  // The upstream commercial plugin marketplace is not part of the independent local distribution.
+  if (item.id === "pluginMarket" && !publicWeb.value) return false;
   if (publicWeb.value && currentUser.value?.role === "user") return ["account", "general", "about"].includes(item.id);
   if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket"].includes(item.id)) return false;
   return !multiTenantEnabled.value || !["languageModel", "mediaModel", "developer"].includes(item.id);
 }).map(item => publicWeb.value && item.id === "account" ? publicAccountPanel : item));
-const activePanel = shallowRef(settingsPanels.value[0]!);
+const advancedPanels = computed(() => settingsPanels.value.filter(item => advancedIds.has(item.id)));
+const visibleSettingsPanels = computed(() => !independentMode.value ? settingsPanels.value
+  : [...settingsPanels.value.filter(item => !advancedIds.has(item.id)), ...(showAdvanced.value ? advancedPanels.value : [])]);
+const activePanel = shallowRef(settingsPanels.value.find(item => item.id === "general") ?? settingsPanels.value[0]!);
 const visible = defineModel<boolean>({ default: false });
 
 watch(settingsPanels, panels => {
@@ -114,6 +146,7 @@ function openPanel(id: string) {
   const panel = settingsPanels.value.find(item => item.id === id);
   if (!panel) return false;
   activePanel.value = panel;
+  if (advancedIds.has(id)) showAdvanced.value = true;
   visible.value = true;
   return true;
 }
@@ -215,10 +248,7 @@ defineExpose({ openPanel });
     grid-template-columns: 44px minmax(0, 1fr);
 
     .sidebar {
-      .settingsGroupLabel {
-        margin: 12px 0 6px;
-        text-align: center;
-      }
+      .settingsGroupLabel { display: none; }
 
       .settingsItem {
         justify-content: center;

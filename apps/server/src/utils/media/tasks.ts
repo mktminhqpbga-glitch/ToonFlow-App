@@ -507,6 +507,20 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
   });
 }
 
+// Read-only inspection for batch crash recovery. Unlike status(), this never launches
+// an interrupted/running provider task: an unknown remote submission must not be retried.
+export async function inspect(cwd: string, taskIds: string[], owner?: AuthIdentity | null) {
+  requireOwner(owner);
+  cwd = await realpath(cwd);
+  return Promise.all(taskIds.map(taskId => {
+    const key = taskPath(cwd, taskId);
+    return locked(key, async () => {
+      const task = await load(cwd, taskId, key, owner);
+      return task ? { ...await snapshot(task, owner), active: task.active } : { taskId, state: "unknown" as const, resumable: false, active: false, result: undefined };
+    });
+  }));
+}
+
 export async function status(cwd: string, taskIds: string[], resume = false, owner?: AuthIdentity | null) {
   requireOwner(owner);
   cwd = await realpath(cwd);

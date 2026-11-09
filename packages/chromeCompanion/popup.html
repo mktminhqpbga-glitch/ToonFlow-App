@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ToonFlow Companion</title>
+<style>
+body{width:330px;margin:0;padding:16px;font:13px -apple-system,BlinkMacSystemFont,Arial,sans-serif;background:#f7f8fa;color:#202124}
+h1{font-size:16px;margin:0 0 10px}p{line-height:1.55}input{box-sizing:border-box;width:100%;padding:8px;border:1px solid #aaa;border-radius:6px}button{margin:8px 6px 0 0;padding:8px 11px;border:1px solid #aaa;border-radius:6px;cursor:pointer}#status{margin-top:12px;white-space:pre-wrap}small{color:#555}
+</style></head>
+<body><h1>ToonFlow Chrome Companion</h1>
+<p>Mở ToonFlow → Cài đặt → AI Bridge. Sao chép mã ghép nối và dán vào đây. Chỉ chọn tab AI trong ToonFlow sau khi ghép nối.</p>
+<input id="code" type="password" autocomplete="off" spellcheck="false" placeholder="toonflow-bridge://127.0.0.1:...">
+<button id="connect">Ghép nối</button><button id="disconnect">Ngắt</button>
+
+<hr>
+<h2 style="font-size:14px">Kết nối từ xa qua Render</h2>
+<p>Dùng mã ghép nối một lần từ ToonFlow để kết nối Chrome từ xa.</p>
+<input id="remoteCode" type="password" spellcheck="false" placeholder="toonflow-remote://pair?...">
+<input id="remoteName" style="margin-top:8px" type="text" maxlength="80" placeholder="Tên thiết bị">
+<button id="remoteConnect">Ghép nối qua Render</button><button id="remoteDisconnect">Ngắt kết nối từ xa</button>
+<div id="remoteStatus" role="status"></div>
+<div id="status" role="status"></div>
+<p><small>Chỉ truy cập Muse, Gemini và ChatGPT. Không thu thập cookie, mật khẩu hoặc token đăng nhập.</small></p>
+<script src="popup.js"></script></body></html>

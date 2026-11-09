@@ -47,9 +47,9 @@
               @dragend="endDrag"
               @dragover.stop="previewDrop($event, column, item)"
               @drop.stop="dropItem($event, column, item)">
-              <button class="itemSelect" type="button" :aria-label="`选择${item.label}`" :aria-pressed="selectedId === item.id" @click="selectItem(item)">
+              <button class="itemSelect" type="button" :aria-label="`选择${nodeDisplayLabel(item)}`" :aria-pressed="selectedId === item.id" @click="selectItem(item)">
                 <component :is="item.children ? openGroups.includes(item.id) ? IconFolderOpen : IconFolder : nodeIcons[item.type ?? ''] ?? IconBox" class="itemIcon" :size="18" aria-hidden="true" />
-                <span class="itemLabel" :title="item.label">{{ item.label }}</span>
+                <span class="itemLabel" :title="nodeDisplayLabel(item)">{{ nodeDisplayLabel(item) }}</span>
                 <span v-if="item.type && disabledTypes.has(item.type)" class="itemStatus" title="已停用">停用</span>
               </button>
               <div class="rowActions" @dragstart.stop.prevent>
@@ -65,7 +65,7 @@
                   @update:visible="visible => setEditingVisible(item.id, visible)"
                   @afterEnter="focusName">
                   <template #reference>
-                    <button class="rowAction" type="button" :aria-label="`编辑${item.label}`" title="编辑" @click.stop>
+                    <button class="rowAction" type="button" :aria-label="`编辑${nodeDisplayLabel(item)}`" title="编辑" @click.stop>
                       <icon-edit :size="14" aria-hidden="true" />
                     </button>
                   </template>
@@ -89,7 +89,7 @@
                   class="rowAction visibilityButton"
                   :class="{ isHidden: item.hidden }"
                   type="button"
-                  :aria-label="`${item.hidden ? '显示' : '隐藏'}${item.label}`"
+                  :aria-label="`${item.hidden ? '显示' : '隐藏'}${nodeDisplayLabel(item)}`"
                   :title="item.hidden ? '显示' : '隐藏'"
                   :aria-pressed="!item.hidden"
                   @click.stop="setVisible(item, item.hidden)"
@@ -97,7 +97,7 @@
                   <icon-eye-off v-if="item.hidden" :size="14" aria-hidden="true" />
                   <icon-eye v-else :size="14" aria-hidden="true" />
                 </button>
-                <button v-if="item.children" class="rowAction deleteButton" type="button" :aria-label="`移除${item.label}菜单`" title="移除菜单，保留子项" @click.stop="removeGroup(item.id)">
+                <button v-if="item.children" class="rowAction deleteButton" type="button" :aria-label="`移除${nodeDisplayLabel(item)}菜单`" title="移除菜单，保留子项" @click.stop="removeGroup(item.id)">
                   <icon-folder-minus :size="14" aria-hidden="true" />
                 </button>
               </div>
@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { nodeDisplayLabel } from "@/lib/nodeDisplayLabel";
 import axios from "axios";
 import { translate } from "@toonflow/i18n/vue";
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue";

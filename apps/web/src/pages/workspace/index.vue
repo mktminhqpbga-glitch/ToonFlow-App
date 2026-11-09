@@ -25,6 +25,10 @@
         :fileAction="performFileAction"
         :saveNode="saveDocumentNode" />
     </keep-alive>
+    <batchPage v-if="activePanel === 'batchImage' || activePanel === 'batchVideo'"
+      :key="JSON.stringify([workspaceStore.project?.directory, activePanel])"
+      :kind="activePanel === 'batchImage' ? 'image' : 'video'"
+      :directory="workspaceStore.project?.directory" :active="true" @importMedia="importBatchMedia" />
     <workspaceMenu class="workspaceMenu" @openSettings="settingsVisible = true" />
     <div class="workspaceTools">
       <el-segmented :modelValue="activePanel" class="panelSwitcher" :options="panelOptions" size="small" aria-label="切换面板" @change="switchPanel">
@@ -57,6 +61,16 @@
             <el-tooltip content="搜索节点" placement="top" :showArrow="false" :hideAfter="0" :enterable="false" :triggerKeys="[]">
               <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="搜索节点" @click="canvasPanelRef?.openNodeSearch()">
                 <icon-search :size="18" aria-hidden="true" />
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="Thư viện vật liệu" placement="top" :showArrow="false" :hideAfter="0">
+              <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="Thư viện vật liệu" @click="canvasPanelRef?.openMaterialPresets()">
+                <icon-shape :size="18" aria-hidden="true" />
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="Studio nhân vật" placement="top" :showArrow="false" :hideAfter="0">
+              <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="Studio nhân vật" @click="canvasPanelRef?.openCharacterStudio()">
+                <icon-mood-smile :size="18" aria-hidden="true" />
               </el-button>
             </el-tooltip>
             <el-tooltip :showArrow="false" content="帮助" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="helpVisible">
@@ -132,9 +146,9 @@
 <script setup lang="ts">
 import { translate } from "@toonflow/i18n/vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onScopeDispose, provide, ref, shallowRef, watch, type ComponentPublicInstance } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
+import { onBeforeRouteLeave, useRoute } from "vue-router";
 import axios from "axios";
-import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase } from "@tabler/icons-vue";
+import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase, IconPhoto, IconVideo, IconShape, IconMoodSmile } from "@tabler/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { QRCode } from "tdesign-vue-next";
 import settings from "@/components/settings/index.vue";
@@ -145,11 +159,17 @@ import { useProviderBalances } from "@/lib/providerBilling";
 import canvasPanel from "./panels/canvas/canvasHost.vue";
 import type { DocumentNodeOptions } from "./panels/canvas/canvasFiles";
 import workspaceMenu from "./components/workspaceMenu.vue";
+import batchPage from "./components/batchPage.vue";
 import floatingAgent from "./components/floatingAgent.vue";
 
 const documentPanel = defineAsyncComponent(() => import("./panels/document/index.vue"));
 
-const activePanel = ref<"canvas" | "document">("canvas");
+// Home sidebar can deep-link directly to the selected project's batch page.
+const route = useRoute();
+const requestedPanel = route.query.panel;
+const activePanel = ref<"canvas" | "document" | "batchImage" | "batchVideo">(
+  requestedPanel === "batchImage" || requestedPanel === "batchVideo" ? requestedPanel : "canvas"
+);
 const selectedTool = ref<"move" | "hand">("move");
 const sideButtonEvents = ["mousedown", "mouseup", "auxclick"] as const;
 // 鼠标侧键会直接触发原生历史导航，需在 DOM 事件阶段拦截，避免生成中的工作区被误关闭。
@@ -168,6 +188,8 @@ useProviderBalances();
 const panelOptions = [
   { label: "画布", value: "canvas", icon: IconVector },
   { label: "文档", value: "document", icon: IconFileText },
+  { label: "Tạo ảnh hàng loạt", value: "batchImage", icon: IconPhoto },
+  { label: "Tạo video hàng loạt", value: "batchVideo", icon: IconVideo },
 ];
 const agentVisible = ref(true);
 const agentWidth = ref(0);
@@ -303,7 +325,7 @@ onBeforeRouteLeave(async () => {
 });
 
 async function switchPanel(value: string | number | boolean) {
-  if (value !== "canvas" && value !== "document") return false;
+  if (value !== "canvas" && value !== "document" && value !== "batchImage" && value !== "batchVideo") return false;
   try {
     if (activePanel.value === "document") await documentPanelRef.value?.flushSave();
     const changed = activePanel.value !== value;
@@ -314,6 +336,25 @@ async function switchPanel(value: string | number | boolean) {
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "文本保存失败");
     return false;
+  }
+}
+
+async function importBatchMedia(result: { path: string; mimeType: string; mediaType: "image" | "video" }) {
+  const directory = workspaceStore.project?.directory;
+  if (!directory || !result.path || !result.mimeType) return;
+  if (!result.mimeType.startsWith(result.mediaType + "/")) {
+    ElMessage.error("Loại media không khớp kết quả batch");
+    return;
+  }
+  try {
+    if (!await switchPanel("canvas")) throw new Error("Không thể mở Canvas");
+    if (!canvasPanelRef.value?.canvasReady) throw new Error("Canvas chưa sẵn sàng");
+    if (directory !== workspaceStore.project?.directory) throw new Error("Workspace đã thay đổi");
+    const imported = await canvasPanelRef.value.importWorkspaceMedia(result.path, result.mimeType);
+    if (!imported) throw new Error("Không thể nhập kết quả vào Canvas");
+    ElMessage.success("Đã tạo và lưu node media trên Canvas");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "Không thể nhập kết quả Batch");
   }
 }
 

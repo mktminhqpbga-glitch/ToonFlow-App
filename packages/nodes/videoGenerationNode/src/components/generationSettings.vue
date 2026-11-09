@@ -1,34 +1,34 @@
 <template>
   <el-popover v-model:visible="settingsVisible" trigger="click" placement="top-start" width="min(340px, calc(100vw - 24px))" :disabled="disabled" :showArrow="false" :popperStyle="{ padding: '14px' }">
     <template #reference>
-      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" aria-label="视频生成设置">
+      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" :aria-label="localized('视频生成设置', 'Cài đặt tạo video')">
         <span class="ratioShape" :style="ratioStyle(ratio)" aria-hidden="true" />
-        <span>{{ [ratio, resolution, duration ? `${duration}秒` : ''].filter(Boolean).join(' · ') }}</span>
+        <span>{{ [ratio, resolution, duration ? `${duration} ${localized("秒", "giây")}` : '', camera?.enabled ? "Camera" : ""].filter(Boolean).join(' · ') }}</span>
         <component :is="settingsVisible ? IconChevronDown : IconChevronUp" :size="14" aria-hidden="true" />
       </el-button>
     </template>
     <div class="generationSettings nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop @wheel.stop>
-      <div v-if="modes.length" class="sectionLabel">生成模式</div>
-      <el-select v-if="modes.length" v-model="mode" :disabled="disabled" :teleported="false" aria-label="视频生成模式">
+      <div v-if="modes.length" class="sectionLabel">{{ localized("生成模式", "Chế độ tạo video") }}</div>
+      <el-select v-if="modes.length" v-model="mode" :disabled="disabled" :teleported="false" :aria-label="localized('视频生成模式', 'Chế độ tạo video')">
         <el-option v-for="item in modes" :key="item.value" :value="item.value" :label="item.label" />
       </el-select>
       <div v-if="durations.length || resolutions.length" class="outputOptions">
         <div v-if="durations.length" class="outputField">
-          <div class="sectionLabel">时长</div>
-          <el-select v-model="duration" :disabled="disabled" :teleported="false" aria-label="视频时长">
-            <el-option v-for="item in durations" :key="item" :value="item" :label="`${item}秒`" />
+          <div class="sectionLabel">{{ localized("时长", "Thời lượng") }}</div>
+          <el-select v-model="duration" :disabled="disabled" :teleported="false" :aria-label="localized('视频时长', 'Thời lượng video')">
+            <el-option v-for="item in durations" :key="item" :value="item" :label="`${item} ${localized('秒', 'giây')}`" />
           </el-select>
         </div>
         <div v-if="resolutions.length" class="outputField">
-          <div class="sectionLabel">分辨率</div>
-          <el-select v-model="resolution" :disabled="disabled" :teleported="false" aria-label="视频分辨率">
+          <div class="sectionLabel">{{ localized("分辨率", "Độ phân giải") }}</div>
+          <el-select v-model="resolution" :disabled="disabled" :teleported="false" :aria-label="localized('视频分辨率', 'Độ phân giải video')">
             <el-option v-for="item in resolutions" :key="item" :value="item" :label="item" />
           </el-select>
         </div>
       </div>
-      <div class="sectionLabel">通用比例</div>
-      <div class="ratioOptions" role="group" aria-label="视频比例">
-        <el-button v-for="item in ratios" :key="item" class="ratioButton" :disabled="disabled" :aria-label="`比例 ${item}`" :aria-pressed="ratio === item" @click="ratio = item">
+      <div class="sectionLabel">{{ localized("通用比例", "Tỷ lệ khung hình") }}</div>
+      <div class="ratioOptions" role="group" :aria-label="localized('视频比例', 'Tỷ lệ video')">
+        <el-button v-for="item in ratios" :key="item" class="ratioButton" :disabled="disabled" :aria-label="`${localized('比例', 'Tỷ lệ')} ${item}`" :aria-pressed="ratio === item" @click="ratio = item">
           <span class="ratioContent">
             <span class="ratioShape" :style="ratioStyle(item)" aria-hidden="true" />
             <span>{{ item }}</span>
@@ -36,22 +36,29 @@
         </el-button>
       </div>
       <div v-if="model?.audio === 'optional'" class="audioOption">
-        <span class="sectionLabel">生成音频</span>
-        <el-switch v-model="generateAudio" :disabled="disabled" aria-label="生成音频" />
+        <span class="sectionLabel">{{ localized("生成音频", "Tạo âm thanh") }}</span>
+        <el-switch v-model="generateAudio" :disabled="disabled" :aria-label="localized('生成音频', 'Tạo âm thanh')" />
       </div>
       <modelForm v-model="other" :rules="model?.rules" :disabled="disabled" />
+      <cameraStudioPanel v-model="camera" :disabled="disabled" />
+      <el-text v-if="model?.providerId === 'chromeBridge'" type="warning" size="small">{{ localized("通过 Chrome 的视频比例仅为提示词要求，无法保证完全准确。", "Tỷ lệ video qua Chrome chỉ là yêu cầu trong prompt, không bảo đảm đúng tuyệt đối.") }}</el-text>
     </div>
   </el-popover>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElButton, ElPopover, ElSelect, ElOption, ElSwitch } from "element-plus";
+import { ElButton, ElPopover, ElSelect, ElOption, ElSwitch, ElText } from "element-plus";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-vue";
 import type { NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import modelForm from "@toonflow/node-shared/modelForm";
+import cameraStudioPanel from "@toonflow/node-shared/cameraStudioPanel";
+import type { CameraSettings } from "@toonflow/node-shared/cameraStudio";
+import { useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 
 const props = defineProps<{ model?: NodeMediaModel; disabled?: boolean; ratios: string[] }>();
+const vietnamese = useNodeVietnamese();
+const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 const settingsVisible = ref(false);
 const duration = defineModel<number | undefined>("duration", { required: true });
 const resolution = defineModel<string>("resolution", { required: true });
@@ -59,12 +66,17 @@ const ratio = defineModel<string>("ratio", { required: true });
 const mode = defineModel<string>("mode", { required: true });
 const generateAudio = defineModel<boolean>("generateAudio", { required: true });
 const other = defineModel<Record<string, unknown>>("other", { required: true });
-const modeLabels: Record<string, string> = {
-  text: "文生视频", singleImage: "单图参考", startEndRequired: "首尾帧必填", endFrameOptional: "尾帧可选", startFrameOptional: "首帧可选",
+const camera = defineModel<CameraSettings | undefined>("camera");
+const modeLabels: Record<string, [string, string]> = {
+  text: ["文生视频", "Tạo video từ văn bản"],
+  singleImage: ["单图参考", "Một ảnh tham chiếu"],
+  startEndRequired: ["首尾帧必填", "Bắt buộc ảnh đầu và cuối"],
+  endFrameOptional: ["尾帧可选", "Ảnh cuối tùy chọn"],
+  startFrameOptional: ["首帧可选", "Ảnh đầu tùy chọn"],
 };
 const modes = computed(() => (props.model?.mode ?? []).map(item => ({
   value: JSON.stringify(item),
-  label: Array.isArray(item) ? "混合参考" : modeLabels[item] ?? item,
+  label: Array.isArray(item) ? localized("混合参考", "Kết hợp nhiều tham chiếu") : modeLabels[item] ? localized(...modeLabels[item]) : item,
 })));
 const mappings = computed(() => props.model?.durationResolutionMap ?? []);
 const durations = computed(() => [...new Set(mappings.value.flatMap(item => item.duration))].sort((a, b) => a - b));

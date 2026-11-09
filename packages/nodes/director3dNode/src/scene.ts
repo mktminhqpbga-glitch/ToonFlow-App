@@ -1,4 +1,5 @@
 import { z } from "@toonflow/nodes-scaffold/runtime";
+import { aperturePresets, cameraBodies, cameraLenses } from "@toonflow/node-shared/cameraStudio";
 import { createJsonScene, registerObject, type SceneRuntime } from "threejson/core";
 import { AmbientLight, Box3, DirectionalLight, GridHelper, HemisphereLight, Mesh, PCFSoftShadowMap, PlaneGeometry, ShadowMaterial, Sphere, Vector3 } from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
@@ -12,7 +13,15 @@ export const sceneSchema = z.strictObject({
   version: z.literal("next"),
   sceneConfig: z.strictObject({
     scene: z.strictObject({ background: color }),
-    camera: z.strictObject({ position: vector, fov: z.number().min(10).max(120), near: z.number().min(0.01).max(10), far: z.number().min(20).max(10000) }),
+    camera: z.strictObject({ position: vector, fov: z.number().min(5).max(120), near: z.number().min(0.01).max(10), far: z.number().min(20).max(10000) }),
+    // Metadata travels with the existing scene document; aperture is guidance only.
+    cameraStudio: z.strictObject({
+      enabled: z.boolean(),
+      body: z.string().refine(value => cameraBodies.includes(value)),
+      lens: z.string().refine(value => cameraLenses.includes(value)),
+      focalLength: z.number().min(12).max(200),
+      aperture: z.number().refine(value => aperturePresets.includes(value)),
+    }).optional(),
     controls: z.strictObject({ target: vector }),
     lights: z.array(z.strictObject({
       type: z.enum(["ambient", "directional", "point", "spot", "hemisphere"]),
@@ -175,11 +184,12 @@ export async function createStage(canvas: HTMLCanvasElement, document: SceneDocu
   const height = Math.round(960 / Math.max(1, aspect) / 2) * 2;
   let runtime: SceneRuntime | undefined;
   try {
+    const { cameraStudio: _cameraStudio, ...sceneConfig } = document.sceneConfig;
     const next = await createJsonScene({
       ...document,
       objectList: document.objectList.filter(object => object.objType !== "mannequin"),
       sceneConfig: {
-        ...document.sceneConfig, canvasWidth: width, canvasHeight: height,
+        ...sceneConfig, canvasWidth: width, canvasHeight: height,
         controls: { enabled: false },
         renderer: { antialias: true, ratioRate: 1 / window.devicePixelRatio, shadowMapEnabled: true },
         renderLoop: { autoResize: false, firstAutoResize: false, updateAnimations: false, scheduleMode: "demand" },

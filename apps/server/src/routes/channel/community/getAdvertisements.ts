@@ -1,5 +1,8 @@
 import { Router } from "express";
-import channelRequest from "@/lib/channelRequest";
+import { success } from "@/lib/responseFormat";
 
-export default Router().get("/", (req, res) => channelRequest(req, res,
-  (source, options) => source.getAdvertisements(options)));
+// Independent build disables upstream promotions at the route boundary.
+export default Router().get("/", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(success({ banner: null, banners: [], bannerMode: "carousel", bannerInterval: 5, sidebar: [] }));
+});

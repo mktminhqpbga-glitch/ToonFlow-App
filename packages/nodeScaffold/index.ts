@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { transformSource } from "../i18n/src/transform.ts";
 import type { Rule } from "@form-create/element-ui";
 import { z } from "zod";
 import postcssConfig from "../../postcss.config.ts";
@@ -36,7 +37,7 @@ export interface NodeConfig {
   serverTool?: string;
 }
 
-export function createNodeConfig(config: NodeConfig, configUrl: string, options: { outDir?: string; syncToData?: boolean } = {}) {
+export function createNodeConfig(config: NodeConfig, configUrl: string, options: { outDir?: string; syncToData?: boolean; localizeBuiltIn?: boolean } = {}) {
   const { name: nodeName } = config;
   const metadata = {
     displayName: config.displayName.trim(),
@@ -59,7 +60,22 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
   return defineConfig({
     root,
     css: { postcss: postcssConfig },
+    // Built-in UMD nodes bundle their own scoped UI translator; the package is
+    // resolved to the existing workspace source without changing external plugin dependencies.
+    ...(options.localizeBuiltIn ? { resolve: { alias: {
+      "@toonflow/i18n/vue": fileURLToPath(new URL("../i18n/src/vue.ts", import.meta.url)),
+    } } } : {}),
+
     plugins: [
+      ...(options.localizeBuiltIn ? [{
+        name: "toonflowBuiltInNodeI18n",
+        enforce: "pre" as const,
+        transform(source: string, id: string) {
+          const path = id.replaceAll("\\\\", "/");
+          if (!/\/packages\/(?:nodeShared|nodeScaffold|nodes\/[^/]+)\/src\/[^?]+\.(?:vue|ts)$/.test(path)) return;
+          return transformSource(source, path);
+        },
+      }] : []),
       vue(),
       {
         name: "syncNodeFile",

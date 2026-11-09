@@ -18,6 +18,7 @@ export type NodeAiModel = {
   maxOutputTokens?: number;
 };
 export type NodeMediaModel = Omit<MediaModel, "mode"> & {
+  availability?: "ready" | "configured" | "needsConfiguration";
   routeId?: string;
   mode?: (string | string[])[];
 };

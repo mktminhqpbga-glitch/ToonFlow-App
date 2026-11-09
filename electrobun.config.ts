@@ -1,4 +1,5 @@
 import type { ElectrobunConfig } from "./.hutch/devkit/api/config/ElectrobunConfig";
+import { appVersion } from "./appVersion";
 import { fileURLToPath } from "node:url";
 
 const startupTarget = process.platform === "darwin" ? (process.arch === "x64" ? "macX64" : "macArm64")
@@ -9,9 +10,9 @@ export const desktopTarget = process.platform === "darwin" ? (process.arch === "
 
 export default {
   app: {
-    name: "toonflow",
+    name: "ToonFlow-App",
     identifier: "local.toonflow.desktop",
-    version: process.env.appVersion ?? "2.0.0",
+    version: appVersion,
     urlSchemes: ["toonflow"],
   },
   build: {
@@ -51,6 +52,8 @@ export default {
       "build/ext": "ext",
       "packages/providers/src": "providers",
       "packages/skills": "skills",
+      // Đóng gói companion extension nguyên bản để người dùng chủ động cài trong Chrome.
+      "packages/chromeCompanion": "chromeCompanion",
       ...(startupTarget ? {
         "packages/startup/assets/startup.json": "startup/startup.json",
         "packages/startup/assets/license.txt": "startup/license.txt",
@@ -77,7 +80,7 @@ export default {
   },
   release: {
     // ACT: 构建基线和补丁固定取 GitHub；客户端更新源由设置单独控制，默认官方源。
-    baseUrl: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || "HBAI-Ltd/Toonflow-app"}/releases/latest/download`,
+    baseUrl: `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || "mktminhqpbga-glitch/ToonFlow-App"}/releases/latest/download`,
     // ACT: 常规构建不访问更新服务器；release:desktop 显式开启增量构建。
     generatePatch: process.env.generateUpdatePatch === "1",
   },

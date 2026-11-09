@@ -60,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, nextTick, ref } from "vue";
 import { IconVideo, IconUpload, IconTransfer, IconMusic, IconLayersSubtract, IconScissors, IconMovie, IconPhotoScan, IconPlayerSkipBack, IconPlayerSkipForward } from "@tabler/icons-vue";
 import { ElButton, ElMessage, ElProgress, ElDropdown, ElDropdownMenu, ElDropdownItem } from "element-plus";
@@ -73,8 +74,9 @@ defineOptions({
   icon: IconVideo,
   handles: [{ id: "video", type: "source", dataType: "VIDEO", label: "视频输出" }] satisfies NodeHandle[],
 });
+const vietnamese = useNodeVietnamese();
 const { node, nodeProps, outputs, nodeEvent, files, updateNodeInternals } = useNode({
-  label: "视频",
+  label: () => { void vietnamese.value; return nodeText("视频", "Video"); },
 });
 const fileInput = ref<HTMLInputElement>();
 const uploading = ref(false);

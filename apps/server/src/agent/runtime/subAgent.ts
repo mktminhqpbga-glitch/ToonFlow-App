@@ -1,3 +1,4 @@
+import { getLocale } from "@/lib/i18n";
 import type { Usage } from "@earendil-works/pi-ai";
 import { createAgentSession, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import type { AgentSession, CreateAgentSessionOptions, ToolDefinition } from "@earendil-works/pi-coding-agent";
@@ -87,7 +88,7 @@ export async function runSubAgent(options: SubAgentModel & {
       if (event.type === "message_start" && event.message.role === "assistant") onProgress?.("正在处理");
       if (event.type === "tool_execution_start") onProgress?.(`正在调用 ${event.toolName}`);
     });
-    await session.prompt(`你正在执行委派的独立子任务。仅处理下述任务，遵守系统中的授权与工作区规则。缺少信息或授权时，说明阻碍并交回调用方；若提供 requestInput 则使用它等待补充。最终返回简明结论、实际修改的文件相对路径、验证情况与未完成项；长篇产物写入已授权的工作区文件。\n\n${JSON.stringify({ name, task })}`, { expandPromptTemplates: false });
+    await session.prompt(`${getLocale() === "vi" ? "Bạn đang thực hiện một nhiệm vụ con được giao độc lập. Chỉ xử lý nhiệm vụ bên dưới, tuân thủ quyền đã cấp và quy tắc workspace trong hệ thống. Nếu thiếu thông tin hoặc quyền, hãy mô tả trở ngại và chuyển lại cho tác nhân gọi; nếu có requestInput thì dùng nó để chờ bổ sung. Khi kết thúc, tóm tắt kết quả, đường dẫn tương đối của các tệp thực sự đã sửa, bằng chứng kiểm tra và phần chưa hoàn thành. Ghi nội dung dài vào tệp workspace được phép." : "你正在执行委派的独立子任务。仅处理下述任务，遵守系统中的授权与工作区规则。缺少信息或授权时，说明阻碍并交回调用方；若提供 requestInput 则使用它等待补充。最终返回简明结论、实际修改的文件相对路径、验证情况与未完成项；长篇产物写入已授权的工作区文件。"}\n\n${JSON.stringify({ name, task })}`, { expandPromptTemplates: false });
     signal.throwIfAborted();
     const question = inputRequired?.();
     const reply = session.messages.findLast(message => message.role === "assistant");

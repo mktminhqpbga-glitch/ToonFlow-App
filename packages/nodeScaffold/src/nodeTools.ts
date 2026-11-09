@@ -8,7 +8,7 @@ export type { NodeToolCall, NodeToolInfo, NodeToolsContext } from "@toonflow/too
 
 export interface NodeToolDefinition<Schema extends z.ZodType = z.ZodType> {
   name: string;
-  description: string;
+  description: string | (() => string);
   parameters: Schema;
   execute(args: z.output<Schema>, context: { signal?: AbortSignal }): unknown | Promise<unknown>;
 }
@@ -83,14 +83,17 @@ export const nodeTools = {
     if (!nodeId) throw new Error("当前组件不属于画布节点");
     if (!/^[a-z][a-zA-Z0-9]{0,63}$/.test(definition.name)) throw new Error("节点函数名必须使用小驼峰，最多 64 个字符");
     const parameters = z.toJSONSchema(definition.parameters, { io: "input", target: "draft-07" });
-    if (!definition.description.trim() || parameters.type !== "object" || typeof definition.execute !== "function") {
+    const currentDescription = () => typeof definition.description === "function" ? definition.description().trim() : definition.description.trim();
+    if (!currentDescription() || parameters.type !== "object" || typeof definition.execute !== "function") {
       throw new Error("节点函数需要描述、Zod 对象参数和 execute 方法");
     }
     const { registry } = getRegistry(useVueFlow());
     const name = `node:${definition.name}` as const;
     const key = `${nodeId}:${name}`;
     const entry: RegisteredNodeTool = {
-      nodeId, name, description: definition.description.trim(),
+      nodeId, name,
+      // ACT: đọc lại ngôn ngữ giao diện khi AI liệt kê tool; giữ nguyên tên hàm và schema.
+      get description() { return currentDescription(); },
       parameters,
       async execute(args, context) {
         const parsed = await definition.parameters.safeParseAsync(args);
