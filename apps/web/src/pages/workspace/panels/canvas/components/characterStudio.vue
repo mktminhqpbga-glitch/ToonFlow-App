@@ -121,8 +121,8 @@ async function loadCharacters() {
     if (token === loadToken) loading.value = false;
   }
 }
-async function persist(next: CharacterRecord[]) {
-  const directory = props.directory;
+async function persist(next: CharacterRecord[], directory = props.directory) {
+  if (directory !== props.directory) throw new Error("Workspace đã thay đổi; hãy mở lại Studio nhân vật");
   if (!directory) throw new Error("Chưa có workspace");
   const files = useWorkspaceFiles(directory);
   if (snapshot) {
@@ -177,7 +177,7 @@ async function saveCharacter() {
       id, name: draftName.value.trim(), description: draftDescription.value.trim(),
       images, updatedAt: new Date().toISOString(),
     };
-    await persist(existing ? characters.value.map(item => item.id === id ? record : item) : [...characters.value, record]);
+    await persist(existing ? characters.value.map(item => item.id === id ? record : item) : [...characters.value, record], directory);
     editVisible.value = false;
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "Không thể lưu nhân vật");
