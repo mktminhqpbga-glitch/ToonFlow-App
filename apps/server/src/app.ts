@@ -11,7 +11,7 @@ import desktopRequest from "@/lib/desktop";
 import { getRuntimePlatform } from "@/lib/platform";
 import initializePlugins from "@/utils/plugins/initialize";
 import { languageRequest, resolveServerLocalePreference, setLocaleFallback, translateError, translateMessage } from "@/lib/i18n";
-import { detectLocale, normalizeLocale } from "@toonflow/i18n";
+
 import { isLocalWebBridgeEnabled } from "@/utils/chromeBridge/access";
 
 const autoInstallProviders = ["apiMart.ts", "metaso.ts", "compshare.ts"];
