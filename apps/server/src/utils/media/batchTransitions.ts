@@ -55,3 +55,12 @@ export function finishedBatchState(scenes: readonly SceneRecord[]): "completed" 
   // COMPLETED is reserved for every result being successfully persisted.
   return scenes.length > 0 && scenes.every(scene => scene.state === "succeeded") ? "completed" : "partial";
 }
+
+export function canDispatchChromeScene(
+  isChrome: boolean, connected: boolean, tabId: number | undefined,
+  deviceId: string | undefined, capabilities: readonly string[] | undefined, kind: "image" | "video",
+) {
+  if (!isChrome) return true;
+  return connected && Number.isInteger(tabId) && Number(tabId) > 0
+    && !!deviceId && capabilities?.includes(kind) === true;
+}
