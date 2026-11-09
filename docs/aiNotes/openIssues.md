@@ -338,3 +338,13 @@
 
 
 **ISSUE-0035 cập nhật 09/11/2026:** Đã code tái xác minh readiness khi trạng thái Bridge được refresh, ngăn tab UNKNOWN trở lại danh sách model sẵn sàng; test pure probe cho logout, sai documentToken/URL/capability. **Chưa nghiệm thu:** tab Muse/Gemini/ChatGPT thật và thời gian probe qua Render trên Mac, hồi quy đồng thời nhiều thiết bị/Chrome. Không đóng issue.
+
+
+### ISSUE-0036 — HD-08: còn chuỗi tiếng Trung trong giao diện, prompt và dữ liệu dịch chưa đầy đủ
+
+- **Ngày, AI sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** MỞ — PARTIAL, chưa E2E.
+- **Đã sửa:** bật dịch ở nodeShared + toàn bộ 9 node UMD có sẵn; sửa alias build Vite, đồng bộ locale trên host, dịch Media Price/History/Node Error/Audio Settings; thêm prompt tiếng Việt riêng cho trợ lý giải thích lỗi và trợ lý tích hợp provider; thêm 254 khóa dịch trong các nhóm Image/Video/Audio/Director 3D; mở rộng `auditVietnamese.ts`, `vietnameseCoverage.test.ts`, CI audit.
+- **Bằng chứng:** run 42563406550 PASS (43 test), audit tại commit 9cca37ca: 656 candidate còn thiếu trên phạm vi Web/nodeShared/nodeScaffold/nodes, 0 vi values chứa Hán tự, 0 parse error. Sau đó thêm 60 khóa nên đếm lại bằng CI mới.
+- **Chưa thể đánh dấu DONE:** audit --strict còn fail; bản dịch thủ công còn thiếu ở nhiều phần Director/Video/Image/Camera Studio, hệ thống prompt khác, giao diện tùy biến/third-party plugin. `providerPromptVi` cần nghiệm thu hành vi thật bằng provider-agent UI; run trước có lỗi cú pháp, đã sửa ở b788552, cần chứng minh CI mới.
+- **Ngôn ngữ lưu cũ:** cấu hình có thể lưu `ui.language = zh-CN` do người dùng từng chọn hoặc bản cũ; KHÔNG tự ghi đè lựa chọn lưu này khi chưa phân biệt được ý muốn, vì yêu cầu không thay dữ liệu người dùng. Trên Mac cần chủ động chọn Tiếng Việt tại Cài đặt một lần; lần sau giữ tùy chọn.
+- **Việc tiếp theo:** tiếp tục xử lý danh sách `bun packages/i18n/src/auditVietnamese.ts`, bổ sung dịch còn thiếu và UI E2E, audit prompt ẩn riêng, đưa strict audit về 0 khi thực sự đủ. Không nhận 100% trước bằng chứng.
