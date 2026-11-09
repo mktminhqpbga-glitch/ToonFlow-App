@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assertTabDispatchAvailable, bridgeDiagnosis } from "./dispatchGuard";
+import { assertTabDispatchAvailable, bridgeDiagnosis, verifyProbeCapabilities } from "./dispatchGuard";
 
 const first = "a6c14c36-cb0b-445b-97f8-52791d743d25";
 const second = "3c3122b2-c1a0-4c11-9b38-362e37be95c6";
@@ -20,6 +20,17 @@ describe("HD-07 Chrome Bridge safety and diagnostic regressions", () => {
     expect(() => assertTabDispatchAvailable("muse", 7, second, new Map(), [
       { id: first, provider: "muse", tabId: 7, state: "unknown" },
     ])).toThrow(/UNKNOWN/);
+  });
+  test("model readiness is revoked on logout, tab reload and lost capability", () => {
+    const token = "41a4f04c-9c73-4fb7-a255-c00384c83173";
+    const selection = { tab: { url: "https://muse.ai/chat" }, documentToken: token };
+    const valid = { ready: true, url: selection.tab.url, documentToken: token, capabilities: ["image", "video"] };
+    expect(verifyProbeCapabilities("muse", selection, valid)).toEqual(["image", "video"]);
+    expect(verifyProbeCapabilities("muse", selection, { ...valid, ready: false })).toEqual([]);
+    expect(verifyProbeCapabilities("muse", selection, { ...valid, documentToken: "cb21aa49-6c37-4dfc-9cb9-af6294219d80" })).toEqual([]);
+    expect(verifyProbeCapabilities("muse", selection, { ...valid, url: "https://muse.ai/other" })).toEqual([]);
+    expect(verifyProbeCapabilities("muse", selection, { ...valid, capabilities: ["text"] })).toEqual([]);
+    expect(verifyProbeCapabilities("gemini", selection, { ...valid, capabilities: ["text", "image", "video"] })).toEqual(["text", "image"]);
   });
   test("no credentials or pairing tokens appear in diagnostics", () => {
     const data = bridgeDiagnosis({ enabled: true, connected: true, mode: "remote",
