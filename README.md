@@ -1,18 +1,21 @@
 > 🇻🇳 **SỔ GHI CHÚ DỰ ÁN — DÀNH CHO CHỦ REPO VÀ CÁC AI TIẾP NHẬN:** [📋 Bảng tổng quan](./docs/aiNotes/overview.md) · [✅ Việc đã làm / ai đã sửa](./docs/aiNotes/completedWork.md) · [⚠️ Vấn đề còn tồn tại / người sửa gần nhất](./docs/aiNotes/openIssues.md) · [📝 Lưu ý quan trọng cho AI](./docs/aiNotes/importantNotes.md)
 >
 > Sau mỗi lần sửa, cần cập nhật lịch sử, người thực hiện, bằng chứng commit, kết quả kiểm tra và mọi vấn đề còn mở. **Đọc [quy tắc ghi chú](./docs/aiNotes/overview.md) trước khi thay đổi.**
->
-> **Chrome Companion (macOS, bản đang phát triển):** [Cách cài extension và kết nối Muse/Gemini/ChatGPT](./packages/chromeCompanion/readme.md). Chưa xác minh vận hành trên tài khoản AI thật.
-
-> **Phiên bản độc lập đang phát triển:** [Nhánh tích hợp](https://github.com/mktminhqpbga-glitch/ToonFlow-App/tree/feat/independentToonFlowFullIntegration) · [Hướng dẫn Web Ventura và Chrome Render](./docs/independentDistribution.md) · [Báo cáo kiểm kê](./docs/integrationAudit.md). Đường dẫn phát hành thuộc fork này, **chưa có bản macOS DMG hoặc Web đã nghiệm thu**. Bản gốc của [HBAI-Ltd/Toonflow-app](https://github.com/HBAI-Ltd/Toonflow-app) và thông báo giấy phép MIT vẫn được ghi công; không khẳng định sở hữu độc quyền mã gốc.
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=200&section=header&text=Toonflow&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=50" alt="Toonflow" width="100%" />
 
 <p>
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app">
     <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" />
   </a>
-
+  &nbsp;|&nbsp;
+  <a href="https://gitee.com/HBAI-Ltd/Toonflow-app">
+    <img src="https://img.shields.io/badge/Gitee-C71D23?style=flat-square&logo=gitee&logoColor=white" alt="Gitee" />
+  </a>
+  &nbsp;|&nbsp;
+  <a href="https://atomgit.com/HBAI-Ltd/Toonflow-app">
+    <img src="./docs/images/atomgitLogo.svg" alt="AtomGit" height="20" />
+  </a>
 </p>
 
 <p align="center">
@@ -59,18 +62,18 @@
 </a>
 
 <p align="center">
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/stargazers">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/stargazers">
     <img src="https://img.shields.io/github/stars/HBAI-Ltd/Toonflow-app?style=for-the-badge&logo=github" alt="Stars Badge" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License Badge" />
   </a>
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/releases">
     <img src="https://img.shields.io/github/v/release/HBAI-Ltd/Toonflow-app?style=for-the-badge" alt="Release" />
   </a>
 </p>
 <p align="center">
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/network/members">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/network/members">
     <img src="https://img.shields.io/github/forks/HBAI-Ltd/Toonflow-app?style=for-the-badge&logo=github&color=orange" alt="Forks Badge" />
   </a>
   <a href="https://atomgit.com/HBAI-Ltd/Toonflow-app">
@@ -81,13 +84,13 @@
   </a>
 </p>
 <p align="center">
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/issues">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/issues">
     <img src="https://img.shields.io/github/issues/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=F48D73" alt="Issues" />
   </a>
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/graphs/contributors">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/graphs/contributors">
     <img src="https://img.shields.io/github/contributors/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=2088FF" alt="Contributors" />
   </a>
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/commits">
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/commits">
     <img src="https://img.shields.io/github/last-commit/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=blueviolet" alt="Last Commit" />
   </a>
 </p>
@@ -148,11 +151,11 @@ Toonflow 是面向短剧、漫剧和短视频创作者的开源 AI 创作工具�
 </div>
 
 <p align="center">
-  <a href="https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases">下载客户端</a> ·
+  <a href="https://github.com/HBAI-Ltd/Toonflow-app/releases">下载客户端</a> ·
   <a href="https://qcn7xdsqgc4z.feishu.cn/docx/RXFqdgR2Xo0dXZxGfd0cZCGgnwf">使用教程</a> ·
-  <span>上游插件市场（独立版默认禁用）</span> ·
+  <a href="https://api.toonflow.net/console/plugIn">插件市场</a> ·
   <a href="https://qcn7xdsqgc4z.feishu.cn/docx/KNBNd9naqolsy6xjAOCcEAkqnRd">开发者文档</a> ·
-  <span>上游模型平台（仅显式启用）</span>
+  <a href="https://api.toonflow.net/">官方模型平台</a>
 </p>
 
 ---
@@ -280,13 +283,13 @@ Toonflow 采用 MIT 开源许可，可自行部署。第三方模型服务的 AP
 
 | 操作系统 | GitHub                                                       |
 | -------- | ------------------------------------------------------------ |
-| Windows x64 | [EXE 安装包](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases) |
-| Windows ARM64 | [EXE 安装包](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases) |
-| macOS Apple Silicon（ARM64，macOS 14 及以上） | [DMG 安装包](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases) |
-| macOS Intel（x64，macOS 14 及以上） | [DMG 安装包](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases) |
-| Linux x64（Debian / Ubuntu） | [DEB 安装包](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases) |
-| Linux ARM64（Debian / Ubuntu） | [DEB 安装包](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases) |
-| Android ARM64 | [APK 下载](https://github.com/mktminhqpbga-glitch/ToonFlow-App/releases/latest) |
+| Windows x64 | [EXE 安装包](https://github.com/HBAI-Ltd/Toonflow-app/releases) |
+| Windows ARM64 | [EXE 安装包](https://github.com/HBAI-Ltd/Toonflow-app/releases) |
+| macOS Apple Silicon（ARM64，macOS 14 及以上） | [DMG 安装包](https://github.com/HBAI-Ltd/Toonflow-app/releases) |
+| macOS Intel（x64，macOS 14 及以上） | [DMG 安装包](https://github.com/HBAI-Ltd/Toonflow-app/releases) |
+| Linux x64（Debian / Ubuntu） | [DEB 安装包](https://github.com/HBAI-Ltd/Toonflow-app/releases) |
+| Linux ARM64（Debian / Ubuntu） | [DEB 安装包](https://github.com/HBAI-Ltd/Toonflow-app/releases) |
+| Android ARM64 | [APK 下载](https://github.com/HBAI-Ltd/Toonflow-app/releases/latest) |
 
 Android 版仅支持 ARM64 设备，下载发布页中的 `toonflow-版本号-android-arm64.apk` 安装。手机内置本地 Bun 后端，可独立运行；也可从首页「设备互联」扫码或手动连接已开启共享的电脑或远程后端（支持局域网与公网）。
 
@@ -343,7 +346,7 @@ sudo spctl --master-disable
 克隆源码后，在仓库根目录执行：
 
 ```sh
-git clone https://github.com/mktminhqpbga-glitch/ToonFlow-App.git
+git clone https://github.com/HBAI-Ltd/Toonflow-app.git
 cd Toonflow-app
 docker compose up -d --build
 ```
@@ -397,7 +400,7 @@ bun --version
 克隆源码并启动：
 
 ```sh
-git clone https://github.com/mktminhqpbga-glitch/ToonFlow-App.git
+git clone https://github.com/HBAI-Ltd/Toonflow-app.git
 cd Toonflow-app
 bun install --frozen-lockfile
 

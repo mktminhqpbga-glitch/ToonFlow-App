@@ -4,12 +4,6 @@
 
 **Cập nhật lần đầu:** 2026-11-08 (Asia/Bangkok) · **Người tạo:** ChatGPT (GPT-6) · **Phạm vi:** sổ ghi chú, không sửa chức năng ứng dụng.
 
-## Checkpoint tiếp quản bản độc lập
-
-- [Tiến độ triển khai và phần còn thiếu](./implementationStatus.md)
-- [Kiểm kê Việt hóa UI/prompt — chưa đạt 100%](./vietnameseFullAudit.md)
-- [Kết quả kiểm thử và checklist nghiệm thu thật](./e2eAcceptance.md)
-
 ## Ba khu vực bắt buộc
 
 | Khu vực | Để làm gì? | Liên kết |
