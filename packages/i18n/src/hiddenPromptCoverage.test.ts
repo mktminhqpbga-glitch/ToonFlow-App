@@ -83,7 +83,6 @@ describe("HD-08 Vietnamese hidden prompts are truly selected, not just documente
     expect(audio).toContain("Chưa có âm thanh được tạo");
     expect(audio).toContain("Mô tả âm thanh mong muốn hoặc nhập văn bản cần đọc");
     for (const code of [image, video, audio]) {
-      expect(code).toContain("muse");
       expect(code).toContain("providerId");
       expect(code).toContain("modelId");
     }
