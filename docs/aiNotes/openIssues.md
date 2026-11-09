@@ -335,3 +335,6 @@
 - **Tests mới:** `dispatchGuard.test.ts`, `bridgeValidation.test.ts`, `mediaSignature.test.ts`, `access.test.ts` chạy trong GitHub Actions; phân biệt unit/security logic với E2E.
 - **E2E chưa làm được:** Chrome Companion đã đăng nhập Muse/Gemini/ChatGPT thật; Render WSS/HTTPS owner pairing thật; 1 ảnh + 1 video file thật và checksum; Batch 5 ảnh 3 video và FFmpeg với clip AI; tab reload/Chrome mất mạng, snapshot dự án sau Mac restart. Cần dùng [quy trình Mac](./hd07MacAcceptance.md) và lưu log đã che token.
 - **Cần tiếp tục:** integration HTTP/WS qua Relay thực, kiểm sống từng selector của website, xác nhận người dùng chọn model/chip và trạng thái online/bận/offline, test crash recovery, xác minh FFprobe codec/duration trên file tạo từ provider. Không đánh dấu DONE trước bằng chứng.
+
+
+**ISSUE-0035 cập nhật 09/11/2026:** Đã code tái xác minh readiness khi trạng thái Bridge được refresh, ngăn tab UNKNOWN trở lại danh sách model sẵn sàng; test pure probe cho logout, sai documentToken/URL/capability. **Chưa nghiệm thu:** tab Muse/Gemini/ChatGPT thật và thời gian probe qua Render trên Mac, hồi quy đồng thời nhiều thiết bị/Chrome. Không đóng issue.
