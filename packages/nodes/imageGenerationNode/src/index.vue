@@ -51,8 +51,8 @@
           v-model="refList"
           @preview="setReferencePreview"
           @remove="removeReference" />
-        <promptInput v-if="editor?.mode === 'inpaint'" v-model="data.inpaintPromptModel" v-model:text="data.inpaintPrompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
-        <promptInput v-else v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
+        <promptInput v-if="editor?.mode === 'inpaint'" v-model="data.inpaintPromptModel" v-model:text="data.inpaintPrompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" :selectAssetPath="selectAssetPathReference" expandable />
+        <promptInput v-else v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" :selectAssetPath="selectAssetPathReference" expandable />
         <div v-if="ratioReport" class="cameraSnapshot">
           Camera đã dùng cho ảnh này: {{ ratioReport.camera.enabled
             ? [ratioReport.camera.body || 'Cinema camera', ratioReport.camera.lens || 'Lens mặc định', ratioReport.camera.focalLength + ' mm', 'f/' + ratioReport.camera.aperture].join(' · ')
@@ -185,7 +185,7 @@ data.value.model ??= "";
 data.value.size ??= "";
 data.value.ratio ??= "16:9";
 data.value.other ??= {};
-const { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, setReferencePreview, removeReference } = useNodeReferences();
+const { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, selectAssetPathReference, setReferencePreview, removeReference } = useNodeReferences();
 const models = shallowRef<NodeMediaModel[]>([]);
 const modelsLoading = ref(false);
 const uploading = ref(false);
