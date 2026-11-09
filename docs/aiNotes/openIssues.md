@@ -281,3 +281,28 @@
 - **Đã sửa code:** backend phân biệt `needsConfiguration` và `configured` cho media provider đang cài; model Chrome đang probe có `ready`; image/video không cho chọn/gửi model thiếu cấu hình. Commit c051788, fec3e8e, 4253903, 5fab792, 6f174cc, 333261f.
 - **Chưa đạt:** các provider chưa cài chưa được liệt kê; config có API key chưa chứng minh kết nối hoặc quota; cần test mode multiTenant; cần test Mac/Chrome/Render thực. Đừng hiểu nhãn `configured` là `connected`.
 - **Kiểm tra:** CI integrationCheck run 42511358311 đã thành công; source review và E2E khác nhau. Tham khảo [bảng kiểm riêng](./hdAcceptance.md).
+
+
+### ISSUE-0029 — HD-02 drag/drop runtime và tính đúng của prompt reference
+
+- **Ngày/người trực tiếp sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** PARTIAL, mở.
+- **Đã làm:** code drag/drop từ Canvas và Asset Library, ID nguồn thật, chèn theo caret, sửa lỗi TypeScript; CI 42549399300 PASS.
+- **Cần kiểm chứng:** click-select/caret DOM, Undo/Redo, thumbnail, video preview, copy/paste, lưu/reload, gửi reference qua provider. Không công nhận E2E.
+
+### ISSUE-0030 — HD-03 UI preset cần thử tạo node trong ứng dụng thật
+
+- **Ngày/người trực tiếp sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** PARTIAL, mở.
+- **Đã làm:** hai cột preset, prompt chỉnh trước, tạo node thực, tự khóa khi thiếu node. CI 42549924812 PASS.
+- **Chưa làm:** thử click từng preset, xác minh node type/SDK từ catalog tải động, lưu mở lại node, chụp UI.
+
+### ISSUE-0031 — HD-04 cần nghiệm thu lưu, nhập media và Studio AI
+
+- **Ngày/người trực tiếp sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** PARTIAL, mở.
+- **Đã làm:** workspace character index, Character ID, bộ ảnh gốc tối đa 9 ảnh, upload, sửa, xóa hồ sơ không xóa media, import Canvas, bảo vệ switch workspace; CI 42550662370 PASS.
+- **Chưa làm:** thử ghi file thực, concurrent edit, cleanup lỗi upload, khôi phục trên Mac, sinh nhân vật thật bằng AI/model.
+
+### ISSUE-0032 — HD-05 Batch Engine vẫn thiếu nghiệm thu runtime, FFmpeg và điều phối đa thiết bị
+
+- **Ngày/người trực tiếp sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** PARTIAL, mở.
+- **Đã làm:** lưu batch state và Task ID bền vững; chỉ một batch job đang chạy toàn server, trang batch ảnh/video, tiếp tục cảnh độc lập sau FAILED, UNKNOWN không tự retry. Initial CI run 42551209546 FAIL TS, sửa ở f3a9e7a; CI 42551746997 PASS.
+- **Chưa làm:** FFmpeg MP4 nối cảnh, test actual provider E2E, map thiết bị/tab thật, resume sau restart/timeout, nhập batch output vào Canvas, bộ test queue/negative. `interrupted` cần xử lý thận trọng, không tự submit job mới cho UNKNOWN.
