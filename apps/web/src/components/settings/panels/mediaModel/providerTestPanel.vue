@@ -19,7 +19,7 @@
                 <el-image v-if="item.file.type.startsWith('image/')" :src="item.url" fit="cover" :previewSrcList="[item.url]" previewTeleported />
                 <videoPlayer v-else-if="item.file.type.startsWith('video/')" class="referenceVideo" :src="item.url" :label="item.file.name" muted />
                 <icon-music v-else :size="22" aria-hidden="true" />
-                <el-button class="removeReference" circle size="small" :icon="IconX" :disabled="busy || disabled" :aria-label="`移除 ${item.file.name}`" @click="removeReference(index)" />
+                <el-button class="removeReference" circle size="small" :icon="IconX" :disabled="busy || disabled"  :aria-label="`${localText('移除', 'Xóa')} ${item.file.name}`" @click="removeReference(index)" />
                 <el-select v-if="activeModel?.type === 'video' && item.file.type.startsWith('image/')" v-model="item.role" size="small" aria-label="参考图用途">
                   <el-option label="参考图" value="images" /><el-option label="首帧" value="firstFrame" /><el-option label="尾帧" value="lastFrame" />
                 </el-select>
@@ -73,7 +73,7 @@
             </div>
           </el-tab-pane>
           <el-tab-pane label="响应数据" name="response"><pre v-if="responseText">{{ responseText }}</pre></el-tab-pane>
-          <el-tab-pane :label="`请求日志${logs.length ? ` (${logs.length})` : ''}`" name="logs">
+          <el-tab-pane  :label="`${localText('请求日志', 'Nhật ký yêu cầu')}${logs.length ? ` (${logs.length})` : ''}`" name="logs">
             <el-collapse>
               <el-collapse-item v-for="log in logs" :key="log.id" :name="log.id">
                 <template #title>
@@ -355,13 +355,13 @@ function sendFeedback() {
     return [secret, token].flatMap(value => [value, encodeURIComponent(value.toWellFormed()), JSON.stringify(value).slice(1, -1)]).filter(Boolean);
   }))].sort((left, right) => right.length - left.length);
   function redact(value: unknown, key = "", depth = 0): unknown {
-    if (secretFields.test(key) || key === "config") return "[已隐藏]";
-    if (/^(?:data|b64_json|base64)$/.test(key) && typeof value === "string") return "[媒体数据已省略]";
-    if (depth > 20) return "[嵌套内容已省略]";
+    if (secretFields.test(key) || key === "config") return localText("[已隐藏]", "[đã ẩn]");
+    if (/^(?:data|b64_json|base64)$/.test(key) && typeof value === "string") return localText("[媒体数据已省略]", "[đã ẩn dữ liệu media]");
+    if (depth > 20) return localText("[嵌套内容已省略]", "[đã ẩn nội dung lồng nhau]");
     if (Array.isArray(value)) return value.map(item => redact(item, "", depth + 1));
     if (value && typeof value === "object") {
       const object = value as Record<string, unknown>;
-      return Object.fromEntries(Object.entries(object).map(([field, item]) => [field, field === "data" && object.type === "base64" ? "[参考素材已省略]" : redact(item, field, depth + 1)]));
+      return Object.fromEntries(Object.entries(object).map(([field, item]) => [field, field === "data" && object.type === "base64" ? localText("[参考素材已省略]", "[đã ẩn tài nguyên tham chiếu]") : redact(item, field, depth + 1)]));
     }
     if (typeof value !== "string") return value;
     if (/^\s*(?:\{|\[|")/.test(value)) {
@@ -369,17 +369,17 @@ function sendFeedback() {
       catch { /* ACT: 混合请求日志和非 JSON 错误按文本脱敏，保留可用的排错信息。 */ }
     }
     let text = value;
-    for (const secret of secretVariants) text = text.replaceAll(secret, "[已隐藏]");
-    return text.replace(/((?:Bearer|Basic)\s+)[^\s"'<>]+/gi, "$1[已隐藏]")
-      .replace(/(https?:\/\/)[^/\s@]+@/gi, "$1[已隐藏]@")
-      .replace(/([?&][^=&#\s]+)=[^&#\s"'<>]*/g, "$1=[已隐藏]")
+    for (const secret of secretVariants) text = text.replaceAll(secret, localText("[已隐藏]", "[đã ẩn]"));
+    return text.replace(/((?:Bearer|Basic)\s+)[^\s"'<>]+/gi, localText("$1[已隐藏]", "$1[đã ẩn]"))
+      .replace(/(https?:\/\/)[^/\s@]+@/gi, localText("$1[已隐藏]@", "$1[đã ẩn]@"))
+      .replace(/([?&][^=&#\s]+)=[^&#\s"'<>]*/g, localText("$1=[已隐藏]", "$1=[đã ẩn]"))
       .replace(/("(?:\\.|[^"\\])*")\s*:\s*("(?:\\.|[^"\\])*")/g, (match, field: string) => {
-        try { return secretFields.test(JSON.parse(field)) ? `${field}:"[已隐藏]"` : match; }
+        try { return secretFields.test(JSON.parse(field)) ? `${field}:localText("[已隐藏]", "[đã ẩn]")` : match; }
         catch { return match; }
       })
-      .replace(/((?:api[_-]?key|secret|token|password|authorization|cookie|credential|private[_-]?key|access[_-]?key|signature)["']?\s*[:=]\s*["']?)[^\s"',;}&<>]+/gi, "$1[已隐藏]")
-      .replace(/data:[^;,\s]+;base64,[a-zA-Z0-9+/=\s]+/g, "[参考素材已省略]")
-      .replace(/("(?:data|b64_json|base64)"\s*:\s*")[^"]*(")/gi, "$1[媒体数据已省略]$2")
+      .replace(/((?:api[_-]?key|secret|token|password|authorization|cookie|credential|private[_-]?key|access[_-]?key|signature)["']?\s*[:=]\s*["']?)[^\s"',;}&<>]+/gi, localText("$1[已隐藏]", "$1[đã ẩn]"))
+      .replace(/data:[^;,\s]+;base64,[a-zA-Z0-9+/=\s]+/g, localText("[参考素材已省略]", "[đã ẩn tài nguyên tham chiếu]"))
+      .replace(/("(?:data|b64_json|base64)"\s*:\s*")[^"]*(")/gi, localText("$1[媒体数据已省略]$2", "$1[đã ẩn dữ liệu media]$2"))
       .slice(0, 4000);
   }
   const content = JSON.stringify(redact({ provider: lastProvider, model: lastModel, error: errorMessage.value, request: lastRequest, logs: logs.value.slice(-12) }), null, 2);
