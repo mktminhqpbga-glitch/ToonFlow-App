@@ -440,7 +440,7 @@ provide("nodePersistence", () => {
     },
   };
 });
-defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, importWorkspaceMedia, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
   openNodeSearch: () => nodeSearchRef.value?.open(),
   getCanvases: (signal?: AbortSignal) => {
     if (!canvasMenuRef.value) throw new Error("画布菜单尚未就绪");
@@ -1077,6 +1077,31 @@ function pastePosition() {
 async function pasteNodeAtCenter(command?: string) {
   const position = pastePosition();
   if (position) await pasteClipboardNode(position, command);
+}
+
+// Import a real persisted batch result, not a preview URL or a temporary fake node.
+async function importWorkspaceMedia(path: string, mimeType: string): Promise<boolean> {
+  const directory = project.value?.directory;
+  const position = pastePosition();
+  if (!props.active || props.settingsVisible || !canvasReady.value || !directory || !position) return false;
+  if (!/^batchResults\\/[0-9a-f-]{36}\\/(?:scene-\\d+\\/|joined-)[^\\/]+$/i.test(path)
+    || !/^(image\\/(png|jpeg|webp)|video\\/(mp4|webm|quicktime))$/i.test(mimeType)) {
+    throw new Error("Đường dẫn hoặc định dạng kết quả batch không hợp lệ");
+  }
+  const signal = canvasController.signal;
+  const content = await useWorkspaceFiles(directory).read(path);
+  signal.throwIfAborted();
+  if (directory !== project.value?.directory) throw new Error("Workspace đã thay đổi trong khi tải kết quả");
+  const name = path.split("/").pop()!;
+  const file = new File([content], name, { type: mimeType });
+  let importedIds: string[] = [];
+  await canvasHistory.batch(async () => {
+    importedIds = await importCanvasFiles([file], position,
+      { directory, availableNodes: availableNodes.value, signal, flow });
+    if (!importedIds.length) throw new Error("Không thể tạo node media từ kết quả batch");
+  });
+  await flushCanvasSave();
+  return importedIds.length > 0;
 }
 
 async function importCanvasContent(files: File[], position: { x: number; y: number }) {
