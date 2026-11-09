@@ -355,3 +355,12 @@
 - **Hành vi đã code:** chỉ cho ghép batch video hoàn tất với >=2 cảnh thành công; xác minh tệp nguồn trong workspace và FFprobe các luồng video/codec/kích thước/thời lượng; chỉ copy concat với các nguồn tương thích; FFprobe lại đầu ra MP4 trước khi lưu metadata `merged`. Xuất file tên ngẫu nhiên, không ghi đè video cũ; không chấp nhận poster/thumbnail. Dùng `createWorkspaceFfmpeg` hiện có, không cài FFmpeg giả.
 - **Commits:** [2189906](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/21899068ee4405338fe6b5db65943f1c20f708c9), [42adb19](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/42adb19ce11ed7d40d7064db2e2499e28acbfaa5), [879c83a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/879c83a0ff40fd05869d17bb66e2bd81d892bb32), [724aade](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/724aade329c3b417e51b494727fe8853018c1afb).
 - **Kiểm thử:** đang kiểm tra CI run 42552231169; FFmpeg chạy với video thật, hợp codec và nhập lại Canvas **NOT TESTED**. Không đánh dấu E2E PASS.
+
+
+### DONE-0026 — Video Node: mở được cài đặt tỷ lệ dù chưa có model
+
+- **Ngày/người trực tiếp sửa:** 2026-11-09, ChatGPT (GPT-6).
+- **Tệp:** `packages/nodes/videoGenerationNode/src/index.vue`.
+- **Code:** bỏ khóa popover thiết lập chỉ vì thiếu `selectedModel`, giữ khóa nút gửi AI bằng `modelCanGenerate`; hiển thị cảnh báo rằng tỷ lệ mới chỉ là cấu hình dự kiến, hướng dẫn nối model trong AI Bridge/Model AI.
+- **Commit:** [7586654](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/75866544de1cbf4bc03900f86f6a1176069d699b).
+- **Kiểm chứng:** Typecheck/build theo CI run 42552641306 đang chạy lúc ghi; chưa kiểm trực tiếp click 9:16 trên Mac. **Trạng thái PARTIAL**.
