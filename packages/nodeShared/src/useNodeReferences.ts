@@ -46,9 +46,7 @@ export function useNodeReferences(handleId = "in") {
           id: referenceKey(item),
           label: findNode<NodeData>(item.source)?.data.label?.trim() || item.source,
           dataType: item.dataType,
-          name: item.dataType === "AUDIO"
-            ? `参考 ${index + 1}：${findNode<NodeData>(item.source)?.data.label?.trim() || item.value?.url.split(/[\\/]/).pop() || "音频"}`
-            : `参考 ${index + 1}`,
+          name: `${findNode<NodeData>(item.source)?.data.label?.trim() || item.value?.url.split(/[\\/]/).pop() || item.source}`,
           value: `{{ref ${index + 1}}}`,
           avatar: item.dataType === "AUDIO" ? audioAvatar : previews.value.get(referenceKey(item)) || undefined,
           previewable: item.dataType === "IMAGE" || item.dataType === "VIDEO",
