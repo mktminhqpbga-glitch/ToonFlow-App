@@ -22,6 +22,15 @@
           <icon-library-photo :size="18" aria-hidden="true" />
           <span class="sidebarText">{{ translate("素材库") }}</span>
         </button>
+        <hr class="sidebarDivider" />
+        <button class="sidebarItem" type="button" :disabled="creating || opening" aria-label="Tạo ảnh hàng loạt" title="Tạo ảnh hàng loạt" @click="openBatch('batchImage')">
+          <icon-photo :size="18" aria-hidden="true" />
+          <span class="sidebarText">Tạo ảnh hàng loạt</span>
+        </button>
+        <button class="sidebarItem" type="button" :disabled="creating || opening" aria-label="Tạo video hàng loạt" title="Tạo video hàng loạt" @click="openBatch('batchVideo')">
+          <icon-video :size="18" aria-hidden="true" />
+          <span class="sidebarText">Tạo video hàng loạt</span>
+        </button>
       </nav>
       <div class="sidebarFooter">
         <button v-if="!publicWeb" class="sidebarItem deviceButton" :class="{ connected: deviceHubEnabled || mobileConnection.online === true }" type="button" :aria-label="mobileConnectionLabel" :title="mobileConnectionLabel" @click="mobileConnectVisible = true">
@@ -115,6 +124,14 @@
     <settings v-model="settingsVisible" />
     <mobileConnect v-if="!publicWeb" v-model="mobileConnectVisible" />
     <workspacePicker ref="relocationPicker" hideTrigger />
+    <el-dialog v-model="batchProjectPickerVisible" :title="pendingBatch === 'batchImage' ? 'Chọn dự án tạo ảnh hàng loạt' : 'Chọn dự án tạo video hàng loạt'" width="min(460px, 94vw)" alignCenter appendToBody>
+      <p>Chọn dự án để lưu hàng đợi và kết quả tạo nội dung.</p>
+      <div class="batchProjectChoices">
+        <el-button v-for="item in sortedProjects" :key="item.directory" :disabled="creating || opening" @click="selectBatchProject(item)">
+          {{ item.name }}
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -155,6 +172,8 @@ const assetsVisible = ref(false);
 const mobileConnectVisible = ref(false);
 const sidebarCollapsed = ref(false);
 const pageScroll = ref<ScrollbarInstance>();
+const batchProjectPickerVisible = ref(false);
+const pendingBatch = ref<"batchImage" | "batchVideo">("batchImage");
 const backgroundScrollTop = ref(0);
 const activeSection = ref("home");
 const projectType = ref<"local" | "team">("local");
@@ -386,17 +405,38 @@ async function restoreAttachment(index: number) {
   }
 }
 
-async function enterWorkspace() {
+async function enterWorkspace(targetPanel?: "batchImage" | "batchVideo") {
   await waitForControlValue(() => workspaceStore.projectLoadingDrawn || undefined, pageLifetime.signal).catch(error => {
     if (!pageLifetime.signal.aborted) throw error;
   });
   if (pageLifetime.signal.aborted) return;
   if (!document.hidden) await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   if (pageLifetime.signal.aborted) return;
-  await router.push("/workspace");
+  await router.push(targetPanel ? { path: "/workspace", query: { panel: targetPanel } } : "/workspace");
 }
 
-async function openProject(project: Project) {
+function openBatch(kind: "batchImage" | "batchVideo") {
+  if (creating.value || opening.value) return;
+  if (!sortedProjects.value.length) {
+    ElMessage.warning("Hãy tạo hoặc mở một dự án trước khi sử dụng chức năng hàng loạt.");
+    scrollToSection("projects");
+    return;
+  }
+  if (sortedProjects.value.length === 1) {
+    void openProject(sortedProjects.value[0]!, kind);
+    return;
+  }
+  pendingBatch.value = kind;
+  batchProjectPickerVisible.value = true;
+}
+
+function selectBatchProject(selected: Project) {
+  const kind = pendingBatch.value;
+  batchProjectPickerVisible.value = false;
+  void openProject(selected, kind);
+}
+
+async function openProject(project: Project, targetPanel?: "batchImage" | "batchVideo") {
   if (creating.value || opening.value) return;
   opening.value = true;
   try {
@@ -412,7 +452,7 @@ async function openProject(project: Project) {
       if (!directory) return;
       await workspaceStore.openProject(directory, project.directory);
     }
-    await enterWorkspace();
+    await enterWorkspace(targetPanel);
   } catch (err) {
     ElMessage.error(axios.isAxiosError<{ message?: string }>(err)
       ? err.response?.data.message || "无法打开项目，请重试"
@@ -1003,5 +1043,19 @@ async function createProject(fromPrompt = true) {
 }
 @keyframes launchSpin {
   to { transform: rotate(360deg); }
+}
+
+.batchProjectChoices {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-height: 48vh;
+  overflow-y: auto;
+}
+.batchProjectChoices .el-button {
+  justify-content: flex-start;
+  margin-left: 0;
+  overflow: hidden;
 }
 </style>
