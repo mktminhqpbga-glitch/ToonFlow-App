@@ -366,3 +366,10 @@
 - **Vẫn thiếu:** xem xét 1.538 ứng viên literal tiếng Trung tại run nêu trên (836 có dictionary chưa rõ thực thi, 702 thiếu dictionary, gồm 61 dòng ứng viên liên quan prompt); xem thêm các gói plugin/skill, thông báo runtime không đi qua bộ i18n, xác thực mọi prompt ẩn và UI trình duyệt thật. Không tự dịch các identifier/schema/enum/API hoặc văn bản người dùng.
 - **Kiểm thử trên Mac:** chưa mở ứng dụng trên Mac Ventura từ phiên hiện tại. Dùng [checklist](./hd08VietnameseAcceptance.md); kiểm tra vi→en→vi, reload, Panorama, Audio, Frame Analysis, model tester, Agent và hidden prompts thật.
 - **Không đánh dấu DONE:** CI/AST PASS chỉ xác nhận phạm vi test, không chứng minh mọi màn hình và prompt đã Việt hóa.
+
+
+### ISSUE-0037 — Nghiệm thu hai nút trên thanh công cụ chính của Canvas
+
+- **Ngày/người sửa gần nhất:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái:** CODED / chờ nghiệm thu trình duyệt.
+- **Thay đổi:** [17262ce](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/17262ce1b474b4ad65ecfdd9dab58567d6e377e7) chuyển nút Thư viện vật liệu và Studio nhân vật đúng vị trí và nối callback xuyên qua Canvas Host; dialog cũ được giữ lại.
+- **Cần xác minh:** mở từng cửa sổ từ thanh chính, không nút trùng, tạo preset node, thêm ảnh nhân vật, đổi Canvas/workspace và lưu/reload; [CI](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591076127) phải PASS trước khi tính typecheck/build. Trình duyệt Mac chưa được thử trực tiếp.

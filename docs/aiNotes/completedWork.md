@@ -433,3 +433,12 @@
 - **Kiểm kê còn mở tại #42587671929:** 1.538 **ứng viên literal** cần xét thủ công: 836 có từ điển vi nhưng chưa xác nhận được đường thực thi, 702 chưa có khóa dictionary; 61 ứng viên ở dòng liên quan prompt. Đây không phải số chuỗi chắc chắn hiển thị, cũng không phải chứng minh prompt ẩn đã dịch hết.
 - **Mac/Web, AI E2E:** **NOT TESTED**; xem [hd08VietnameseAcceptance.md](./hd08VietnameseAcceptance.md).
 - **Trạng thái:** **PARTIAL**, không tuyên bố 100%.
+
+
+### DONE-0031 — Chuyển nút Thư viện vật liệu và Studio nhân vật lên thanh công cụ Canvas (CODED, chờ E2E)
+
+- **Ngày/người sửa:** 2026-11-09, ChatGPT (GPT-6); đúng branch tích hợp, PR #4 Draft.
+- **Mã:** `apps/web/src/pages/workspace/index.vue`, `panels/canvas/canvasHost.vue`, `panels/canvas/index.vue`, `panels/canvas/components/canvasControls.vue` (đều trong `apps/web/src/pages/workspace/`).
+- **Thay đổi:** chuyển hai nút từ panel dưới-trái vào `toolMenuContent`, thứ tự [+] [hand] [search] [Shapes: vật liệu] [smile: nhân vật] [help]. Giữ nguyên 2 dialog và callback thêm node/ảnh qua instance Canvas hiện tại, không tạo nút thứ hai.
+- **Commit mã:** [17262ce](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/17262ce1b474b4ad65ecfdd9dab58567d6e377e7).
+- **Kiểm thử:** source/static replacement PASS; [CI cho commit](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591076127) đã khởi chạy (xem GitHub để xác minh kết luận cuối). UI click, tạo node thật, lưu/reload và Mac Ventura **NOT TESTED**; không đánh dấu DONE nghiệm thu.
