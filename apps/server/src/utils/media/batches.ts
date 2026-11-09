@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { lstat, mkdir, readdir, readFile, realpath } from "@toonflow/file";
 import { createWorkspaceFfmpeg } from "@/utils/ffmpeg";
+import { chromeBridge } from "@/utils/chromeBridge/manager";
 import { z } from "zod";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
 import { imageGenerationSchema, videoGenerationSchema } from "./schemas";
@@ -13,6 +14,8 @@ const sceneState = z.enum(["queued", "running", "succeeded", "failed", "unknown"
 const batchState = z.enum(["running", "paused", "completed", "cancelled"]);
 const sceneSchema = z.object({
   id: z.uuid(), taskId: z.uuid(), index: z.number().int().nonnegative(),
+  deviceId: z.string().max(256).optional(), tabId: z.number().int().nonnegative().optional(),
+  providerId: z.string().max(96).optional(),
   state: sceneState,
   request: z.union([imageGenerationSchema, videoGenerationSchema]),
   result: z.array(z.object({ path: z.string(), mimeType: z.string(), mediaType: kindSchema })).optional(),
@@ -139,9 +142,20 @@ async function processBatch(cwd: string, id: string, owner?: AuthIdentity | null
       return;
     }
     // Persist the generated task ID and RUNNING state before any provider-side submission.
+    // Record the actual selected device/tab identity at dispatch, never a fabricated queue assignment.
+    const bridge = chromeBridge.status();
+    const provider = next.request.providerId === "chromeBridge"
+      ? next.request.modelId.replace(/_(image|video)$/, "") : undefined;
+    const selection = provider ? (bridge.selected as Record<string, { tab?: { id: number } }>)[provider] : undefined;
+    const deviceId = provider && bridge.connected
+      ? ("remote" in bridge && bridge.remote?.selectedDeviceId ? bridge.remote.selectedDeviceId : "local") : undefined;
     await mutateBatch(cwd, id, owner, current => {
       const scene = current.scenes[next.index];
-      if (current.state === "running" && scene?.state === "queued") scene.state = "running";
+      if (current.state === "running" && scene?.state === "queued") {
+        scene.state = "running";
+        scene.providerId = scene.request.providerId;
+        if (selection && deviceId) { scene.deviceId = deviceId; scene.tabId = selection.tab?.id; }
+      }
     });
     const current = await readBatch(cwd, id, owner);
     const scene = current.scenes[next.index];
