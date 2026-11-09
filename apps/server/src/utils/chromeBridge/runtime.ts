@@ -215,7 +215,8 @@ class ChromeBridgeRuntime {
   }
   models(kind: BridgeCapability) {
     if (!this.enabled || !this.connected) return [];
-    return [...this.selections.entries()].filter(([, value]) => value.capabilities.includes(kind))
+    return [...this.selections.entries()].filter(([, value]) => value.capabilities.includes(kind)
+      && !this.recentJobs.some(job => job.tabId === value.tab.id && job.state === "unknown"))
       .map(([provider]) => ({
         providerId: "chromeBridge", providerLabel: "Chrome Companion",
         modelId: provider + "_" + kind, label: provider === "muse" ? "Muse · Chrome" : provider === "gemini" ? "Gemini · Chrome" : "ChatGPT · Chrome",
