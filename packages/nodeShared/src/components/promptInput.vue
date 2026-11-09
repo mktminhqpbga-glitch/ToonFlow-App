@@ -188,7 +188,7 @@ async function dropMaterialReference(event: DragEvent) {
     if (!resolved) return;
     const target = savedCaret && instance.chatEditor.NODES[savedCaret.gridIndex]?.children[savedCaret.childIndex];
     if (target?.type === "Write" && target.text === savedCaret?.text) target.focus(Math.min(savedCaret.offset, target.text.length));
-    else instance.chatEditor.NODES.at(-1)?.children.at(-1)?.focus(-1);
+    else { const last = instance.chatEditor.NODES.at(-1)?.children.at(-1); if (last?.type === "Write") last.focus(-1); }
     if (sender === instance) await instance.setHtml(referenceHtml(resolved));
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : localized("引用素材失败", "Không thể thả tài nguyên vào prompt"));
