@@ -72,7 +72,7 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
         enforce: "pre" as const,
         transform(source: string, id: string) {
           const path = id.replaceAll("\\\\", "/");
-          if (!/\/packages\/(?:nodeShared|nodes\/[^/]+)\/src\/[^?]+\.(?:vue|ts)$/.test(path)) return;
+          if (!/\/packages\/(?:nodeShared|nodeScaffold|nodes\/[^/]+)\/src\/[^?]+\.(?:vue|ts)$/.test(path)) return;
           return transformSource(source, path);
         },
       }] : []),
