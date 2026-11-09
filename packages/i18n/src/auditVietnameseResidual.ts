@@ -11,6 +11,7 @@ const quoted = /(["'`])([^"'\r\n]*[\u3400-\u9fff][^"'\r\n]*)\1/g;
 const report = { auditedFiles: 0, sourceChineseLiteralOccurrences: 0, guardedOrTranslated: 0,
   needsManualReview: 0, promptRelatedCandidates: 0, parseFailures: 0 };
 const byFile = new Map<string, number>();
+const reviewByScope: Record<string, number> = { web: 0, nodes: 0, nodeShared: 0, nodeScaffold: 0, server: 0 };
 for (const source of sources) await walk(resolve(root, source));
 
 async function walk(directory: string) {
@@ -40,12 +41,17 @@ async function walk(directory: string) {
         }
         report.needsManualReview++;
         byFile.set(path, (byFile.get(path) ?? 0) + 1);
+        const scope = path.startsWith("apps/web/") ? "web" : path.startsWith("apps/server/") ? "server"
+          : path.startsWith("packages/nodeShared/") ? "nodeShared"
+          : path.startsWith("packages/nodeScaffold/") ? "nodeScaffold" : "nodes";
+        reviewByScope[scope]++;
         if (/\b(?:prompt|instruction|system|agent)\b/i.test(line)) report.promptRelatedCandidates++;
       }
     }
   }
 }
 console.log("[VI RESIDUAL REVIEW] " + JSON.stringify({
-  ...report, metric: "Lexical candidates, NOT proven visible untranslated strings",
+  ...report, reviewByScope,
+  metric: "Lexical candidates, NOT proven visible untranslated strings",
   topFiles: [...byFile.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([file,count])=>({file,count})),
 }));
