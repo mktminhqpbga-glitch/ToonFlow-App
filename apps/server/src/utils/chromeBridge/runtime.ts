@@ -201,6 +201,23 @@ class ChromeBridgeRuntime {
     return this.select(provider, selection.tab.id, false);
   }
 
+  async verifySelections() {
+    if (!this.connected) { this.selections.clear(); return; }
+    for (const [provider, selection] of [...this.selections.entries()]) {
+      if ([...this.jobs.values()].some(job => job.provider === provider)) continue;
+      try {
+        const probe = await this.call("probe", { tabId: selection.tab.id, provider }) as BridgeProbe;
+        if (!probe?.ready || !isBridgeDocumentToken(probe.documentToken)
+          || probe.documentToken !== selection.documentToken || probe.url !== selection.tab.url) {
+          this.selections.delete(provider);
+        } else {
+          const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(kind => probe.capabilities?.includes(kind));
+          if (!capabilities.length) this.selections.delete(provider);
+          else this.selections.set(provider, { ...selection, capabilities });
+        }
+      } catch { this.selections.delete(provider); }
+    }
+  }
   models(kind: BridgeCapability) {
     if (!this.enabled || !this.connected) return [];
     return [...this.selections.entries()].filter(([, value]) => value.capabilities.includes(kind))
