@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { canDispatchBatch, finishedBatchState, mayResumeBatch, nextQueuedIndex, outstandingScenes, recoverRunningScene, type SceneRecord } from "./batchTransitions";
+import { canDispatchBatch, canDispatchChromeScene, finishedBatchState, mayResumeBatch, nextQueuedIndex, outstandingScenes, recoverRunningScene, type SceneRecord } from "./batchTransitions";
 
 const scenes = (states: SceneRecord["state"][]): SceneRecord[] =>
   states.map((state, index) => ({ state, taskId: `task-${index}` }));
@@ -47,6 +47,14 @@ describe("persistent media batch recovery (no provider calls)", () => {
     expect(finishedBatchState(scenes(["succeeded", "failed"]))).toBe("partial");
     expect(finishedBatchState(scenes(["succeeded", "cancelled"]))).toBe("partial");
     expect(finishedBatchState(scenes([]))).toBe("partial");
+  });
+  test("Chrome unplugged or wrong tab never consumes queued Task IDs", () => {
+    expect(canDispatchChromeScene(true, false, 2, "local", ["image"], "image")).toBe(false);
+    expect(canDispatchChromeScene(true, true, undefined, "local", ["image"], "image")).toBe(false);
+    expect(canDispatchChromeScene(true, true, 2, undefined, ["image"], "image")).toBe(false);
+    expect(canDispatchChromeScene(true, true, 2, "local", ["video"], "image")).toBe(false);
+    expect(canDispatchChromeScene(true, true, 2, "local", ["image"], "image")).toBe(true);
+    expect(canDispatchChromeScene(false, false, undefined, undefined, undefined, "video")).toBe(true);
   });
   test("duplicate dispatch guards ignore completed scene IDs", () => {
     const records = scenes(["succeeded", "succeeded", "cancelled"]);
