@@ -32,6 +32,7 @@ export default defineConfig(({ command }) => ({
   },
   resolve: {
     alias: [
+      { find: "@toonflow/i18n/vue", replacement: fileURLToPath(new URL("../../packages/i18n/src/vue.ts", import.meta.url)) },
       { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
       { find: /^shiki$/, replacement: fileURLToPath(new URL("./src/lib/shiki.ts", import.meta.url)) },
     ],
