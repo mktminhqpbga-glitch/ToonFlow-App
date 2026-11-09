@@ -16,7 +16,7 @@
             :class="{ dragging: !!drag }"
             tabindex="0"
             role="application"
-            :aria-label="`${mode === 'sphere' ? '720°全景图' : '360°环绕图'}预览，拖动或方向键旋转，滚轮或加减键缩放，Home 重置`"
+            :aria-label="(mode === 'sphere' ? localized('720°全景图', 'Ảnh toàn cảnh 720°') : localized('360°环绕图', 'Ảnh xoay vòng 360°')) + localized('预览，拖动或方向键旋转，滚轮或加减键缩放，Home 重置', ': kéo hoặc dùng phím mũi tên để xoay; cuộn hoặc +/- để thu phóng; Home để đặt lại')"
             :aria-busy="loading || capturing"
             @pointerdown.prevent="startDrag"
             @pointermove="moveDrag"
