@@ -10,12 +10,12 @@
     :fullscreenVisible="false"
     style="width: 360px">
     <template #topActions>
-      <el-button :icon="IconTextRecognition" :loading="transcribing" :disabled="busy || !outputFile" text title="音频转文本" aria-label="音频转文本" @click.stop="transcribe">转文本</el-button>
-      <el-button v-if="transcribing" :icon="IconPlayerStop" text title="取消转文本" aria-label="取消转文本" @click.stop="cancelTranscription">取消</el-button>
-      <el-button :icon="IconScissors" :disabled="busy || !previewUrl" text title="截取音频" aria-label="截取音频" @click.stop="actions?.open('clip')">截取</el-button>
-      <el-button :icon="IconGauge" :disabled="busy || !previewUrl" text title="音频变速" aria-label="音频变速" @click.stop="actions?.open('speed')">变速</el-button>
-      <el-button :icon="IconTransfer" :loading="uploading" :disabled="busy" text title="替换音频" aria-label="替换音频" @click.stop="fileInput?.click()">替换音频</el-button>
-      <input ref="fileInput" type="file" accept="audio/*" hidden aria-label="选择替换音频" :disabled="busy" @change="replaceOutput" />
+      <el-button :icon="IconTextRecognition" :loading="transcribing" :disabled="busy || !outputFile" text :title="localized('音频转文本', 'Chuyển âm thanh thành văn bản')" :aria-label="localized('音频转文本', 'Chuyển âm thanh thành văn bản')" @click.stop="transcribe">{{ localized('转文本', 'Chuyển thành văn bản') }}</el-button>
+      <el-button v-if="transcribing" :icon="IconPlayerStop" text :title="localized('取消转文本', 'Hủy chuyển thành văn bản')" :aria-label="localized('取消转文本', 'Hủy chuyển thành văn bản')" @click.stop="cancelTranscription">{{ localized('取消', 'Hủy') }}</el-button>
+      <el-button :icon="IconScissors" :disabled="busy || !previewUrl" text :title="localized('截取音频', 'Cắt âm thanh')" :aria-label="localized('截取音频', 'Cắt âm thanh')" @click.stop="actions?.open('clip')">{{ localized('截取', 'Cắt đoạn') }}</el-button>
+      <el-button :icon="IconGauge" :disabled="busy || !previewUrl" text :title="localized('音频变速', 'Thay đổi tốc độ âm thanh')" :aria-label="localized('音频变速', 'Thay đổi tốc độ âm thanh')" @click.stop="actions?.open('speed')">{{ localized('变速', 'Điều chỉnh tốc độ') }}</el-button>
+      <el-button :icon="IconTransfer" :loading="uploading" :disabled="busy" text :title="localized('替换音频', 'Thay âm thanh')" :aria-label="localized('替换音频', 'Thay âm thanh')" @click.stop="fileInput?.click()">{{ localized('替换音频', 'Thay âm thanh') }}</el-button>
+      <input ref="fileInput" type="file" accept="audio/*" hidden :aria-label="localized('选择替换音频', 'Chọn âm thanh thay thế')" :disabled="busy" @change="replaceOutput" />
     </template>
     <div v-loading="generating || uploading" class="audioContent nopan" :aria-busy="generating || uploading">
       <audioPlayer v-if="previewUrl" ref="player" v-model:pcmOptions="pcmOptions" class="audioPreview" :src="previewUrl" :mimeType="outputFile?.mimeType" @loadedmetadata="updateNodeInternals" />
@@ -99,6 +99,7 @@ defineOptions({
 });
 const vLoading = ElLoading.directive;
 const vietnamese = useNodeVietnamese();
+const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({ label: () => { void vietnamese.value; return nodeText("音频生成", "Tạo âm thanh"); }, onModelsChanged: () => void refreshProviderModels() });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; language: string; sampleRate: number; format: string; other: Record<string, unknown> });
