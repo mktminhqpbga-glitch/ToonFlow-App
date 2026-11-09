@@ -47,6 +47,7 @@ const props = defineProps<{
   materials?: MaterialMention[];
   selectMaterial?: (id: string) => Promise<Reference | undefined>;
   selectAsset?: () => Promise<Reference | undefined>;
+  selectAssetPath?: (path: string) => Promise<Reference | undefined>;
   expandable?: boolean;
   placeholder?: string;
 }>();
@@ -136,9 +137,11 @@ async function chooseReference(select: () => Reference | undefined | Promise<Ref
 }
 
 const materialDragType = "application/toonflow-material-reference";
+const assetDragType = "application/toonflow-asset";
 
 function allowMaterialDrop(event: DragEvent) {
-  if (!props.selectMaterial || !event.dataTransfer?.types.includes(materialDragType)) return;
+  if (!event.dataTransfer || !(props.selectMaterial && event.dataTransfer.types.includes(materialDragType)
+    || props.selectAssetPath && event.dataTransfer.types.includes(assetDragType))) return;
   event.preventDefault();
   event.stopPropagation();
   event.dataTransfer.dropEffect = "copy";
@@ -146,11 +149,14 @@ function allowMaterialDrop(event: DragEvent) {
 
 async function dropMaterialReference(event: DragEvent) {
   const transfer = event.dataTransfer;
-  if (!props.selectMaterial || !transfer?.types.includes(materialDragType)) return;
+  if (!transfer || !(props.selectMaterial && transfer.types.includes(materialDragType)
+    || props.selectAssetPath && transfer.types.includes(assetDragType))) return;
   event.preventDefault();
   event.stopPropagation();
   const materialId = transfer.getData(materialDragType);
+  const assetPath = transfer.getData(assetDragType);
   const material = props.materials?.find(item => item.id === materialId && !item.disabled);
+  if (!material && !assetPath) return;
   const instance = sender;
   if (!material || !instance || selectingReference.value) return;
   const editor = instance.chatElement.richText;
@@ -173,7 +179,7 @@ async function dropMaterialReference(event: DragEvent) {
   selectingReference.value = true;
   closeMentionMenu();
   try {
-    const reference = await props.selectMaterial(material.id);
+    const reference = material ? await props.selectMaterial?.(material.id) : await props.selectAssetPath?.(assetPath);
     await nextTick();
     await instance.nextTick();
     if (resetTask) await resetTask;
