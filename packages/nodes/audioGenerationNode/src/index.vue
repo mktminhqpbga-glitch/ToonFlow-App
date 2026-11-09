@@ -38,7 +38,7 @@
             noDataText="请先在设置中添加音频模型"
             placement="top-start"
             @update:modelValue="data.model = $event"
-            @visible-change="visible => visible && loadModels().catch(error => showNodeError(error, nodeText("模型读取失败", "Không tải được danh sách model")))">
+            @visible-change="visible => visible && loadModels().catch(error => showNodeError(error, nodeText('模型读取失败', 'Không tải được danh sách model')))">
             <template v-if="!selectedModel" #prefix><icon-music-bolt :size="17" /></template>
             <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
             <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
@@ -50,14 +50,14 @@
           <generationSettings v-model:language="data.language" v-model:sampleRate="data.sampleRate" v-model:format="data.format" v-model:other="data.other" :model="selectedModel" :disabled="busy || !selectedModel" />
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'audio' }" :supported="selectedModel?.supportsPrice === true" />
-            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" title=nodeText("放弃任务", "Bỏ tác vụ") aria-label=nodeText("放弃任务", "Bỏ tác vụ") @click="generationState.cancel().catch(error => showNodeError(error, nodeText("停止生成失败", "Không dừng được tác vụ tạo")))" />
+            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" title=nodeText('放弃任务', 'Bỏ tác vụ') aria-label=nodeText('放弃任务', 'Bỏ tác vụ') @click="generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo')))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || transcribing || actions?.processing || (!generating && !pendingRecovery && (!generationPrompt || !selectedModel))"
               :title="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成音频'"
               :aria-label="generating ? '停止生成' : pendingRecovery ? '复查任务' : '生成音频'"
-              @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText("停止生成失败", "Không dừng được tác vụ tạo"))) : startGeneration().catch(error => showNodeError(error, nodeText("音频生成失败", "Tạo âm thanh thất bại")))" />
+              @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo'))) : startGeneration().catch(error => showNodeError(error, nodeText('音频生成失败', 'Tạo âm thanh thất bại')))" />
           </div>
         </div>
       </el-card>
