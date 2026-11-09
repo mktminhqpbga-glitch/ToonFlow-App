@@ -169,7 +169,7 @@ const cancelling = ref(false);
 const progress = ref(0);
 const progressLabel = ref("");
 const errorMessage = ref("");
-const previewUrl = files.useFileUrl(source, error => { previewFailed.value = true; errorMessage.value = readError(error, "视频读取失败"); });
+const previewUrl = files.useFileUrl(source, error => { previewFailed.value = true; errorMessage.value = readError(error, nodeText("视频读取失败", "Không đọc được video")); });
 const busy = computed(() => processing.value || uploading.value || !!player.value?.capturing);
 const hasDimensions = computed(() => settings.frames || settings.clips || settings.audio);
 const lastResultMatches = computed(() => !!lastResult.value && resultSource.value === source.value?.url);
@@ -220,9 +220,9 @@ nodeEvent.on("canConnect", (connection, context) => {
   return getTargetValues(id, "in", context.nodes, [...edges, connection]).length <= 1;
 });
 nodeEvent.on("save", reason => {
-  if (reason === "reload" && busy.value) throw new Error("拉片处理中，请完成或取消后再刷新节点");
-  if (uploading.value) throw new Error("视频上传中，请稍后切换画布或删除节点");
-  if (player.value?.capturing) throw new Error("截图保存中，请稍后切换画布或删除节点");
+  if (reason === "reload" && busy.value) throw new Error(nodeText("拉片处理中，请完成或取消后再刷新节点", "Đang phân tích video; hãy hoàn thành hoặc hủy trước khi làm mới node"));
+  if (uploading.value) throw new Error(nodeText("视频上传中，请稍后切换画布或删除节点", "Đang tải video lên; hãy chờ trước khi đổi Canvas hoặc xóa node"));
+  if (player.value?.capturing) throw new Error(nodeText("截图保存中，请稍后切换画布或删除节点", "Đang lưu ảnh chụp; hãy chờ trước khi đổi Canvas hoặc xóa node"));
 });
 // ACT: 结果文件由多个生成节点及撤销历史引用，删除本节点仅停止任务，保留已提交素材。
 nodeEvent.on("delete", cancelAndWait);
@@ -249,7 +249,7 @@ async function loadModels() {
       if (!settings.aiModel && first) settings.aiModel = getNodeModelKey(first);
     }
   } catch (error) {
-    if (!disposed) modelError.value = readError(error, "模型列表加载失败");
+    if (!disposed) modelError.value = readError(error, nodeText("模型列表加载失败", "Không tải được danh sách model"));
   } finally {
     modelsLoading.value = false;
   }
@@ -278,8 +278,8 @@ function uploadVideo(event: Event) {
   const file = input.files?.[0];
   input.value = "";
   if (!file || busy.value || connected.value) return;
-  if (!file.size) return void ElMessage.error("视频文件不能为空");
-  if (!file.type.startsWith("video/") && !/\.(mp4|m4v|mov|mkv|webm|avi|ts)$/i.test(file.name)) return void ElMessage.error("请选择视频文件");
+  if (!file.size) return void ElMessage.error(nodeText("视频文件不能为空", "Tệp video không được rỗng"));
+  if (!file.type.startsWith("video/") && !/\.(mp4|m4v|mov|mkv|webm|avi|ts)$/i.test(file.name)) return void ElMessage.error(nodeText("请选择视频文件", "Hãy chọn tệp video"));
   uploadJob = importVideo(file);
 }
 
@@ -300,10 +300,10 @@ async function importVideo(file: File) {
     uploadedSource.value = { url: path, mimeType: file.type || types[extension ?? ""] || "video/mp4" };
     committed = true;
   } catch (error) {
-    if (!disposed) errorMessage.value = readError(error, "视频导入失败");
+    if (!disposed) errorMessage.value = readError(error, nodeText("视频导入失败", "Không nhập được video"));
   } finally {
     if (!committed && workspace && path) {
-      try { await workspace.remove(path); } catch (error) { ElMessage.error(readError(error, "未完成的视频导入清理失败")); }
+      try { await workspace.remove(path); } catch (error) { ElMessage.error(readError(error, nodeText("未完成的视频导入清理失败", "Không dọn được tệp video nhập dở"))); }
     }
     uploading.value = false;
     uploadJob = undefined;
@@ -366,17 +366,17 @@ async function processAi() {
   processing.value = true;
   cancelling.value = false;
   progress.value = 0;
-  progressLabel.value = "准备 AI 辅助分析";
+  progressLabel.value = nodeText("准备 AI 辅助分析", "Đang chuẩn bị phân tích bằng AI");
   errorMessage.value = "";
   try {
     const workspace = files.getWorkspaceFiles();
     const ffmpeg = await loadFfmpeg(current.signal);
     await enhanceResult(result, workspace, ffmpeg, current.signal, model, focus);
     progress.value = 100;
-    if (lastResult.value?.ai?.overviewError) ElMessage.warning("逐镜头分析已保存，整段归纳未完成，可重试归纳");
-    else ElMessage.success("AI 拉片报告已生成");
+    if (lastResult.value?.ai?.overviewError) ElMessage.warning(nodeText("逐镜头分析已保存，整段归纳未完成，可重试归纳", "Đã lưu phân tích từng cảnh, chưa tổng hợp toàn video; có thể thử tổng hợp lại"));
+    else ElMessage.success(nodeText("AI 拉片报告已生成", "Đã tạo báo cáo phân tích video bằng AI"));
   } catch (error) {
-    if (!current.signal.aborted) errorMessage.value = `本地结果已保留；${readError(error, "AI 分析失败")}`;
+    if (!current.signal.aborted) errorMessage.value = `本地结果已保留；${readError(error, nodeText("AI 分析失败", "Phân tích bằng AI thất bại"))}`;
   } finally {
     processing.value = false;
     cancelling.value = false;
@@ -391,23 +391,23 @@ async function processVideo() {
   const options = { ...settings };
   const model = selectedModel.value;
   if (options.aiEnabled && (!model || (!options.frames && !options.clips))) {
-    errorMessage.value = !model ? "请选择支持图片理解的模型" : "AI 辅助拉片需要开启分镜或动态";
+    errorMessage.value = !model ? nodeText("请选择支持图片理解的模型", "Hãy chọn model có thể hiểu hình ảnh") : nodeText("AI 辅助拉片需要开启分镜或动态", "Phân tích video bằng AI cần bật phân cảnh hoặc video ngắn");
     return;
   }
   if (options.aiEnabled && options.focus.trim().length > 2000) {
-    errorMessage.value = "分析重点最多填写 2000 字";
+    errorMessage.value = nodeText("分析重点最多填写 2000 字", "Trọng tâm phân tích tối đa 2.000 ký tự");
     return;
   }
   if (!Number.isFinite(options.threshold) || options.threshold <= 0 || options.threshold > 255
     || !Number.isFinite(options.minSceneSeconds) || options.minSceneSeconds < 0 || options.minSceneSeconds > 60) {
-    errorMessage.value = "请填写有效的切镜阈值和最短镜头时长";
+    errorMessage.value = nodeText("请填写有效的切镜阈值和最短镜头时长", "Hãy nhập ngưỡng cắt cảnh và thời lượng cảnh tối thiểu hợp lệ");
     return;
   }
   const current = controller = new AbortController();
   processing.value = true;
   cancelling.value = false;
   progress.value = 0;
-  progressLabel.value = "准备本地分析";
+  progressLabel.value = nodeText("准备本地分析", "Đang chuẩn bị phân tích cục bộ");
   errorMessage.value = "";
   preview?.pause();
   const directory = `assets/${id}/analysis${crypto.randomUUID().replaceAll("-", "")}`;
@@ -458,20 +458,20 @@ async function processVideo() {
     metadata.height = result.height;
     if (options.aiEnabled && model) {
       progress.value = 0;
-      progressLabel.value = "本地分镜已保存，开始 AI 分析";
+      progressLabel.value = nodeText("本地分镜已保存，开始 AI 分析", "Đã lưu phân cảnh cục bộ, bắt đầu phân tích bằng AI");
       await enhanceResult(result, workspace, ffmpeg, current.signal, model, options.focus);
     }
     progress.value = 100;
-    if (lastResult.value?.ai?.overviewError) ElMessage.warning("本地拉片及逐镜头分析已完成，整段归纳未完成");
-    else ElMessage.success(`拉片完成，已识别 ${result.scenes.length} 个镜头`);
+    if (lastResult.value?.ai?.overviewError) ElMessage.warning(nodeText("本地拉片及逐镜头分析已完成，整段归纳未完成", "Đã phân tích cục bộ và từng cảnh; phần tổng hợp toàn video chưa hoàn tất"));
+    else ElMessage.success(vietnamese.value ? `Đã phân tích xong, nhận diện ${result.scenes.length} cảnh` : `拉片完成，已识别 ${result.scenes.length} 个镜头`);
   } catch (error) {
-    if (!current.signal.aborted) errorMessage.value = `${committed ? "本地结果已保留；" : ""}${readError(error, "逐帧拉片失败")}`;
+    if (!current.signal.aborted) errorMessage.value = `${committed ? nodeText("本地结果已保留；", "Đã giữ kết quả cục bộ; ") : ""}${readError(error, nodeText("逐帧拉片失败", "Phân tích video theo khung hình thất bại"))}`;
   } finally {
     if (!committed && workspace && directoryCreated) {
       try { await workspace.remove(directory, true); }
       catch (error) {
         if ((error as { response?: { data?: { data?: { code?: string } } } })?.response?.data?.data?.code !== "ENOENT") {
-          const cleanupError = readError(error, "临时文件清理失败");
+          const cleanupError = readError(error, nodeText("临时文件清理失败", "Không thể dọn tệp tạm"));
           errorMessage.value = `${errorMessage.value ? `${errorMessage.value}；` : ""}${cleanupError}`;
         }
       }
