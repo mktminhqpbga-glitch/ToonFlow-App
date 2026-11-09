@@ -376,3 +376,11 @@
 
 
 - **Cập nhật ISSUE-0037, 2026-11-09, ChatGPT (GPT-6):** `IconShapes` gây CI TS2724 đã sửa bằng `IconShape` tại [4aa196f](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/4aa196f661a0df1559b229a34ede4242a8631982), CI [42591313409](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591313409) SUCCESS. Bổ sung test hợp đồng đường nối Canvas + Home Batch tại [8293dc3](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/8293dc3cbe3843b23a44048df01de434a0c46c3f), CI [42591976160](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42591976160) SUCCESS. **Vẫn MỞ**: UI Mac click, dialog, chọn dự án, lưu/reload và media thật chưa được chạy; không coi source-contract PASS là E2E.
+
+
+### ISSUE-0038 — Nghiệm thu release riêng và Batch lifecycle trên Mac
+- **Người sửa gần nhất:** ChatGPT (GPT-6), 2026-11-09. **Trạng thái: PARTIAL / UI NOT TESTED**.
+- Đã xác nhận `release/toonflow-two-commits` trỏ `c73a5e40`, parent duy nhất là commit nguyên gốc `b325d961`, snapshot giống integration `661cdb0`. GitHub Actions không có run riêng trên release tại thời điểm kiểm tra. Không được lấy CI của nhánh khác làm chứng cứ nghiệm thu độc lập release.
+- Tạo nhánh `feat/toonflow-functional-completion` từ release; bổ sung trigger push CI riêng trên nhánh phát triển (không sửa workflow release), sửa race model fetch trong Batch `73e1731`, thêm kiểm tra regression `f866d62`. Run mới: https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42599007281 (chưa xác nhận kết luận ở lúc ghi).
+- **Còn thiếu:** chạy ứng dụng Mac thật, đổi workspace trong lúc model HTTP pending; xác minh model/queue không giao nhau, save/reload, UI click; nghiệm thu Chrome Companion VM, video/FFprobe thực, và 206-item audit file (không thấy trong Git tree `c73a5e40`).
+- **An toàn:** không gửi AI prompt có phí, không thay đổi Render, không xóa workspace, không merge PR #4.
