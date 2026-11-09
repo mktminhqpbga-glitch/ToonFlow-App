@@ -315,3 +315,14 @@
 - **Đã làm:** FFprobe xác minh nguồn rồi chỉ concat các cảnh MP4/MOV có codec/kích thước/kiểu audio tương thích; không ghi đè file; FFprobe lại file mới; lưu kết quả MP4 của batch. Ghi Device ID và Tab ID thực khi dispatch cho Chrome Bridge theo selection; serial global nên không chồng batch vào một tab.
 - **Commit:** 2189906, 42adb19, 879c83a, 724aade, 4619c55.
 - **Chưa nghiệm thu:** đoạn clip thực, codec/frame rate audio, hoạt động FFmpeg trên Mac Ventura, nhiều Chrome song song, xử lý hai người dùng/tiến trình, queue trạng thái task hiện tại cho Dashboard. E2E **BLOCKED** do chưa có môi trường Chrome/Render/FFmpeg thực.
+
+
+### ISSUE-0034 — HD-06 runtime E2E, hệ thống queue, media import và Mac Ventura chưa nghiệm thu
+
+- **Ngày/người sửa gần nhất:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái: MỞ — PARTIAL.**
+- **Code:** các phần `promptDrop.ts`, `promptInput.vue`, `materialPresetCatalog.ts`, `characterRecords.ts`, `media/tasks.ts` (read-only `inspect`), `media/batches.ts`, `batchTransitions.ts`, Canvas index/host, BatchPage/Workspace, workflow CI.
+- **Đã kiểm thử:** regression Bun cho pure state, prompt drop ID/caret, catalog preset, ghi/đọc tệp Character JSON thật, MP4 fixture FFmpeg thật; [run 42556447168](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42556447168) PASS cho code ở thời điểm run. Các guard Chrome offline thêm sau đó cần CI riêng.
+- **Đã sửa:** Asset Library và existing reference không bị `!material` chặn; batch restart không tự resume UNKNOWN; mọi cảnh SUCCESS mới đặt `completed`, lỗi khác thành `partial`; Chrome rớt trước submit sẽ bảo toàn queued Task ID và đưa batch sang `paused` kèm lý do. Kết quả batch đã có đường đi nhập node Canvas và ghi save.
+- **Chưa hoàn tất:** Browser thao tác thực Undo/Redo/caret/payload ảnh-video, HTTP server và dự án reload, task backend restart có provider thật, concurrency đa thiết bị/tab/đa tiến trình, thử FFmpeg xuất MP4 bằng app, Chrome Muse/Gemini/ChatGPT đã đăng nhập, Render Relay, Mac Intel macOS 13; AI Center HD-07, Việt hóa 100% HD-08, desktop packaging HD-09.
+- **Bảo vệ dữ liệu:** không xóa hồ sơ/canvas/cấu hình của người dùng; tất cả fixture/test ghi thư mục tạm. Kết quả E2E **NOT TESTED** khi chưa có log Mac/Chrome xác thực.
+- **Bước kế tiếp:** theo [checklist Mac](./hd06MacAcceptance.md); chạy Web/Server local, test giao diện thật, tạo video provider thật, load/reload, kiểm hàng đợi thực và bổ sung unit/integration HTTP routes trên workspace thử nghiệm độc lập. Không tự retry UNKNOWN.
