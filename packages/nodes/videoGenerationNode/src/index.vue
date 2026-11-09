@@ -244,13 +244,13 @@ const modelCanGenerate = computed(() => !!selectedModel.value && selectedModel.v
 function getGenerationPrompt(prompt: string, references = refList.value) {
   return [
     prompt.trim(),
-    ...references.flatMap((item, index) => (item.dataType === "STRING" && item.value?.trim() ? [`参考 ${index + 1}：\n${item.value.trim()}`] : [])),
+    ...references.flatMap((item, index) => (item.dataType === "STRING" && item.value?.trim() ? [`${nodeText("参考", "Tham chiếu")} ${index + 1}${nodeText("：", ":")}\n${item.value.trim()}`] : [])),
   ]
     .filter(Boolean)
     .join("\n\n");
 }
-const generationPrompt = computed(() => getGenerationPrompt(data.value.prompt));
-const generationInput = computed(() => getGenerationInput(data.value.prompt));
+const generationPrompt = computed(() => { void vietnamese.value; return getGenerationPrompt(data.value.prompt); });
+const generationInput = computed(() => { void vietnamese.value; return getGenerationInput(data.value.prompt); });
 
 function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory"> | undefined {
   const choice = selectedModel.value;
