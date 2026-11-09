@@ -41,6 +41,7 @@ function handler(action: (req: Request, res: Response) => Promise<unknown> | unk
   };
 }
 router.get("/status", handler(() => chromeBridge.refreshStatus()));
+router.get("/diagnostics", handler(async () => { await chromeBridge.refreshStatus(); return chromeBridge.diagnostics(); }));
 router.post("/mode", handler(req => chromeBridge.setMode(z.enum(["local", "remote"]).parse(req.body?.mode))));
 router.post("/remote/config", handler(req => {
   const input = z.object({ url: z.string().min(8).max(2048), ownerKey: z.string().min(32).max(256) }).parse(req.body);
