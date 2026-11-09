@@ -40,7 +40,7 @@ export function bridgeDiagnosis(status: {
     const unknown = status.jobs?.some(job => job.provider === provider && job.tabId === choice?.tab.id && job.state === "unknown") ?? false;
     return { provider, tabId: choice?.tab.id ?? null, connected: extensionConnected && !!choice,
       capabilities: extensionConnected ? [...choice?.capabilities ?? []] : [],
-      state: unknown ? "unknown" : running ? "running" : extensionConnected && choice ? "ready" : "offline",
+      state: !extensionConnected || !choice ? "offline" : unknown ? "unknown" : running ? "running" : "ready",
       reason: !extensionConnected ? "Kiểm tra Relay, thiết bị và Extension" : !choice ? "Chưa chọn và xác minh tab" : unknown ? "Kết quả tác vụ cũ chưa rõ; không tự retry" : running ? "Tab đang xử lý" : "Tab đã được probe xác nhận",
     };
   });

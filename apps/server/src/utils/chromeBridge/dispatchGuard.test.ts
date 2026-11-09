@@ -44,6 +44,25 @@ describe("HD-07 Chrome Bridge safety and diagnostic regressions", () => {
     expect(data.pendingJobs).toBe(1);
     expect(JSON.stringify(data)).not.toContain("render.example");
   });
+  test("disconnect overrides stale running and UNKNOWN indicators without clearing recorded tasks", () => {
+    const selected = { muse: { tab: { id: 7 }, capabilities: ["image", "video"] } };
+    for (const state of ["running", "unknown"]) {
+      const diagnostics = bridgeDiagnosis({
+        enabled: true, connected: false, mode: "remote",
+        remote: { configured: true, url: "https://relay.example", transport: "wss",
+          selectedDeviceId: "device-1", devices: [{ id: "device-1", online: false }] },
+        selected,
+        jobs: [{ provider: "muse", tabId: 7, state }],
+      });
+      const muse = diagnostics.providers.find(item => item.provider === "muse");
+      expect(muse?.state).toBe("offline");
+      expect(muse?.connected).toBe(false);
+      expect(muse?.capabilities).toEqual([]);
+      expect(muse?.reason).toContain("Kiểm tra Relay");
+      expect(diagnostics.stages.map(item => item.ready)).toEqual([true, false, false]);
+      expect(diagnostics.pendingJobs).toBe(state === "running" ? 1 : 0);
+    }
+  });
   test("an older UNKNOWN job on another tab does not mislabel the freshly selected tab", () => {
     const result = bridgeDiagnosis({ enabled: true, connected: true, mode: "local",
       selected: { muse: { tab: { id: 9 }, capabilities: ["image"] } },
