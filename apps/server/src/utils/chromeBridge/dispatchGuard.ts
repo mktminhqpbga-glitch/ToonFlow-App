@@ -36,8 +36,8 @@ export function bridgeDiagnosis(status: {
   ];
   const providers = (["muse", "gemini", "chatgpt"] as const).map(provider => {
     const choice = status.selected?.[provider];
-    const running = status.jobs?.some(job => job.provider === provider && ["submitting", "running"].includes(job.state)) ?? false;
-    const unknown = status.jobs?.some(job => job.provider === provider && job.state === "unknown") ?? false;
+    const running = status.jobs?.some(job => job.provider === provider && job.tabId === choice?.tab.id && ["submitting", "running"].includes(job.state)) ?? false;
+    const unknown = status.jobs?.some(job => job.provider === provider && job.tabId === choice?.tab.id && job.state === "unknown") ?? false;
     return { provider, tabId: choice?.tab.id ?? null, connected: extensionConnected && !!choice,
       capabilities: extensionConnected ? [...choice?.capabilities ?? []] : [],
       state: unknown ? "unknown" : running ? "running" : extensionConnected && choice ? "ready" : "offline",
