@@ -159,7 +159,8 @@ async function dropMaterialReference(event: DragEvent) {
   const existing = props.references.find(item => item.id === materialId);
   if (!material && !assetPath && !existing) return;
   const instance = sender;
-  if (!material || !instance || selectingReference.value) return;
+  // Global Asset Library drops and already-linked media are valid without a new material mention.
+  if (!instance || selectingReference.value) return;
   const editor = instance.chatElement.richText;
   const documentAtPoint = document as Document & {
     caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
