@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { getRuntimePlatform } from "@/lib/platform";
 import { prepareChromePrompt, requestedRatios } from "./ratio";
+import { assertTabDispatchAvailable } from "./dispatchGuard";
 
 export type BridgeProvider = "muse" | "gemini" | "chatgpt";
 export type BridgeCapability = "text" | "image" | "video";
@@ -180,6 +181,8 @@ class ChromeBridgeRuntime {
     const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(capability => result.capabilities?.includes(capability));
     if (!capabilities.length) throw new Error("Tab không có chức năng đã được xác minh");
     this.selections.set(provider, { tab: found, capabilities, documentToken: result.documentToken });
+    // A deliberate re-selection follows user review of an UNKNOWN tab; ordinary status refresh never clears it.
+    this.recentJobs = this.recentJobs.filter(job => job.tabId !== id || job.state !== "unknown");
     this.recentJobs = this.recentJobs.filter(job => job.provider !== provider);
     return this.status();
   }
@@ -216,7 +219,7 @@ class ChromeBridgeRuntime {
     if (!selection.capabilities.includes(kind)) throw new Error(provider + " chưa hỗ trợ " + kind + " trên tab được chọn");
     if (!prompt.trim() || prompt.length > 100000 || !/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error("Yêu cầu AI không hợp lệ");
     if (images.length > 4 || images.some(image => !/^image\/(png|jpeg|webp)$/.test(image.mimeType) || image.data.length > 20 * 1024 * 1024)) throw new Error("Ảnh tham chiếu không được hỗ trợ hoặc quá lớn");
-    if (this.jobs.has(requestId)) throw new Error("Tác vụ đã được gửi; không gửi trùng");
+    assertTabDispatchAvailable(provider, selection.tab.id, requestId, this.jobs, this.recentJobs);
     const preparedPrompt = prepareChromePrompt(kind, prompt, options);
     return new Promise<BridgeResult>((resolve, reject) => {
       const job: Job = {
@@ -256,7 +259,7 @@ class ChromeBridgeRuntime {
   }
 
   async stop() {
-    for (const job of [...this.jobs.values()]) this.finishJob(job, new Error("Ứng dụng đã đóng; chưa xác định tác vụ bên website"));
+    for (const job of [...this.jobs.values()]) this.finishJob(job, new Error("Ứng dụng đã đóng; chưa xác định tác vụ bên website"), undefined, "unknown");
     for (const [id, call] of this.calls) { clearTimeout(call.timer); call.reject(new Error("Ứng dụng đã đóng")); this.calls.delete(id); }
     this.socket?.close(); this.socket = undefined;
     this.server?.stop(true); this.server = undefined; this.selections.clear(); this.token = "";
