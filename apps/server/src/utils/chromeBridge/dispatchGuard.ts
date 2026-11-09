@@ -36,12 +36,13 @@ export function bridgeDiagnosis(status: {
   ];
   const providers = (["muse", "gemini", "chatgpt"] as const).map(provider => {
     const choice = status.selected?.[provider];
+    const capabilityReady = !!choice?.capabilities.length;
     const running = status.jobs?.some(job => job.provider === provider && job.tabId === choice?.tab.id && ["submitting", "running"].includes(job.state)) ?? false;
     const unknown = status.jobs?.some(job => job.provider === provider && job.tabId === choice?.tab.id && job.state === "unknown") ?? false;
-    return { provider, tabId: choice?.tab.id ?? null, connected: extensionConnected && !!choice,
+    return { provider, tabId: choice?.tab.id ?? null, connected: extensionConnected && capabilityReady,
       capabilities: extensionConnected ? [...choice?.capabilities ?? []] : [],
-      state: !extensionConnected || !choice ? "offline" : unknown ? "unknown" : running ? "running" : "ready",
-      reason: !extensionConnected ? "Kiểm tra Relay, thiết bị và Extension" : !choice ? "Chưa chọn và xác minh tab" : unknown ? "Kết quả tác vụ cũ chưa rõ; không tự retry" : running ? "Tab đang xử lý" : "Tab đã được probe xác nhận",
+      state: !extensionConnected || !choice || !capabilityReady ? "offline" : unknown ? "unknown" : running ? "running" : "ready",
+      reason: !extensionConnected ? "Kiểm tra Relay, thiết bị và Extension" : !choice ? "Chưa chọn và xác minh tab" : !capabilityReady ? "Tab chưa có khả năng AI được xác nhận" : unknown ? "Kết quả tác vụ cũ chưa rõ; không tự retry" : running ? "Tab đang xử lý" : "Tab đã được probe xác nhận",
     };
   });
   return { stages, providers, pendingJobs: status.jobs?.filter(job => ["submitting", "running"].includes(job.state)).length ?? 0 };

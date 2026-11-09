@@ -63,6 +63,16 @@ describe("HD-07 Chrome Bridge safety and diagnostic regressions", () => {
       expect(diagnostics.pendingJobs).toBe(state === "running" ? 1 : 0);
     }
   });
+  test("a selected tab with no verified capabilities is not reported ready", () => {
+    const result = bridgeDiagnosis({ enabled: true, connected: true, mode: "local",
+      selected: { muse: { tab: { id: 11 }, capabilities: [] } } });
+    const muse = result.providers.find(item => item.provider === "muse");
+    expect(muse?.tabId).toBe(11);
+    expect(muse?.connected).toBe(false);
+    expect(muse?.state).toBe("offline");
+    expect(muse?.capabilities).toEqual([]);
+    expect(muse?.reason).toContain("chưa có khả năng AI");
+  });
   test("an older UNKNOWN job on another tab does not mislabel the freshly selected tab", () => {
     const result = bridgeDiagnosis({ enabled: true, connected: true, mode: "local",
       selected: { muse: { tab: { id: 9 }, capabilities: ["image"] } },
