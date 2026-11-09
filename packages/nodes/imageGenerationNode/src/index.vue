@@ -224,14 +224,15 @@ const selectedModel = useNodeModelSelection(models, computed({ get: () => data.v
 const { sizeOptions, ratioOptions } = useImageModelForm(data, selectedModel);
 const modelGroups = computed(() => groupNodeModels(models.value));
 const modelCanGenerate = computed(() => !!selectedModel.value && selectedModel.value.availability !== "needsConfiguration");
-const generationPrompt = computed(() =>
-  [
+const generationPrompt = computed(() => {
+  void vietnamese.value;
+  return [
     (editor.value?.mode === "inpaint" ? data.value.inpaintPrompt : data.value.prompt).trim(),
-    ...refList.value.flatMap((item, index) => (item.dataType === "STRING" && item.value?.trim() ? [`参考 ${index + 1}：\n${item.value.trim()}`] : [])),
+    ...refList.value.flatMap((item, index) => (item.dataType === "STRING" && item.value?.trim() ? [`${nodeText("参考", "Tham chiếu")} ${index + 1}${nodeText("：", ":")}\n${item.value.trim()}`] : [])),
   ]
     .filter(Boolean)
-    .join("\n\n")
-);
+    .join("\n\n");
+});
 const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined>(() => {
   void vietnamese.value;
   const choice = selectedModel.value;
@@ -250,8 +251,8 @@ const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined
   if (inpaint) {
     let imageIndex = 3 + (inpaint.images?.length ?? 0);
     const mapping = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value
-      ? [`参考 ${index + 1} / {{ref ${index + 1}}}${nodeText(" 对应第 ", " tương ứng với ảnh thứ ")}${item.value.url === inpaint.source ? 1 : imageIndex++} 张图`] : []);
-    if (mapping.length) input.prompt += `\n${nodeText("当前节点参考编号对应关系：", "Quy chiếu số thứ tự tham chiếu của node hiện tại:")}${mapping.join("；")}。`;
+      ? [`${nodeText("参考", "Tham chiếu")} ${index + 1} / {{ref ${index + 1}}}${nodeText(" 对应第 ", " tương ứng với ảnh thứ ")}${item.value.url === inpaint.source ? 1 : imageIndex++}${nodeText(" 张图", " ảnh")}`] : []);
+    if (mapping.length) input.prompt += `\n${nodeText("当前节点参考编号对应关系：", "Quy chiếu số thứ tự tham chiếu của node hiện tại:")}${mapping.join(nodeText("；", "; "))}${nodeText("。", ".")}`;
   }
   return input;
 });
@@ -351,10 +352,10 @@ async function confirmInpaint() {
   if (inpaintEditor.busy || generating.value || deleting.value || uploading.value) return;
   if (!generationPrompt.value) throw new Error("请输入重绘提示词");
   if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
-  let prompt = generationPrompt.value.replace(/\{\{ref (\d+)\}\}/g, nodeText("重绘参考 $1", "Tham chiếu vẽ lại $1")).replace(/^参考 (\d+)：/gm, nodeText("重绘参考 $1", "Tham chiếu vẽ lại $1") + "：");
+  let prompt = generationPrompt.value.replace(/\{\{ref (\d+)\}\}/g, nodeText("重绘参考 $1", "Tham chiếu vẽ lại $1")).replace(/^(?:参考|Tham chiếu) (\d+)[：:]/gm, nodeText("重绘参考 $1", "Tham chiếu vẽ lại $1") + nodeText("：", ":"));
   const images = refList.value.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []);
   const imageReferences = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value ? [index + 1] : []);
-  if (imageReferences.length) prompt += `\n${nodeText("重绘参考编号对应关系（前两张为原图和区域引导图）：", "Quy chiếu số thứ tự tham chiếu vẽ lại (hai ảnh đầu tiên là ảnh gốc và ảnh hướng dẫn vùng chỉnh sửa):")}${imageReferences.map((reference, index) => `${nodeText("重绘参考 ", "Tham chiếu vẽ lại ")}${reference}${nodeText(" 对应第 ", " tương ứng với ảnh thứ ")}${index + 3} 张图`).join("；")}。`;
+  if (imageReferences.length) prompt += `\n${nodeText("重绘参考编号对应关系（前两张为原图和区域引导图）：", "Quy chiếu số thứ tự tham chiếu vẽ lại (hai ảnh đầu tiên là ảnh gốc và ảnh hướng dẫn vùng chỉnh sửa):")}${imageReferences.map((reference, index) => `${nodeText("重绘参考 ", "Tham chiếu vẽ lại ")}${reference}${nodeText(" 对应第 ", " tương ứng với ảnh thứ ")}${index + 3}${nodeText(" 张图", " ảnh")}`).join(nodeText("；", "; "))}${nodeText("。", ".")}`;
   await inpaintEditor.createInpaint({ prompt, images }, new AbortController().signal);
 }
 
