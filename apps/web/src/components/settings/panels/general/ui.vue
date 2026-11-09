@@ -22,7 +22,7 @@
 
     <section class="settingSection" aria-labelledby="languageTitle">
       <h3 id="languageTitle"><icon-language :size="18" />语言</h3>
-      <p class="description">界面语言立即生效，默认跟随电脑语言。</p>
+      <p class="description">界面语言立即生效，可选择跟随电脑语言。</p>
       <languageSelect class="languageCards" />
     </section>
 

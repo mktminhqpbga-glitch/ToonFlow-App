@@ -12,7 +12,7 @@
     :plans="plans" :selectedPlanId="data.selectedPlanId ?? ''" :tasks="tasks"
     :exportingVideo="exportingVideo" :exportingImage="exportingImage" :exportProgress="exportProgress"
     @exportVideo="exportVideo" @exportImage="exportImage" @addMannequin="addMannequin"
-    @selectPlan="data.selectedPlanId = $event" @loadModels="loadModels" @generate="generate" @editInstruction="setPrompt" @close="editing = false">
+    @cameraChange="saveCameraStudio" @selectPlan="data.selectedPlanId = $event" @loadModels="loadModels" @generate="generate" @editInstruction="setPrompt" @close="editing = false">
     <template #input>
       <referenceItem v-if="refList.length" v-model="refList" @preview="setReferencePreview" @remove="removeReference" />
       <promptInput v-model="promptModel" v-model:text="prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" />
@@ -21,6 +21,8 @@
 </template>
 
 <script setup lang="ts">
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
+import { normalizeCameraSettings, type CameraSettings } from "@toonflow/node-shared/cameraStudio";
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import { IconCube3dSphere } from "@tabler/icons-vue";
@@ -33,7 +35,7 @@ import referenceItem from "@toonflow/node-shared/referenceItem";
 import sceneEditor from "./sceneEditor.vue";
 import { capturePreview, sceneSchema, createEmptyScene, createMannequinObject, createStage, disposeStage, getSceneLighting, type LightingSettings, type SceneDocument, type SceneSettings } from "./scene";
 import { createDirectorDraft } from "./agentTools";
-import { directorPrompt } from "./agentPrompt";
+import { directorPrompt, directorPromptVi } from "./agentPrompt";
 import { anchorSchema, prepareMotion, sampleMotion, type CameraAnchor } from "./motion";
 import { directorPlanSchema, prepareSceneAnimation, type DirectorPlan, type DirectorGeneration } from "./sceneAnimation";
 import { renderImage, renderVideo } from "./renderMedia";
@@ -50,7 +52,8 @@ defineOptions({
   icon: IconCube3dSphere,
   handles: [{ id: "in", type: "target", dataType: ["STRING", "IMAGE", "VIDEO"], label: "文本、图片、视频输入" }] satisfies NodeHandle[],
 });
-const { node, nodeProps, previewReady, ai, files, nodeEvent } = useNode({ label: "3D导演台", onModelsChanged: () => void loadModels() });
+const vietnamese = useNodeVietnamese();
+const { node, nodeProps, previewReady, ai, files, nodeEvent } = useNode({ label: () => { void vietnamese.value; return nodeText("3D导演台", "Bàn đạo diễn 3D"); }, onModelsChanged: () => void loadModels() });
 const vLoading = ElLoading.directive;
 const { addNodes, findNode, getNodes, nodeTypes, removeNodes } = useVueFlow();
 const mediaFiles = useNodeFiles();
@@ -146,6 +149,33 @@ async function openEditor() {
   if (!disposed && !modelError.value) editing.value = true;
 }
 
+async function saveCameraStudio(camera: CameraSettings, fov?: number) {
+  if (modelLoading.value || modelError.value || disposed) throw new Error("Không thể lưu camera khi scene đang lỗi");
+  const current = modelDocument.value;
+  const nextScene = sceneSchema.parse({
+    ...current.scene,
+    sceneConfig: {
+      ...current.scene.sceneConfig,
+      cameraStudio: normalizeCameraSettings(camera),
+      camera: fov === undefined ? current.scene.sceneConfig.camera
+        : { ...current.scene.sceneConfig.camera, fov },
+    },
+  });
+  const nextDocument: ModelDocument = { ...current, scene: nextScene };
+  // Update the component model immediately, so successive preset edits use the latest snapshot.
+  // Persist through the existing serialized write queue rather than overlapping writes.
+  modelDocument.value = nextDocument;
+  const saving = modelSaving.then(async () => {
+    const path = await writeModel(files.getWorkspaceFiles(), nextDocument);
+    if (!disposed) data.value.modelPath = path;
+  });
+  modelSaving = saving.catch(() => {});
+  try { await saving; }
+  catch (error) {
+    if (modelDocument.value === nextDocument) modelDocument.value = current;
+    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không lưu được Camera Studio");
+  }
+}
 async function addMannequin() {
   if (modelLoading.value || modelError.value || addingMannequin.value || exportingVideo.value || exportingImage.value || tasks.value.some(task => !task.error)) return;
   addingMannequin.value = true;
@@ -369,7 +399,7 @@ async function generate() {
     await ai.generate({
       references: mediaReferences,
       ...getNodeModelIdentity(choice),
-      systemPrompt: directorPrompt,
+      systemPrompt: document.documentElement.lang === "vi" ? directorPromptVi : directorPrompt,
       prompt: JSON.stringify({ instruction: requirement, references, selectedPlanId: basePlanId, document: draft.summary() }),
       directory,
       tools: draft.tools,

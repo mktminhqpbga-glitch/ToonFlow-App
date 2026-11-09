@@ -7,9 +7,12 @@ export type ImageInpaint = { source: string; original: string; guide: string; ma
 export type InpaintDraftInput = { prompt: string; images?: NodeImageRequest["images"] };
 
 const inpaintInstruction = "对父节点提供的第一张原图片进行局部重绘。第二张图片是同一原图的标注图，红色涂抹标出了需要修改的区域；红色仅用于指示选区，不要把标注画进结果。只修改标注区域，保留原图的构图、尺寸比例和区域外内容，返回完整图片。";
-
+const inpaintInstructionVi = "Hãy vẽ lại một phần ảnh gốc đầu tiên do node nguồn cung cấp. Ảnh thứ hai là ảnh đánh dấu trên cùng ảnh gốc; vùng tô đỏ là khu vực cần sửa, không được vẽ nét đánh dấu màu đỏ lên kết quả. Chỉ thay đổi vùng đánh dấu, giữ nguyên bố cục, tỷ lệ kích thước và mọi nội dung nằm ngoài vùng sửa. Xuất ảnh hoàn chỉnh.";
 export function buildInpaintPrompt(prompt: string) {
-  return prompt.startsWith(inpaintInstruction) ? prompt : `${inpaintInstruction}\n\n重绘要求：\n${prompt}`;
+  // The generated instruction is not user-authored text. Preserve the latter byte-for-byte.
+  if (prompt.startsWith(inpaintInstruction) || prompt.startsWith(inpaintInstructionVi)) return prompt;
+  const vietnamese = typeof document !== "undefined" && document.documentElement.lang === "vi";
+  return `${vietnamese ? inpaintInstructionVi : inpaintInstruction}\n\n${vietnamese ? "Yêu cầu vẽ lại:" : "重绘要求："}\n${prompt}`;
 }
 
 export function buildInpaintRequest<T extends Pick<NodeImageRequest, "prompt" | "images">>(input: T, inpaint: ImageInpaint): T {

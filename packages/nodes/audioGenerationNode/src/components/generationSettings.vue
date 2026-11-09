@@ -1,7 +1,7 @@
 <template>
   <el-popover v-model:visible="settingsVisible" trigger="click" placement="top-start" width="min(380px, calc(100vw - 24px))" :disabled="disabled" :showArrow="false" :popperStyle="{ padding: '16px' }">
     <template #reference>
-      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" aria-label="音频生成设置">
+      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" :aria-label="localized('音频生成设置', 'Cài đặt tạo âm thanh')">
         <icon-adjustments-horizontal :size="15" aria-hidden="true" />
         <span>{{ languageLabel }} · {{ sampleRate / 1000 }}k · {{ format }}</span>
         <component :is="settingsVisible ? IconChevronDown : IconChevronUp" :size="14" aria-hidden="true" />
@@ -10,20 +10,20 @@
     <div class="generationSettings nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop @wheel.stop>
       <div class="settingsHeader">
         <icon-adjustments-horizontal :size="17" aria-hidden="true" />
-        <span>音频参数</span>
+        <span>{{ localized('音频参数', 'Thông số âm thanh') }}</span>
       </div>
       <div class="settingsFields">
         <div class="settingField">
-          <span class="fieldLabel">语种</span>
-          <el-segmented v-model="language" :options="languageOptions" :disabled="disabled" block aria-label="音频语种" />
+          <span class="fieldLabel">{{ localized('语种', 'Ngôn ngữ') }}</span>
+          <el-segmented v-model="language" :options="audioLanguageOptions" :disabled="disabled" block :aria-label="localized('音频语种', 'Ngôn ngữ âm thanh')" />
         </div>
         <div class="settingField">
-          <span class="fieldLabel">采样率</span>
-          <el-segmented v-model="sampleRate" :options="sampleRates" :disabled="disabled" block aria-label="音频采样率" />
+          <span class="fieldLabel">{{ localized('采样率', 'Tần số lấy mẫu') }}</span>
+          <el-segmented v-model="sampleRate" :options="sampleRates" :disabled="disabled" block :aria-label="localized('音频采样率', 'Tần số lấy mẫu âm thanh')" />
         </div>
         <div class="settingField">
-          <span class="fieldLabel">输出格式</span>
-          <el-segmented v-model="format" :options="formats" :disabled="disabled" block aria-label="音频输出格式" />
+          <span class="fieldLabel">{{ localized('输出格式', 'Định dạng đầu ra') }}</span>
+          <el-segmented v-model="format" :options="formats" :disabled="disabled" block :aria-label="localized('音频输出格式', 'Định dạng âm thanh')" />
         </div>
       </div>
       <div class="settingsSummary">{{ languageLabel }} · {{ sampleRate / 1000 }} kHz · {{ formatLabels[format] ?? format }}</div>
@@ -39,7 +39,10 @@ import { IconAdjustmentsHorizontal, IconChevronDown, IconChevronUp } from "@tabl
 import type { NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import modelForm from "@toonflow/node-shared/modelForm";
 import { languageOptions, sampleRateOptions, formatOptions } from "../audioSettings";
+import { useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 
+const vietnamese = useNodeVietnamese();
+const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 defineProps<{ model?: NodeMediaModel; disabled?: boolean }>();
 const settingsVisible = ref(false);
 const language = defineModel<string>("language", { required: true });
@@ -49,7 +52,12 @@ const other = defineModel<Record<string, unknown>>("other", { required: true });
 const formatLabels: Record<string, string> = { wav: "WAV", mp3: "MP3", pcm: "PCM", ogg_opus: "Ogg Opus" };
 const sampleRates = sampleRateOptions.map(value => ({ label: `${value / 1000}k`, value }));
 const formats = formatOptions.map(value => ({ label: value === "ogg_opus" ? "Opus" : formatLabels[value], value }));
-const languageLabel = computed(() => languageOptions.find(item => item.value === language.value)?.label ?? language.value);
+// Localize the visible names only; retain the provider's protocol language codes.
+const audioLanguageOptions = computed(() => languageOptions.map(item => ({
+  ...item, label: item.value === "zh-CN" ? localized("中文", "Tiếng Trung")
+    : item.value === "en" ? localized("英文", "Tiếng Anh") : item.label,
+})));
+const languageLabel = computed(() => audioLanguageOptions.value.find(item => item.value === language.value)?.label ?? language.value);
 </script>
 
 <style scoped lang="scss">

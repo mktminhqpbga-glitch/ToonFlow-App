@@ -1,7 +1,7 @@
 <template>
   <div class="videoPlayer" role="region" tabindex="0" :aria-label="playerLabel" :aria-busy="preparing" @keydown.self="handleKeydown" @focusin="player && (player.controls.show = true)">
     <div ref="container" class="playerSurface" />
-    <div v-if="preparing || previewError" class="previewStatus" role="status">{{ preparing ? '正在生成兼容预览…' : previewError }}</div>
+    <div v-if="preparing || previewError" class="previewStatus" role="status">{{ preparing ? translate('正在生成兼容预览…') : previewError }}</div>
   </div>
 </template>
 

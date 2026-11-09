@@ -5,4 +5,4 @@ export default createNodeConfig({
   displayName: "音频生成",
   author: "Toonflow",
   github: "https://github.com/HBAI-Ltd/Toonflow-app",
-}, import.meta.url);
+}, import.meta.url, { localizeBuiltIn: true });

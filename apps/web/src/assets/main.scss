@@ -1,3 +1,5 @@
+@use "./typography.scss";
+
 html:root {
   --ui-radius: 8px;
   --ui-radius-small: calc(var(--ui-radius) * 0.5);

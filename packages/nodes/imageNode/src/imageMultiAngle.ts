@@ -67,6 +67,28 @@ export function buildMultiAnglePrompt(value: MultiAngleSettings) {
   const visibility = rearView
     ? "Reconstruct the previously unseen surfaces consistently with the reference. Identity consistency does not require the original face to remain visible: allow the head, body and objects to occlude features naturally. When the reference shows a person from the front, a near-180-degree view shows the back of the head, hair, shoulders and clothing; do not turn the head toward the new camera or copy facial features and front clothing details onto the back. If the reference already shows the person's back, the reverse view may reveal their front."
     : "Render the requested viewpoint with corresponding changes to visible surfaces, occlusion and background perspective.";
+  if (typeof document !== "undefined" && document.documentElement.lang === "vi") {
+    const side = settings.azimuth < 0 ? "trái" : "phải";
+    const horizontalVi = settings.azimuth === 0
+      ? "Giữ vị trí camera trên trục nhìn ngang ban đầu."
+      : settings.azimuth === -180
+        ? "GÓC NHÌN NGƯỢC: di chuyển camera đúng 180 độ quanh chủ thể tới phía đối diện hoàn toàn so với vị trí gốc; hiển thị những mặt vốn quay lưng về camera tham chiếu."
+        : rearView
+          ? `GÓC NHÌN PHÍA SAU: di chuyển camera ${Math.abs(settings.azimuth)} độ về bên ${side} của ảnh tham chiếu, vượt qua góc bên tới nửa không gian phía sau. Vị trí camera còn cách hướng đối diện hoàn toàn ${180 - Math.abs(settings.azimuth)} độ; nhìn về tâm chủ thể. Cần tái hiện các bề mặt trước đó bị che khuất thay vì lặp lại góc chính diện hay góc bên.`
+          : `Di chuyển chính CAMERA ${Math.abs(settings.azimuth)} độ quanh chủ thể về mép ${side} của ảnh tham chiếu, hướng ống kính về tâm chủ thể. Đây là thay đổi vị trí camera, không phải xoay người hoặc di chuyển vật thể trong ảnh.`;
+    const verticalVi = settings.elevation === 0
+      ? "Giữ góc nhìn theo phương dọc ban đầu."
+      : `Đặt camera ${Math.abs(settings.elevation)} độ ${settings.elevation > 0 ? "phía trên mặt phẳng nhìn gốc, ống kính hướng xuống" : "phía dưới mặt phẳng nhìn gốc, ống kính hướng lên"} để ngắm tâm chủ thể.`;
+    const visibilityVi = rearView
+      ? "Tái dựng bề mặt chưa thấy dựa trên đặc điểm tham chiếu. Không cần giữ khuôn mặt gốc luôn nhìn thấy: đầu, thân và vật thể có thể che khuất nhau một cách tự nhiên. Nếu ảnh gốc nhìn người từ trước, góc gần 180 độ phải thấy phía sau đầu, tóc, vai và quần áo; không quay đầu người về camera mới hoặc sao chép mặt và chi tiết áo trước sang mặt sau. Nếu ảnh gốc chụp từ sau lưng thì góc ngược có thể cho thấy phía trước."
+      : "Hiển thị bề mặt, vùng che khuất và phối cảnh hậu cảnh đúng với vị trí camera mới.";
+    return [
+      `Chụp lại khung cảnh trong ảnh {{ref 1}} từ VỊ TRÍ CAMERA MỚI. ${horizontalVi} ${verticalVi} Chỉ di chuyển camera; giữ nguyên hướng thế giới của chủ thể và bối cảnh.`,
+      `Dùng ảnh tham chiếu làm hệ tọa độ: +X hướng sang mép phải ảnh, +Y hướng lên, +Z hướng về camera ban đầu. Tâm chủ thể là (0, 0, 0), camera gốc tại (0, 0, 4.8), camera mới tại (${Number(position.x.toFixed(3))}, ${Number(position.y.toFixed(3))}, ${Number(position.z.toFixed(3))}), hướng nhìn vào (0, 0, 0).`,
+      `Khoảng cách camera: ${settings.distance.toFixed(1)} đơn vị chuẩn hóa (khoảng cách gốc 4.8), bằng ${(settings.distance / 4.8).toFixed(2)} lần khoảng cách tham chiếu. Dùng tiêu cự tương đương ${multiAngleFocalLengths[settings.lens]} mm, ${settings.lens === "wide" ? "ống kính góc rộng không méo mắt cá" : "ống kính tiêu chuẩn"}.`,
+      `Giữ nguyên các chủ thể, danh tính, số lượng, trang phục, tóc, màu, vật liệu và phong cách. ${visibilityVi} Cập nhật phối cảnh nền theo camera mới. Không lật gương, đổi trái/phải giải phẫu, hoặc chỉ bóp méo phối cảnh phẳng thay vì tạo góc nhìn mới. Xuất một ảnh hoàn chỉnh, không thêm camera, đường dẫn hoặc nhãn chữ.`,
+    ].join("\n");
+  }
   return [
     `Photograph the scene in reference image {{ref 1}} from a NEW CAMERA POSITION. ${horizontal} ${vertical} Move only the camera; keep the subject and scene in their original world orientation.`,
     `Use the reference image as the coordinate basis: +X points to its right edge, +Y points up, +Z points toward the original camera. The subject center is (0, 0, 0), the original camera is (0, 0, 4.8), and the new camera is (${Number(position.x.toFixed(3))}, ${Number(position.y.toFixed(3))}, ${Number(position.z.toFixed(3))}), looking at (0, 0, 0).`,

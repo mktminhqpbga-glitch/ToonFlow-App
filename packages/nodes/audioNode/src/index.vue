@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, ref, watch } from "vue";
 import { IconMusic, IconUpload, IconTransfer, IconScissors, IconGauge, IconTextRecognition, IconPlayerStop } from "@tabler/icons-vue";
 import { ElButton, ElMessage } from "element-plus";
@@ -65,8 +66,9 @@ defineOptions({
   icon: IconMusic,
   handles: [{ id: "audio", type: "source", dataType: "AUDIO", label: "音频输出" }] satisfies NodeHandle[],
 });
+const vietnamese = useNodeVietnamese();
 const { node, nodeProps, outputs, nodeEvent, files, updateNodeInternals } = useNode({
-  label: "音频",
+  label: () => { void vietnamese.value; return nodeText("音频", "Âm thanh"); },
 });
 const fileInput = ref<HTMLInputElement>();
 const uploading = ref(false);

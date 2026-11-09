@@ -1,25 +1,25 @@
 <template>
   <el-popover v-model:visible="settingsVisible" trigger="click" placement="top-start" width="min(340px, calc(100vw - 24px))" :disabled="disabled" :showArrow="false" :popperStyle="{ padding: '14px' }">
     <template #reference>
-      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" aria-label="图片生成设置">
+      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" :aria-label="localized('图片生成设置', 'Cài đặt tạo ảnh')">
         <span class="ratioShape" :style="ratioStyle(ratio)" aria-hidden="true" />
-        <span>{{ ratio }} · {{ size }} · 1张</span>
+        <span>{{ ratio }} · {{ size }} · {{ localized("1张", "1 ảnh") }}{{ camera?.enabled ? " · Camera" : "" }}</span>
         <component :is="settingsVisible ? IconChevronDown : IconChevronUp" :size="14" aria-hidden="true" />
       </el-button>
     </template>
     <div class="generationSettings nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop @wheel.stop>
-      <div class="sectionLabel">分辨率</div>
-      <el-radio-group v-model="size" class="sizeOptions" :disabled="disabled" aria-label="图片分辨率">
+      <div class="sectionLabel">{{ localized("分辨率", "Độ phân giải") }}</div>
+      <el-radio-group v-model="size" class="sizeOptions" :disabled="disabled" :aria-label="localized('图片分辨率', 'Độ phân giải ảnh')">
         <el-radio-button v-for="item in sizes" :key="item" :value="item">{{ item }}</el-radio-button>
       </el-radio-group>
-      <div class="sectionLabel">比例</div>
-      <div class="ratioOptions" role="group" aria-label="图片比例">
+      <div class="sectionLabel">{{ localized("比例", "Tỷ lệ khung hình") }}</div>
+      <div class="ratioOptions" role="group" :aria-label="localized('图片比例', 'Tỷ lệ ảnh')">
         <el-button
           v-for="item in ratios"
           :key="item"
           class="ratioButton"
           :disabled="disabled"
-          :aria-label="`比例 ${item}`"
+          :aria-label="`${localized('比例', 'Tỷ lệ')} ${item}`"
           :aria-pressed="ratio === item"
           @click="ratio = item">
           <span class="ratioContent">
@@ -29,22 +29,30 @@
         </el-button>
       </div>
       <modelForm v-model="other" :rules="model?.rules" :disabled="disabled" />
+      <cameraStudioPanel v-model="camera" :disabled="disabled" />
+      <el-text v-if="model?.providerId === 'chromeBridge'" type="warning" size="small">{{ localized("Chrome 比例只是提示词要求，无法保证。生成后请检查图片尺寸。", "Tỷ lệ Chrome là yêu cầu trong prompt, không được bảo đảm. Kiểm tra kích thước ảnh sau khi tạo.") }}</el-text>
     </div>
   </el-popover>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { ElButton, ElPopover, ElRadioGroup, ElRadioButton } from "element-plus";
+import { ElButton, ElPopover, ElRadioGroup, ElRadioButton, ElText } from "element-plus";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-vue";
 import type { NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import modelForm from "./modelForm.vue";
+import cameraStudioPanel from "./cameraStudio.vue";
+import type { CameraSettings } from "../cameraStudio";
+import { useNodeVietnamese } from "../nodeLanguage";
 
 defineProps<{ sizes: string[]; ratios: string[]; model?: NodeMediaModel; disabled?: boolean }>();
+const vietnamese = useNodeVietnamese();
+const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 const settingsVisible = ref(false);
 const size = defineModel<string>("size", { required: true });
 const ratio = defineModel<string>("ratio", { required: true });
 const other = defineModel<Record<string, unknown>>("other", { required: true });
+const camera = defineModel<CameraSettings | undefined>("camera");
 
 function ratioStyle(value: string) {
   const [width = 1, height = 1] = value.split(":").map(Number);
