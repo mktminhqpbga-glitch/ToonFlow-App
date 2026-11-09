@@ -21,7 +21,7 @@ async function check(url: string, options: RequestInit, validate: (response: Res
   }
 }
 
-await check(web, {}, async response => (await response.text()).includes("<html"), "Web HTML reachable");
+await check(web, {}, async response => /<html(?:\\s|>)/i.test(await response.text()), "Web HTML reachable");
 await check(`${server}/api/workspaces/list`, {}, async response => {
   const payload: unknown = await response.json();
   return typeof payload === "object" && payload !== null && "code" in payload && payload.code === 200
