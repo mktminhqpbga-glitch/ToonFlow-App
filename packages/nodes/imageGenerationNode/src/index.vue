@@ -18,10 +18,10 @@
       <el-button :icon="IconLayoutGrid" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl" :loading="gridSplit?.splitting" text :title="vietnamese ? 'Chia ảnh thành ô' : '宫格切分'" :aria-label="vietnamese ? 'Chia ảnh thành ô' : '宫格切分'" @click.stop="gridSplit?.open($event)">{{ vietnamese ? 'Chia ảnh thành ô' : '宫格切分' }}</el-button>
       <mediaHistory mediaType="image" :current="outputFile" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @select="outputs.image = { dataType: 'IMAGE', value: $event }" />
       <el-button :icon="IconTransfer" :loading="uploading" :disabled="generating || deleting || lighting?.generating || multiAngle?.generating || panorama?.busy" text :title="vietnamese ? 'Thay ảnh' : '替换图片'" :aria-label="vietnamese ? 'Thay ảnh' : '替换图片'" @click.stop="fileInput?.click()">{{ vietnamese ? 'Thay ảnh' : '替换图片' }}</el-button>
-      <input ref="fileInput" type="file" accept="image/*" hidden aria-label="选择替换图片" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @change="replaceOutput" />
+      <input ref="fileInput" type="file" accept="image/*" hidden :aria-label="vietnamese ? 'Chọn ảnh thay thế' : '选择替换图片'" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @change="replaceOutput" />
     </template>
     <template #topRightActions>
-      <el-button :icon="IconPencil" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="标记" aria-label="标记" @click.stop="startEditor('mark')" />
+      <el-button :icon="IconPencil" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text :title="vietnamese ? 'Đánh dấu' : '标记'" :aria-label="vietnamese ? 'Đánh dấu' : '标记'" @click.stop="startEditor('mark')" />
     </template>
     <div v-loading="generating || uploading" class="imageContent nopan" :aria-busy="generating || uploading" :draggable="!!outputFile" @dragstart.capture="dragOutputReference">
       <imageEditor
@@ -34,8 +34,8 @@
         @load="resizeImage"
         @error="showNodeError('无法预览该图片', '图片预览失败')" />
       <div v-else-if="inpaintGuideUrl" class="inpaintGuide">
-        <img :src="inpaintGuideUrl" alt="局部重绘标注图" draggable="false" @load="resizeImage" @error="showNodeError('无法读取重绘标注图', '重绘标注读取失败')" />
-        <span>红色标注为重绘区域</span>
+        <img :src="inpaintGuideUrl"  :alt="vietnamese ? 'Ảnh đánh dấu vùng cần vẽ lại' : '局部重绘标注图'" draggable="false" @load="resizeImage" @error="showNodeError('无法读取重绘标注图', '重绘标注读取失败')" />
+        <span>{{ vietnamese ? "Vùng tô đỏ là khu vực cần vẽ lại" : "红色标注为重绘区域" }}</span>
       </div>
       <div v-else class="imageEmpty" role="img" :aria-label="vietnamese ? 'Chưa có ảnh được tạo' : '暂无生成图片'">
         <icon-photo-ai :size="48" stroke="1.25" aria-hidden="true" />
@@ -45,7 +45,7 @@
       <div v-if="lightingVisible" ref="lightingTarget" />
       <div v-else-if="multiAngleVisible" ref="multiAngleTarget" />
       <el-card v-else class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
-        <el-button v-if="inpaintGuideUrl && editor?.mode !== 'inpaint'" class="inpaintInfo" text :icon="IconBrush" @click="inpaintPreviewVisible = true">查看重绘标注</el-button>
+        <el-button v-if="inpaintGuideUrl && editor?.mode !== 'inpaint'" class="inpaintInfo" text :icon="IconBrush" @click="inpaintPreviewVisible = true">{{ vietnamese ? "Xem vùng đã đánh dấu" : "查看重绘标注" }}</el-button>
         <referenceItem
           v-if="refList.length"
           v-model="refList"
@@ -99,7 +99,7 @@
             :sizes="sizeOptions"
             :ratios="ratioOptions"
             :disabled="generating || deleting || !modelCanGenerate" />
-          <el-button v-if="editor?.mode === 'inpaint'" class="confirmButton" type="primary" :icon="IconCheck" :loading="editor.busy" :disabled="deleting || uploading || !generationPrompt" @click="confirmInpaint().catch(error => showNodeError(error, '重绘节点创建失败'))">确认</el-button>
+          <el-button v-if="editor?.mode === 'inpaint'" class="confirmButton" type="primary" :icon="IconCheck" :loading="editor.busy" :disabled="deleting || uploading || !generationPrompt" @click="confirmInpaint().catch(error => showNodeError(error, '重绘节点创建失败'))">{{ vietnamese ? "Xác nhận" : "确认" }}</el-button>
           <div v-else class="generationActions">
             <mediaPrice v-if="priceInput" :input="{ ...priceInput, mediaType: 'image' }" :supported="selectedModel?.supportsPrice === true" />
             <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" :title="vietnamese ? 'Hủy tác vụ' : '放弃任务'" :aria-label="vietnamese ? 'Hủy tác vụ' : '放弃任务'" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
