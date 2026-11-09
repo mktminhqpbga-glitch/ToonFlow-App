@@ -23,7 +23,7 @@
     <template #topRightActions>
       <el-button :icon="IconPencil" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="标记" aria-label="标记" @click.stop="startEditor('mark')" />
     </template>
-    <div v-loading="generating || uploading" class="imageContent nopan" :aria-busy="generating || uploading">
+    <div v-loading="generating || uploading" class="imageContent nopan" :aria-busy="generating || uploading" :draggable="!!outputFile" @dragstart.capture="dragOutputReference">
       <imageEditor
         v-if="previewUrl"
         ref="editor"
@@ -261,6 +261,13 @@ const priceInput = computed(() => {
   if (!input || inpaint && !Array.isArray(inpaint.images)) return;
   return inpaint ? buildInpaintRequest(input, inpaint) : input;
 });
+function dragOutputReference(event: DragEvent) {
+  if (!outputFile.value || !event.dataTransfer) { event.preventDefault(); return; }
+  event.dataTransfer.effectAllowed = "copy";
+  // The drop target validates this real Canvas node + output handle before connecting it.
+  event.dataTransfer.setData("application/toonflow-material-reference", encodeURIComponent(JSON.stringify([id, "image"])));
+}
+
 const outputFile = computed(() => outputs.value.image?.dataType === "IMAGE" ? outputs.value.image.value : undefined);
 const ratioReport = computed(() => outputFile.value ? data.value.cameraHistory?.[outputFile.value.url] : undefined);
 const inpaintGuideUrl = files.useFileUrl(
