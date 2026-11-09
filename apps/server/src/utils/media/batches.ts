@@ -290,7 +290,7 @@ export async function mergeBatchVideos(cwd: string, id: string, owner?: AuthIden
       const audio = data.streams.find(stream => stream.codec_type === "audio");
       resolve({ codec: video.codec_name, width: video.width, height: video.height, hasAudio: !!audio,
         fps: video.avg_frame_rate, pixelFormat: video.pix_fmt,
-        audioCodec: audio?.codec_name, audioSampleRate: audio?.sample_rate });
+        audioCodec: audio?.codec_name, audioSampleRate: audio?.sample_rate === undefined ? undefined : String(audio.sample_rate) });
     });
   })));
   if (!areConcatStreamsCompatible(probes))
