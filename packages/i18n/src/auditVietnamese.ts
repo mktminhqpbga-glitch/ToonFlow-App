@@ -47,8 +47,9 @@ const stats = {
   parseFailures: failures.length,
 };
 console.log("[VI AUDIT] " + JSON.stringify(stats));
-for (const item of missing.slice(0, 60)) console.log("[VI MISSING] " + JSON.stringify(item));
-if (missing.length > 60) console.log("[VI MISSING] " + (missing.length - 60) + " additional keys; see --strict or local catalog output.");
+const visibleCount = process.argv.includes("--all") ? missing.length : 60;
+for (const item of missing.slice(0, visibleCount)) console.log("[VI MISSING] " + JSON.stringify(item));
+if (missing.length > visibleCount) console.log("[VI MISSING] " + (missing.length - visibleCount) + " additional keys; run with --all for complete list.");
 for (const item of failures.slice(0, 20)) console.error("[VI PARSE ERROR] " + item);
 if (failures.length || untranslatedValues.length || process.argv.includes("--strict") && missing.length) {
   process.exitCode = 1;
