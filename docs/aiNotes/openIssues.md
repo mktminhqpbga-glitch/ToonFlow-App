@@ -356,3 +356,13 @@
 - **Đã kiểm tra và sửa:** 536 khóa UI thiếu tiếng Việt tại mốc audit ban đầu; cập nhật từ điển lên 4.884 mục, audit `--strict` toàn bộ `apps/web/src`, `packages/nodeShared/src`, `packages/nodeScaffold/src`, `packages/nodes`. CI #42567345816 PASS với 0 ứng viên UI thiếu, 0 giá trị dịch chứa chữ Hán, 0 lỗi parse. Việt hóa các prompt tạo media, phân tích video, vẽ lại, panorama, góc máy, ánh sáng và sub-agent; thêm regression tests.
 - **Giới hạn cần nói rõ:** 0 **khóa còn thiếu trong tập ứng viên UI do máy phân tích nhận biết**, không phải 0 ký tự tiếng Trung trong repository. Nhánh ngôn ngữ Trung Quốc vẫn phải giữ để hỗ trợ người dùng chọn zh-CN. Không có cách đáng tin để kết luận mọi chuỗi UI/prompt ẩn tùy biến đều đã được phát hiện và dịch chỉ dựa trên kiểm thử tĩnh.
 - **Cần nghiệm thu tiếp:** trên Mac Intel Ventura mở Web/Server; chuyển giữa `vi` → `en` → `vi`, kiểm tra giao diện từng node, thông báo lỗi, tooltip, lịch sử, Audio Generation, camera, thư viện vật liệu, Studio, lưu/mở lại; kiểm tra request gửi tới model thật với locale vi và payload user prompt không bị thay đổi. Phần browser và provider thật **NOT TESTED/BLOCKED**.
+
+
+### ISSUE-0036 — HD-08 Việt hóa chưa đủ 100% nguồn giao diện và prompt ẩn
+
+- **Ngày/người trực tiếp rà soát và sửa:** 2026-11-09, ChatGPT (GPT-6). **Trạng thái: MỞ — PARTIAL.**
+- **Đã sửa code và kiểm thử CI:** dynamic Panorama Preview, Frame Analysis runtime messages, Video Player preview, provider tester errors/log placeholders/system repair prompt, 22 lỗi backend media, 10 khóa `vi.json`, test 9 node UMD sử dụng `localizeBuiltIn`. Đã bổ sung kiểm toán thành `dictionaryCoveredUnverified` và `noVietnameseDictionaryKey`.
+- **Bằng chứng test:** [run #42587671929](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42587671929): 72 PASS, 0 FAIL, UI AST thiếu 0 key trong các phạm vi công bố. Bản cập nhật mới hơn tiếp tục đòi CI.
+- **Vẫn thiếu:** xem xét 1.538 ứng viên literal tiếng Trung tại run nêu trên (836 có dictionary chưa rõ thực thi, 702 thiếu dictionary, gồm 61 dòng ứng viên liên quan prompt); xem thêm các gói plugin/skill, thông báo runtime không đi qua bộ i18n, xác thực mọi prompt ẩn và UI trình duyệt thật. Không tự dịch các identifier/schema/enum/API hoặc văn bản người dùng.
+- **Kiểm thử trên Mac:** chưa mở ứng dụng trên Mac Ventura từ phiên hiện tại. Dùng [checklist](./hd08VietnameseAcceptance.md); kiểm tra vi→en→vi, reload, Panorama, Audio, Frame Analysis, model tester, Agent và hidden prompts thật.
+- **Không đánh dấu DONE:** CI/AST PASS chỉ xác nhận phạm vi test, không chứng minh mọi màn hình và prompt đã Việt hóa.
