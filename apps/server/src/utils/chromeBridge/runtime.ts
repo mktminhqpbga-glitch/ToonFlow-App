@@ -228,7 +228,7 @@ class ChromeBridgeRuntime {
       };
       const cancel = () => {
         void this.call("cancel", { id: requestId, tabId: job.tabId }).catch(() => {});
-        this.finishJob(job, new DOMException("Đã yêu cầu hủy; kết quả trên website có thể vẫn tiếp tục", "AbortError"));
+        this.finishJob(job, new DOMException("Đã yêu cầu hủy; kết quả trên website có thể vẫn tiếp tục", "AbortError"), undefined, "unknown");
       };
       job.abort = () => signal?.removeEventListener("abort", cancel);
       this.jobs.set(requestId, job);
