@@ -10,22 +10,22 @@
     :bottomWidth="660"
     :style="{ width: previewUrl && videoWidth ? `${videoWidth + 18}px` : undefined }">
     <template #topActions>
-      <el-button :icon="IconMusic" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('extractAudio')">提取音轨</el-button>
-      <el-button :icon="IconLayersSubtract" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('separate')">分离音视频</el-button>
-      <el-button :icon="IconScissors" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('trim')">截取片段</el-button>
-      <el-button :icon="IconMovie" text :loading="actions?.creatingAnalysis" :disabled="!outputFile || generating || deleting || uploading || actions?.processing || actions?.creatingAnalysis" @click.stop="actions?.createFrameAnalysis()">逐帧拉片</el-button>
+      <el-button :icon="IconMusic" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('extractAudio')">{{ vietnamese ? "Trích xuất âm thanh" : "提取音轨" }}</el-button>
+      <el-button :icon="IconLayersSubtract" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('separate')">{{ vietnamese ? "Tách âm thanh và video" : "分离音视频" }}</el-button>
+      <el-button :icon="IconScissors" text :disabled="!outputFile || generating || deleting || uploading || actions?.processing" @click.stop="actions?.open('trim')">{{ vietnamese ? "Cắt đoạn video" : "截取片段" }}</el-button>
+      <el-button :icon="IconMovie" text :loading="actions?.creatingAnalysis" :disabled="!outputFile || generating || deleting || uploading || actions?.processing || actions?.creatingAnalysis" @click.stop="actions?.createFrameAnalysis()">{{ vietnamese ? "Phân tích từng khung hình" : "逐帧拉片" }}</el-button>
       <mediaHistory mediaType="video" :current="outputFile" :disabled="generating || deleting || uploading" @select="outputs.video = { dataType: 'VIDEO', value: $event }" />
       <el-button :icon="IconTransfer" :loading="uploading" :disabled="generating || deleting" text :title="vietnamese ? 'Thay video' : '替换视频'" :aria-label="vietnamese ? 'Thay video' : '替换视频'" @click.stop="fileInput?.click()">{{ vietnamese ? 'Thay video' : '替换视频' }}</el-button>
-      <input ref="fileInput" type="file" accept="video/*" hidden aria-label="选择替换视频" :disabled="generating || deleting || uploading" @change="replaceOutput" />
+      <input ref="fileInput" type="file" accept="video/*" hidden :aria-label="vietnamese ? 'Chọn video thay thế' : '选择替换视频'" :disabled="generating || deleting || uploading" @change="replaceOutput" />
     </template>
     <template #topRightActions>
       <el-dropdown trigger="click" placement="bottom-end" :disabled="!player?.ready || player?.capturing || generating || deleting || uploading" @command="player?.captureFrame($event)">
         <el-button :icon="IconPhotoScan" :loading="player?.capturing" :disabled="!player?.ready || player?.capturing || generating || deleting || uploading" text :title="vietnamese ? 'Trích xuất khung hình' : '截取视频帧'" :aria-label="vietnamese ? 'Trích xuất khung hình' : '截取视频帧'" />
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="current" :icon="IconPhotoScan">截取当前帧</el-dropdown-item>
-            <el-dropdown-item command="first" :icon="IconPlayerSkipBack">截取首帧</el-dropdown-item>
-            <el-dropdown-item command="last" :icon="IconPlayerSkipForward">截取尾帧</el-dropdown-item>
+            <el-dropdown-item command="current" :icon="IconPhotoScan">{{ vietnamese ? "Chụp khung hình hiện tại" : "截取当前帧" }}</el-dropdown-item>
+            <el-dropdown-item command="first" :icon="IconPlayerSkipBack">{{ vietnamese ? "Chụp khung hình đầu" : "截取首帧" }}</el-dropdown-item>
+            <el-dropdown-item command="last" :icon="IconPlayerSkipForward">{{ vietnamese ? "Chụp khung hình cuối" : "截取尾帧" }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -49,7 +49,7 @@
           @preview="setReferencePreview"
           @remove="removeReference" />
         <div v-if="frameMode" class="referenceHint">
-          {{ selectedMode === "startFrameOptional" ? "仅一张图片时作为尾帧；两张图片按顺序作为首帧、尾帧" : "图片引用按顺序作为首帧、尾帧" }}
+          {{ vietnamese ? (selectedMode === "startFrameOptional" ? "Một ảnh sẽ làm khung hình cuối; hai ảnh theo thứ tự là khung hình đầu và cuối." : "Ảnh tham chiếu theo thứ tự là khung hình đầu và khung hình cuối.") : (selectedMode === "startFrameOptional" ? "仅一张图片时作为尾帧；两张图片按顺序作为首帧、尾帧" : "图片引用按顺序作为首帧、尾帧") }}
         </div>
         <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" :selectAssetPath="selectAssetPathReference" expandable />
         <div v-if="outputCameraSnapshot" class="cameraSnapshot">
@@ -69,7 +69,7 @@
             :noDataText="vietnamese ? 'Chưa có model phù hợp. Hãy thêm trong Cài đặt.' : '请先在设置中添加视频模型'"
             placement="top-start"
             @update:modelValue="data.model = $event"
-            @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, '模型读取失败'))">
+            @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, vietnamese ? 'Không thể tải danh sách mô hình' : '模型读取失败'))">
             <template v-if="!selectedModel" #prefix><icon-sparkles :size="17" /></template>
             <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
             <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
@@ -97,14 +97,14 @@
           <span v-if="!modelCanGenerate" class="modelUnavailable" role="status">{{ vietnamese ? "Chưa có mô hình video sẵn sàng; có thể chọn tỷ lệ dự kiến, nhưng chưa thể gửi tạo video. Hãy mở Cài đặt AI Bridge / Model AI." : "尚无可用视频模型：可以预选比例，但不能提交生成，请在设置中连接模型。" }}</span>
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'video' }" :supported="selectedModel?.supportsPrice === true" />
-            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" title="放弃任务" aria-label="放弃任务" @click="generationState.cancel().catch(error => showNodeError(error, '停止生成失败'))" />
+            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading" :title="vietnamese ? 'Bỏ tác vụ' : '放弃任务'" :aria-label="vietnamese ? 'Bỏ tác vụ' : '放弃任务'" @click="generationState.cancel().catch(error => showNodeError(error, vietnamese ? 'Không thể dừng tạo video' : '停止生成失败'))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || (!generating && !pendingRecovery && (!generationPrompt || !modelCanGenerate))"
               :title="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo video' : '生成视频')"
               :aria-label="generating ? (vietnamese ? 'Dừng tạo' : '停止生成') : pendingRecovery ? (vietnamese ? 'Kiểm tra lại tác vụ' : '复查任务') : (vietnamese ? 'Tạo video' : '生成视频')"
-              @click="generating ? generationState.cancel().catch(error => showNodeError(error, '停止生成失败')) : startGeneration().catch((error) => showNodeError(error, '视频生成失败'))" />
+              @click="generating ? generationState.cancel().catch(error => showNodeError(error, vietnamese ? 'Không thể dừng tạo video' : '停止生成失败')) : startGeneration().catch((error) => showNodeError(error, vietnamese ? 'Không thể tạo video' : '视频生成失败'))" />
           </div>
         </div>
       </el-card>
