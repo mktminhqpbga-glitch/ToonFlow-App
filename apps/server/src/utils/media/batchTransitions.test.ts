@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { canDispatchBatch, mayResumeBatch, nextQueuedIndex, outstandingScenes, recoverRunningScene, type SceneRecord } from "./batchTransitions";
+import { canDispatchBatch, finishedBatchState, mayResumeBatch, nextQueuedIndex, outstandingScenes, recoverRunningScene, type SceneRecord } from "./batchTransitions";
 
 const scenes = (states: SceneRecord["state"][]): SceneRecord[] =>
   states.map((state, index) => ({ state, taskId: `task-${index}` }));
@@ -41,6 +41,12 @@ describe("persistent media batch recovery (no provider calls)", () => {
     expect(canDispatchBatch("running", scenes(["failed", "queued"]))).toBe(true);
     expect(canDispatchBatch("running", scenes(["running", "queued"]))).toBe(true);
     expect(canDispatchBatch("paused", scenes(["unknown", "queued"]))).toBe(false);
+  });
+  test("batch COMPLETED requires all scene results to have succeeded", () => {
+    expect(finishedBatchState(scenes(["succeeded", "succeeded"]))).toBe("completed");
+    expect(finishedBatchState(scenes(["succeeded", "failed"]))).toBe("partial");
+    expect(finishedBatchState(scenes(["succeeded", "cancelled"]))).toBe("partial");
+    expect(finishedBatchState(scenes([]))).toBe("partial");
   });
   test("duplicate dispatch guards ignore completed scene IDs", () => {
     const records = scenes(["succeeded", "succeeded", "cancelled"]);
