@@ -87,15 +87,27 @@ class RemoteBridge {
     if (this.jobs.size) throw new Error("Finish or cancel remote AI tasks before changing the Relay");
     const next = checkUrl(url);
     if (ownerKey.trim().length < 32) throw new Error("Owner key must have at least 32 characters");
-    const preserve = this.settings.url === next && this.settings.ownerKey === ownerKey.trim();
-    this.stop(); this.settings = { url: next, ownerKey: ownerKey.trim(),
-      deviceId: preserve ? this.settings.deviceId : "", secrets: preserve ? this.settings.secrets : {} };
     const old = this.settings;
-    // Verify credentials before committing secrets to the desktop's mode-0600 config file.
-    await this.request("/v1/owner/devices");
-    persist(old); this.enabled = true;
-    await this.refreshDevices(); this.createChannel();
-    return this.status();
+    const preserve = old.url === next && old.ownerKey === ownerKey.trim();
+    const candidate: RemoteSettings = { url: next, ownerKey: ownerKey.trim(),
+      deviceId: preserve ? old.deviceId : "", secrets: preserve ? { ...old.secrets } : {} };
+    this.stop();
+    this.settings = candidate;
+    try {
+      // Only verified Relay credentials may replace the persisted, working configuration.
+      await this.request("/v1/owner/devices");
+      await this.refreshDevices();
+      persist(this.settings);
+      this.enabled = true;
+      this.createChannel();
+      return this.status();
+    } catch (error) {
+      // An incorrect key or unreachable Render endpoint must never destroy a previously paired device.
+      this.settings = old;
+      this.enabled = true;
+      if (old.url && old.ownerKey) this.createChannel();
+      throw error;
+    }
   }
   async refreshDevices() {
     const [devices, pending] = await Promise.all([
