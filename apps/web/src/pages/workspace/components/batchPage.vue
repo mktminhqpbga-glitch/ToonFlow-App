@@ -38,7 +38,7 @@
       <div class="batchActions">
         <el-button size="small" :disabled="batch.state !== 'running' || controlling === batch.id" @click="control(batch, 'pause')">Tạm dừng</el-button>
         <el-button size="small" :disabled="batch.state !== 'paused' || controlling === batch.id" @click="control(batch, 'resume')">Tiếp tục</el-button>
-        <el-button size="small" type="danger" plain :disabled="['completed','cancelled'].includes(batch.state) || controlling === batch.id" @click="control(batch, 'cancel')">Hủy</el-button>
+        <el-button size="small" type="danger" plain :disabled="['completed','partial','cancelled'].includes(batch.state) || controlling === batch.id" @click="control(batch, 'cancel')">Hủy</el-button>
         <el-button v-if="batch.kind === 'video' && batch.scenes.length > 1" size="small" type="primary"
           :loading="joining === batch.id" :disabled="joining !== '' || batch.state !== 'completed' || batch.scenes.some(scene => scene.state !== 'succeeded')"
           @click="mergeVideo(batch)">Ghép MP4 (FFmpeg)</el-button>
