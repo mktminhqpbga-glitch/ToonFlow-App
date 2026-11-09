@@ -1,5 +1,4 @@
 import { getLocale, t } from "@/lib/i18n";
-const localized = (zh: string, vi: string) => getLocale() === "vi" ? vi : zh;
 import { join } from "node:path";
 import { z } from "zod";
 import { SessionManager, type ToolDefinition } from "@earendil-works/pi-coding-agent";
@@ -9,6 +8,7 @@ import { createAgentToolContext } from "@/agent/tools";
 import { addUsage, emptyUsage, runSubAgent, type SubAgentModel } from "@/agent/runtime/subAgent";
 import { readTeam, saveTeamFile } from "@/utils/teams";
 import { loadTool, validateToolConfig } from "@/utils/plugins/tools";
+const localized = (zh: string, vi: string) => getLocale() === "vi" ? vi : zh;
 
 const resourceSchema = z.strictObject({
   action: z.enum(["list", "read", "write"]),
