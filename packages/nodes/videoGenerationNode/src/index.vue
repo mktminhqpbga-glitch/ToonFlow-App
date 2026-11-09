@@ -30,7 +30,7 @@
         </template>
       </el-dropdown>
     </template>
-    <div v-loading="generating || uploading" class="videoContent nopan" :aria-busy="generating || uploading">
+    <div v-loading="generating || uploading" class="videoContent nopan" :aria-busy="generating || uploading" :draggable="!!outputFile" @dragstart.capture="dragOutputReference">
       <videoPlayer
         v-if="previewUrl"
         ref="player"
@@ -294,6 +294,13 @@ function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory">
       ? { type: reference.index === 0 && firstFrame ? "firstFrame" : "lastFrame" } : reference),
   };
 }
+function dragOutputReference(event: DragEvent) {
+  if (!outputFile.value || !event.dataTransfer) { event.preventDefault(); return; }
+  event.dataTransfer.effectAllowed = "copy";
+  // The drop target validates this real Canvas node + output handle before connecting it.
+  event.dataTransfer.setData("application/toonflow-material-reference", encodeURIComponent(JSON.stringify([id, "video"])));
+}
+
 const outputFile = computed(() => outputs.value.video?.dataType === "VIDEO" ? outputs.value.video.value : undefined);
 const outputCameraSnapshot = computed(() => outputFile.value ? data.value.cameraHistory?.[outputFile.value.url] : undefined);
 const previewUrl = files.useFileUrl(
