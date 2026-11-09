@@ -26,7 +26,7 @@ export function useNodeReferences(handleId = "in") {
   const { id, node } = useNode<NodeData & { referenceOrder?: Record<string, string[]> }>();
   const flow = useVueFlow();
   const { findNode, removeEdges } = flow;
-  const selectNodeAsset = inject<((targetId: string, targetHandleId: string) => Promise<{ source: string; sourceHandle: string } | undefined>) | undefined>("selectNodeAsset", undefined);
+  const selectNodeAsset = inject<((targetId: string, targetHandleId: string, assetPath?: string) => Promise<{ source: string; sourceHandle: string } | undefined>) | undefined>("selectNodeAsset", undefined);
   let disposed = false;
   onScopeDispose(() => { disposed = true; });
   const inputValues = ref<NodeInputValue[]>([]);
@@ -100,6 +100,13 @@ export function useNodeReferences(handleId = "in") {
     if (!disposed && source) return referenceMentions.value.find(item => item.id === referenceKey(source));
   }
 
+  async function selectAssetPathReference(assetPath: string) {
+    if (disposed || findNode(id) !== node || !assetPath || !selectNodeAsset) return;
+    const source = await selectNodeAsset(id, handleId, assetPath);
+    await nextTick();
+    if (!disposed && source) return referenceMentions.value.find(item => item.id === referenceKey(source));
+  }
+
   useNodeEvent().on(`input:${handleId}`, (values) => {
     inputValues.value = values;
     const ids = new Set(values.filter(item => item.dataType === "IMAGE" || item.dataType === "VIDEO").map(referenceKey));
@@ -118,7 +125,7 @@ export function useNodeReferences(handleId = "in") {
     ));
   }
 
-  return { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, setReferencePreview, removeReference };
+  return { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, selectAssetPathReference, setReferencePreview, removeReference };
 }
 
 function referenceKey(item: { source: string; sourceHandle: string }) {
