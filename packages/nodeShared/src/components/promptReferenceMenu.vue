@@ -21,7 +21,7 @@
       <template v-else>
         <section v-for="group in matchingGroups" :key="group.type" class="materialSection" :aria-label="group.label">
           <h2 class="sectionTitle">{{ group.label }}</h2>
-          <button v-for="item in group.items" :key="item.id" type="button" class="menuItem" :class="{ active: activeKey === `material:${item.id}` }" :data-key="`material:${item.id}`" :title="item.name" :disabled="busy || item.disabled" @mousedown.prevent @mouseenter="activeKey = `material:${item.id}`" @focus="activeKey = `material:${item.id}`" @click="emit('selectMaterial', item.id)">
+          <button v-for="item in group.items" :key="item.id" type="button" class="menuItem" :class="{ active: activeKey === `material:${item.id}` }" :data-key="`material:${item.id}`" :title="item.name" :disabled="busy || item.disabled" :draggable="!busy && !item.disabled" @dragstart="startMaterialDrag($event, item)" @mousedown.prevent @mouseenter="activeKey = `material:${item.id}`" @focus="activeKey = `material:${item.id}`" @click="emit('selectMaterial', item.id)">
             <promptReferenceThumbnail :dataType="item.dataType" :media="item.media" />
             <span class="itemName">{{ item.name }}</span>
           </button>
@@ -47,6 +47,14 @@ import { IconChevronRight, IconFileText, IconFolder, IconMusic, IconPhoto, IconS
 import type { MaterialMention, ReferenceMention } from "../useNodeReferences";
 import promptReferenceThumbnail from "./promptReferenceThumbnail.vue";
 import { useNodeVietnamese } from "../nodeLanguage";
+
+const materialDragType = "application/toonflow-material-reference";
+function startMaterialDrag(event: DragEvent, item: MaterialMention) {
+  if (item.disabled || !event.dataTransfer) { event.preventDefault(); return; }
+  event.dataTransfer.effectAllowed = "copy";
+  // Only the stable source/handle pair is transported. The receiving node validates it again.
+  event.dataTransfer.setData(materialDragType, item.id);
+}
 
 const vietnamese = useNodeVietnamese();
 const localized = (chinese: string, vi: string) => vietnamese.value ? vi : chinese;
