@@ -384,3 +384,10 @@
 - Tạo nhánh `feat/toonflow-functional-completion` từ release; bổ sung trigger push CI riêng trên nhánh phát triển (không sửa workflow release), sửa race model fetch trong Batch `73e1731`, thêm kiểm tra regression `f866d62`. Run mới: https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42599007281 (chưa xác nhận kết luận ở lúc ghi).
 - **Còn thiếu:** chạy ứng dụng Mac thật, đổi workspace trong lúc model HTTP pending; xác minh model/queue không giao nhau, save/reload, UI click; nghiệm thu Chrome Companion VM, video/FFprobe thực, và 206-item audit file (không thấy trong Git tree `c73a5e40`).
 - **An toàn:** không gửi AI prompt có phí, không thay đổi Render, không xóa workspace, không merge PR #4.
+
+
+### ISSUE-0039 — Chrome Bridge diagnostic state sau rớt kết nối: chờ nghiệm thu UI/VM
+- **Ngày/người sửa gần nhất:** ChatGPT (GPT-6), 2026-11-09. **CODED + CI TESTED, UI NOT TESTED**.
+- `dispatchGuard.ts` đã sửa để offline ưu tiên stale task, và tab không có capability sẽ không được báo ready; regression mới trong `dispatchGuard.test.ts`. CI từng commit mã: [42607487305](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42607487305) và [42607808516](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42607808516) SUCCESS.
+- Smoke GET read-only cho Web, Workspace, Bridge ở `bun scripts/smokeLocal.ts` (chỉ chạy sau khi mở server/web trên Mac). Không phải Playwright và không chứng minh tương tác thật.
+- **Cần tái hiện/kiểm chứng trên máy chủ sở hữu:** Ngắt rồi nối lại Extension/VM, xác nhận offline/ready, tab/capability và task UNKNOWN, tạo thử media chỉ với đồng ý riêng của chủ tài khoản. Mac browser, Media node reload và queue restart vẫn NOT TESTED.
