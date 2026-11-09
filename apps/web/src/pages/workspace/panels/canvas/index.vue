@@ -294,7 +294,7 @@ type AssetReference = { source: string; sourceHandle: string };
 type AssetSelection = { target: GraphNode; targetHandleId: string; directory: string; sourceId: string; controller: AbortController; signal: AbortSignal; resolve: (reference?: AssetReference) => void };
 const assetSelection = shallowRef<AssetSelection>();
 const assetSelecting = ref(false);
-provide("selectNodeAsset", (targetId: string, targetHandleId: string) => {
+provide("selectNodeAsset", (targetId: string, targetHandleId: string, assetPath?: string) => {
   finishAssetSelection();
   const target = findNode(targetId);
   const directory = project.value?.directory;
@@ -303,6 +303,15 @@ provide("selectNodeAsset", (targetId: string, targetHandleId: string) => {
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, canvasController.signal, workspaceController.signal]);
     assetSelection.value = { target, targetHandleId, directory, sourceId: crypto.randomUUID(), controller, signal, resolve };
+    if (assetPath !== undefined) {
+      const name = assetPath.split("/").pop() ?? "";
+      const entry = { name, path: assetPath, type: "file" };
+      if (canSelectAsset(entry)) {
+        void selectAsset(entry).finally(() => {
+          if (assetSelection.value?.signal === signal) finishAssetSelection();
+        });
+      } else finishAssetSelection();
+    }
     signal.addEventListener("abort", () => {
       if (assetSelection.value?.signal === signal) finishAssetSelection();
     }, { once: true });
