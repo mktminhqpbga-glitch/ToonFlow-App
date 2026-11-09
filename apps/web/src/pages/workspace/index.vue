@@ -28,7 +28,7 @@
     <batchPage v-if="activePanel === 'batchImage' || activePanel === 'batchVideo'"
       :key="JSON.stringify([workspaceStore.project?.directory, activePanel])"
       :kind="activePanel === 'batchImage' ? 'image' : 'video'"
-      :directory="workspaceStore.project?.directory" :active="true" />
+      :directory="workspaceStore.project?.directory" :active="true" @importMedia="importBatchMedia" />
     <workspaceMenu class="workspaceMenu" @openSettings="settingsVisible = true" />
     <div class="workspaceTools">
       <el-segmented :modelValue="activePanel" class="panelSwitcher" :options="panelOptions" size="small" aria-label="切换面板" @change="switchPanel">
@@ -321,6 +321,25 @@ async function switchPanel(value: string | number | boolean) {
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "文本保存失败");
     return false;
+  }
+}
+
+async function importBatchMedia(result: { path: string; mimeType: string; mediaType: "image" | "video" }) {
+  const directory = workspaceStore.project?.directory;
+  if (!directory || !result.path || !result.mimeType) return;
+  if (!result.mimeType.startsWith(result.mediaType + "/")) {
+    ElMessage.error("Loại media không khớp kết quả batch");
+    return;
+  }
+  try {
+    if (!await switchPanel("canvas")) throw new Error("Không thể mở Canvas");
+    if (!canvasPanelRef.value?.canvasReady) throw new Error("Canvas chưa sẵn sàng");
+    if (directory !== workspaceStore.project?.directory) throw new Error("Workspace đã thay đổi");
+    const imported = await canvasPanelRef.value.importWorkspaceMedia(result.path, result.mimeType);
+    if (!imported) throw new Error("Không thể nhập kết quả vào Canvas");
+    ElMessage.success("Đã tạo và lưu node media trên Canvas");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "Không thể nhập kết quả Batch");
   }
 }
 
