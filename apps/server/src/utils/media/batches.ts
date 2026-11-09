@@ -84,10 +84,11 @@ async function reconcile(cwd: string, id: string, index: number, owner?: AuthIde
   if (!scene || scene.state !== "running") return;
   const [task] = await mediaTasks.status(cwd, [scene.taskId], false, owner);
   if (!task || task.state === "running") return "running" as const;
-  if (task.state === "succeeded" && task.result?.data?.length) {
+  if (task.state === "succeeded" && task.result?.data?.length && task.result.data.every(file => file.mediaType === batch.kind)) {
+    const verified = task.result.data.map(file => ({ path: file.path, mimeType: file.mimeType, mediaType: batch.kind }));
     await mutateBatch(cwd, id, owner, record => {
       const current = record.scenes[index];
-      if (current?.state === "running") { current.state = "succeeded"; current.result = task.result!.data!; }
+      if (current?.state === "running") { current.state = "succeeded"; current.result = verified; }
     });
     return "succeeded" as const;
   }
