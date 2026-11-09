@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { lstat, mkdir, readdir, readFile, realpath } from "@toonflow/file";
 import { createWorkspaceFfmpeg } from "@/utils/ffmpeg";
 import { chromeBridge } from "@/utils/chromeBridge/manager";
+import { canDispatchBatch, mayResumeBatch, nextQueuedIndex, recoverRunningScene } from "./batchTransitions";
 import { z } from "zod";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
 import { imageGenerationSchema, videoGenerationSchema } from "./schemas";
@@ -88,8 +89,10 @@ async function reconcile(cwd: string, id: string, index: number, owner?: AuthIde
   const scene = batch.scenes[index];
   if (!scene || scene.state !== "running") return;
   const [task] = await mediaTasks.inspect(cwd, [scene.taskId], owner);
-  if (task?.state === "running" && task.active) return "running" as const;
-  if (task.state === "succeeded" && task.result?.data?.length && task.result.data.every(file => file.mediaType === batch.kind)) {
+  const observed = recoverRunningScene({ state: task?.state ?? "unknown", active: task?.active === true,
+    validResult: !!(task?.result?.data?.length && task.result.data.every(file => file.mediaType === batch.kind)) });
+  if (observed === "running") return "running" as const;
+  if (observed === "succeeded" && task?.result?.data?.length) {
     const verified = task.result.data.map(file => ({ path: file.path, mimeType: file.mimeType, mediaType: batch.kind }));
     await mutateBatch(cwd, id, owner, record => {
       const current = record.scenes[index];
@@ -97,11 +100,11 @@ async function reconcile(cwd: string, id: string, index: number, owner?: AuthIde
     });
     return "succeeded" as const;
   }
-  if (task.state === "failed" || task.state === "cancelled") {
+  if (observed === "failed" || observed === "cancelled") {
     await mutateBatch(cwd, id, owner, record => {
       const current = record.scenes[index];
       if (current?.state === "running") {
-        current.state = task.state === "cancelled" ? "cancelled" : "failed";
+        current.state = observed;
         current.error = task.result?.message?.slice(0, 1000) ?? "Tác vụ thất bại";
       }
     });
@@ -134,7 +137,8 @@ async function processBatch(cwd: string, id: string, owner?: AuthIdentity | null
       }
       continue;
     }
-    const next = batch.scenes.find(scene => scene.state === "queued");
+    const nextIndex = nextQueuedIndex(batch.scenes);
+    const next = nextIndex < 0 ? undefined : batch.scenes[nextIndex];
     if (!next) {
       await mutateBatch(cwd, id, owner, current => {
         if (current.state === "running") current.state = "completed";
@@ -230,7 +234,7 @@ export async function listBatches(cwd: string, owner?: AuthIdentity | null) {
   // an in-flight task from the previous process is inspected without resubmission and
   // becomes UNKNOWN if its provider acknowledgement cannot be proven.
   for (const batch of batches) {
-    if (batch.state === "running" && batch.scenes.some(scene => scene.state === "queued" || scene.state === "running"))
+    if (canDispatchBatch(batch.state, batch.scenes))
       schedule(cwd, batch.id, owner);
   }
   return batches.sort((a, b) => b.createdAt - a.createdAt);
@@ -239,7 +243,7 @@ export async function controlBatch(cwd: string, id: string, action: "pause" | "r
   cwd = await realpath(cwd);
   const state = await mutateBatch(cwd, id, owner, batch => {
     if (action === "pause" && batch.state === "running") batch.state = "paused";
-    if (action === "resume" && batch.state === "paused") batch.state = "running";
+    if (action === "resume" && mayResumeBatch(batch.state, batch.scenes)) batch.state = "running";
     if (action === "cancel" && !["completed", "cancelled"].includes(batch.state)) {
       batch.state = "cancelled";
       for (const scene of batch.scenes) if (scene.state === "queued") scene.state = "cancelled";
