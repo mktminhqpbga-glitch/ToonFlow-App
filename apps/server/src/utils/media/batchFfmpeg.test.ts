@@ -17,7 +17,7 @@ function fingerprint(path: string) {
   };
   const video = probe.streams.find(stream => stream.codec_type === "video");
   const audio = probe.streams.find(stream => stream.codec_type === "audio");
-  if (!video?.codec_name || !video.width || !video.height || Number(probe.format.duration) <= 0) return;
+  if (!video?.codec_name || !video.width || !video.height || !Number.isFinite(Number(probe.format.duration)) || Number(probe.format.duration) <= 0) return;
   return { codec: video.codec_name, width: video.width, height: video.height, hasAudio: !!audio,
     fps: video.avg_frame_rate, pixelFormat: video.pix_fmt,
     audioCodec: audio?.codec_name, audioSampleRate: audio?.sample_rate } satisfies VideoStreamFingerprint;
