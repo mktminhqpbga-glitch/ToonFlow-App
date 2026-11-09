@@ -78,6 +78,8 @@ class RemoteBridge {
     this.selected.clear();
   }
   private rejectPending(reason: string) {
+    // A Relay transport loss invalidates any prior tab/document readiness; require a fresh probe.
+    this.selected.clear();
     for (const [id, call] of this.calls) {
       clearTimeout(call.timeout); call.reject(new Error(reason)); this.calls.delete(id);
     }
