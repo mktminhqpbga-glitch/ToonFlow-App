@@ -409,6 +409,7 @@ const mentionSource: MentionCanvasSource = {
 
 defineExpose({ canvasId, canvasReady, canvasListReady, getCanvasContext, readDocumentNode, readDocumentNodes, focusDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, resolveDocumentNodeFile, performFileAction, flushSave, cancelSave,
   addNodeAtPointer: () => activeInstance.value?.addNodeAtPointer(),
+  importWorkspaceMedia: (path: string, mimeType: string) => activeInstance.value?.importWorkspaceMedia(path, mimeType) ?? Promise.resolve(false),
   openNodeSearch: () => activeInstance.value?.openNodeSearch(),
   mentionSource,
   get saveBusy() { return fileActionBusy || [...instances.values()].some(panel => panel.saveBusy); },
