@@ -208,3 +208,12 @@
 - Abort/cancel phát tới website chưa đồng nghĩa website đã dừng. Đánh dấu UNKNOWN nếu không có xác nhận, giữ thông tin cảnh báo; không gọi đây là failed/retry an toàn.
 - Trước khi ghi file từ Chrome Companion, kiểm tra bytes khớp MIME thật; header đúng chưa đủ chứng minh duration/codec, do đó FFprobe và phát lại là bước bắt buộc khi nghiệm thu video thật.
 - Chẩn đoán API/UI chỉ trả trạng thái tầng kết nối, capability và việc đang chạy; không trả owner key, pairing secret, cookie, prompt hay bytes media. Giữ middleware loopback+Origin/Referer và header ý định thao tác, không tự bật Local Web Bridge.
+
+
+### NOTE-0028 — HD-08: không được dịch ID và không được âm thầm sửa ngôn ngữ lưu cũ
+
+- **Ngày ghi:** 2026-11-09, ChatGPT (GPT-6).
+- Transform i18n chỉ dành cho chuỗi hiển thị (nhãn, tooltip, placeholder, notification, lỗi), **không** dịch model ID, providerId, đường dẫn, JSON, schema, API, user prompt/content và system instructions bằng transform tổng quát; hidden system prompts phải có bản Việt riêng và chọn theo locale.
+- Node UMD dựng sẵn chạy plugin i18n độc lập; đồng bộ locale chọn trên host từ `documentElement.lang`; bản dịch khác giữ nguyên khi không phải `vi`. Không tùy tiện dịch tên/logic plugin bên ngoài.
+- Không tự đổi `ui.language` đã lưu `zh-CN` sang `vi` vì chưa thể biết đó là lựa chọn chủ động hay di sản default cũ. Điều này là lựa chọn bảo toàn dữ liệu; muốn khởi chạy bằng tiếng Việt, người dùng chọn Tiếng Việt trong Cài đặt. Khi UI không lưu tùy chọn, đó là bug cần kiểm trực tiếp.
+- Kiểm toán `auditVietnamese.ts` tính các Chinese display candidates từ AST trong phạm vi chỉ định; missing dictionary entries khác với số Hán tự còn xuất hiện trên màn hình thật. Phải báo cả số missing và giới hạn; CI PASS (non-strict) không phải bằng chứng 100%, `--strict` mới chặn hết các mục chưa dịch trong phạm vi scan.
