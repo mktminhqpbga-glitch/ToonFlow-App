@@ -270,7 +270,7 @@ export async function mergeBatchVideos(cwd: string, id: string, owner?: AuthIden
   const manifest = (await resolveWorkspacePath(cwd, `batchJobs/${id}-concat.txt`, true)).path;
   // Explicit filenames are taken only from workspace-validated, existing files.
   const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
-  await writeWorkspaceFile(manifest, sources.map(source => "file " + quote(source)).join("\\n") + "\\n");
+  await writeWorkspaceFile(manifest, sources.map(source => "file " + quote(source)).join("\n") + "\n");
   const outputName = `batchResults/${id}/joined-${randomUUID()}.mp4`;
   const output = (await resolveWorkspacePath(cwd, outputName, true)).path;
   await mkdir(dirname(output), { recursive: true });
