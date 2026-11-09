@@ -51,7 +51,7 @@
         <div v-if="frameMode" class="referenceHint">
           {{ selectedMode === "startFrameOptional" ? "仅一张图片时作为尾帧；两张图片按顺序作为首帧、尾帧" : "图片引用按顺序作为首帧、尾帧" }}
         </div>
-        <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
+        <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" :selectAssetPath="selectAssetPathReference" expandable />
         <div v-if="outputCameraSnapshot" class="cameraSnapshot">
           Camera đã dùng cho video này: {{ outputCameraSnapshot.camera.enabled
             ? [outputCameraSnapshot.camera.body || 'Cinema camera', outputCameraSnapshot.camera.lens || 'Lens mặc định', outputCameraSnapshot.camera.focalLength + ' mm', 'f/' + outputCameraSnapshot.camera.aperture].join(' · ')
@@ -167,7 +167,7 @@ data.value.mode ??= "";
 data.value.generateAudio ??= true;
 data.value.ratio ??= "9:16";
 data.value.other ??= {};
-const { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, setReferencePreview, removeReference } = useNodeReferences();
+const { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, selectAssetPathReference, setReferencePreview, removeReference } = useNodeReferences();
 const models = shallowRef<NodeMediaModel[]>([]);
 const modelsLoading = ref(false);
 const uploading = ref(false);
