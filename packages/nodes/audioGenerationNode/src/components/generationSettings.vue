@@ -15,7 +15,7 @@
       <div class="settingsFields">
         <div class="settingField">
           <span class="fieldLabel">{{ localized('语种', 'Ngôn ngữ') }}</span>
-          <el-segmented v-model="language" :options="languageOptions" :disabled="disabled" block :aria-label="localized('音频语种', 'Ngôn ngữ âm thanh')" />
+          <el-segmented v-model="language" :options="audioLanguageOptions" :disabled="disabled" block :aria-label="localized('音频语种', 'Ngôn ngữ âm thanh')" />
         </div>
         <div class="settingField">
           <span class="fieldLabel">{{ localized('采样率', 'Tần số lấy mẫu') }}</span>
@@ -52,7 +52,12 @@ const other = defineModel<Record<string, unknown>>("other", { required: true });
 const formatLabels: Record<string, string> = { wav: "WAV", mp3: "MP3", pcm: "PCM", ogg_opus: "Ogg Opus" };
 const sampleRates = sampleRateOptions.map(value => ({ label: `${value / 1000}k`, value }));
 const formats = formatOptions.map(value => ({ label: value === "ogg_opus" ? "Opus" : formatLabels[value], value }));
-const languageLabel = computed(() => languageOptions.find(item => item.value === language.value)?.label ?? language.value);
+// Localize the visible names only; retain the provider's protocol language codes.
+const audioLanguageOptions = computed(() => languageOptions.map(item => ({
+  ...item, label: item.value === "zh-CN" ? localized("中文", "Tiếng Trung")
+    : item.value === "en" ? localized("英文", "Tiếng Anh") : item.label,
+})));
+const languageLabel = computed(() => audioLanguageOptions.value.find(item => item.value === language.value)?.label ?? language.value);
 </script>
 
 <style scoped lang="scss">
