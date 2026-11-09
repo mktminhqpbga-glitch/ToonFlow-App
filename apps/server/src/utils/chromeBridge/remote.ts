@@ -204,6 +204,24 @@ class RemoteBridge {
     if (this.jobs.size) throw new Error("Cancel active tasks first");
     this.selected.delete(provider); return this.status();
   }
+  async verifySelections() {
+    if (!this.connected) { this.selected.clear(); return; }
+    for (const [provider, selection] of [...this.selected.entries()]) {
+      if ([...this.jobs.values()].some(job => job.provider === provider)) continue;
+      try {
+        const probe = await this.call("probe", { tabId: selection.tab.id, provider }) as BridgeProbe;
+        if (!probe?.ready || !isBridgeDocumentToken(probe.documentToken)
+          || probe.documentToken !== selection.documentToken || probe.url !== selection.tab.url) {
+          this.selected.delete(provider);
+        } else {
+          const capabilities = (["text", "image", "video"] as BridgeCapability[]).filter(kind =>
+            probe.capabilities?.includes(kind) && (provider === "muse" ? kind !== "text" : kind !== "video"));
+          if (!capabilities.length) this.selected.delete(provider);
+          else this.selected.set(provider, { ...selection, capabilities });
+        }
+      } catch { this.selected.delete(provider); }
+    }
+  }
   models(kind: BridgeCapability) {
     if (!this.connected) return [];
     return [...this.selected.entries()].filter(([, choice]) => choice.capabilities.includes(kind))
