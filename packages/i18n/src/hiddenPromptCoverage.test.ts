@@ -44,6 +44,19 @@ describe("HD-08 Vietnamese hidden prompts are truly selected, not just documente
     expect(source("apps/web/src/components/settings/panels/mediaModel/providerAgentDialog.vue"))
       .toContain('locale.value === "vi"');
   });
+  test("delegated agent selects Vietnamese instructions but leaves JSON task payload unchanged", () => {
+    const sourceText = source("apps/server/src/agent/runtime/subAgent.ts");
+    expect(sourceText).toContain('getLocale() === "vi"');
+    expect(sourceText).toContain("Bạn đang thực hiện một nhiệm vụ con");
+    expect(sourceText).toContain("JSON.stringify({ name, task })");
+  });
+  test("inpaint keeps user input and uses a Vietnamese instruction branch", () => {
+    const sourceText = source("packages/nodes/imageNode/src/imageInpaint.ts");
+    expect(sourceText).toContain("inpaintInstructionVi");
+    expect(sourceText).toContain('document.documentElement.lang === "vi"');
+    expect(sourceText).toContain("return prompt");
+    expect(sourceText).toContain("Yêu cầu vẽ lại:");
+  });
   test("generation nodes and audio node select Vietnamese reference labels in AI prompts", () => {
     for (const path of [
       "packages/nodes/imageGenerationNode/src/index.vue",
