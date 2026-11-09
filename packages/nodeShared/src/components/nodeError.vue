@@ -15,11 +15,11 @@
         </el-select>
       </template>
       <el-button class="explainButton" size="small" :loading="explaining" :disabled="explaining || (models.length > 0 && !selectedModel)" @click="explainError">
-        {{ explaining ? "正在准备解释…" : explanationError ? "重试 AI 解释" : "AI 解释" }}
+        {{ explaining ? localized("正在准备解释…", "Đang chuẩn bị giải thích…") : explanationError ? localized("重试 AI 解释", "Thử giải thích lại bằng AI") : localized("AI 解释", "Giải thích bằng AI") }}
       </el-button>
     </div>
     <div v-if="explanation || explanationError" class="explanation" aria-live="polite">
-      <div class="errorLabel">{{ explanationError ? "AI 解释请求失败" : "AI 解释" }}</div>
+      <div class="errorLabel">{{ explanationError ? localized("AI 解释请求失败", "Không thể yêu cầu AI giải thích") : localized("AI 解释", "Giải thích bằng AI") }}</div>
       <div class="explanationText" tabindex="0">{{ explanationError || explanation }}</div>
       <div v-if="explanationError" class="explanationHint">{{ localized('上方“错误详情”保留的是原始错误。这里显示的是解释服务的报错，请检查解释用的文本模型，或换一个模型后重试。', 'Phía trên là lỗi gốc; đây là lỗi của dịch vụ giải thích. Hãy kiểm tra hoặc đổi model giải thích rồi thử lại.') }}</div>
       <div v-if="explanation && !explanationError" class="explanationHint">{{ localized('由', 'Được giải thích bởi') }} {{ explanationModelLabel }} {{ localized('解释，原因是推测，供排查参考。', '— nguyên nhân chỉ là suy đoán, dùng để tham khảo khi kiểm tra.') }}</div>
