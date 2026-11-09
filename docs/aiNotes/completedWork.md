@@ -346,3 +346,12 @@
 - **Thực hiện:** batch scene có UUID + taskId bền vững, lưu workspace, điều phối tuần tự để không chồng job Chrome, tái sử dụng media task thật, tiếp tục cảnh độc lập sau FAILED, UNKNOWN dừng/không tự gửi lại, API tạo/đọc/list/điều khiển, UI chọn model/prompt/media thật, trạng thái từng cảnh, tải kết quả; mở 2 trang từ Workspace.
 - **Kiểm tra:** CI trước đó run 42551209546 FAIL do mismatch type kết quả audio, đã sửa commit [f3a9e7a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/f3a9e7ae5c5c2e3ad32082911e642fd6d8a91c58). Run [42551746997](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42551746997) **PASS** (typecheck/build) sau wiring UI commit [585e9bb](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/585e9bbac8afd5fc77b8c99fbb1740171b0641a5).
 - **Chưa làm/xác nhận:** FFmpeg ghép MP4, map Device/Tab và queue đa thiết bị chính xác, đưa kết quả Batch lên Canvas, phục hồi/restart thật, E2E Muse/Gemini/video thật. Không coi CI là E2E. **Trạng thái PARTIAL**.
+
+
+### DONE-0025 — HD-05: ghép MP4 bằng FFmpeg trên file video đã xác minh (code, chưa E2E)
+
+- **Ngày/người sửa:** 2026-11-09, ChatGPT (GPT-6).
+- **Mã nguồn:** `apps/server/src/utils/media/batches.ts`, `apps/server/src/routes/ai/media/batches/merge.ts`, `apps/web/src/pages/workspace/components/batchPage.vue`.
+- **Hành vi đã code:** chỉ cho ghép batch video hoàn tất với >=2 cảnh thành công; xác minh tệp nguồn trong workspace và FFprobe các luồng video/codec/kích thước/thời lượng; chỉ copy concat với các nguồn tương thích; FFprobe lại đầu ra MP4 trước khi lưu metadata `merged`. Xuất file tên ngẫu nhiên, không ghi đè video cũ; không chấp nhận poster/thumbnail. Dùng `createWorkspaceFfmpeg` hiện có, không cài FFmpeg giả.
+- **Commits:** [2189906](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/21899068ee4405338fe6b5db65943f1c20f708c9), [42adb19](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/42adb19ce11ed7d40d7064db2e2499e28acbfaa5), [879c83a](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/879c83a0ff40fd05869d17bb66e2bd81d892bb32), [724aade](https://github.com/mktminhqpbga-glitch/ToonFlow-App/commit/724aade329c3b417e51b494727fe8853018c1afb).
+- **Kiểm thử:** đang kiểm tra CI run 42552231169; FFmpeg chạy với video thật, hợp codec và nhập lại Canvas **NOT TESTED**. Không đánh dấu E2E PASS.
