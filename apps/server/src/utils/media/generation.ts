@@ -13,6 +13,7 @@ import { detectMimeType, readPriceReference } from "@/utils/media/priceReference
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { type BridgeProvider } from "@/utils/chromeBridge/runtime";
 import { chromeBridge } from "@/utils/chromeBridge/manager";
+import { mediaErrorText } from "./mediaErrorVi";
 import { verifyChromeMediaSignature } from "@/utils/chromeBridge/mediaSignature";
 
 const maxMediaSize = 100 * 1024 * 1024;
@@ -44,14 +45,14 @@ const mediaExtensions: Record<string, string> = {
 };
 
 function invalid(message: string): never {
-  throw Object.assign(new Error(message), { status: 400 });
+  throw Object.assign(new Error(mediaErrorText(message)), { status: 400 });
 }
 
 function requireGenerationMode(task?: MediaGenerationTask) {
   if (modelGateway.enabled()) {
     if (!task?.modelRouteCipher) invalid("多租户媒体生成必须通过持久任务提交");
   } else if (task?.modelRouteCipher) {
-    throw Object.assign(new Error("多租户模型路由尚未开启"), { status: 403 });
+    throw Object.assign(new Error(mediaErrorText("多租户模型路由尚未开启")), { status: 403 });
   }
 }
 
@@ -237,7 +238,7 @@ async function preparePriceRequest(directory: string | undefined, mediaType: "im
   }
   catch (error) {
     signal?.throwIfAborted();
-    if (deadline.aborted) throw new Error("读取参考媒体信息超时，请稍后重试");
+    if (deadline.aborted) throw new Error(mediaErrorText("读取参考媒体信息超时，请稍后重试"));
     throw error;
   }
 }
