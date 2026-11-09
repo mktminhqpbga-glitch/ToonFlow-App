@@ -53,6 +53,10 @@ jobs:
         run: bun packages/i18n/src/auditVietnamese.ts --strict
       - name: Report residual Chinese source literals (review candidates, not E2E)
         run: bun packages/i18n/src/auditVietnameseResidual.ts
+      - name: Audit Vietnamese UI literals across Web and Node packages
+        run: |
+          bun packages/i18n/src/auditVietnamese.ts
+          bun packages/i18n/src/auditVietnameseResidual.ts
       - name: Build Tools
         run: bun run build:tools
       - name: Build Extensions
