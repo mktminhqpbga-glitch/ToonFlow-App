@@ -1,7 +1,7 @@
 // Pure state rules shared by the persistent batch dispatcher and regression tests.
 // No network, filesystem, provider or mocked AI calls are involved here.
 export type SceneState = "queued" | "running" | "succeeded" | "failed" | "cancelled" | "unknown";
-export type BatchState = "running" | "paused" | "completed" | "cancelled";
+export type BatchState = "running" | "paused" | "completed" | "partial" | "cancelled";
 export type SceneRecord = { state: SceneState; taskId: string };
 export type TaskObservation = {
   state: string;
@@ -49,4 +49,9 @@ export function areConcatStreamsCompatible(probes: readonly VideoStreamFingerpri
     && item.height === first.height && item.hasAudio === first.hasAudio
     && item.fps === first.fps && item.pixelFormat === first.pixelFormat
     && item.audioCodec === first.audioCodec && item.audioSampleRate === first.audioSampleRate);
+}
+
+export function finishedBatchState(scenes: readonly SceneRecord[]): "completed" | "partial" {
+  // COMPLETED is reserved for every result being successfully persisted.
+  return scenes.length > 0 && scenes.every(scene => scene.state === "succeeded") ? "completed" : "partial";
 }
