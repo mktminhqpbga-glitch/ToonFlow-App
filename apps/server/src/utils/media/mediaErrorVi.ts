@@ -2,7 +2,7 @@ import { getLocale, translateMessage } from "@/lib/i18n";
 
 // Keep protocol IDs and original non-Vietnamese errors unchanged.
 // Translate only fixed, user-visible media failures, never user prompts or provider output.
-const errors: Record<string, string> = {
+export const viMediaErrorTranslations: Record<string, string> = {
   "多租户媒体生成必须通过持久任务提交": "Tác vụ media nhiều người dùng phải được gửi qua hàng đợi bền vững",
   "多租户模型路由尚未开启": "Định tuyến model nhiều người dùng chưa được bật",
   "参考媒体须为不超过 100 MB 的文件": "Tệp tham chiếu phải có dung lượng tối đa 100 MB",
@@ -28,6 +28,6 @@ const errors: Record<string, string> = {
 };
 
 export function mediaErrorText(message: string, language = getLocale()) {
-  if (language === "vi") return errors[message] ?? translateMessage(message);
+  if (language === "vi") return viMediaErrorTranslations[message] ?? translateMessage(message);
   return translateMessage(message);
 }
