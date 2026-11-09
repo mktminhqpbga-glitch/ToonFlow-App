@@ -79,6 +79,7 @@
         ref="canvasControlsRef"
         :availableNodes="availableNodes"
         :createPresetNode="createPresetNode"
+        :addCharacterToCanvas="addCharacterToCanvas"
         v-model:assetsVisible="assetsVisible"
         v-model:snapEnabled="snapEnabled"
         v-model:showEdges="showEdges"
@@ -179,6 +180,7 @@ import canvasControls from "./components/canvasControls.vue";
 import canvasEmpty from "./components/canvasEmpty.vue";
 import canvasViewportHint from "./components/canvasViewportHint.vue";
 import assetLibrary from "./components/assetLibrary.vue";
+import type { CharacterRecord } from "./components/characterStudio.vue";
 import groupNode from "./components/groupNode.vue";
 import selectionToolbar from "./components/selectionToolbar.vue";
 import nodeSearch from "./components/nodeSearch.vue";
@@ -667,6 +669,35 @@ function selectFiles(position: { x: number; y: number }) {
 
 function openNodeMenu(event: MouseEvent) {
   if (event.target instanceof Element && event.target.classList.contains("vue-flow__pane")) nodeMenuRef.value?.openMenu(event, true);
+}
+
+async function addCharacterToCanvas(character: CharacterRecord): Promise<boolean> {
+  const directory = project.value?.directory;
+  if (!props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !directory || !character.images.length) return false;
+  const rect = canvasElement.value?.getBoundingClientRect();
+  if (!rect) return false;
+  const origin = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  const files = useWorkspaceFiles(directory);
+  const imported: string[] = [];
+  await canvasHistory.batch(async () => {
+    for (const [index, image] of character.images.entries()) {
+      canvasController.signal.throwIfAborted();
+      const data = await files.read(image.path);
+      const createdIds = await importCanvasFiles([new File([data], image.name, { type: image.mimeType })],
+        { x: origin.x - 200 + index * 40, y: origin.y - 160 + index * 50 },
+        { directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow });
+      for (const id of createdIds) {
+        const created = findNode(id);
+        if (created) Object.assign(created.data, { characterId: character.id, characterReferencePath: image.path });
+        imported.push(id);
+      }
+    }
+  });
+  if (!imported.length) return false;
+  flow.removeSelectedElements();
+  const nodes = imported.map(id => findNode(id)).filter((node): node is NonNullable<typeof node> => !!node);
+  if (nodes.length) flow.addSelectedNodes(nodes);
+  return true;
 }
 
 async function createPresetNode(preset: { nodeType: string; title: string; prompt: string }): Promise<boolean> {
