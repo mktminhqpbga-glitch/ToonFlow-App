@@ -18,6 +18,7 @@ describe("HD-08 provider model tester Vietnamese runtime and hidden feedback", (
     expect(source).toContain("const details = content.length > 60000");
     expect(source).toContain("${details}");
     expect(source).toContain("secretFields");
-    expect(source).toContain("providerId");
+    expect(source).toContain("selectedModelId");
+    expect(source).toContain("props.provider.id");
   });
 });
