@@ -35,3 +35,18 @@ export function mayResumeBatch(state: BatchState, scenes: readonly SceneRecord[]
 export function outstandingScenes(scenes: readonly SceneRecord[]) {
   return scenes.filter(scene => scene.state === "queued" || scene.state === "running").length;
 }
+
+export type VideoStreamFingerprint = {
+  codec: string; width: number; height: number; hasAudio: boolean;
+  fps?: string; pixelFormat?: string; audioCodec?: string; audioSampleRate?: string;
+};
+
+export function areConcatStreamsCompatible(probes: readonly VideoStreamFingerprint[]) {
+  if (probes.length < 2) return false;
+  const first = probes[0]!;
+  if (!first.codec || !first.width || !first.height) return false;
+  return probes.every(item => item.codec === first.codec && item.width === first.width
+    && item.height === first.height && item.hasAudio === first.hasAudio
+    && item.fps === first.fps && item.pixelFormat === first.pixelFormat
+    && item.audioCodec === first.audioCodec && item.audioSampleRate === first.audioSampleRate);
+}
