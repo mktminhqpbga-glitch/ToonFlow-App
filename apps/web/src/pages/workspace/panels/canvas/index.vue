@@ -77,6 +77,8 @@
       <canvasControls
         v-if="canvasId"
         ref="canvasControlsRef"
+        :availableNodes="availableNodes"
+        :createPresetNode="createPresetNode"
         v-model:assetsVisible="assetsVisible"
         v-model:snapEnabled="snapEnabled"
         v-model:showEdges="showEdges"
@@ -665,6 +667,32 @@ function selectFiles(position: { x: number; y: number }) {
 
 function openNodeMenu(event: MouseEvent) {
   if (event.target instanceof Element && event.target.classList.contains("vue-flow__pane")) nodeMenuRef.value?.openMenu(event, true);
+}
+
+async function createPresetNode(preset: { nodeType: string; title: string; prompt: string }): Promise<boolean> {
+  const directory = project.value?.directory;
+  if (!props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !directory
+    || !availableNodes.value.some(node => node.type === preset.nodeType) || !preset.prompt.trim()) return false;
+  const rect = canvasElement.value?.getBoundingClientRect();
+  if (!rect) return false;
+  const center = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  const id = crypto.randomUUID();
+  const prompt = preset.prompt.trim();
+  await canvasHistory.batch(async () => {
+    addNodes({
+      id,
+      type: preset.nodeType,
+      position: { x: center.x - 200, y: center.y - 140 },
+      data: { label: preset.title, prompt, promptModel: [[{ type: "Write", text: prompt }]] },
+    });
+    await nextTick();
+    if (!findNode(id)) throw new Error("Không thể tạo node từ thư viện vật liệu");
+  });
+  const created = findNode(id);
+  if (!created) return false;
+  flow.removeSelectedElements();
+  flow.addSelectedNodes([created]);
+  return true;
 }
 
 function createEmptyNode(type: string) {
