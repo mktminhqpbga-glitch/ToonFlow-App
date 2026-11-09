@@ -339,6 +339,14 @@ watch(model, (value) => {
   if (sender && JSON.stringify(getStoredModel(value)) !== JSON.stringify(getStoredModel(sender.getModel()))) syncModel(value);
 }, { deep: true });
 
+// Đồng bộ placeholder khi đổi ngôn ngữ mà không tạo lại editor hoặc mất caret/Undo.
+watch([vietnamese, () => props.placeholder], () => {
+  if (!sender) return;
+  sender.updateConfig({
+    placeholder: props.placeholder ?? localized("描述一下生成风格提示词，输入 @ 引用参考", "Mô tả nội dung cần tạo, nhập @ để thêm tài nguyên tham chiếu"),
+  });
+});
+
 watch(() => props.references, async (options) => {
   const instance = sender;
   if (!instance) return;
