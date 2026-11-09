@@ -39,6 +39,8 @@ jobs:
           bun run --cwd packages/nodes/imageGenerationNode typecheck
           bun run --cwd packages/nodes/videoGenerationNode typecheck
           bun run --cwd packages/nodes/director3dNode typecheck
+      - name: Run batch state regression tests (pure, no AI providers)
+        run: bun test apps/server/src/utils/media/batchTransitions.test.ts
       - name: Build Tools
         run: bun run build:tools
       - name: Build Extensions
