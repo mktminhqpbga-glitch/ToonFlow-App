@@ -1,10 +1,10 @@
 import { getLocale, t } from "@/lib/i18n";
-const localized = (zh: string, vi: string) => getLocale() === "vi" ? vi : zh;
 import { randomUUID } from "node:crypto";
 import type { Usage } from "@earendil-works/pi-ai";
 import { createTeamA2aClient, SendMessageRequest, GetTaskRequest, CancelTaskRequest, TaskState, Role, type Message, type Task, type Artifact } from "@toonflow/teams-scaffold/a2a";
 import { emptyUsage, type SubAgentResult } from "@/agent/runtime/subAgent";
 import { getRemoteTeam } from "@/utils/teams";
+const localized = (zh: string, vi: string) => getLocale() === "vi" ? vi : zh;
 
 export async function runRemoteTeam(options: {
   name: string;
