@@ -87,7 +87,7 @@ async function reconcile(cwd: string, id: string, index: number, owner?: AuthIde
   const batch = await readBatch(cwd, id, owner);
   const scene = batch.scenes[index];
   if (!scene || scene.state !== "running") return;
-  const [task] = await mediaTasks.status(cwd, [scene.taskId], false, owner);
+  const [task] = await mediaTasks.inspect(cwd, [scene.taskId], owner);
   if (!task || task.state === "running") return "running" as const;
   if (task.state === "succeeded" && task.result?.data?.length && task.result.data.every(file => file.mediaType === batch.kind)) {
     const verified = task.result.data.map(file => ({ path: file.path, mimeType: file.mimeType, mediaType: batch.kind }));
