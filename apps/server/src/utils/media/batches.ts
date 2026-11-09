@@ -88,7 +88,7 @@ async function reconcile(cwd: string, id: string, index: number, owner?: AuthIde
   const scene = batch.scenes[index];
   if (!scene || scene.state !== "running") return;
   const [task] = await mediaTasks.inspect(cwd, [scene.taskId], owner);
-  if (!task || task.state === "running") return "running" as const;
+  if (task?.state === "running" && task.active) return "running" as const;
   if (task.state === "succeeded" && task.result?.data?.length && task.result.data.every(file => file.mediaType === batch.kind)) {
     const verified = task.result.data.map(file => ({ path: file.path, mimeType: file.mimeType, mediaType: batch.kind }));
     await mutateBatch(cwd, id, owner, record => {
@@ -225,6 +225,13 @@ export async function listBatches(cwd: string, owner?: AuthIdentity | null) {
   for (const filename of entries.filter(name => /^[a-f0-9-]{36}\.json$/i.test(name)).slice(0, 100)) {
     try { batches.push(exposed(await readBatch(cwd, filename.slice(0, -5), owner))); }
     catch (error) { if ((error as { status?: number }).status !== 403) console.warn("Skipping invalid batch record", filename); }
+  }
+  // Queue records survive process restart. Dispatch only records explicitly left running;
+  // an in-flight task from the previous process is inspected without resubmission and
+  // becomes UNKNOWN if its provider acknowledgement cannot be proven.
+  for (const batch of batches) {
+    if (batch.state === "running" && batch.scenes.some(scene => scene.state === "queued" || scene.state === "running"))
+      schedule(cwd, batch.id, owner);
   }
   return batches.sort((a, b) => b.createdAt - a.createdAt);
 }
