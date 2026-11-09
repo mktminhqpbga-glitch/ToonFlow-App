@@ -1,5 +1,20 @@
 <template>
   <div class="bridgePanel">
+    <el-card shadow="never" class="bridgeCard" aria-label="Chẩn đoán đường kết nối Chrome AI">
+      <h3>Chẩn đoán kết nối AI</h3>
+      <p class="diagnosticNote">Kiểm tra theo thứ tự Relay → Thiết bị → Extension → Tab → Model. Đây là trạng thái backend, không phải kết quả AI đã nghiệm thu.</p>
+      <div v-for="step in diagnosis?.stages ?? []" :key="step.id" class="diagnosticRow">
+        <el-tag :type="step.ready ? 'success' : 'warning'" effect="plain">{{ step.ready ? "OK" : "Cần xử lý" }}</el-tag>
+        <strong>{{ stageLabels[step.id] ?? step.id }}</strong>
+        <span>{{ step.message }}</span>
+      </div>
+      <div v-for="tab in diagnosis?.providers ?? []" :key="tab.provider" class="diagnosticRow">
+        <el-tag effect="plain" :type="tab.state === 'ready' ? 'success' : tab.state === 'running' ? 'warning' : tab.state === 'unknown' ? 'danger' : 'info'">{{ tab.state }}</el-tag>
+        <strong>{{ tab.provider }}{{ tab.tabId !== null ? ' · Tab ' + tab.tabId : '' }}</strong>
+        <span>{{ tab.reason }} · Model: {{ tab.capabilities.join(', ') || 'chưa xác nhận' }}</span>
+      </div>
+      <small>Đang xử lý thực tế: {{ diagnosis?.pendingJobs ?? 0 }}. UNKNOWN không tự gửi lại.</small>
+    </el-card>
     <el-card shadow="never" class="bridgeCard">
       <h3>Chrome Companion</h3>
       <div class="bridgeActions">
@@ -143,6 +158,15 @@ import { IconBrowser, IconCopy, IconExternalLink, IconRefresh } from "@tabler/ic
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
 
 type Provider = "muse" | "gemini" | "chatgpt";
+type Diagnosis = {
+  stages: { id: string; ready: boolean; message: string }[];
+  providers: { provider: Provider; tabId: number | null; connected: boolean; capabilities: string[];
+    state: string; reason: string }[];
+  pendingJobs: number;
+};
+const stageLabels: Record<string, string> = { relay: "Relay / Kênh kết nối", device: "Thiết bị Chrome", extension: "Companion Extension" };
+const diagnosis = ref<Diagnosis>();
+
 type Tab = { id: number; title: string; url: string; provider: Provider };
 type Selection = { tab: Tab; capabilities: string[] };
 type Status = {
@@ -218,6 +242,7 @@ async function refresh() {
     const modeChanged = status.value.mode !== next.mode
       || status.value.remote?.selectedDeviceId !== next.remote?.selectedDeviceId;
     status.value = next;
+    try { diagnosis.value = await api<Diagnosis>("diagnostics"); } catch { diagnosis.value = undefined; }
     if (!next.connected || modeChanged) tabs.value = [];
     if (modeChanged) invalidate();
     if (next.remote?.url && !relayUrl.value) relayUrl.value = next.remote.url;
@@ -307,6 +332,9 @@ watch(() => status.value.connected, connected => { if (connected && !tabs.value.
 </script>
 
 <style scoped lang="scss">
+.diagnosticNote { font-size: 12px; color: var(--el-text-color-secondary); }
+.diagnosticRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--el-border-color-lighter); font-size: 12px; }
+.diagnosticRow strong { min-width: 110px; }
 .bridgePanel {
   display: flex;
   flex-direction: column;
