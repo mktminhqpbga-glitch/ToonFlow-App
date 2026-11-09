@@ -1,5 +1,6 @@
 import conf from "@/utils/conf";
 import { isLocalWebBridgeEnabled } from "./access";
+import { bridgeDiagnosis } from "./dispatchGuard";
 import { chromeBridge as localBridge, type BridgeCapability, type BridgeProvider } from "./runtime";
 import { remoteBridge } from "./remote";
 
@@ -21,6 +22,7 @@ class BridgeManager {
       : remoteBridge.status();
     return { ...status, localAvailable: localBridge.enabled };
   }
+  diagnostics() { return bridgeDiagnosis(this.status()); }
   async refreshStatus() {
     if (this.mode === "remote") {
       try { await remoteBridge.refreshDevices(); } catch { /* Keep last verified state, render disconnection. */ }
