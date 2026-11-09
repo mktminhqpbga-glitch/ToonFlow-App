@@ -411,6 +411,8 @@ defineExpose({ canvasId, canvasReady, canvasListReady, getCanvasContext, readDoc
   addNodeAtPointer: () => activeInstance.value?.addNodeAtPointer(),
   importWorkspaceMedia: (path: string, mimeType: string) => activeInstance.value?.importWorkspaceMedia(path, mimeType) ?? Promise.resolve(false),
   openNodeSearch: () => activeInstance.value?.openNodeSearch(),
+  openMaterialPresets: () => activeInstance.value?.openMaterialPresets(),
+  openCharacterStudio: () => activeInstance.value?.openCharacterStudio(),
   mentionSource,
   get saveBusy() { return fileActionBusy || [...instances.values()].some(panel => panel.saveBusy); },
 });

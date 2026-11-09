@@ -440,7 +440,9 @@ provide("nodePersistence", () => {
     },
   };
 });
-defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, importWorkspaceMedia, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, importWorkspaceMedia,
+  openMaterialPresets: () => { if (props.active && !props.settingsVisible && canvasReady.value) canvasControlsRef.value?.openMaterialPresets(); },
+  openCharacterStudio: () => { if (props.active && !props.settingsVisible && canvasReady.value) canvasControlsRef.value?.openCharacterStudio(); }, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
   openNodeSearch: () => nodeSearchRef.value?.open(),
   getCanvases: (signal?: AbortSignal) => {
     if (!canvasMenuRef.value) throw new Error("画布菜单尚未就绪");

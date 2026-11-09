@@ -63,6 +63,16 @@
                 <icon-search :size="18" aria-hidden="true" />
               </el-button>
             </el-tooltip>
+            <el-tooltip content="Thư viện vật liệu" placement="top" :showArrow="false" :hideAfter="0">
+              <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="Thư viện vật liệu" @click="canvasPanelRef?.openMaterialPresets()">
+                <icon-shapes :size="18" aria-hidden="true" />
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="Studio nhân vật" placement="top" :showArrow="false" :hideAfter="0">
+              <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="Studio nhân vật" @click="canvasPanelRef?.openCharacterStudio()">
+                <icon-mood-smile :size="18" aria-hidden="true" />
+              </el-button>
+            </el-tooltip>
             <el-tooltip :showArrow="false" content="帮助" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="helpVisible">
               <span class="toolTrigger">
                 <el-popover v-model:visible="helpVisible" trigger="click" placement="top-end" :width="196">
@@ -138,7 +148,7 @@ import { translate } from "@toonflow/i18n/vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onScopeDispose, provide, ref, shallowRef, watch, type ComponentPublicInstance } from "vue";
 import { onBeforeRouteLeave, useRoute } from "vue-router";
 import axios from "axios";
-import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase, IconPhoto, IconVideo } from "@tabler/icons-vue";
+import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase, IconPhoto, IconVideo, IconShapes, IconMoodSmile } from "@tabler/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { QRCode } from "tdesign-vue-next";
 import settings from "@/components/settings/index.vue";
