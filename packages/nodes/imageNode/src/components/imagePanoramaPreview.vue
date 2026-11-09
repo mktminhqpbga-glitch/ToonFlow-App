@@ -3,9 +3,9 @@
     <div class="previewWorkspace">
       <div class="stageColumn">
         <div class="stageHeader">
-          <span class="viewLabel">{{ showOriginal ? '原图对比' : activeCorrectionCount ? `已启用 ${activeCorrectionCount} 项校正` : '当前视角' }}</span>
+          <span class="viewLabel">{{ showOriginal ? localized('原图对比', 'So sánh ảnh gốc') : activeCorrectionCount ? (vietnamese ? `Đã bật ${activeCorrectionCount} hiệu chỉnh` : `已启用 ${activeCorrectionCount} 项校正`) : localized('当前视角', 'Góc nhìn hiện tại') }}</span>
           <div class="viewActions">
-            <el-button size="small" :type="showOriginal ? 'primary' : 'default'" :plain="showOriginal" :disabled="busy || !ready" :aria-pressed="showOriginal" @click="showOriginal = !showOriginal">{{ showOriginal ? '返回校正' : '对比原图' }}</el-button>
+            <el-button size="small" :type="showOriginal ? 'primary' : 'default'" :plain="showOriginal" :disabled="busy || !ready" :aria-pressed="showOriginal" @click="showOriginal = !showOriginal">{{ showOriginal ? localized('返回校正', 'Quay lại hiệu chỉnh') : localized('对比原图', 'So sánh ảnh gốc') }}</el-button>
             <el-button size="small" :type="showGrid ? 'primary' : 'default'" :plain="showGrid" :disabled="busy || !ready" :aria-pressed="showGrid" @click="showGrid = !showGrid">参考线</el-button>
           </div>
         </div>
@@ -27,8 +27,8 @@
             @wheel.prevent="zoomView">
             <canvas ref="canvas" aria-hidden="true" @webglcontextlost.prevent="loseContext" @webglcontextrestored="restoreContext" />
             <div v-if="showGrid && ready" class="referenceGrid" aria-hidden="true" />
-            <div v-if="loading || imageError || unavailable" class="stageStatus" role="status">{{ unavailable ? '当前设备无法显示全景预览，请重新打开后重试' : imageError || '正在加载全景图…' }}</div>
-            <div v-else class="stageHint">拖动旋转 · 滚轮缩放 · 16:9 取景</div>
+            <div v-if="loading || imageError || unavailable" class="stageStatus" role="status">{{ unavailable ? localized('当前设备无法显示全景预览，请重新打开后重试', 'Thiết bị không hiển thị được ảnh toàn cảnh; hãy mở lại và thử lần nữa') : imageError || localized('正在加载全景图…', 'Đang tải ảnh toàn cảnh…') }}</div>
+            <div v-else class="stageHint">{{ localized('拖动旋转 · 滚轮缩放 · 16:9 取景', 'Kéo để xoay · Cuộn để thu phóng · Khung hình 16:9') }}</div>
           </div>
         </div>
         <div class="viewControls">
@@ -93,9 +93,9 @@
           <label><span>截图</span><el-select v-model="captureCount" size="small" :disabled="busy" aria-label="截图方式"><el-option label="当前视角单张" :value="1" /><el-option label="四宫格" :value="4" /><el-option label="12 宫格" :value="12" /></el-select></label>
           <label v-if="captureCount > 1"><span>输出</span><el-select v-model="captureLayout" size="small" :disabled="busy" aria-label="宫格输出方式"><el-option label="拼成一张" value="combined" /><el-option label="分散单图并成组" value="separate" /></el-select></label>
         </div>
-        <el-button type="primary" :loading="busy" :disabled="!ready" @click="capture">{{ disabled ? '正在保存…' : capturing ? '正在截图…' : '截图并添加节点' }}</el-button>
+        <el-button type="primary" :loading="busy" :disabled="!ready" @click="capture">{{ disabled ? localized('正在保存…', 'Đang lưu…') : capturing ? localized('正在截图…', 'Đang chụp ảnh…') : localized('截图并添加节点', 'Chụp ảnh và tạo node') }}</el-button>
       </div>
-      <p class="captureHint">{{ captureCount === 1 ? '截取当前视角' : captureCount === 4 ? '每隔 90° 截取水平视角，排列为 2 × 2' : mode === 'sphere' ? '上方、水平、下方各 4 个方向，排列为 4 × 3' : '每隔 30° 截取一张，排列为 4 × 3' }} · 每张 1280 × 720 · {{ showOriginal ? '截图仍使用校正结果' : '截图包含已启用的校正' }}</p>
+      <p class="captureHint">{{ captureCount === 1 ? localized('截取当前视角', 'Chụp góc nhìn hiện tại') : captureCount === 4 ? localized('每隔 90° 截取水平视角，排列为 2 × 2', 'Chụp mỗi 90° theo chiều ngang, bố trí 2 × 2') : mode === 'sphere' ? localized('上方、水平、下方各 4 个方向，排列为 4 × 3', 'Mỗi hướng trên, ngang, dưới gồm 4 ảnh, bố trí 4 × 3') : localized('每隔 30° 截取一张，排列为 4 × 3', 'Chụp mỗi 30°, bố trí 4 × 3') }} · {{ localized('每张 1280 × 720', 'Mỗi ảnh 1280 × 720') }} · {{ showOriginal ? localized('截图仍使用校正结果', 'Ảnh chụp vẫn dùng kết quả đã hiệu chỉnh') : localized('截图包含已启用的校正', 'Ảnh chụp bao gồm các hiệu chỉnh đang bật') }}</p>
       <p v-if="captureError" class="captureError" role="alert">{{ captureError }}</p>
     </footer>
   </section>
@@ -106,7 +106,10 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { ElButton, ElOption, ElSelect, ElSlider, ElSwitch } from "element-plus";
 import * as three from "three";
 import { getPanoramaViews, type PanoramaCapture, type PanoramaMode } from "../imagePanorama";
+import { useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 
+const vietnamese = useNodeVietnamese();
+const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 const props = defineProps<{ src: string; mode: PanoramaMode; disabled?: boolean }>();
 const emit = defineEmits<{ capture: [value: PanoramaCapture] }>();
 const viewport = ref<HTMLDivElement>();
@@ -317,7 +320,7 @@ function loadImage() {
   material.map = null;
   material.needsUpdate = true;
   mesh.visible = false;
-  imageError.value = props.src ? "" : "没有可预览的图片";
+  imageError.value = props.src ? "" : localized("没有可预览的图片", "Không có ảnh để xem trước");
   captureError.value = "";
   loading.value = !!props.src;
   scheduleRender();
@@ -329,7 +332,7 @@ function loadImage() {
     if (!Number.isFinite(ratio) || ratio <= 0) {
       loaded.dispose();
       loading.value = false;
-      imageError.value = "图片尺寸无效，无法预览全景图";
+      imageError.value = localized("图片尺寸无效，无法预览全景图", "Kích thước ảnh không hợp lệ, không thể xem toàn cảnh");
       return;
     }
     imageRatio.value = ratio;
@@ -345,7 +348,7 @@ function loadImage() {
   }, undefined, () => {
     if (disposed || version !== imageVersion) return;
     loading.value = false;
-    imageError.value = "全景图加载失败，请检查图片后重新打开";
+    imageError.value = localized("全景图加载失败，请检查图片后重新打开", "Không tải được ảnh toàn cảnh; hãy kiểm tra ảnh rồi mở lại");
   });
 }
 
