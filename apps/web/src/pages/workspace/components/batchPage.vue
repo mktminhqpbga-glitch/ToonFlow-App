@@ -94,15 +94,23 @@ function keyFor(model: Model) { return JSON.stringify([model.providerId, model.p
 const selectedModel = computed(() => filteredModels.value.find(model => keyFor(model) === modelKey.value && model.availability !== "needsConfiguration"));
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 let runToken = 0;
+let modelsRunToken = 0;
 async function readModels() {
+  const token = ++modelsRunToken;
   modelsLoading.value = true;
   try {
     const { data } = await axios.get<{ data: Model[] }>("/api/ai/media/models");
+    if (token !== modelsRunToken || !props.active) return;
     models.value = data.data;
-    if (!selectedModel.value) modelKey.value = filteredModels.value.find(model => model.availability !== "needsConfiguration") ? keyFor(filteredModels.value.find(model => model.availability !== "needsConfiguration")!) : "";
+    if (!selectedModel.value) {
+      const firstReady = filteredModels.value.find(model => model.availability !== "needsConfiguration");
+      modelKey.value = firstReady ? keyFor(firstReady) : "";
+    }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "Không thể đọc model AI");
-  } finally { modelsLoading.value = false; }
+    if (token === modelsRunToken && props.active) ElMessage.error(error instanceof Error ? error.message : "Không thể đọc model AI");
+  } finally {
+    if (token === modelsRunToken) modelsLoading.value = false;
+  }
 }
 async function refresh() {
   const directory = props.directory;
@@ -191,16 +199,20 @@ async function download(result: Result) {
 }
 watch([() => props.active, () => props.directory, () => props.kind], ([active]) => {
   ++runToken;
+  ++modelsRunToken;
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = undefined;
   batches.value = [];
+  models.value = [];
+  modelKey.value = "";
+  modelsLoading.value = false;
   if (!active || !props.directory) return;
   ratio.value = props.kind === "image" ? "16:9" : "9:16";
   void readModels();
   void refresh();
   pollTimer = setInterval(() => { if (!loading.value) void refresh(); }, 3000);
 }, { immediate: true });
-onBeforeUnmount(() => { ++runToken; if (pollTimer) clearInterval(pollTimer); });
+onBeforeUnmount(() => { ++runToken; ++modelsRunToken; if (pollTimer) clearInterval(pollTimer); });
 </script>
 
 <style scoped lang="scss">
