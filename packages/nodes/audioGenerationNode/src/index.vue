@@ -294,7 +294,7 @@ function getConfig() {
 
 nodeTools.register({
   name: "getConfig",
-  description: "读取此音频生成节点的配置、自定义配置 other、可选音频模型、语种、采样率、输出格式与输入数量限制，models 中的 rules 声明自定义字段，不含密钥；文本不限，图片与音频互斥且合计最多一个，具体模型能力由供应商校验",
+  description: () => nodeText("读取此音频生成节点的配置、自定义配置 other、可选音频模型、语种、采样率、输出格式与输入数量限制，models 中的 rules 声明自定义字段，不含密钥；文本不限，图片与音频互斥且合计最多一个，具体模型能力由供应商校验", "Đọc cấu hình node tạo âm thanh, trường tùy chỉnh other, model âm thanh có thể dùng, ngôn ngữ, tần số lấy mẫu, định dạng đầu ra và giới hạn tham chiếu. Trường rules trong models mô tả cấu hình, không chứa khóa bí mật. Văn bản không giới hạn; ảnh và âm thanh loại trừ nhau, tổng cộng tối đa một; nhà cung cấp sẽ kiểm tra khả năng cụ thể."),
   parameters: z.strictObject({}),
   async execute(_args, { signal }) {
     signal?.throwIfAborted();
@@ -305,7 +305,7 @@ nodeTools.register({
 });
 nodeTools.register({
   name: "setConfig",
-  description: "修改音频生成模型、语种、采样率、格式或自定义配置 other；先用 getConfig 查询选项，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；不修改提示词、不启动生成",
+  description: () => nodeText("修改音频生成模型、语种、采样率、格式或自定义配置 other；先用 getConfig 查询选项，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；不修改提示词、不启动生成", "Chỉnh model tạo âm thanh, ngôn ngữ, tần số lấy mẫu, định dạng hoặc trường tùy chỉnh other. Hãy dùng getConfig để tra lựa chọn; phải cung cấp providerId và modelId cùng nhau. other cần theo field và rules của model đích. Chỉ sửa trường được truyền; giữ trường còn lại, dùng giá trị mặc định của model mới khi đổi model. Không sửa prompt hoặc tự bắt đầu tạo."),
   parameters: z.strictObject({
     providerId: z.string().min(1).optional(),
     modelId: z.string().min(1).optional(),
