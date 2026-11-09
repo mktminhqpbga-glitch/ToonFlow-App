@@ -58,3 +58,20 @@ Không đánh dấu PASS E2E khi chỉ typecheck/build. Không sửa hay xóa d�
 - **CI xác thực:** [run #42556447168](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42556447168) và [run #42556832767](https://github.com/mktminhqpbga-glitch/ToonFlow-App/actions/runs/42556832767): **PASS** typecheck, regression Bun, FFmpeg fixture, build Web/Server/Nodes/Tools/MCP. Run #42556832767 đã gồm test Chrome offline guard; đây không phải provider E2E.
 - **Hướng dẫn Mac và cách tái chạy:** [hd06MacAcceptance.md](./hd06MacAcceptance.md). Lệnh test đã được tích hợp trong `.github/workflows/integrationCheck.yml`.
 - **Còn mở:** browser/Web runtime, Chrome đăng nhập thực, Render, multi-device concurrency, FFmpeg ghép video provider trong app và Mac Intel Ventura; không tự tuyên bố E2E PASS.
+
+
+## HD-07 — Kiểm thử backend Chrome Bridge và trạng thái E2E (09/11/2026)
+
+| Ca | Tệp/bài test | Kết quả | Giới hạn |
+| --- | --- | --- | --- |
+| CH-01 Local/Remote không gửi chồng vào cùng Tab ID | `chromeBridge/dispatchGuard.ts` + `dispatchGuard.test.ts` | **PASS** trong CI run 42560296259 | Unit logic, chưa điều khiển Chrome thật |
+| CH-02 Chặn duplicate Task ID và tab UNKNOWN | `dispatchGuard.test.ts`, `runtime.ts`, `remote.ts` | **PASS** trong CI run 42560296259 | Chưa test relay restart thực |
+| CH-03 Chọn đúng HTTPS host + documentToken | `bridgeValidation.test.ts` + `runtime.ts` | **PASS** trong CI run 42560296259 | Chưa thử các thay đổi DOM của Muse thực |
+| CH-04 Không nhận HTML/thumbnail làm media | `mediaSignature.test.ts`, `generation.ts` | **PASS** trong CI run 42560296259 | Chỉ chữ ký bytes, video thật cần ffprobe/codec/duration |
+| CH-05 Bảo vệ API Origin/Referer, loopback, header | `access.test.ts` + `router.ts` | **PASS** trong CI run 42560296259 | Unit policy, chưa gọi HTTP trên Mac thật |
+| CH-06 API chẩn đoán Relay→Device→Extension→Tab/Model | `manager.ts`, `router.ts`, `dispatchGuard.ts`, `settings/chromeBridge/index.vue` | **CODED**, typecheck/build PASS tại run 42560296259 | Chưa click/test Network thực |
+| CH-07 Ảnh AI thật + tệp workspace và reload | `generation.ts`, `packages/chromeCompanion/content.js` | **BLOCKED** | Không có tab/credential provider đăng nhập |
+| CH-08 Video AI thật + codec/duration/ffprobe | `generation.ts`, `packages/chromeCompanion/content.js` | **BLOCKED** | Không có clip Muse thật |
+| CH-09 Batch 5 ảnh + 3 video + concat và Canvas | `media/batches.ts`, `batchPage.vue` | **BLOCKED** | Chưa có AI/Chrome/Render thực |
+
+**Lưu ý:** Run 42560296259 là bằng chứng ở commit `773dc60b2`. Các sửa đổi sau run (điều chỉnh phân biệt UNKNOWN theo đúng tab) cần chạy CI riêng; không mặc nhiên coi run cũ xác minh HEAD mới. Bài nghiệm thu thủ công trên Mac: [hd07MacAcceptance.md](./hd07MacAcceptance.md). **Không đánh dấu HD-07 DONE**.
