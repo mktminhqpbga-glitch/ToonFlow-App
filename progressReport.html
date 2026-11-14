@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="30">
+  <title>AI Canvas Studio — Báo cáo tiến độ</title>
+  <style>
+    :root { --ink:#172033; --muted:#637089; --line:#dbe3ef; --panel:#fff; --bg:#f4f7fb; --blue:#2563eb; --green:#15803d; --amber:#b45309; --gray:#64748b; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .shell { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:32px 0 56px; }
+    .hero { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:24px; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { margin-bottom:8px; font-size:clamp(26px,4vw,42px); letter-spacing:-.03em; }
+    h2 { margin-bottom:8px; font-size:21px; }
+    h3 { margin-bottom:6px; font-size:17px; }
+    .eyebrow { margin-bottom:8px; color:var(--blue); font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+    .lead { max-width:720px; margin-bottom:0; color:var(--muted); font-size:16px; }
+    .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    button, select { min-height:44px; border:1px solid var(--line); border-radius:10px; padding:0 14px; background:var(--panel); color:var(--ink); font:inherit; cursor:pointer; }
+    button:hover { border-color:#9bb4dc; }
+    .primary { border-color:var(--blue); background:var(--blue); color:white; }
+    .panel { margin-bottom:18px; padding:22px; border:1px solid var(--line); border-radius:16px; background:var(--panel); box-shadow:0 8px 24px rgb(28 45 75 / 6%); }
+    .summaryGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .metric { padding:16px; border:1px solid var(--line); border-radius:12px; background:#fbfdff; }
+    .metricValue { display:block; font-size:26px; font-weight:800; }
+    .metricLabel { display:block; color:var(--muted); font-size:13px; }
+    .progressTrack { height:10px; overflow:hidden; border-radius:999px; background:#e5edf8; }
+    .progressBar { height:100%; border-radius:inherit; background:linear-gradient(90deg,#2563eb,#60a5fa); transition:width .3s ease; }
+    .summaryMeta { display:flex; justify-content:space-between; gap:12px; margin:10px 0 0; color:var(--muted); font-size:13px; }
+    .stageList { display:grid; gap:14px; }
+    .stage { border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+    .stageHeader { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:17px 18px; background:#fbfdff; }
+    .stageTitle { display:flex; align-items:center; gap:12px; }
+    .stageNumber { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#e8f0ff; color:var(--blue); font-weight:800; }
+    .stageHeader p { margin:0; color:var(--muted); }
+    .status { display:inline-flex; align-items:center; min-height:28px; border-radius:999px; padding:0 10px; font-size:12px; font-weight:750; white-space:nowrap; }
+    .status.done { background:#dcfce7; color:var(--green); }
+    .status.active { background:#dbeafe; color:#1d4ed8; }
+    .status.waiting { background:#f1f5f9; color:var(--gray); }
+    .stageBody { display:grid; grid-template-columns:1.2fr 1fr; gap:18px; padding:18px; }
+    .stageBody section { min-width:0; }
+    .stageBody ul { margin:8px 0 0; padding-left:20px; }
+    .stageBody li { margin:6px 0; }
+    .check { color:var(--green); font-weight:700; }
+    .pending { color:var(--amber); font-weight:700; }
+    .log { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+    .logItem { display:grid; grid-template-columns:130px 1fr; gap:14px; padding:12px 0; border-bottom:1px solid var(--line); }
+    .logItem:last-child { border-bottom:0; }
+    time { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .note { margin:0; color:var(--muted); }
+    .footer { color:var(--muted); font-size:13px; text-align:center; }
+    .hidden { display:none; }
+    @media (max-width:760px) { .hero,.stageHeader { align-items:stretch; flex-direction:column; } .actions { justify-content:flex-start; } .summaryGrid { grid-template-columns:repeat(2,1fr); } .stageBody { grid-template-columns:1fr; } .logItem { grid-template-columns:1fr; gap:2px; } }
+  </style>
+</head>
+<body>
+  <main id="AC.REPORT.PROGRESS.PAGE" class="shell">
+    <header id="AC.REPORT.PROGRESS.HEADER" class="hero">
+      <div>
+        <div class="eyebrow">AI Canvas Studio · ToonFlow direction</div>
+        <h1>Báo cáo tiến độ công việc</h1>
+        <p class="lead">Theo dõi từng giai đoạn xây dựng Canvas vô hạn, node ảnh/video, quản lý dự án, kết nối AI và đóng gói Desktop. Nội dung được cập nhật theo file này và trang tự tải lại mỗi 30 giây.</p>
+      </div>
+      <div id="AC.REPORT.PROGRESS.ACTIONS" class="actions">
+        <button id="AC.REPORT.PROGRESS.REFRESH" class="primary" type="button">Cập nhật ngay</button>
+        <select id="AC.REPORT.PROGRESS.FILTER" aria-label="Lọc giai đoạn">
+          <option value="all">Tất cả giai đoạn</option>
+          <option value="active">Đang thực hiện</option>
+          <option value="waiting">Chưa bắt đầu</option>
+          <option value="done">Đã hoàn thành</option>
+        </select>
+      </div>
+    </header>
+
+    <section id="AC.REPORT.PROGRESS.SUMMARY" class="panel" aria-labelledby="summaryTitle">
+      <h2 id="summaryTitle">Tổng quan hiện tại</h2>
+      <div class="summaryGrid">
+        <div class="metric"><span id="AC.REPORT.PROGRESS.METRIC.PERCENT" class="metricValue">10%</span><span class="metricLabel">Tiến độ tổng thể</span></div>
+        <div class="metric"><span class="metricValue">1 / 3</span><span class="metricLabel">Giai đoạn đang chuẩn bị</span></div>
+        <div class="metric"><span class="metricValue">0</span><span class="metricLabel">Chức năng đã kiểm chứng</span></div>
+        <div class="metric"><span class="metricValue">Không</span><span class="metricLabel">Tác vụ AI thật đã gửi</span></div>
+      </div>
+      <div id="AC.REPORT.PROGRESS.BAR" class="progressTrack" role="progressbar" aria-label="Tiến độ tổng thể" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10" style="margin-top:18px"><div class="progressBar" style="width:10%"></div></div>
+      <div class="summaryMeta"><span>Trạng thái: đang lập nền tảng và đặc tả</span><span id="AC.REPORT.PROGRESS.LAST_UPDATED">Lần xem: —</span></div>
+    </section>
+
+    <section id="AC.REPORT.PROGRESS.STAGES" class="panel" aria-labelledby="stagesTitle">
+      <h2 id="stagesTitle">Tiến độ theo 3 giai đoạn</h2>
+      <div class="stageList">
+        <article id="AC.REPORT.STAGE.01" class="stage" data-status="active">
+          <div class="stageHeader"><div class="stageTitle"><span class="stageNumber">01</span><div><h3>Ứng dụng cơ bản</h3><p>Canvas, node, kết nối, dự án và lưu dữ liệu</p></div></div><span class="status active">Đang chuẩn bị</span></div>
+          <div class="stageBody"><section><h3>Phạm vi phải hoàn thiện</h3><ul><li class="check">Đặc tả yêu cầu cốt lõi đã ghi vào <code>CORE_REQUIREMENTS.md</code>.</li><li class="pending">Xây dựng Canvas vô hạn bằng Vue Flow.</li><li class="pending">Tạo node ảnh/video, kéo thả, nối dây và thu phóng.</li><li class="pending">Quản lý project, tự động lưu và khôi phục dữ liệu.</li><li class="pending">MapID cho từng thành phần, chức năng, file và selector.</li></ul></section><section><h3>Điều kiện nghiệm thu</h3><ul><li>Không mất project, node, kết nối hoặc kết quả đã lưu khi tải lại.</li><li>Mỗi nút đều có hành vi thực tế và ID ổn định.</li><li>Kiểm chứng bằng thao tác chạy được trước khi chuyển giai đoạn.</li></ul></section></div>
+        </article>
+        <article id="AC.REPORT.STAGE.02" class="stage" data-status="waiting">
+          <div class="stageHeader"><div class="stageTitle"><span class="stageNumber">02</span><div><h3>Kết nối AI thật</h3><p>Ưu tiên một nhà cung cấp và quy trình task an toàn</p></div></div><span class="status waiting">Chưa bắt đầu</span></div>
+          <div class="stageBody"><section><h3>Phạm vi phải hoàn thiện</h3><ul><li class="pending">Chọn một nhà cung cấp AI đầu tiên.</li><li class="pending">Chrome Extension Manifest V3 nhận diện đúng tab AI.</li><li class="pending">Ghép nối bằng mã đơn giản qua WebSocket.</li><li class="pending">Gửi task có Task ID riêng và nhận đúng kết quả.</li><li class="pending">Không tự gửi lại khi mất kết nối, không lấy kết quả cũ.</li></ul></section><section><h3>Điều kiện nghiệm thu</h3><ul><li>Task ID được ghi nhận, đối chiếu và hiển thị trong node.</li><li>Mất kết nối không tạo task trùng hoặc làm sai kết quả.</li><li>Luồng gửi và nhận được kiểm chứng với nhà cung cấp đã chọn.</li></ul></section></div>
+        </article>
+        <article id="AC.REPORT.STAGE.03" class="stage" data-status="waiting">
+          <div class="stageHeader"><div class="stageTitle"><span class="stageNumber">03</span><div><h3>Hoàn thiện và đóng gói Desktop</h3><p>Ổn định, kiểm thử, tài liệu và bản phát hành</p></div></div><span class="status waiting">Chưa bắt đầu</span></div>
+          <div class="stageBody"><section><h3>Phạm vi phải hoàn thiện</h3><ul><li class="pending">Rà soát toàn bộ giao diện và hành vi.</li><li class="pending">Kiểm tra dữ liệu, ID, MapID, WebSocket và Extension.</li><li class="pending">Hoàn thiện tài liệu sử dụng và xử lý lỗi.</li><li class="pending">Đóng gói ứng dụng Desktop theo cấu hình dự án.</li></ul></section><section><h3>Điều kiện nghiệm thu</h3><ul><li>Chỉ báo cáo hoàn thành khi đã chạy và kiểm chứng thực tế.</li><li>Bản Desktop mở được và giữ nguyên dữ liệu dự án.</li><li>Có bằng chứng build, chạy và kiểm tra từng luồng chính.</li></ul></section></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="AC.REPORT.PROGRESS.LOG" class="panel" aria-labelledby="logTitle">
+      <h2 id="logTitle">Nhật ký cập nhật</h2>
+      <ul class="log">
+        <li class="logItem"><time datetime="2026-11-14">14/11/2026</time><div><strong>Khởi tạo báo cáo tiến độ.</strong><p class="note">Tạo trang theo dõi 3 giai đoạn, có lọc trạng thái, tự tải lại 30 giây và hiển thị điều kiện nghiệm thu.</p></div></li>
+        <li class="logItem"><time datetime="2026-11-14">14/11/2026</time><div><strong>Ghi nhận yêu cầu cốt lõi.</strong><p class="note">Đã bổ sung 10 yêu cầu cốt lõi và 4 quy tắc cứng vào <code>CORE_REQUIREMENTS.md</code>.</p></div></li>
+      </ul>
+    </section>
+
+    <section id="AC.REPORT.PROGRESS.RULES" class="panel" aria-labelledby="rulesTitle">
+      <h2 id="rulesTitle">Quy tắc báo cáo</h2>
+      <p class="note">Mọi trạng thái phải phản ánh công việc đã làm và bằng chứng đã kiểm chứng. Không đánh dấu hoàn thành chỉ vì đã tạo giao diện hoặc viết mã. Khi có thay đổi, cập nhật nhật ký, phạm vi, điều kiện nghiệm thu và phần trăm tổng thể trong cùng một lần sửa.</p>
+    </section>
+    <p id="AC.REPORT.PROGRESS.FOOTER" class="footer">Trang đang tự tải lại mỗi 30 giây · ID báo cáo: AC.REPORT.PROGRESS.PAGE</p>
+  </main>
+  <script>
+    const filter = document.querySelector('#AC\\.REPORT\\.PROGRESS\\.FILTER');
+    const refresh = document.querySelector('#AC\\.REPORT\\.PROGRESS\\.REFRESH');
+    const lastUpdated = document.querySelector('#AC\\.REPORT\\.PROGRESS\\.LAST_UPDATED');
+    const stages = [...document.querySelectorAll('.stage')];
+    function applyFilter() {
+      const selected = filter.value;
+      stages.forEach(stage => { stage.classList.toggle('hidden', selected !== 'all' && stage.dataset.status !== selected); });
+    }
+    function updateTime() { lastUpdated.textContent = `Lần xem: ${new Date().toLocaleString('vi-VN')}`; }
+    filter.addEventListener('change', applyFilter);
+    refresh.addEventListener('click', () => location.reload());
+    updateTime();
+    applyFilter();
+  </script>
+</body>
+</html>
