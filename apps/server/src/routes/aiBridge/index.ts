@@ -1,6 +1,4 @@
 /** MacFlow-only API client for independently installed AI-Bridge services. */
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { Request } from "express";
 import { Router } from "express";
 import { createHash } from "node:crypto";
@@ -8,8 +6,8 @@ import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { assertAppRequest } from "@/utils/mcp/control";
 import conf from "@/utils/conf";
-import { bridgeApiKey, bridgeConnection, configureBridgeKey, probeBridge, selectedBridgeSource, verifyCustomBridgeKey } from "@/utils/aiBridge/connection";
-import { addMediaProvider, getMediaProvider } from "@/utils/media/provider";
+import { bridgeApiKey, bridgeConnection, configureBridgeKey, normalizeBridgeBaseUrl, probeBridge, selectedBridgeSource, verifyCustomBridgeKey } from "@/utils/aiBridge/connection";
+import { fetchAiBrModels } from "@/utils/aiBridge/models";
 
 const router = Router();
 // The selected source stays pinned until the user explicitly connects a
@@ -102,68 +100,27 @@ router.get("/sources", async (req, res) => {
 });
 const connectSchema = z.strictObject({
   apiKey: z.string().trim().min(24).max(256).regex(/^[^\s]+$/).optional(),
+  baseUrl: z.string().trim().min(8).max(2048).optional(),
 });
 let connecting = false;
-async function installCustomMediaProvider(apiKey: string) {
-  try {
-    const installed = await getMediaProvider("aiBridgeLocal");
-    // Never silently reuse an older imported adapter which can choose a
-    // global tab or omit the explicit outputKinds guard. Keep user-modified
-    // provider source intact and stop activation with a clear message.
-    if (installed.version !== "0.6.0"
-      || !installed.models.some(model => model.type === "image")
-      || !installed.models.some(model => model.type === "video")
-      || !installed.source.includes("pinned(request.other?.bridgeTarget)")
-      || !installed.source.includes("outputKinds")) {
-      throw Object.assign(new Error(
-        "Adapter aiBridgeLocal đang cài đặt chưa tương thích với việc chọn tab an toàn. MacFlow chưa kích hoạt nguồn; cần cập nhật adapter trong Cài đặt → Mô hình media."), { status: 409 });
-    }
-  } catch (error) {
-    // Preserve an already-installed custom provider. Only create a new one
-    // when it does not exist; do not overwrite customized provider sources.
-    if (!(error && typeof error === "object" && "status" in error && error.status === 404)) throw error;
-    const paths = [
-      join(process.cwd(), "research", "aiBridge.ts"),
-      join(process.cwd(), "..", "..", "research", "aiBridge.ts"),
-    ];
-    let code: string | undefined;
-    for (const path of paths) {
-      code = await readFile(path, "utf8").catch(() => undefined);
-      if (code) break;
-    }
-    if (!code) throw Object.assign(new Error("Chưa tìm thấy adapter AI-Bridge đã kiểm thử trong workspace."), { status: 503 });
-    await addMediaProvider(code);
-  }
-  // The existing settings store writes 0600 and is already used for provider
-  // credentials. Neither API response nor browser storage includes the key.
-  const providerConfigs = conf.get("settings", {}).mediaProviderConfigs;
-  const installed = providerConfigs && typeof providerConfigs === "object"
-    && !Array.isArray(providerConfigs)
-    ? (providerConfigs as Record<string, unknown>).aiBridgeLocal : undefined;
-  const existing = installed && typeof installed === "object" && !Array.isArray(installed)
-    ? installed as Record<string, unknown> : {};
-  // Keep a user-selected pinned target and any other existing preferences;
-  // never silently replace the user's Chrome tab during key configuration.
-  conf.set("settings.mediaProviderConfigs.aiBridgeLocal", {
-    ...existing,
-    baseUrl: "http://127.0.0.1:4319/v1", apiKey,
-  });
-}
 router.post("/connect", async (req, res) => {
   assertLocal(req);
   if (connecting) throw Object.assign(new Error("AI-Bridge đang kiểm tra kết nối. Vui lòng thử lại sau."), { status: 409 });
   const data = connectSchema.parse(req.body);
+  const currentCustom = bridgeConnection("custom");
+  if (data.baseUrl && bridgeConnection("custom").origin !== normalizeBridgeBaseUrl(data.baseUrl) && !data.apiKey)
+    throw Object.assign(new Error("Đổi địa chỉ AI-Br cần nhập lại API Key; không gửi khóa cũ sang máy chủ mới."), { status: 400 });
   const apiKey = data.apiKey ?? bridgeApiKey("custom");
   connecting = true;
   try {
-    const check = await verifyCustomBridgeKey(apiKey);
+    const check = await verifyCustomBridgeKey(apiKey, data.baseUrl);
     if (!check.apiOk) {
       res.set("Cache-Control", "no-store").json(success({
         saved: false, activated: false, ...check,
       }));
       return;
     }
-    if (!check.mediaReady && source === "custom") {
+    if (!check.mediaReady && source === "custom" && currentCustom.origin === normalizeBridgeBaseUrl(data.baseUrl ?? currentCustom.origin)) {
       // A new but unready key must never replace credentials used by an
       // already-selected custom bridge. No effect on existing sessions.
       res.set("Cache-Control", "no-store").json(success({
@@ -172,10 +129,10 @@ router.post("/connect", async (req, res) => {
       }));
       return;
     }
-    if (check.mediaReady) await installCustomMediaProvider(apiKey);
-    // Save verified key even if the extension is not ready, so a future check
-    // needs no re-entry. Preserve Original until media transport is verified.
-    configureBridgeKey(apiKey, check.mediaReady);
+    // AI-Br models are implemented natively. No manual .ts provider import,
+    // and no auto-install of the experimental research adapter is required.
+    // Text models can work even when no media-capable extension is connected.
+    configureBridgeKey(apiKey, check.mediaReady, data.baseUrl);
     if (check.mediaReady) {
       source = "custom";
       ({ origin, baseUrl } = bridgeConnection("custom"));
@@ -217,7 +174,8 @@ router.get("/diagnostics", async (req, res) => {
   const models = checks[1]!;
   const status = checks[2]!;
   const hasMediaTab = status.status === "fulfilled" && status.value.readyMediaTabs;
-  const hasAdapter = source === "original" || !!await getMediaProvider("aiBridgeLocal").catch(() => null);
+  const hasAdapter = true; // Built-in AI-Br provider, no imported file.
+  const customModelIds = await fetchAiBrModels().then(models => models.map(model => model.id)).catch(() => []);
   res.set("Cache-Control", "no-store").json(success({
     baseUrl,
     endpoints: { health: `${origin}/health`, models: `${baseUrl}/models`, chat: `${baseUrl}/chat/completions`, status: `${origin}/api/bridge/status` },
@@ -225,6 +183,7 @@ router.get("/diagnostics", async (req, res) => {
     healthOk: health.status === "fulfilled",
     modelsOk: models.status === "fulfilled",
     modelCount: models.status === "fulfilled" ? models.value : 0,
+    modelIds: customModelIds,
     statusOk: status.status === "fulfilled",
     connectedExtensions: status.status === "fulfilled" ? status.value.connectedExtensions : 0,
     detectedTabs: status.status === "fulfilled" ? status.value.detectedTabs : 0,
@@ -240,6 +199,7 @@ router.get("/config", (req, res) => {
   assertLocal(req);
   res.set("Cache-Control", "no-store").json(success({
     source, baseUrl,
+    customBaseUrl: bridgeConnection("custom").baseUrl,
     // MacFlow only consumes the external service API. No credentials or
     // extension pairing secrets are exposed to the browser, even for Original.
     apiKeyConfigured: (() => { try { return !!key(); } catch { return false; } })(),

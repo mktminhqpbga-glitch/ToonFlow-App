@@ -18,8 +18,9 @@ export type BridgeStatus = {
   tabs: BridgeTab[];
 };
 export type BridgeConfig = {
-  source: "original" | "custom";
+  source: "original" | "custom" | "cloud";
   baseUrl: string;
+  customBaseUrl?: string;
   apiKeyConfigured: boolean;
   customKeySaved: boolean;
 };
@@ -37,8 +38,22 @@ export type BridgeDiagnostics = {
   healthOk: boolean;
   modelsOk: boolean;
   modelCount: number;
+  modelIds?: string[];
   statusOk: boolean;
 };
+
+export function normalizeBridgeBaseUrl(value: string): string {
+  let url: URL;
+  try { url = new URL(value.trim()); }
+  catch { throw new Error("Base URL phải là địa chỉ HTTPS đầy đủ hoặc HTTP trên localhost."); }
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) && url.port === "4319";
+  if (!(url.protocol === "https:" || url.protocol === "http:" && local)
+    || url.username || url.password || url.search || url.hash) {
+    throw new Error("Base URL chỉ hỗ trợ HTTPS hoặc HTTP localhost:4319, không có tài khoản, tham số hay dấu #.");
+  }
+  if (url.protocol === "http:") url.hostname = "127.0.0.1";
+  return url.toString().replace(/\/$/, "");
+}
 
 type ResponseEnvelope<T> = { code?: number; data?: T; message?: string };
 async function request<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -59,11 +74,11 @@ export const readBridgeStatus = (signal?: AbortSignal) => request<BridgeStatus>(
 export const readBridgeConfig = (signal?: AbortSignal) => request<BridgeConfig>("/api/aiBridge/config", signal);
 export const readBridgeDiagnostics = (signal?: AbortSignal) => request<BridgeDiagnostics>("/api/aiBridge/diagnostics", signal);
 export const readBridgeSources = (signal?: AbortSignal) => request<BridgeSources>("/api/aiBridge/sources", signal);
-export async function connectCustomBridge(apiKey?: string, signal?: AbortSignal): Promise<BridgeConnectResult> {
+export async function connectCustomBridge(options: { apiKey?: string; baseUrl?: string }, signal?: AbortSignal): Promise<BridgeConnectResult> {
   const response = await fetch("/api/aiBridge/connect", {
     method: "POST", cache: "no-store",
     headers: { "Content-Type": "application/json", "x-toonflow-workspace": "1" },
-    body: JSON.stringify(apiKey ? { apiKey } : {}), signal,
+    body: JSON.stringify(options), signal,
   });
   const payload = await response.json().catch(() => null) as ResponseEnvelope<BridgeConnectResult> | null;
   if (!response.ok || !payload || payload.code !== 200 || !payload.data)

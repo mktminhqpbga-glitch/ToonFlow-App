@@ -15,6 +15,7 @@ import { chromeModels, runTask } from "@/utils/aiChrome";
 import { readReferences } from "@/utils/aiChrome/files";
 import { providerForChromeModel } from "@/utils/aiChrome/protocol";
 import { generateBridgeMedia, listBridgeMediaModels } from "@/utils/media/aiBridge";
+import { generateAiBrMedia, listAiBrMediaModels } from "@/utils/media/aiBr";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
@@ -83,7 +84,7 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       } : {}),
     } as MediaModel];
   }));
-  return [...installedModels, ...chromeModels(), ...await listBridgeMediaModels()] as MediaModel[];
+  return [...installedModels, ...chromeModels(), ...await listBridgeMediaModels(), ...await listAiBrMediaModels()] as MediaModel[];
 }
 
 export async function readReference(cwd: string, reference: MediaReference, mediaType: string, signal?: AbortSignal): Promise<Extract<MediaInput, { type: "base64" }>> {
@@ -234,7 +235,7 @@ async function preparePriceRequest(directory: string | undefined, mediaType: "im
 
 export async function getMediaPrice(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  if ((request.providerId === "aiChrome" || request.providerId === "aiBridge") && !modelGateway.enabled()) return null;
+  if ((request.providerId === "aiChrome" || request.providerId === "aiBridge" || request.providerId === "aiBr") && !modelGateway.enabled()) return null;
   if (modelGateway.enabled()) {
     const quote = await modelGateway.quoteRequest(mediaType, request.providerId, request.modelId, request);
     return { ...quote, price: `${quote.amount} ${quote.currency}`, tips: translateMessage("平台售价，按实际用量结算") };
@@ -313,7 +314,30 @@ async function executeMedia(
   try {
     signal?.throwIfAborted();
     let assets: MediaAsset[] | undefined;
-    if (request.providerId === "aiBridge") {
+    if (request.providerId === "aiBr") {
+      if (modelGateway.enabled() || modelRouteCipher || !task || mediaType === "audio")
+        invalid("AI-Br chỉ cho phép tạo ảnh/video với tác vụ bền vững trong MacFlow cục bộ.");
+      const resumeData = checkpoint?.providerData;
+      if (task.resume && resumeData?.transport !== "aiBr")
+        invalid("Không có mã tác vụ Cloud AI-Br phù hợp để khôi phục; không tự gửi lại prompt.");
+      let dispatched = !!task.resume;
+      try {
+        assets = await generateAiBrMedia({ directory, request, kind: mediaType, signal,
+          readReference,
+          clientRequestId: task.taskId,
+          resumeData: task.resume ? resumeData : undefined,
+          saveTask: data => task.save({ providerData: data as ProviderTaskData }),
+          beforeSubmit: async () => {
+            await task.save({ providerData: { transport: "aiBr", stage: "submitting", clientRequestId: task.taskId, kind: mediaType } });
+            dispatched = true;
+            markSubmitted();
+          },
+        });
+      } catch (cause) {
+        if (!dispatched && cause && typeof cause === "object") notSubmittedFailures.add(cause);
+        throw cause;
+      }
+    } else if (request.providerId === "aiBridge") {
       if (modelGateway.enabled() || modelRouteCipher || !task || mediaType === "audio")
         invalid("AI-Bridge chỉ cho phép tạo ảnh/video từ MacFlow cục bộ với tác vụ bền vững.");
       if (task.resume || checkpoint?.providerData)

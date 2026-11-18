@@ -39,7 +39,7 @@
           <span>{{ chromeModels.length ? 'Chọn dịch vụ → tab tại menu AI Chrome kế bên' : chromeMissingLabel }}</span>
         </el-option>
       </el-option-group>
-      <el-option v-if="bridgeSelected" :value="getNodeModelKey(bridgeSelected)" :label="bridgeSelected.label">
+      <el-option v-if="bridgeSelected && bridgeSelected.providerId !== 'aiBr'" :value="getNodeModelKey(bridgeSelected)" :label="bridgeSelected.label">
         <modelLabel :label="bridgeSelected.label" :providerId="bridgeSelected.providerId" :modelId="bridgeSelected.modelId" />
       </el-option>
       <el-option v-if="chromeSelected" :value="getNodeModelKey(chromeSelected)" :label="chromeSelected.label">
@@ -168,7 +168,7 @@ const bridgeTabs = ref<BridgeTab[]>([]);
 const customBridgeTabs = ref<BridgeTab[]>([]);
 const bridgeProviders = ref<BridgeProvider[]>([]);
 const bridgeError = ref("");
-const bridgeModels = computed(() => props.models.filter(model => model.providerId === "aiBridge" || model.providerId === "aiBridgeLocal"));
+const bridgeModels = computed(() => props.models.filter(model => model.providerId === "aiBridge" || model.providerId === "aiBridgeLocal" || model.providerId === "aiBr"));
 const bridgeDiscoveries = computed(() => {
   const detected = bridgeTabDiscoveries(bridgeTabs.value, props.outputKind);
   const found = new Map(detected.map(item => [item.provider, item]));
@@ -179,15 +179,15 @@ const bridgeDiscoveries = computed(() => {
 const missingBridgeKind = computed(() => props.outputKind === "image" ? "chưa xác minh tạo ảnh"
   : props.outputKind === "video" ? "chưa xác minh tạo video"
     : props.outputKind === "audio" ? "chưa xác minh âm thanh" : "chưa có model văn bản");
-const bridgeSelected = computed(() => selectedModel.value && (selectedModel.value.providerId === "aiBridge" || selectedModel.value.providerId === "aiBridgeLocal") ? selectedModel.value : undefined);
-const selectedBridgeTab = computed(() => (bridgeSelected.value?.providerId === "aiBridgeLocal"
+const bridgeSelected = computed(() => selectedModel.value && (selectedModel.value.providerId === "aiBridge" || selectedModel.value.providerId === "aiBridgeLocal" || selectedModel.value.providerId === "aiBr") ? selectedModel.value : undefined);
+const selectedBridgeTab = computed(() => (bridgeSelected.value?.providerId === "aiBridgeLocal" || bridgeSelected.value?.providerId === "aiBr"
   ? customBridgeTabs.value : bridgeTabs.value).find(tab => bridgeKey(tab) === props.bridgeTarget
-  && (bridgeSelected.value?.providerId === "aiBridgeLocal" || tab.provider === bridgeSelected.value?.modelId)));
+  && (bridgeSelected.value?.providerId === "aiBridgeLocal" || bridgeSelected.value?.providerId === "aiBr" || tab.provider === bridgeSelected.value?.modelId)));
 const bridgeChoice = computed(() => selectedBridgeTab.value && bridgeSelected.value
   ? [getNodeModelKey(bridgeSelected.value), bridgeKey(selectedBridgeTab.value)] : []);
 const bridgeOptions = computed(() => bridgeModels.value.map(model => {
-  const entries = model.providerId === "aiBridgeLocal" ? customBridgeTabs.value : bridgeTabs.value;
-  const children = entries.filter(tab => model.providerId === "aiBridgeLocal" || tab.provider === model.modelId).map(tab => ({
+  const entries = model.providerId === "aiBridgeLocal" || model.providerId === "aiBr" ? customBridgeTabs.value : bridgeTabs.value;
+  const children = entries.filter(tab => model.providerId === "aiBridgeLocal" || model.providerId === "aiBr" || tab.provider === model.modelId).map(tab => ({
     value: bridgeKey(tab), label: `${tab.title || bridgeNames[tab.provider]} · Tab ${tab.tabId} · Profile ${tab.profileInstanceId.slice(0, 8)} · ${bridgeTabCanRun(tab, props.outputKind) ? 'Sẵn sàng' : missingBridgeKind.value}`,
     status: tab.busy ? "busy" : tab.ready ? "ready" : "offline",
     disabled: !bridgeTabCanRun(tab, props.outputKind),
@@ -218,6 +218,8 @@ const chromeMissingLabel = computed(() => ({
   video: "Muse đã kết nối: extension chưa báo luồng Video",
   audio: "Muse đã kết nối: extension chưa báo luồng Âm thanh",
 })[props.outputKind]);
+// Cloud AI-Br models are selectable without choosing a tab when the dashboard
+// has pinned the target. The optional tab picker remains available beside it.
 const regularGroups = computed(() => groupNodeModels(props.models.filter(model => !chromeServiceId(model) && model.providerId !== "aiBridge" && model.providerId !== "aiBridgeLocal")));
 const selectedTarget = computed(() => targets.value.find(tab => tab.tabId === props.chromeTabId && chromeTargetService(tab.provider) === (chromeSelected.value && chromeServiceId(chromeSelected.value))));
 const selectedOrdinal = computed(() => selectedTarget.value ? targets.value.indexOf(selectedTarget.value) + 1 : 0);
@@ -291,7 +293,7 @@ async function refreshBridge() {
   bridgeTabs.value = normal.status === "fulfilled" ? normal.value.tabs : [];
   bridgeProviders.value = normal.status === "fulfilled" ? normal.value.providers : [];
   customBridgeTabs.value = custom.status === "fulfilled" ? custom.value.tabs : [];
-  const error = bridgeSelected.value?.providerId === "aiBridgeLocal" ? custom : normal;
+  const error = bridgeSelected.value?.providerId === "aiBridgeLocal" || bridgeSelected.value?.providerId === "aiBr" ? custom : normal;
   bridgeError.value = error.status === "rejected"
     ? error.reason instanceof Error ? error.reason.message : "Không đọc được tab AI-Bridge."
     : "";
@@ -300,10 +302,10 @@ function onBridgeOpen(visible: boolean) { if (visible) { emit("open"); void refr
 function chooseBridge(value: unknown) {
   if (!Array.isArray(value) || value.length !== 2 || !value.every(item => typeof item === "string")) return;
   const model = findNodeModel(bridgeModels.value, value[0]);
-  const tab = (model?.providerId === "aiBridgeLocal" ? customBridgeTabs.value : bridgeTabs.value)
+  const tab = (model?.providerId === "aiBridgeLocal" || model?.providerId === "aiBr" ? customBridgeTabs.value : bridgeTabs.value)
     .find(item => bridgeKey(item) === value[1]);
   if (!model || !tab || !bridgeTabCanRun(tab, props.outputKind)
-    || model.providerId !== "aiBridgeLocal" && model.modelId !== tab.provider) return;
+    || model.providerId !== "aiBridgeLocal" && model.providerId !== "aiBr" && model.modelId !== tab.provider) return;
   emit("update:modelValue", value[0]);
   emit("update:chromeTabId", undefined);
   emit("update:bridgeTarget", bridgeKey(tab));

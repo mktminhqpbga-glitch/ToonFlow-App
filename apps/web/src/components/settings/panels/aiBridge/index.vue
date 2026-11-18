@@ -6,17 +6,29 @@
         <el-tag size="small" :type="apiStateType">{{ apiStateLabel }}</el-tag>
       </header>
       <p class="hint">MacFlow sử dụng API do AI-Bridge cung cấp. Chọn AI, tab và thực hiện tạo ảnh/video trong các node trên Canvas.</p>
-      <p class="hint">Nguồn API đang dùng: <strong>{{ config ? config.source === 'custom' ? 'Tùy chỉnh (4319)' : 'Gốc (4320)' : 'Chưa đọc được cấu hình' }}</strong>
+      <p class="hint">Nguồn API đang dùng: <strong>{{ sourceLabel }}</strong>
         <span v-if="config"> · <code>{{ config.baseUrl }}</code></span>
       </p>
+      <p v-if="config?.customKeySaved && config.customBaseUrl && config.customBaseUrl !== config.baseUrl" class="hint">Đã lưu kết nối tùy chỉnh: <code>{{ config.customBaseUrl }}</code> (chưa kích hoạt).</p>
 
       <div class="keySetup">
-        <label for="bridgeSetupKey">API Key AI-Bridge tùy chỉnh (4319)</label>
+        <label for="bridgeSetupUrl">Base URL API của AI-Br</label>
+        <el-input
+          id="bridgeSetupUrl"
+          v-model="setupBaseUrl"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="https://ten-dich-vu.onrender.com/v1 hoặc http://localhost:4319/v1"
+          :disabled="settingUp"
+          @keyup.enter="connectKey"
+        />
+        <p class="hint">Nhập địa chỉ HTTPS của AI-Br Cloud hoặc HTTP trên localhost. Để trống khi chỉ kiểm tra lại kết nối đã lưu. Đổi địa chỉ API cần nhập khóa mới.</p>
+        <label for="bridgeSetupKey">API Key AI-Br</label>
         <el-input
           id="bridgeSetupKey"
           v-model="setupKey"
           type="password"
-          showPassword
           autocomplete="off"
           autocapitalize="off"
           spellcheck="false"
@@ -27,17 +39,17 @@
         <p class="hint">API Key được gửi tới backend MacFlow để xác minh và lưu trên máy Mac. MacFlow không lưu khóa trong bộ nhớ trình duyệt.</p>
         <div class="actions">
           <el-button type="primary" :loading="settingUp" :disabled="loading || settingUp || (!setupKey.trim() && !savedKeyAvailable)" @click="connectKey">
-            {{ setupKey.trim() ? 'Xác minh và lưu API Key' : 'Kiểm tra lại kết nối' }}
+            {{ setupKey.trim() ? 'Xác minh và lưu kết nối' : 'Kiểm tra lại kết nối' }}
           </el-button>
-          <el-tag v-if="config?.source === 'custom'" type="success">Đang dùng API 4319</el-tag>
-          <el-tag v-else-if="savedKeyAvailable" type="info">Đã lưu khóa của 4319</el-tag>
+          <el-tag v-if="config?.source === 'custom'" type="success">Đang dùng AI-Br tùy chỉnh</el-tag>
+          <el-tag v-else-if="savedKeyAvailable" type="info">Đã lưu API Key</el-tag>
         </div>
         <el-alert v-if="setupError" type="error" :title="setupError" :closable="false" showIcon />
         <el-alert v-if="setupResult?.saved && !setupResult.activated" type="warning" :closable="false" showIcon
-          :title="setupResult.reason || 'API Key hợp lệ và đã lưu, nhưng chưa kích hoạt nguồn 4319.'"
+          :title="setupResult.reason || 'API Key hợp lệ và đã lưu, nhưng nguồn API chưa kích hoạt.'"
           description="Số model hợp lệ chưa bảo đảm tab tạo ảnh/video sẵn sàng. Có thể kiểm tra lại khi AI/tab đã được xác minh." />
         <el-alert v-else-if="setupResult?.activated" type="success" :closable="false" showIcon
-          title="API Key được xác minh, nguồn 4319 đã kích hoạt"
+          title="Kết nối AI-Br đã được xác minh và kích hoạt"
           :description="'API trả về ' + setupResult.modelCount + ' model; ' + setupResult.readyTabs + ' tab sẵn sàng tại thời điểm kiểm tra.'" />
       </div>
 
@@ -52,6 +64,12 @@
             Danh sách model: {{ diagnostics.modelsOk ? diagnostics.modelCount + ' model' : 'Chưa truy cập được' }} ·
             API danh sách tab: {{ diagnostics.statusOk ? 'Có phản hồi' : 'Không truy cập được' }}</p>
           <p class="hint">Địa chỉ API: <code>{{ diagnostics.baseUrl }}</code></p>
+          <div v-if="modelIds.length" class="modelList">
+            <strong>Các model đã nhận diện</strong>
+            <div class="modelTags">
+              <el-tag v-for="model in modelIds" :key="model" size="small" type="info">{{ model }}</el-tag>
+            </div>
+          </div>
           <p class="hint">Danh sách model hợp lệ chỉ xác nhận API phản hồi; khả năng tạo ảnh/video còn phụ thuộc AI và tab được chọn trên Canvas.</p>
         </template>
         <p v-else class="hint">Chưa có kết quả kiểm tra API.</p>
@@ -111,7 +129,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import {
-  bridgeProviderName, bridgeTabKey, connectCustomBridge, readBridgeConfig,
+  bridgeProviderName, bridgeTabKey, connectCustomBridge, normalizeBridgeBaseUrl, readBridgeConfig,
   readBridgeDiagnostics, readBridgeSources, readBridgeStatus,
   type BridgeConfig, type BridgeConnectResult, type BridgeDiagnostics,
   type BridgeSources, type BridgeStatus, type BridgeTab,
@@ -122,6 +140,7 @@ const config = ref<BridgeConfig>();
 const status = ref<BridgeStatus>();
 const diagnostics = ref<BridgeDiagnostics>();
 const sources = ref<BridgeSources>();
+const setupBaseUrl = ref("");
 const setupKey = ref("");
 const setupResult = ref<BridgeConnectResult>();
 const setupError = ref("");
@@ -138,8 +157,13 @@ let viewGeneration = 0;
 let loadingGeneration = -1;
 
 const savedKeyAvailable = computed(() => config.value?.customKeySaved === true || setupResult.value?.saved === true);
+const sourceLabel = computed(() => !config.value ? "Chưa đọc được cấu hình"
+  : config.value.source === "cloud" || config.value.source === "custom" && config.value.baseUrl.startsWith("https://") ? "AI-Br Cloud"
+    : config.value.source === "custom" ? "AI-Br tùy chỉnh" : "Gốc (4320)");
 const apiStateType = computed(() => diagnostics.value?.modelsOk ? "success" : diagnostics.value ? "warning" : "info");
 const apiStateLabel = computed(() => diagnostics.value?.modelsOk ? "Danh sách model truy cập được" : diagnostics.value ? "API chưa xác minh" : "Chưa kiểm tra");
+const modelIds = computed(() => (Array.isArray(diagnostics.value?.modelIds) ? diagnostics.value.modelIds : [])
+  .filter(model => typeof model === "string" && model.trim()));
 const tabs = computed(() => (Array.isArray(status.value?.tabs) ? status.value.tabs : []).filter(tab =>
   tab && typeof tab.provider === "string" && typeof tab.profileInstanceId === "string"
   && typeof tab.documentToken === "string" && typeof tab.url === "string"
@@ -196,16 +220,27 @@ async function refreshTabs() {
 
 async function connectKey() {
   const apiKey = setupKey.value.trim();
+  const baseUrlInput = setupBaseUrl.value.trim();
   if (settingUp.value || loading.value || (!apiKey && !savedKeyAvailable.value)) return;
+  let baseUrl: string | undefined;
+  try {
+    if (baseUrlInput) {
+      if (!apiKey) throw new Error("Khi thay đổi Base URL, cần nhập API Key mới cho địa chỉ đó.");
+      baseUrl = normalizeBridgeBaseUrl(baseUrlInput);
+    }
+  } catch (cause) {
+    setupError.value = message(cause, "Base URL API không hợp lệ.");
+    return;
+  }
   const generation = viewGeneration;
   settingUp.value = true;
   setupError.value = "";
   setupResult.value = undefined;
   try {
-    const next = await connectCustomBridge(apiKey || undefined, controller.signal);
+    const next = await connectCustomBridge({ ...(apiKey ? { apiKey } : {}), ...(baseUrl ? { baseUrl } : {}) }, controller.signal);
     if (!visibleNow(generation)) return;
     setupResult.value = next;
-    if (next.saved) setupKey.value = "";
+    if (next.saved) { setupKey.value = ""; setupBaseUrl.value = ""; }
     else setupError.value = next.reason || "API Key chưa được xác minh hoặc lưu.";
   } catch (cause) {
     if (visibleNow(generation)) setupError.value = message(cause, "Không kết nối được AI-Bridge.");
@@ -222,6 +257,7 @@ watch(() => props.visible, visible => {
     void refresh();
     poll = setInterval(() => void refreshTabs(), 8000);
   } else {
+    setupBaseUrl.value = "";
     setupKey.value = "";
     setupResult.value = undefined;
     setupError.value = "";
@@ -238,6 +274,7 @@ watch(() => props.visible, visible => {
 onBeforeUnmount(() => {
   clearInterval(poll);
   controller.abort();
+  setupBaseUrl.value = "";
   setupKey.value = "";
   setupResult.value = undefined;
   config.value = undefined;
@@ -255,6 +292,8 @@ onBeforeUnmount(() => {
 .keySetup label { font-size: 13px; font-weight: 600; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .statusSummary { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--el-border-color-lighter); border-radius: 8px; }
+.modelList { display: grid; gap: 8px; font-size: 12px; }
+.modelTags { display: flex; flex-wrap: wrap; gap: 6px; }
 .sourceDetails { display: grid; gap: 8px; }
 .sourceDetails summary { cursor: pointer; color: var(--el-text-color-secondary); font-size: 12px; }
 .sourceDetails[open] > *:not(summary) { margin-top: 8px; }

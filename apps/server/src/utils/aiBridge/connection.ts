@@ -43,16 +43,37 @@ export function selectedBridgeSource(): BridgeSource {
   if (value !== "original" && value !== "custom") configError("Chỉ cho phép MACFLOW_AI_BRIDGE_SOURCE=original hoặc custom.");
   return value;
 }
-export function configureBridgeKey(apiKey: string, activate: boolean) {
+/** A Cloud dashboard is the server; the Chrome extension is on the user's machine. */
+export function normalizeBridgeBaseUrl(value: string) {
+  let url: URL;
+  try { url = new URL(value.trim()); } catch { return configError("URL API AI-Br không hợp lệ."); }
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname.toLowerCase());
+  if ((url.protocol !== "https:" && !(loopback && url.protocol === "http:"))
+    || !!url.username || !!url.password || !!url.search || !!url.hash || url.port === "0"
+    || url.pathname.replace(/\/+$/, "") && !["", "/", "/v1"].includes(url.pathname.replace(/\/+$/, ""))) {
+    configError("AI-Br yêu cầu HTTPS, hoặc HTTP chỉ tới localhost; URL chỉ được kết thúc bằng /v1.");
+  }
+  // Prevent an apparently valid private-network endpoint being used as an internal proxy.
+  if (/^(?:10|127|169\.254|192\.168)\./.test(url.hostname) && !loopback
+    || /^172\.(?:1[6-9]|2\d|3[01])\./.test(url.hostname)
+    || url.hostname.endsWith(".local") && !loopback) configError("Không cho phép đích API mạng nội bộ khác localhost.");
+  return url.origin;
+}
+export function configureBridgeKey(apiKey: string, activate: boolean, baseUrl?: string) {
   if (apiKey.length < 24 || apiKey.length > 256 || /\s/.test(apiKey))
     configError("API Key phải có từ 24 đến 256 ký tự và không có khoảng trắng.");
   const saved = conf.get("aiBridge") ?? {};
   // conf stores settings.json with mode 0600. No browser storage or log output.
-  conf.set("aiBridge", { ...saved, customApiKey: apiKey, ...(activate ? { source: "custom" as const } : {}) });
+  conf.set("aiBridge", { ...saved, customApiKey: apiKey,
+    ...(baseUrl ? { customBaseUrl: normalizeBridgeBaseUrl(baseUrl) } : {}),
+    ...(activate ? { source: "custom" as const } : {}),
+  });
 }
 export function bridgeConnection(source: BridgeSource = selectedBridgeSource()) {
   const custom = source === "custom";
-  const origin = custom ? "http://127.0.0.1:4319" : "http://127.0.0.1:4320";
+  const origin = custom
+    ? normalizeBridgeBaseUrl(conf.get("aiBridge")?.customBaseUrl || process.env.MACFLOW_AI_BRIDGE_CUSTOM_BASE_URL || "http://127.0.0.1:4319")
+    : "http://127.0.0.1:4320";
   return {
     source, origin, baseUrl: `${origin}/v1`,
     // Legacy Original uses its existing credential file until migration.
@@ -108,11 +129,11 @@ export async function probeBridge(source: BridgeSource): Promise<{
 }
 
 /** Tests only read-only endpoints. Never sends a prompt or media request. */
-export async function verifyCustomBridgeKey(apiKey: string): Promise<{
+export async function verifyCustomBridgeKey(apiKey: string, baseUrl?: string): Promise<{
   apiOk: boolean; modelCount: number; statusOk: boolean;
   connectedExtensions: number; readyTabs: number; mediaReady: boolean; reason: string;
 }> {
-  const c = bridgeConnection("custom");
+  const c = baseUrl ? { origin: normalizeBridgeBaseUrl(baseUrl) } : bridgeConnection("custom");
   const headers = { Authorization: `Bearer ${apiKey}` };
   const result = { apiOk: false, modelCount: 0, statusOk: false,
     connectedExtensions: 0, readyTabs: 0, mediaReady: false, reason: "" };
@@ -125,16 +146,16 @@ export async function verifyCustomBridgeKey(apiKey: string): Promise<{
   };
   try {
     const health = await request("/health", false);
-    if (!health.ok) { result.reason = "Máy chủ AI-Bridge cổng 4319 chưa sẵn sàng."; return result; }
+    if (!health.ok) { result.reason = "Máy chủ AI-Br chưa sẵn sàng."; return result; }
     await health.body?.cancel();
   } catch {
-    result.reason = "Không kết nối được máy chủ AI-Bridge tại cổng 4319.";
+    result.reason = "Không kết nối được máy chủ AI-Br đã chọn.";
     return result;
   }
   try {
     const response = await request("/v1/models");
     if (response.status === 401 || response.status === 403) {
-      result.reason = "API Key không đúng hoặc không có quyền truy cập máy chủ 4319.";
+      result.reason = "API Key không đúng hoặc không có quyền truy cập AI-Br.";
       await response.body?.cancel();
       return result;
     }
@@ -158,7 +179,7 @@ export async function verifyCustomBridgeKey(apiKey: string): Promise<{
     const response = await request("/api/bridge/status");
     if (!response.ok) {
       result.reason = response.status === 404
-        ? "API Key hợp lệ nhưng AI-Bridge 4319 thiếu /api/bridge/status; chưa thể chọn tab trong MacFlow."
+        ? "API Key hợp lệ nhưng AI-Br thiếu /api/bridge/status; chỉ có thể sử dụng model văn bản đã được công bố."
         : `API Key hợp lệ nhưng chưa lấy được trạng thái extension (HTTP ${response.status}).`;
       await response.body?.cancel();
       return result;

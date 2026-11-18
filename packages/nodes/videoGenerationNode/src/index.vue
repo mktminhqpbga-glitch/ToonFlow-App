@@ -256,7 +256,7 @@ function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory">
     resolution: data.value.resolution || undefined,
     ratio: data.value.ratio,
     generateAudio: choice.audio === "optional" ? data.value.generateAudio : choice.audio,
-    other: choice.providerId === "aiBridge" || choice.providerId === "aiBridgeLocal" ? { ...data.value.other, bridgeTarget: data.value.bridgeTarget }
+    other: choice.providerId === "aiBridge" || choice.providerId === "aiBridgeLocal" || choice.providerId === "aiBr" ? { ...data.value.other, bridgeTarget: data.value.bridgeTarget }
       : chromeServiceId(choice) ? { ...data.value.other, chromeTabId: data.value.chromeTabId }
         : Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
     outputDirectory: `assets/${id}`,
