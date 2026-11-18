@@ -547,7 +547,7 @@ onDeactivated(() => {
   editor.value?.commands.clearSearch();
   editor.value?.view.dom.blur();
 });
-onBeforeUnmount(() => { lifetime.abort(new Error("编辑器已关闭")); editor.value?.destroy(); });
+onBeforeUnmount(() => { lifetime.abort(new Error("Trình soạn thảo đã đóng")); editor.value?.destroy(); });
 </script>
 
 <style scoped lang="scss">

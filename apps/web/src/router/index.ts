@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import { useHelloStore } from "@/stores/hello";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { publicWeb } from "@/stores/multiTenant";
 import { adminRoute } from "@/pages/multiTenant/router";
@@ -7,11 +8,11 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: () => "/home",
+      redirect: () => publicWeb.value ? "/home" : "/hello",
     },
     {
       path: "/hello",
-      beforeEnter: () => ({ path: "/home", replace: true }),
+      beforeEnter: async () => publicWeb.value || await useHelloStore().load() ? { path: "/home", replace: true } : true,
       component: () => import("@/pages/hello/index.vue"),
     },
     {

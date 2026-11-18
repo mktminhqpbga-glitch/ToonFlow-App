@@ -9,21 +9,21 @@
     "./pcmPreview": "./src/pcmPreview.ts",
     "./promptInput": "./src/components/promptInput.vue",
     "./promptText": "./src/promptText.ts",
+    "./nodePrompts": "./src/nodePrompts.ts",
     "./referenceItem": "./src/components/referenceItem.vue",
     "./mediaHistory": "./src/components/mediaHistory.vue",
     "./mediaPrice": "./src/components/mediaPrice.vue",
     "./modelForm": "./src/components/modelForm.vue",
     "./imageGenerationSettings": "./src/components/imageGenerationSettings.vue",
     "./modelLabel": "./src/components/modelLabel.vue",
+    "./chromeModelSelect": "./src/components/chromeModelSelect.vue",
+    "./chromeTabs": "./src/chromeTabs.ts",
     "./showNodeError": "./src/showNodeError.ts",
     "./useNodeReferences": "./src/useNodeReferences.ts",
     "./useNodeGeneration": "./src/useNodeGeneration.ts",
     "./useModelForm": "./src/useModelForm.ts",
     "./useAudioTranscription": "./src/useAudioTranscription.ts",
-    "./groupNodeModels": "./src/groupNodeModels.ts",
-    "./nodeLanguage": "./src/nodeLanguage.ts",
-    "./cameraStudio": "./src/cameraStudio.ts",
-    "./cameraStudioPanel": "./src/components/cameraStudio.vue"
+    "./groupNodeModels": "./src/groupNodeModels.ts"
   },
   "scripts": {
     "typecheck": "vue-tsc --noEmit"
@@ -34,6 +34,7 @@
     "element-plus": "^2.14.5"
   },
   "dependencies": {
+    "@toonflow/i18n": "workspace:*",
     "@form-create/element-ui": "^3",
     "@tabler/icons-vue": "^3.46.0",
     "@toonflow/model-icons": "workspace:*",

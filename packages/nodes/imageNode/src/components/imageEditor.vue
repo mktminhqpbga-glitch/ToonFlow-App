@@ -1,14 +1,14 @@
 <template>
   <div class="imageEditor" :class="{ editing: mode, previewUnavailable: preparingPreview || previewError }" :style="{ '--imageRatio': imageRatio }" :aria-busy="preparingPreview">
     <img ref="sourceImage" :src="previewSrc" :alt="alt" draggable="false" @load="imageLoaded" @error="handleError" />
-    <div v-if="preparingPreview || previewError" class="previewStatus" role="status">{{ preparingPreview ? "正在生成兼容预览…" : previewError }}</div>
+    <div v-if="preparingPreview || previewError" class="previewStatus" role="status">{{ preparingPreview ? "Đang tạo bản xem trước tương thích…" : previewError }}</div>
     <canvas
       v-if="mode"
       ref="paintCanvas"
       class="paintCanvas nodrag nopan nowheel"
       :class="{ inpaint: mode === 'inpaint' }"
       :style="{ aspectRatio: `${sourceImage?.naturalWidth} / ${sourceImage?.naturalHeight}`, cursor: tool === 'text' ? 'text' : 'crosshair' }"
-      :aria-label="mode === 'inpaint' ? '涂抹需要重绘的区域' : '图片标记画布'"
+      :aria-label="mode === 'inpaint' ? 'Tô vùng cần vẽ lại' : 'Canvas đánh dấu ảnh'"
       @pointerdown.stop.prevent="startStroke"
       @pointermove.stop.prevent="moveStroke"
       @pointerup.stop.prevent="finishStroke"
@@ -24,8 +24,8 @@
       class="textInput nodrag nopan nowheel"
       :style="textStyle"
       :rows="Math.max(1, textDraft.text.split('\n').length)"
-      aria-label="标记文本"
-      placeholder="输入文本"
+      aria-label="Chữ đánh dấu"
+      placeholder="Nhập văn bản"
       wrap="off"
       @pointerdown.stop
       @mousedown.stop
@@ -35,20 +35,20 @@
   </div>
   <teleport v-if="mode && toolbarTarget" :to="toolbarTarget">
     <div class="paintToolbar" @keydown.esc.stop.prevent="!busy && cancel()">
-      <el-button class="exitButton" :icon="IconX" :disabled="busy" text :title="mode === 'mark' ? '取消标记' : '取消局部重绘'" :aria-label="mode === 'mark' ? '取消标记' : '取消局部重绘'" @click="cancel">{{ mode === 'mark' ? '标记' : '局部重绘' }}</el-button>
-      <el-button :icon="IconBrush" :type="tool === 'brush' ? 'primary' : 'default'" :disabled="busy" text title="画笔" aria-label="画笔" :aria-pressed="tool === 'brush'" @click="tool = 'brush'" />
+      <el-button class="exitButton" :icon="IconX" :disabled="busy" text :title="mode === 'mark' ? 'Hủy đánh dấu' : 'Hủy vẽ lại một vùng'" :aria-label="mode === 'mark' ? 'Hủy đánh dấu' : 'Hủy vẽ lại một vùng'" @click="cancel" />
+      <el-button :icon="IconBrush" :type="tool === 'brush' ? 'primary' : 'default'" :disabled="busy" text title="Cọ vẽ" aria-label="Cọ vẽ" :aria-pressed="tool === 'brush'" @click="tool = 'brush'" />
       <template v-if="mode === 'mark'">
-        <el-button :icon="IconSquare" :type="tool === 'rectangle' ? 'primary' : 'default'" :disabled="busy" text title="矩形" aria-label="矩形" :aria-pressed="tool === 'rectangle'" @click="tool = 'rectangle'" />
-        <el-button :icon="IconCircle" :type="tool === 'circle' ? 'primary' : 'default'" :disabled="busy" text title="圆形" aria-label="圆形" :aria-pressed="tool === 'circle'" @click="tool = 'circle'" />
-        <el-button :icon="IconTypography" :type="tool === 'text' ? 'primary' : 'default'" :disabled="busy" text title="文本" aria-label="文本" :aria-pressed="tool === 'text'" @click="tool = 'text'" />
+        <el-button :icon="IconSquare" :type="tool === 'rectangle' ? 'primary' : 'default'" :disabled="busy" text title="Hình chữ nhật" aria-label="Hình chữ nhật" :aria-pressed="tool === 'rectangle'" @click="tool = 'rectangle'" />
+        <el-button :icon="IconCircle" :type="tool === 'circle' ? 'primary' : 'default'" :disabled="busy" text title="Hình tròn" aria-label="Hình tròn" :aria-pressed="tool === 'circle'" @click="tool = 'circle'" />
+        <el-button :icon="IconTypography" :type="tool === 'text' ? 'primary' : 'default'" :disabled="busy" text title="Văn bản" aria-label="Văn bản" :aria-pressed="tool === 'text'" @click="tool = 'text'" />
       </template>
-      <el-button :icon="IconEraser" :type="tool === 'eraser' ? 'primary' : 'default'" :disabled="busy" text title="橡皮擦" aria-label="橡皮擦" :aria-pressed="tool === 'eraser'" @click="tool = 'eraser'" />
-      <input v-if="mode === 'mark'" v-model="color" type="color" class="brushColor" :disabled="busy" title="画笔颜色" aria-label="画笔颜色" />
-      <label class="brushSize">{{ tool === 'text' ? '字号' : '粗细' }}<input v-model.number="toolSize" type="range" :min="tool === 'text' ? 12 : 2" max="60" :disabled="busy" :aria-label="tool === 'text' ? '文本字号' : '画笔粗细'" /><span>{{ toolSize }}</span></label>
-      <el-button :icon="IconArrowBackUp" :disabled="busy || !strokeCount" text title="撤销" aria-label="撤销" @click="undo" />
-      <el-button :icon="IconArrowForwardUp" :disabled="busy || strokeCount === historyLength" text title="恢复" aria-label="恢复" @click="redo" />
-      <el-button :icon="IconTrash" :disabled="busy || !hasDrawing" text title="清空标记" aria-label="清空标记" @click="clear" />
-      <el-button v-if="mode === 'mark'" class="saveButton" :icon="IconCheck" :disabled="!hasDrawing && !textDraft?.text.trim()" :loading="busy" type="primary" @click="saveMark">保存</el-button>
+      <el-button :icon="IconEraser" :type="tool === 'eraser' ? 'primary' : 'default'" :disabled="busy" text title="Tẩy" aria-label="Tẩy" :aria-pressed="tool === 'eraser'" @click="tool = 'eraser'" />
+      <input v-if="mode === 'mark'" v-model="color" type="color" class="brushColor" :disabled="busy" title="Màu cọ" aria-label="Màu cọ" />
+      <label class="brushSize">{{ tool === 'text' ? 'Cỡ chữ' : 'Độ dày' }}<input v-model.number="toolSize" type="range" :min="tool === 'text' ? 12 : 2" max="60" :disabled="busy" :aria-label="tool === 'text' ? 'Cỡ chữ' : 'Độ dày nét vẽ'" /><span>{{ toolSize }}</span></label>
+      <el-button :icon="IconArrowBackUp" :disabled="busy || !strokeCount" text title="Hoàn tác" aria-label="Hoàn tác" @click="undo" />
+      <el-button :icon="IconArrowForwardUp" :disabled="busy || strokeCount === historyLength" text title="Làm lại" aria-label="Làm lại" @click="redo" />
+      <el-button :icon="IconTrash" :disabled="busy || !hasDrawing" text title="Xóa đánh dấu" aria-label="Xóa đánh dấu" @click="clear" />
+      <el-button v-if="mode === 'mark'" class="saveButton" :icon="IconCheck" :disabled="!hasDrawing && !textDraft?.text.trim()" :loading="busy" type="primary" @click="saveMark" title="Lưu" aria-label="Lưu" />
     </div>
   </teleport>
 </template>
@@ -299,24 +299,24 @@ function handleTextKey(event: KeyboardEvent) {
 
 function createCanvas() {
   const source = sourceImage.value;
-  if (!source?.naturalWidth || !paintCanvas.value) throw new Error("图片尚未加载完成");
+  if (!source?.naturalWidth || !paintCanvas.value) throw new Error("Ảnh chưa tải xong");
   const canvas = document.createElement("canvas");
   canvas.width = source.naturalWidth;
   canvas.height = source.naturalHeight;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("无法创建绘画画布");
+  if (!context) throw new Error("Không tạo được Canvas để vẽ");
   return { canvas, context };
 }
 
 function toFile(canvas: HTMLCanvasElement) {
-  return new Promise<File>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(new File([blob], "image.png", { type: "image/png" })) : reject(new Error("图片编码失败")), "image/png"));
+  return new Promise<File>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(new File([blob], "image.png", { type: "image/png" })) : reject(new Error("Mã hóa ảnh thất bại")), "image/png"));
 }
 
 async function saveMark() {
   if (busy.value) return;
   commitText();
   if (!hasDrawing.value) return;
-  if (!nodeTypes?.value?.["remote-imageNode"]) return void ElMessage.error("请先启用图片节点插件");
+  if (!nodeTypes?.value?.["remote-imageNode"]) return void ElMessage.error("Hãy bật plugin node ảnh trước");
   const controller = operation = new AbortController();
   busy.value = true;
   const id = crypto.randomUUID();
@@ -332,7 +332,7 @@ async function saveMark() {
     controller.signal.throwIfAborted();
     const path = await uploadNodeFile(workspace, id, file);
     controller.signal.throwIfAborted();
-    if (findNode(node.id) !== node || !nodeTypes?.value?.["remote-imageNode"]) throw new Error("画布节点已变化，请重新保存");
+    if (findNode(node.id) !== node || !nodeTypes?.value?.["remote-imageNode"]) throw new Error("Node trên Canvas đã thay đổi, hãy lưu lại");
     const x = node.computedPosition.x + node.dimensions.width + 80;
     let y = node.computedPosition.y;
     for (const other of [...getNodes.value].sort((left, right) => left.computedPosition.y - right.computedPosition.y)) {
@@ -340,16 +340,16 @@ async function saveMark() {
     }
     await batchHistory(async () => {
       controller.signal.throwIfAborted();
-      addNodes([{ id, type: "remote-imageNode", position: { x, y }, data: { label: `${node.data.label || "图片"} - 标记`, outputs: { image: { dataType: "IMAGE", value: { url: path, mimeType: "image/png" } } } } }]);
+      addNodes([{ id, type: "remote-imageNode", position: { x, y }, data: { label: `${node.data.label || "Ảnh"} - Đánh dấu`, outputs: { image: { dataType: "IMAGE", value: { url: path, mimeType: "image/png" } } } } }]);
       addEdges([{ id: crypto.randomUUID(), source: node.id, sourceHandle: "image", target: id, targetHandle: "in" }]);
       committed = true;
     });
     cancel();
   } catch (error) {
-    if (!controller.signal.aborted) showNodeError(error, "标记保存失败");
+    if (!controller.signal.aborted) showNodeError(error, "Lưu đánh dấu thất bại");
   } finally {
     if (!committed && workspace) await workspace.remove(`assets/${id}`, true).catch(error => {
-      if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "标记临时文件清理失败");
+      if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "Không xóa được tệp đánh dấu tạm");
     });
     operation = undefined;
     busy.value = false;
@@ -357,11 +357,11 @@ async function saveMark() {
 }
 
 async function createInpaint(input: InpaintDraftInput, signal: AbortSignal) {
-  if (busy.value || mode.value !== "inpaint") throw new Error("请先进入局部重绘");
-  if (!input.prompt.trim()) throw new Error("请输入重绘提示词");
-  if (!nodeTypes?.value?.["remote-imageGenerationNode"]) throw new Error("请先启用图片生成节点插件");
+  if (busy.value || mode.value !== "inpaint") throw new Error("Hãy mở chế độ vẽ lại một vùng");
+  if (!input.prompt.trim()) throw new Error("Hãy nhập mô tả vẽ lại");
+  if (!nodeTypes?.value?.["remote-imageGenerationNode"]) throw new Error("Hãy bật plugin node tạo ảnh trước");
   const layer = paintCanvas.value;
-  if (!layer || !layer.getContext("2d")?.getImageData(0, 0, layer.width, layer.height).data.some((value, index) => index % 4 === 3 && value)) throw new Error("请先涂抹需要重绘的区域");
+  if (!layer || !layer.getContext("2d")?.getImageData(0, 0, layer.width, layer.height).data.some((value, index) => index % 4 === 3 && value)) throw new Error("Hãy tô vùng cần vẽ lại trước");
   const workspace = files.getWorkspaceFiles();
   const controller = operation = new AbortController();
   const requestSignal = AbortSignal.any([signal, controller.signal]);
@@ -393,7 +393,7 @@ async function createInpaint(input: InpaintDraftInput, signal: AbortSignal) {
       await workspace.rename(path, paths[index]!);
     }
     const result = await createVariation({
-      label: "局部重绘", nodeId, prompt: buildInpaintPrompt(input.prompt),
+      label: "Vẽ lại một vùng", nodeId, prompt: buildInpaintPrompt(input.prompt),
       model: typeof node.data.model === "string" ? node.data.model : "",
       size: typeof node.data.size === "string" ? node.data.size : "",
       ratio: typeof node.data.ratio === "string" ? node.data.ratio : "16:9",
@@ -405,7 +405,7 @@ async function createInpaint(input: InpaintDraftInput, signal: AbortSignal) {
   } finally {
     if (canvas) canvas.width = canvas.height = 0;
     if (!committed) await workspace.remove(`assets/${nodeId}`, true).catch(error => {
-      if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "重绘临时文件清理失败");
+      if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "Không xóa được tệp vẽ lại tạm");
     });
     operation = undefined;
     busy.value = false;
@@ -466,9 +466,9 @@ defineExpose({ mode, busy, start, cancel, createInpaint, previewSrc });
   box-shadow: var(--el-box-shadow-light);
   white-space: nowrap;
 
-  .el-button { margin: 0; padding: 0 8px; min-width: 32px; }
+  .el-button { width: 32px; min-width: 32px; height: 32px; margin: 0; padding: 0; }
   .exitButton { margin-right: 4px; }
-  .saveButton { margin-left: 8px; padding: 0 12px; }
+  .saveButton { margin-left: 8px; }
   .brushColor { width: 26px; height: 26px; padding: 2px; border: 1px solid var(--el-border-color); border-radius: 5px; background: transparent; cursor: pointer; }
   .brushSize { display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 12px; input { width: 70px; accent-color: var(--el-color-primary); } span { min-width: 18px; } }
 }

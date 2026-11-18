@@ -11,9 +11,9 @@
         :class="{ activeLight: activeLight === handle.kind }"
         :style="handle.style"
         :disabled="disabled"
-        :aria-label="`${handle.label}，水平方位 ${handle.azimuth} 度，俯仰 ${handle.elevation} 度；方向键调整，Shift 微调`"
+        :aria-label="`${handle.label}, góc ngang ${handle.azimuth} độ, góc cao ${handle.elevation} độ; dùng phím mũi tên để chỉnh, giữ Shift để chỉnh từng độ`"
         :aria-pressed="activeLight === handle.kind"
-        title="拖动调整光位；方向键调整，Shift 微调"
+        title="Kéo để chỉnh vị trí đèn; dùng phím mũi tên, giữ Shift để chỉnh từng độ"
         @click="emit('selectLight', handle.kind)"
         @pointerdown.stop.prevent="startDrag($event, handle.kind)"
         @pointermove="moveDrag"
@@ -23,10 +23,10 @@
         @keydown="adjustDirection($event, handle.kind)">
         <span>{{ handle.label }}</span>
       </button>
-      <span v-if="imageFailed" class="imageError" role="status">参考图加载失败</span>
-      <span class="stageHint">拖动光球调整光位 · 拖动空白旋转视角</span>
+      <span v-if="imageFailed" class="imageError" role="status">Không tải được ảnh tham chiếu</span>
+      <span class="stageHint">Kéo điểm sáng để đặt đèn · Kéo vùng trống để xoay góc nhìn</span>
     </template>
-    <div v-else class="stageFallback" role="status">3D 预览不可用，请使用角度控件调整光位</div>
+    <div v-else class="stageFallback" role="status">Không thể xem trước 3D, hãy dùng thanh chỉnh góc để đặt đèn</div>
   </div>
 </template>
 
@@ -176,13 +176,13 @@ function render() {
       imageMaterial.emissiveIntensity += transmission * 0.14;
       frameMaterial.emissive.copy(lamp.color).multiplyScalar(transmission * 0.3);
     }
-    return [{ kind, label: isRim ? "轮廓" : "主光", azimuth: Math.round(azimuth), elevation: Math.round(elevation), style: { ...project(bulb.position), "--lightColor": color } }];
+    return [{ kind, label: isRim ? "Đèn viền" : "Đèn chính", azimuth: Math.round(azimuth), elevation: Math.round(elevation), style: { ...project(bulb.position), "--lightColor": color } }];
   });
   directionLabels.value = [
-    { text: "相机侧 · 0°", style: project(new three.Vector3(0, -0.15, radius + 0.25)) },
-    { text: "背侧 · 180°", style: project(new three.Vector3(0, -0.15, -radius - 0.25)) },
-    { text: "原图左 · −90°", style: project(new three.Vector3(-radius - 0.25, -0.15, 0)) },
-    { text: "原图右 · 90°", style: project(new three.Vector3(radius + 0.25, -0.15, 0)) },
+    { text: "Phía máy ảnh · 0°", style: project(new three.Vector3(0, -0.15, radius + 0.25)) },
+    { text: "Phía sau · 180°", style: project(new three.Vector3(0, -0.15, -radius - 0.25)) },
+    { text: "Trái ảnh gốc · −90°", style: project(new three.Vector3(-radius - 0.25, -0.15, 0)) },
+    { text: "Phải ảnh gốc · 90°", style: project(new three.Vector3(radius + 0.25, -0.15, 0)) },
   ];
   renderer.render(scene, camera);
 }

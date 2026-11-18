@@ -1,21 +1,20 @@
-# 画布操作
+# Thao tác Canvas
 
-让 Agent 直接操作项目中打开的画布，搭建和整理节点流程。
+Cho phép Agent thao tác trực tiếp Canvas đang mở trong dự án để xây dựng và sắp xếp luồng node.
 
-## 使用方式
+## Cách sử dụng
 
-先打开目标项目的画布，再向 Agent 描述希望完成的操作。
-例如：“把当前画布整理整齐”“添加一个文本节点写入这段分镜”“把这张参考图接到视频生成节点”。
-Agent 会先读取实际节点和可用能力，再执行操作；已有节点可以继续复用。
+Mở Canvas của dự án cần thao tác, rồi mô tả công việc, ví dụ: “Sắp xếp Canvas hiện tại”, “Thêm node văn bản để viết phân cảnh” hoặc “Nối ảnh tham chiếu này với node tạo video”.
+Agent sẽ tra cứu node và khả năng thực tế trước khi thực hiện, ưu tiên dùng lại node hiện có.
 
-## 支持的功能
+## Tính năng
 
-- 新建、切换和重命名画布。
-- 添加节点；批量移动、重命名、选择和删除节点，一次可处理多个节点。
-- 批量连接兼容的节点端口，批量删除指定连线。
-- 根据节点尺寸与连线自动整理整张画布，或调整视图展示指定节点。
-- 调用节点提供的功能，例如修改文本、设置提示词或生成媒体；具体以该节点支持的功能为准。
+- Tạo, chuyển và đổi tên Canvas.
+- Thêm node; di chuyển, đổi tên, chọn và xóa nhiều node cùng lúc.
+- Nối nhiều cặp cổng tương thích hoặc xóa nhiều dây nối cùng lượt.
+- Tự sắp xếp Canvas dựa vào kích thước node và dây nối, hoặc chỉnh khung nhìn tới node cần xem.
+- Gọi chức năng node có hỗ trợ như sửa chữ, đặt prompt hoặc tạo media theo schema thực tế của node.
 
-需要保持目标画布可用。新增节点的类型取决于当前安装的节点插件，连线也须满足节点的输入要求。
-节点生成任务启动后仍需等待实际结果；自动整理画布不会触发生成。
-本工具没有配置项，无需单独填写 API Key；媒体生成所需配置由对应供应商提供。
+Canvas mục tiêu phải đang khả dụng. Loại node có thể thêm phụ thuộc plugin đã cài; dây nối phải thỏa điều kiện đầu vào.
+Tác vụ tạo media cần chờ kết quả thực tế sau khi bắt đầu; tự sắp xếp Canvas không chạy tạo media.
+Không cần API Key riêng cho công cụ này; cấu hình tạo media thuộc nhà cung cấp tương ứng.

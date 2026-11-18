@@ -32,7 +32,7 @@ export function createDocumentSession(resource: ExtResource, extension: ExtDefin
     get config() { return extensionConfig(extension.id); },
     saveConfig: config => saveExtensionConfig(extension.id, config),
     writeClipboardText, mountNode,
-    openFile: openFile ?? (async () => { throw new Error("当前宿主不支持打开链接文件"); }),
+    openFile: openFile ?? (async () => { throw new Error("Host hiện tại không hỗ trợ mở tệp từ liên kết"); }),
     updateText(text) {
       if (disposed || context.loading || !extension.text || context.text === text) return;
       cancelRead();
@@ -68,7 +68,7 @@ export function createDocumentSession(resource: ExtResource, extension: ExtDefin
         // ACT: 保存始终绑定打开时的目录和文件，排队期间切换 Tab 不改变写入目标。
         saving = saving.catch(() => {}).then(async () => {
           if (disposed) return;
-          if (!disk) throw new Error("文件尚未读取，不能保存");
+          if (!disk) throw new Error("Tệp chưa được đọc nên chưa thể lưu");
           const nextRevision = await files.writeTextSnapshot(resource.path, text, disk);
           disk = { ...disk, text, revision: nextRevision };
         }).then(() => {

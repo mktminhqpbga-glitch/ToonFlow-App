@@ -36,19 +36,19 @@ export async function refreshMobileConnection() {
         const response = await fetch("/api/connection/connection", { cache: "no-store", signal: request.signal });
         if (response.status === 404 && !actualPlatform.isMobile && !actualPlatform.isDesktop) deviceConnectionSupported.value = false;
         else {
-          if (!response.ok) throw new Error("无法读取设备连接状态，请重试");
+          if (!response.ok) throw new Error("Không thể đọc trạng thái kết nối thiết bị, vui lòng thử lại");
           data = await response.json() as MobileConnection;
         }
       }
-      if (data.mode !== "local" && data.mode !== "remote") throw new Error("设备连接状态无效，请重试");
+      if (data.mode !== "local" && data.mode !== "remote") throw new Error("Trạng thái kết nối thiết bị không hợp lệ, vui lòng thử lại");
       mobileConnection.value = data;
       if (!actualPlatform.isMobile && data.mode === "local") {
         const status = await fetch("/api/mobileLink/status", { headers: { "x-toonflow-mobile-link": "1" }, cache: "no-store", signal: request.signal });
         if (status.ok) {
           const body = await status.json() as { code?: number; data?: { enabled?: boolean; hubEnabled?: boolean } };
-          if (body.code !== 200) throw new Error("无法读取共享状态，请重试");
+          if (body.code !== 200) throw new Error("Không thể đọc trạng thái chia sẻ, vui lòng thử lại");
           deviceHubEnabled.value = (body.data?.hubEnabled ?? body.data?.enabled) === true;
-        } else if (status.status !== 403) throw new Error("无法读取共享状态，请重试");
+        } else if (status.status !== 403) throw new Error("Không thể đọc trạng thái chia sẻ, vui lòng thử lại");
       } else deviceHubEnabled.value = false;
       return data;
     } catch (cause) {
@@ -66,11 +66,11 @@ export async function refreshMobileConnection() {
 export async function changeDeviceConnection(action: "connect" | "disconnect", body?: { qrCode: string } | { url: string; code: string }) {
   if (action === "connect") {
     await refreshMobileConnection();
-    if (deviceHubEnabled.value) throw new Error("请先在设置 → 设备互联中关闭“允许其他设备连接”");
+    if (deviceHubEnabled.value) throw new Error("Trước tiên hãy tắt Cho phép thiết bị khác kết nối trong Cài đặt → Kết nối thiết bị");
   }
-  if (!deviceConnectionSupported.value) throw new Error("请使用 Toonflow 桌面端或移动客户端连接其他设备");
+  if (!deviceConnectionSupported.value) throw new Error("Hãy dùng Toonflow trên desktop hoặc ứng dụng di động để kết nối thiết bị khác");
   const { data } = await axios.post<{ restart: "mobile" | "host"; message?: string }>(`/api/connection/${action}`, body ?? {}, { headers: { "x-toonflow-workspace": "1" } });
-  if (data?.restart !== "mobile" && data?.restart !== "host") throw new Error(data?.message || "设备未返回有效的切换方式，请重试");
+  if (data?.restart !== "mobile" && data?.restart !== "host") throw new Error(data?.message || "Thiết bị không trả về cách chuyển đổi hợp lệ, vui lòng thử lại");
   if (data.restart === "mobile") window.location.href = "toonflow://restart";
 }
 

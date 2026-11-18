@@ -36,7 +36,7 @@ export const supportedLocales: { code: Locale; name: string }[] = [
   { code: "ar", name: "العربية" }, { code: "fa", name: "فارسی" }, { code: "tr", name: "Türkçe" },
 ];
 const catalogs: Record<string, Record<string, string>> = { "zh-TW": zhTw, en, ja, ru, vi, th, ko, hi, id, ms, fil, bn, ur, ta, te, mr, pa, ar, fa, tr };
-let activeLocale: Locale = "zh-CN";
+let activeLocale: Locale = "vi";
 const listeners = new Set<(locale: Locale) => void>();
 const formatters = new Map<string, IntlMessageFormat>();
 

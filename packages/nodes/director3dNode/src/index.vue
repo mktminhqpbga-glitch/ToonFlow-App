@@ -1,7 +1,7 @@
 <template>
   <nodeSkeleton v-bind="nodeProps" style="width: 320px">
-    <button v-loading="modelLoading" type="button" class="directorContent nopan" :disabled="modelLoading" :title="modelError || undefined" aria-label="打开导演台" @dblclick.stop @click.stop="openEditor">
-      <img v-if="preview" class="scenePreview" :src="preview" alt="最后镜头" draggable="false" />
+    <button v-loading="modelLoading" type="button" class="directorContent nopan" :disabled="modelLoading" :title="modelError || undefined" aria-label="Mở bàn đạo diễn" @dblclick.stop @click.stop="openEditor">
+      <img v-if="preview" class="scenePreview" :src="preview" alt="Góc máy cuối" draggable="false" />
       <div v-else class="emptyPreview">
         <icon-cube3d-sphere :size="38" stroke="1.2" />
       </div>
@@ -12,17 +12,25 @@
     :plans="plans" :selectedPlanId="data.selectedPlanId ?? ''" :tasks="tasks"
     :exportingVideo="exportingVideo" :exportingImage="exportingImage" :exportProgress="exportProgress"
     @exportVideo="exportVideo" @exportImage="exportImage" @addMannequin="addMannequin"
-    @cameraChange="saveCameraStudio" @selectPlan="data.selectedPlanId = $event" @loadModels="loadModels" @generate="generate" @editInstruction="setPrompt" @close="editing = false">
+    @selectPlan="data.selectedPlanId = $event" @loadModels="loadModels" @generate="generate" @editInstruction="setPrompt" @close="editing = false">
     <template #input>
       <referenceItem v-if="refList.length" v-model="refList" @preview="setReferencePreview" @remove="removeReference" />
       <promptInput v-model="promptModel" v-model:text="prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" />
+      <chromeModelSelect chromeOnly
+        :modelValue="model"
+        :chromeTabId="data.chromeTabId"
+        :models="models.filter(item => item.providerId !== 'aiBridge')"
+        outputKind="text"
+        :disabled="modelLoading || addingMannequin"
+        :loading="modelsLoading"
+        @update:modelValue="model = $event; data.chromeTabId = undefined"
+        @update:chromeTabId="data.chromeTabId = $event"
+        @open="loadModels()" />
     </template>
   </sceneEditor>
 </template>
 
 <script setup lang="ts">
-import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
-import { normalizeCameraSettings, type CameraSettings } from "@toonflow/node-shared/cameraStudio";
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import { IconCube3dSphere } from "@tabler/icons-vue";
@@ -30,12 +38,15 @@ import { ElLoading, ElMessage } from "element-plus";
 import { getNodeModelIdentity, getNodeModelKey, nodeSkeleton, useNode, useNodeFiles, useNodeModelSelection, z, type NodeHandle, type NodeData, type NodeAiModel } from "@toonflow/nodes-scaffold/runtime";
 import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
+import { chromeServiceId, requireChromeTab } from "@toonflow/node-shared/chromeTabs";
+import chromeModelSelect from "@toonflow/node-shared/chromeModelSelect";
 import promptInput from "@toonflow/node-shared/promptInput";
 import referenceItem from "@toonflow/node-shared/referenceItem";
 import sceneEditor from "./sceneEditor.vue";
 import { capturePreview, sceneSchema, createEmptyScene, createMannequinObject, createStage, disposeStage, getSceneLighting, type LightingSettings, type SceneDocument, type SceneSettings } from "./scene";
 import { createDirectorDraft } from "./agentTools";
-import { directorPrompt, directorPromptVi } from "./agentPrompt";
+import { directorPrompt } from "./agentPrompt";
+import { resolveNodePrompt } from "@toonflow/node-shared/nodePrompts";
 import { anchorSchema, prepareMotion, sampleMotion, type CameraAnchor } from "./motion";
 import { directorPlanSchema, prepareSceneAnimation, type DirectorPlan, type DirectorGeneration } from "./sceneAnimation";
 import { renderImage, renderVideo } from "./renderMedia";
@@ -50,10 +61,9 @@ type ModelDocument = z.infer<typeof modelDocumentSchema>;
 defineOptions({
   inheritAttrs: false,
   icon: IconCube3dSphere,
-  handles: [{ id: "in", type: "target", dataType: ["STRING", "IMAGE", "VIDEO"], label: "文本、图片、视频输入" }] satisfies NodeHandle[],
+  handles: [{ id: "in", type: "target", dataType: ["STRING", "IMAGE", "VIDEO"], label: "Đầu vào văn bản, ảnh, video" }] satisfies NodeHandle[],
 });
-const vietnamese = useNodeVietnamese();
-const { node, nodeProps, previewReady, ai, files, nodeEvent } = useNode({ label: () => { void vietnamese.value; return nodeText("3D导演台", "Bàn đạo diễn 3D"); }, onModelsChanged: () => void loadModels() });
+const { node, nodeProps, previewReady, ai, files, nodeEvent } = useNode({ label: "Bàn đạo diễn 3D", onModelsChanged: () => void loadModels() });
 const vLoading = ElLoading.directive;
 const { addNodes, findNode, getNodes, nodeTypes, removeNodes } = useVueFlow();
 const mediaFiles = useNodeFiles();
@@ -61,7 +71,7 @@ const exportingVideo = ref(false);
 const exportingImage = ref("");
 const exportProgress = ref(0);
 const exportController = new AbortController();
-nodeEvent.on("delete", () => { if (exportingVideo.value || exportingImage.value) throw new Error("正在导出，请完成后再删除导演节点"); });
+nodeEvent.on("delete", () => { if (exportingVideo.value || exportingImage.value) throw new Error("Đang xuất dữ liệu, hãy hoàn tất trước khi xóa node đạo diễn"); });
 const data = computed(() => node.data as typeof node.data & {
   modelPath?: string;
   modelSnapshot?: ModelDocument;
@@ -70,6 +80,7 @@ const data = computed(() => node.data as typeof node.data & {
   prompt?: string;
   promptModel?: PromptModel;
   model?: string;
+  chromeTabId?: number;
   anchors?: CameraAnchor[];
   selectedPlanId?: string;
 });
@@ -97,10 +108,10 @@ const modelError = ref("");
 const addingMannequin = ref(false);
 let modelSaving = Promise.resolve();
 let disposed = false;
-onBeforeUnmount(() => { disposed = true; exportController.abort(new Error("导演节点已关闭，导出已停止")); });
+onBeforeUnmount(() => { disposed = true; exportController.abort(new Error("Node đạo diễn đã đóng; quá trình xuất đã dừng")); });
 
 function getModelPath() {
-  if (!node.id || /[\\/]/.test(node.id) || node.id === "." || node.id === "..") throw new Error("节点 ID 不能作为文件夹名称");
+  if (!node.id || /[\\/]/.test(node.id) || node.id === "." || node.id === "..") throw new Error("ID của node không thể dùng làm tên thư mục");
   return `assets/${node.id}/model.json`;
 }
 
@@ -122,7 +133,7 @@ async function loadModel() {
     const { modelPath, modelSnapshot } = data.value;
     if (!modelPath && !modelSnapshot) return;
     const workspaceFiles = files.getWorkspaceFiles();
-    if (modelPath && modelPath !== getModelPath()) throw new Error("导演台模型文件路径无效");
+    if (modelPath && modelPath !== getModelPath()) throw new Error("Đường dẫn tệp mô hình của bàn đạo diễn không hợp lệ");
     const value = modelDocumentSchema.parse(modelSnapshot ?? await workspaceFiles.readJson(modelPath!));
     if (disposed) return;
     // 复制、跨画布粘贴时只传递一次快照，写入新节点目录成功后才移除快照。
@@ -135,8 +146,8 @@ async function loadModel() {
     modelDocument.value = value;
     if (!selectedPlan.value) data.value.selectedPlanId = value.plans[0]?.id;
   } catch (error) {
-    modelError.value = error instanceof Error ? error.message : "模型文件读取失败";
-    if (!disposed) ElMessage.error(`导演台加载失败：${modelError.value}`);
+    modelError.value = error instanceof Error ? error.message : "Không đọc được tệp mô hình";
+    if (!disposed) ElMessage.error(`Không tải được bàn đạo diễn: ${modelError.value}`);
   } finally {
     modelLoading.value = false;
   }
@@ -149,33 +160,6 @@ async function openEditor() {
   if (!disposed && !modelError.value) editing.value = true;
 }
 
-async function saveCameraStudio(camera: CameraSettings, fov?: number) {
-  if (modelLoading.value || modelError.value || disposed) throw new Error("Không thể lưu camera khi scene đang lỗi");
-  const current = modelDocument.value;
-  const nextScene = sceneSchema.parse({
-    ...current.scene,
-    sceneConfig: {
-      ...current.scene.sceneConfig,
-      cameraStudio: normalizeCameraSettings(camera),
-      camera: fov === undefined ? current.scene.sceneConfig.camera
-        : { ...current.scene.sceneConfig.camera, fov },
-    },
-  });
-  const nextDocument: ModelDocument = { ...current, scene: nextScene };
-  // Update the component model immediately, so successive preset edits use the latest snapshot.
-  // Persist through the existing serialized write queue rather than overlapping writes.
-  modelDocument.value = nextDocument;
-  const saving = modelSaving.then(async () => {
-    const path = await writeModel(files.getWorkspaceFiles(), nextDocument);
-    if (!disposed) data.value.modelPath = path;
-  });
-  modelSaving = saving.catch(() => {});
-  try { await saving; }
-  catch (error) {
-    if (modelDocument.value === nextDocument) modelDocument.value = current;
-    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không lưu được Camera Studio");
-  }
-}
 async function addMannequin() {
   if (modelLoading.value || modelError.value || addingMannequin.value || exportingVideo.value || exportingImage.value || tasks.value.some(task => !task.error)) return;
   addingMannequin.value = true;
@@ -204,7 +188,7 @@ async function addMannequin() {
     modelSaving = saving.catch(() => {});
     await saving;
   } catch (error) {
-    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "人偶添加失败");
+    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không thêm được hình nhân");
   } finally {
     addingMannequin.value = false;
   }
@@ -212,7 +196,7 @@ async function addMannequin() {
 
 nodeEvent.on("copy", async () => {
   await nodeEvent.emit("save");
-  if (modelError.value) throw new Error(`导演台模型未加载，无法复制：${modelError.value}`);
+  if (modelError.value) throw new Error(`Chưa tải mô hình bàn đạo diễn, không thể sao chép: ${modelError.value}`);
   return { modelPath: undefined, modelSnapshot: modelDocument.value };
 });
 
@@ -224,14 +208,14 @@ nodeEvent.on("save", async (reason) => {
     await pending;
   } while (pending !== modelSaving);
   if (reason === "reload" && (exportingVideo.value || exportingImage.value || tasks.value.some(task => !task.error))) {
-    throw new Error("导演台正在生成或导出，请完成后再刷新节点");
+    throw new Error("Bàn đạo diễn đang tạo hoặc xuất dữ liệu, hãy hoàn tất trước khi làm mới node");
   }
 });
 
 async function exportToCanvas(kind: "image" | "video", key: string, aspect: number, render: (signal: AbortSignal) => Promise<File>) {
   if (kind === "video" ? exportingVideo.value : exportingImage.value) return;
   const type = `remote-${kind}Node`;
-  if (!nodeTypes?.value?.[type]) return void ElMessage.error(`请先启用${kind === "image" ? "图片" : "视频"}节点插件`);
+  if (!nodeTypes?.value?.[type]) return void ElMessage.error(`Hãy bật plugin node ${kind === "image" ? "ảnh" : "video"} trước`);
   if (kind === "video") { exportingVideo.value = true; exportProgress.value = 0; }
   else exportingImage.value = key;
   const id = crypto.randomUUID();
@@ -257,7 +241,7 @@ async function exportToCanvas(kind: "image" | "video", key: string, aspect: numb
   try {
     workspaceFiles = files.getWorkspaceFiles();
     if (kind === "video") {
-      exportNode = addExportNode(selectedPlan.value?.name ?? "视频");
+      exportNode = addExportNode(selectedPlan.value?.name ?? "Video");
       // ACT: 导出进度只在当前运行中使用，不能写入画布或复制到另一个节点。
       Object.defineProperty(exportNode.data, "exportProgress", { value: 0, writable: true, configurable: true });
       stopWatching = watch([() => findNode(id), exportProgress], ([current, progress]) => {
@@ -272,7 +256,7 @@ async function exportToCanvas(kind: "image" | "video", key: string, aspect: numb
     const path = await mediaFiles.uploadFile(id, file);
     exportController.signal.throwIfAborted();
     if (discarded) return;
-    if (findNode(node.id) !== node || !nodeTypes?.value?.[type]) throw new Error("画布节点已变化，请重新导出");
+    if (findNode(node.id) !== node || !nodeTypes?.value?.[type]) throw new Error("Node trên Canvas đã thay đổi, hãy xuất lại");
     exportNode ??= addExportNode(file.name.replace(/\.[^.]+$/, ""));
     // 更新已有输出对象，让已挂载的视频节点及连接它的节点同步收到结果。
     (exportNode.data.outputs ??= {})[kind] = {
@@ -280,9 +264,9 @@ async function exportToCanvas(kind: "image" | "video", key: string, aspect: numb
     };
     committed = true;
     if (kind === "video") exportProgress.value = 100;
-    ElMessage.success(`${kind === "image" ? "图片" : "视频"}已导出到画布`);
+    ElMessage.success(`Đã xuất ${kind === "image" ? "ảnh" : "video"} ra Canvas`);
   } catch (error) {
-    if (!disposed && !discarded) ElMessage.error(error instanceof Error ? error.message : "导出失败，请重试");
+    if (!disposed && !discarded) ElMessage.error(error instanceof Error ? error.message : "Xuất dữ liệu thất bại, hãy thử lại");
     if (exportNode && findNode(id) === exportNode) removeNodes(id);
   } finally {
     stopWatching();
@@ -291,7 +275,7 @@ async function exportToCanvas(kind: "image" | "video", key: string, aspect: numb
       try { await workspaceFiles!.remove(`assets/${id}`, true); }
       catch (cleanupError) {
         const code = (cleanupError as { response?: { data?: { data?: { code?: string } } } })?.response?.data?.data?.code;
-        if (!disposed && code !== "ENOENT") ElMessage.error("导出中断，临时素材清理失败");
+        if (!disposed && code !== "ENOENT") ElMessage.error("Đã gián đoạn xuất dữ liệu và không thể xóa tư liệu tạm");
       }
     }
     if (kind === "video") exportingVideo.value = false;
@@ -306,7 +290,7 @@ function exportVideo(aspect: number) {
 }
 
 function exportImage(anchor: CameraAnchor, aspect: number, time: number) {
-  const name = `关键帧${anchors.value.findIndex(item => item.id === anchor.id) + 1}`;
+  const name = `Khung hình chính ${anchors.value.findIndex(item => item.id === anchor.id) + 1}`;
   return exportToCanvas("image", anchor.id, aspect, async signal => {
     const file = await renderImage(scene.value, anchor, aspect, time, signal, selectedPlan.value, lighting.value, sceneSettings.value);
     return new File([file], `${name}.png`, { type: file.type });
@@ -324,7 +308,7 @@ async function loadModels() {
     // ACT: 只给空配置选默认模型，保留暂时不可用的旧选择。
     if (!model.value) model.value = first ? getNodeModelKey(first) : "";
   } catch (error) {
-    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "模型加载失败");
+    if (!disposed) ElMessage.error(error instanceof Error ? error.message : "Không tải được mô hình");
   } finally {
     modelsLoading.value = false;
   }
@@ -357,7 +341,7 @@ watch([scene, selectedPlan, lighting, sceneSettings, modelLoading, previewReady]
     if (plan) planPreviews.set(plan, { scene: value, lighting: light, settings, image });
     if (!disposed && version === previewVersion) preview.value = image;
   } catch (error) {
-    if (!disposed && version === previewVersion) ElMessage.error(error instanceof Error ? error.message : "预览生成失败");
+    if (!disposed && version === previewVersion) ElMessage.error(error instanceof Error ? error.message : "Không tạo được bản xem trước");
   }
 }, { immediate: true });
 
@@ -370,7 +354,14 @@ async function generate() {
   if (modelLoading.value || modelError.value || addingMannequin.value) return;
   const choice = selectedModel.value;
   const requirement = prompt.value.trim();
+  const chromeTabId = data.value.chromeTabId;
   if (!choice || !requirement) return;
+  try {
+    await requireChromeTab(choice, chromeTabId, "text");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "Tab Chrome chưa sẵn sàng");
+    return;
+  }
   // 首次创建基础模型期间只接收一个请求，后续动画可并行生成。
   if (!scene.value.objectList.length && tasks.value.some(task => !task.error)) return;
   const baseScene = scene.value;
@@ -380,7 +371,7 @@ async function generate() {
   setPrompt("");
   try {
     const workspaceFiles = files.getWorkspaceFiles();
-    if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
+    if (refList.value.some(item => item.value === undefined)) throw new Error("Node tham chiếu chưa có nội dung, hãy bổ sung nội dung");
     const mediaReferences = refList.value
       .filter(item => item.value !== undefined && (item.dataType === "STRING" || item.dataType === "IMAGE" || item.dataType === "VIDEO"))
       .map(item => item.dataType === "STRING" ? { dataType: item.dataType, value: item.value } : { dataType: item.dataType, value: { ...item.value } });
@@ -399,13 +390,14 @@ async function generate() {
     await ai.generate({
       references: mediaReferences,
       ...getNodeModelIdentity(choice),
-      systemPrompt: document.documentElement.lang === "vi" ? directorPromptVi : directorPrompt,
+      systemPrompt: await resolveNodePrompt("director3d.system", directorPrompt),
       prompt: JSON.stringify({ instruction: requirement, references, selectedPlanId: basePlanId, document: draft.summary() }),
       directory,
+      chromeTabId: chromeServiceId(choice) ? chromeTabId : undefined,
       tools: draft.tools,
     });
     if (disposed) return;
-    if (!draft.edited) throw new Error("Agent 未修改方案，原方案未修改，请重试。");
+    if (!draft.edited) throw new Error("Agent chưa chỉnh sửa phương án; phương án gốc được giữ nguyên, hãy thử lại.");
     const result = draft.read();
     const nextScene = draft.sceneChanged ? result.scene : baseScene;
     const plan = { ...result.plan, id: task.id, instruction: requirement };
@@ -417,7 +409,7 @@ async function generate() {
     // 动画请求可以并行生成，同一模型文件顺序保存，写入成功后才替换当前场景。
     const saving = modelSaving.then(async () => {
       if (disposed) return;
-      if (scene.value !== baseScene) throw new Error("基础模型已被另一条指令更新，请基于当前模型重试。");
+      if (scene.value !== baseScene) throw new Error("Mô hình cơ sở đã được một yêu cầu khác cập nhật; hãy thử lại dựa trên mô hình hiện tại.");
       const objects = new Map(nextScene.objectList.map(object => [object.threeJsonId, object]));
       const previousPlans = draft.sceneChanged
         ? plans.value.map(item => ({ ...item, tracks: item.tracks.filter(track => objects.has(track.objectId) && (!track.joint || objects.get(track.objectId)?.objType === "mannequin")) }))
@@ -434,7 +426,7 @@ async function generate() {
     await saving;
     tasks.value = tasks.value.filter(item => item.id !== task.id);
   } catch (error) {
-    if (!disposed) tasks.value = tasks.value.map(item => item.id === task.id ? { ...item, error: error instanceof Error ? error.message : "生成失败，请重试" } : item);
+    if (!disposed) tasks.value = tasks.value.map(item => item.id === task.id ? { ...item, error: error instanceof Error ? error.message : "Tạo thất bại, hãy thử lại" } : item);
   }
 }
 </script>

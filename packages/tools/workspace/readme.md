@@ -1,23 +1,23 @@
-# 工作区文件
+# Tệp trong workspace
 
-让 Agent 阅读、列出和编辑当前项目工作区内的文件，并下载远程图片。
+Cho Agent đọc, liệt kê và chỉnh sửa tệp trong workspace của dự án hiện tại, đồng thời tải ảnh công khai từ web.
 
-## 使用方式
+## Cách sử dụng
 
-先选择或打开项目，再给出文件名称与任务，例如：“阅读分镜.md并总结”“把这段设定保存为角色设定.md”。
-文件位置相对于当前工作区；修改已有内容前，Agent 会先读取相关文件。
+Mở dự án rồi nói tên tệp và yêu cầu, ví dụ: “Đọc tệp phân-cảnh.md và tóm tắt” hoặc “Lưu mô tả này thành nhân-vật.md”.
+Đường dẫn được tính từ workspace hiện tại. Trước khi sửa tệp có sẵn, Agent phải đọc nội dung liên quan.
 
-## 支持的功能
+## Tính năng
 
-- 列出目录内容，读取文件。
-- 新建或写入文件，编辑已有文件中的内容。
-- 下载公开 HTTP(S) 图片到 `assets/chatImages/`，返回可直接预览的工作区相对路径；支持 PNG、JPEG、WebP、GIF、AVIF、BMP，单张不超过 20 MB，不支持 SVG、登录图片或内网地址。
-- 阅读可用的全局技能及其附带资料；全局技能目录只允许读取。
+- Liệt kê thư mục và đọc tệp.
+- Tạo/ghi tệp mới hoặc chỉnh sửa nội dung tệp có sẵn.
+- Tải ảnh HTTP(S) công khai vào `assets/chatImages/`, trả đường dẫn tương đối có thể xem trước. Hỗ trợ PNG, JPEG, WebP, GIF, AVIF, BMP, tối đa 20 MB/ảnh; không hỗ trợ SVG, ảnh cần đăng nhập hoặc địa chỉ mạng nội bộ.
+- Đọc kỹ năng toàn cục và các tài liệu đi kèm khi được phép; thư mục kỹ năng toàn cục chỉ được đọc.
 
-## 配置
+## Cấu hình
 
-在“设置 → 插件市场 → 已安装”找到“工作区文件”，点击“配置”。
-“只读模式”默认关闭。开启后，本工具只提供文件读取和目录列表，不再提供写入、编辑或图片下载。
-只读模式仅限制本工具，不会关闭画布操作等其他工具的修改能力。
+Trong **Cài đặt → Chợ tiện ích → Đã cài**, chọn **Tệp trong workspace** rồi bấm **Cấu hình**.
+**Chế độ chỉ đọc** mặc định tắt; khi bật, công cụ chỉ đọc tệp và liệt kê thư mục, không còn ghi, sửa hoặc tải ảnh.
+Chế độ này chỉ giới hạn công cụ hiện tại, không khóa khả năng sửa của công cụ Canvas khác.
 
-文件修改限定在当前工作区内。本工具没有删除、重命名或执行终端命令的功能。
+Mọi thao tác sửa tệp đều giới hạn trong workspace; công cụ này không hỗ trợ xóa, đổi tên hay chạy lệnh terminal.

@@ -2,67 +2,67 @@
   <div class="mcpPanel">
     <section class="settingSection" aria-labelledby="mcpEnabledTitle">
       <div class="settingHeader">
-        <h3 id="mcpEnabledTitle">开启 MCP</h3>
-        <el-switch :modelValue="mcpSettings.enabled" :loading="saving" aria-label="开启 MCP" @change="(value) => setEnabled(value === true)" />
+        <h3 id="mcpEnabledTitle">Bật MCP</h3>
+        <el-switch :modelValue="mcpSettings.enabled" :loading="saving" aria-label="Bật MCP" @change="(value) => setEnabled(value === true)" />
       </div>
-      <p class="description">允许外部 Coding 工具和 Agent 操作 Toonflow。开启后，将客户端配置添加到对应工具中。</p>
+      <p class="description">Cho phép công cụ lập trình và Agent bên ngoài thao tác với Toonflow. Sau khi bật, hãy thêm cấu hình khách vào công cụ tương ứng.</p>
     </section>
 
     <section class="settingSection" aria-labelledby="mcpConnectionTitle">
       <div class="settingHeader">
-        <h3 id="mcpConnectionTitle">连接状态</h3>
-        <el-button text :icon="IconRefresh" :loading="loading" :disabled="saving" @click="refreshStatus">刷新</el-button>
+        <h3 id="mcpConnectionTitle">Trạng thái kết nối</h3>
+        <el-button text :icon="IconRefresh" :loading="loading" :disabled="saving" @click="refreshStatus">Làm mới</el-button>
       </div>
       <el-alert v-if="statusError" :title="statusError" type="error" :closable="false" showIcon />
       <template v-else-if="status">
         <div class="connectionState">
-          <el-tag :type="status.enabled ? 'success' : 'info'" effect="plain">{{ status.enabled ? "已开启" : "已关闭" }}</el-tag>
-          <span v-if="status.enabled">{{ status.connections.length }} 个界面已连接</span>
+          <el-tag :type="status.enabled ? 'success' : 'info'" effect="plain">{{ status.enabled ? "Đã bật" : "Đã tắt" }}</el-tag>
+          <span v-if="status.enabled">{{ status.connections.length }} giao diện đã kết nối</span>
         </div>
         <ul v-if="status.enabled && status.connections.length" class="connectionList">
           <li v-for="connection in status.connections" :key="connection.id">
-            <span>{{ connection.state.directory || "首页" }}</span>
-            <small v-if="connection.state.directory">{{ connection.state.panel === "document" ? "文档" : "画布" }}</small>
+            <span>{{ connection.state.directory || "Trang chủ" }}</span>
+            <small v-if="connection.state.directory">{{ connection.state.panel === "document" ? "Tài liệu" : "Canvas" }}</small>
           </li>
         </ul>
       </template>
-      <p class="description">画布与节点操作需要 Toonflow 界面保持打开。</p>
+      <p class="description">Để thao tác Canvas và node, giao diện Toonflow phải được mở.</p>
     </section>
 
     <section class="settingSection" aria-labelledby="mcpEndpointTitle">
-      <h3 id="mcpEndpointTitle">服务地址</h3>
+      <h3 id="mcpEndpointTitle">Địa chỉ dịch vụ</h3>
       <div class="portSetting">
-        <label for="mcpPort">首选本地端口</label>
+        <label for="mcpPort">Cổng cục bộ ưu tiên</label>
         <el-input-number id="mcpPort" v-model="portDraft" :min="1" :max="65535" :precision="0" controlsPosition="right" size="small" :disabled="saving" />
-        <el-button size="small" :loading="saving" :disabled="portDraft === undefined || portDraft === (status?.preferredPort ?? mcpSettings.port)" @click="savePort">保存</el-button>
+        <el-button size="small" :loading="saving" :disabled="portDraft === undefined || portDraft === (status?.preferredPort ?? mcpSettings.port)" @click="savePort">Lưu</el-button>
       </div>
-      <p class="description">默认 10588，占用时自动顺延。保存后自动切换 MCP 端口，地址变化后请重新复制客户端配置。</p>
-      <el-input :modelValue="status?.endpoint ?? ''" dir="ltr" readonly aria-label="MCP 服务地址" />
-      <p v-if="status?.port" class="description">当前本地监听端口：{{ status.port }}</p>
-      <p v-if="status?.port && status.port !== status.preferredPort && !status.error" class="description">首选端口 {{ status.preferredPort }} 已被占用，已顺延至 {{ status.port }}。</p>
+      <p class="description">Mặc định là cổng 10588; nếu bị chiếm, hệ thống tự chọn cổng tiếp theo. Sau khi lưu sẽ tự chuyển cổng MCP; nếu địa chỉ thay đổi, hãy sao chép lại cấu hình cho ứng dụng khách.</p>
+      <el-input :modelValue="status?.endpoint ?? ''" dir="ltr" readonly aria-label="Địa chỉ dịch vụ MCP" />
+      <p v-if="status?.port" class="description">Cổng đang lắng nghe cục bộ: {{ status.port }}</p>
+      <p v-if="status?.port && status.port !== status.preferredPort && !status.error" class="description">Cổng ưu tiên {{ status.preferredPort }} đã bị chiếm, hệ thống chuyển sang {{ status.port }}.</p>
       <el-alert v-if="status?.error" class="listenerError" :title="status.error" type="error" :closable="false" showIcon />
       <div class="actions">
-        <el-button :icon="IconCopy" :disabled="!mcpSettings.enabled || !status?.endpoint || saving" @click="copyConfig('http')">复制 HTTP 配置</el-button>
-        <el-button v-if="status?.stdio" :icon="IconTerminal2" :disabled="!mcpSettings.enabled || saving" @click="copyConfig('stdio')">复制 stdio 配置</el-button>
+        <el-button :icon="IconCopy" :disabled="!mcpSettings.enabled || !status?.endpoint || saving" @click="copyConfig('http')">Sao chép cấu hình HTTP</el-button>
+        <el-button v-if="status?.stdio" :icon="IconTerminal2" :disabled="!mcpSettings.enabled || saving" @click="copyConfig('stdio')">Sao chép cấu hình stdio</el-button>
       </div>
-      <p class="description">HTTP 配置包含访问凭证，请仅提供给可信的客户端。</p>
+      <p class="description">Cấu hình HTTP chứa thông tin xác thực; chỉ cung cấp cho ứng dụng khách đáng tin cậy.</p>
     </section>
 
     <section class="settingSection" aria-labelledby="mcpSkillTitle">
       <h3 id="mcpSkillTitle">Toonflow Skill</h3>
-      <p class="description">教外部 Agent 组合使用 Toonflow 工具。将 SKILL.md 安装到对应 Coding 工具的技能目录。</p>
+      <p class="description">Hướng dẫn Agent bên ngoài phối hợp dùng công cụ Toonflow. Hãy cài SKILL.md vào thư mục kỹ năng của công cụ lập trình tương ứng.</p>
       <div class="actions">
-        <el-button :icon="IconFileText" :loading="skillAction === 'view'" :disabled="!!skillAction" @click="handleSkill('view')">查看 Skill</el-button>
-        <el-button :icon="IconCopy" :loading="skillAction === 'copy'" :disabled="!!skillAction" @click="handleSkill('copy')">复制</el-button>
-        <el-button :icon="IconDownload" :loading="skillAction === 'download'" :disabled="!!skillAction" @click="handleSkill('download')">导出 Skill</el-button>
+        <el-button :icon="IconFileText" :loading="skillAction === 'view'" :disabled="!!skillAction" @click="handleSkill('view')">Xem Skill</el-button>
+        <el-button :icon="IconCopy" :loading="skillAction === 'copy'" :disabled="!!skillAction" @click="handleSkill('copy')">Sao chép</el-button>
+        <el-button :icon="IconDownload" :loading="skillAction === 'download'" :disabled="!!skillAction" @click="handleSkill('download')">Xuất Skill</el-button>
       </div>
     </section>
 
     <el-dialog v-model="skillVisible" title="Toonflow Skill" width="min(760px, calc(100vw - 32px))" alignCenter appendToBody>
       <div class="skillContent"><messageMarkdown :content="skillContent" /></div>
     </el-dialog>
-    <el-dialog v-model="copyVisible" :title="`复制 ${copyTitle}`" width="min(680px, calc(100vw - 32px))" alignCenter appendToBody @opened="copyInput?.select()">
-      <p class="copyHint">浏览器无法自动复制，请选中文本后手动复制。{{ copyHasCredential ? "此配置包含访问凭证，请仅提供给可信的客户端。" : "" }}</p>
+    <el-dialog v-model="copyVisible" :title="`Sao chép ${copyTitle}`" width="min(680px, calc(100vw - 32px))" alignCenter appendToBody @opened="copyInput?.select()">
+      <p class="copyHint">Trình duyệt không thể sao chép tự động; hãy chọn văn bản và sao chép thủ công.{{ copyHasCredential ? "Cấu hình này chứa thông tin xác thực; chỉ cung cấp cho ứng dụng khách đáng tin cậy." : "" }}</p>
       <el-input ref="copyInput" :modelValue="copyContent" type="textarea" dir="ltr" :autosize="{ minRows: 8, maxRows: 18 }" readonly :aria-label="copyTitle" />
     </el-dialog>
   </div>
@@ -123,7 +123,7 @@ async function refreshStatus() {
   statusError.value = "";
   try {
     const { data } = await axios.get<{ code: number; data: McpStatus; message?: string }>("/api/mcp/status", { headers });
-    if (data.code !== 200) throw new Error(data.message || "读取 MCP 状态失败");
+    if (data.code !== 200) throw new Error(data.message || "Đọc trạng thái MCP thất bại");
     if (portDraft.value === (status.value?.preferredPort ?? mcpSettings.value.port)) portDraft.value = data.data.preferredPort;
     status.value = data.data;
   } catch (error) {
@@ -154,7 +154,7 @@ async function setEnabled(enabled: boolean) {
 async function savePort() {
   const port = portDraft.value;
   if (port === undefined || !Number.isInteger(port) || port < 1 || port > 65535) {
-    ElMessage.error("端口必须是 1 到 65535 的整数");
+    ElMessage.error("Cổng phải là số nguyên từ 1 đến 65535");
     return;
   }
   saving.value = true;
@@ -185,7 +185,7 @@ async function copyConfig(transport: "http" | "stdio") {
 async function copyText(content: string, title: string, hasCredential = false) {
   try {
     await writeClipboardText(content);
-    ElMessage.success(`${title}已复制`);
+    ElMessage.success(`${title}Đã sao chép`);
     return;
   } catch {
     // ACT: HTTP 页面或剪贴板权限受限时保留手动复制入口。

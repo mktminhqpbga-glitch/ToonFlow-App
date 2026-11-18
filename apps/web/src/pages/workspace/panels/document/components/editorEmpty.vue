@@ -1,8 +1,8 @@
 <template>
-  <div class="editorEmpty" role="status" aria-label="文档空状态">
+  <div class="editorEmpty" role="status" aria-label="Chưa mở tài liệu">
     <icon-file-text class="emptyIcon" :size="48" stroke="1.2" aria-hidden="true" />
-    <p class="emptyTitle">尚未打开文档</p>
-    <p class="emptyDescription">从左侧文件树选择文件或画布节点</p>
+    <p class="emptyTitle">Chưa mở tài liệu</p>
+    <p class="emptyDescription">Chọn tệp hoặc node Canvas từ cây thư mục bên trái</p>
   </div>
 </template>
 

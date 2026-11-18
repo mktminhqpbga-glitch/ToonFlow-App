@@ -3,11 +3,11 @@ import { z } from "zod";
 const webUrl = z.url().refine(value => {
   const url = new URL(value);
   return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
-}, "仅支持不含账号密码的 HTTP/HTTPS 网页地址").describe("HTTP/HTTPS 网页地址，用于 open、navigate 或 newTab");
-const sessionFields = { browserSessionId: z.uuid().optional().describe("当前对话之前返回的浏览器会话 ID；省略则复用本对话会话") };
-const ref = z.string().min(1).max(100).describe("最近一次 snapshot 返回的元素引用；页面变化后重新 snapshot");
-const offset = z.number().int().min(0).default(0).describe("snapshot、read 或 tabs 的分页起点，默认 0；按返回的 nextOffset 继续读取");
-const tabId = z.string().min(1).max(100).describe("tabs 返回的标签页 ID；closeTab 省略时关闭当前标签页");
+}, "Chỉ hỗ trợ địa chỉ HTTP/HTTPS không chứa tài khoản hoặc mật khẩu").describe("Địa chỉ web HTTP/HTTPS dùng cho open, navigate hoặc newTab");
+const sessionFields = { browserSessionId: z.uuid().optional().describe("ID phiên trình duyệt đã trả về trước đó trong cùng cuộc trò chuyện; bỏ trống để dùng lại phiên hiện tại") };
+const ref = z.string().min(1).max(100).describe("Tham chiếu phần tử từ snapshot gần nhất; chụp lại snapshot sau khi trang thay đổi");
+const offset = z.number().int().min(0).default(0).describe("Vị trí bắt đầu phân trang của snapshot, read hoặc tabs, mặc định 0; tiếp tục với nextOffset được trả về");
+const tabId = z.string().min(1).max(100).describe("ID tab do tabs trả về; closeTab bỏ trống để đóng tab hiện tại");
 
 export const browserConfigSchema = z.strictObject({
   executablePath: z.string().trim().max(4096).default(""),
@@ -20,9 +20,9 @@ export const browserActionSchema = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("read"), ...sessionFields, offset }),
   z.strictObject({ action: z.literal("click"), ...sessionFields, ref }),
   z.strictObject({ action: z.literal("hover"), ...sessionFields, ref }),
-  z.strictObject({ action: z.literal("type"), ...sessionFields, ref, text: z.string().max(20000).describe("type 操作填入的完整文本") }),
-  z.strictObject({ action: z.literal("pressKey"), ...sessionFields, key: z.string().min(1).max(50).describe("Puppeteer 按键名称，例如 Enter、Tab、Escape、Backspace") }),
-  z.strictObject({ action: z.literal("scroll"), ...sessionFields, direction: z.enum(["up", "down", "left", "right"]).describe("scroll 的方向"), amount: z.number().int().min(1).max(10000).default(600).describe("scroll 的像素距离，默认 600") }),
+  z.strictObject({ action: z.literal("type"), ...sessionFields, ref, text: z.string().max(20000).describe("Văn bản đầy đủ cần điền bằng thao tác type") }),
+  z.strictObject({ action: z.literal("pressKey"), ...sessionFields, key: z.string().min(1).max(50).describe("Tên phím theo Puppeteer, ví dụ Enter, Tab, Escape, Backspace") }),
+  z.strictObject({ action: z.literal("scroll"), ...sessionFields, direction: z.enum(["up", "down", "left", "right"]).describe("Hướng cuộn cho scroll"), amount: z.number().int().min(1).max(10000).default(600).describe("Khoảng cách cuộn tính bằng pixel, mặc định 600") }),
   z.strictObject({ action: z.literal("screenshot"), ...sessionFields }),
   z.strictObject({ action: z.literal("tabs"), ...sessionFields, offset }),
   z.strictObject({ action: z.literal("newTab"), ...sessionFields, url: webUrl.optional() }),

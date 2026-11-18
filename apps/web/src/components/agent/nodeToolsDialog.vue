@@ -1,7 +1,7 @@
 <template>
-  <el-dialog v-model="visible" title="节点工具控制" width="min(520px, 94vw)" alignCenter appendToBody destroyOnClose :closeOnClickModal="false" :closeOnPressEscape="!saving" :showClose="!saving">
+  <el-dialog v-model="visible" title="Kiểm soát công cụ node" width="min(520px, 94vw)" alignCenter appendToBody destroyOnClose :closeOnClickModal="false" :closeOnPressEscape="!saving" :showClose="!saving">
     <div class="nodeToolsConfig">
-      <p class="description">选择 Agent 可以通过画布节点生成的媒体，保存后应用于所有对话。</p>
+      <p class="description">Chọn các loại media mà Agent được phép tạo qua node Canvas; lưu xong sẽ áp dụng cho mọi cuộc trò chuyện.</p>
       <el-form labelPosition="top" :disabled="saving">
         <div class="permissionList">
           <div v-for="group in groups" :key="group.enabledKey" class="permissionRow">
@@ -12,15 +12,15 @@
             <el-switch :id="`${controlId}-${group.enabledKey}`" v-model="draft[group.enabledKey]" :aria-label="group.description" />
           </div>
         </div>
-        <p class="scopeHint">你仍可手动生成，已开始的任务不会中断。</p>
+        <p class="scopeHint">Bạn vẫn có thể tạo thủ công; các tác vụ đã bắt đầu sẽ không bị gián đoạn.</p>
         <details class="advancedSettings" :open="expanded" @toggle="expanded = ($event.target as HTMLDetailsElement).open">
-          <summary>高级设置</summary>
+          <summary>Cài đặt nâng cao</summary>
           <div class="advancedContent">
-            <p class="description">使用自定义节点时，把它的工具名称加入对应类别，随上方开关一起控制。</p>
+            <p class="description">Khi dùng node tùy chỉnh, hãy thêm tên công cụ vào đúng loại để quản lý bằng các công tắc phía trên.</p>
             <p :id="`${controlId}-nameHint`" class="inputHint">填写 nodeTools.register 中的 name，区分大小写。按回车添加，也可直接粘贴带 node: 前缀的名称。</p>
             <el-form-item v-for="group in groups" :key="group.namesKey" :label="group.additionalLabel" :error="fieldErrors[group.namesKey]">
               <div class="toolNamesField">
-                <p class="defaultTool">默认包含 <code>{{ group.name }}</code>，无需重复添加。</p>
+                <p class="defaultTool">Mặc định gồm <code>{{ group.name }}</code>, không cần thêm lại.</p>
                 <el-input-tag
                   :modelValue="draft[group.namesKey]"
                   :max="100"
@@ -30,15 +30,15 @@
                   @update:modelValue="updateToolNames(group, $event)" />
               </div>
             </el-form-item>
-            <p class="inputHint">同一工具加入多个类别时，需要这些类别全部允许才能调用。每类最多追加 100 个名称。</p>
+            <p class="inputHint">Nếu công cụ thuộc nhiều loại, tất cả các loại đó phải được cho phép mới sử dụng được. Mỗi loại bổ sung tối đa 100 tên.</p>
           </div>
         </details>
       </el-form>
     </div>
     <template #footer>
       <el-alert v-if="saveError" class="saveError" :title="saveError" type="error" :closable="false" showIcon />
-      <el-button :disabled="saving" @click="visible = false">取消</el-button>
-      <el-button type="primary" :loading="saving" @click="saveConfig">保存</el-button>
+      <el-button :disabled="saving" @click="visible = false">Hủy</el-button>
+      <el-button type="primary" :loading="saving" @click="saveConfig">Lưu</el-button>
     </template>
   </el-dialog>
 </template>
@@ -102,11 +102,11 @@ async function saveConfig() {
   try {
     await saveSettings(() => ({ agentNodeTools: config }));
     visible.value = false;
-    ElMessage.success("节点工具权限已保存，对所有对话生效");
+    ElMessage.success("Đã lưu quyền công cụ node, áp dụng cho mọi cuộc trò chuyện");
   } catch (error) {
     saveError.value = axios.isAxiosError(error)
-      ? error.response?.data?.message || "保存失败，请重试；当前填写的内容已保留"
-      : "保存失败，修改内容已保留，请重试";
+      ? error.response?.data?.message || "Lưu thất bại, vui lòng thử lại; nội dung đã nhập vẫn được giữ"
+      : "Lưu thất bại, nội dung chỉnh sửa vẫn được giữ, vui lòng thử lại";
   } finally { saving.value = false; }
 }
 </script>

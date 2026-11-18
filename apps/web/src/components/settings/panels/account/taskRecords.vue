@@ -1,46 +1,46 @@
 <template>
-  <section class="taskRecords" aria-label="任务记录" :aria-busy="loading">
+    <section class="taskRecords" aria-label="Lịch sử tác vụ" :aria-busy="loading">
     <div class="recordsToolbar">
       <el-form class="searchForm" @submit.prevent="submitSearch">
-        <el-input v-model="search" class="taskSearch" :prefixIcon="IconSearch" placeholder="搜索任务 ID" aria-label="搜索任务 ID" clearable @clear="clearSearch" />
-        <el-button type="primary" nativeType="submit" :disabled="loading">查询</el-button>
-        <el-button :disabled="loading || (!search && !activeSearch)" @click="clearSearch">清除</el-button>
+        <el-input v-model="search" class="taskSearch" :prefixIcon="IconSearch" placeholder="Tìm ID tác vụ" aria-label="Tìm ID tác vụ" clearable @clear="clearSearch" />
+        <el-button type="primary" nativeType="submit" :disabled="loading">Tra cứu</el-button>
+        <el-button :disabled="loading || (!search && !activeSearch)" @click="clearSearch">Xóa bộ lọc</el-button>
       </el-form>
-      <el-button :icon="IconChartBar" @click="consumptionVisible = true">消耗查询</el-button>
+      <el-button :icon="IconChartBar" @click="consumptionVisible = true">Tra cứu chi phí</el-button>
     </div>
     <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" showIcon>
-      <el-button size="small" @click="refresh">重试</el-button>
+      <el-button size="small" @click="refresh">Thử lại</el-button>
     </el-alert>
     <div v-loading="loading" class="recordsList">
       <el-table :data="records" rowKey="id" emptyText="">
-        <el-table-column label="任务" minWidth="220">
+        <el-table-column label="Tác vụ" minWidth="220">
           <template #default="{ row }">
             <div class="taskIdentity">
               <div class="modelHeading">
                 <div class="modelAvatar" aria-hidden="true"><modelIcon :model="row.modelName" :size="24" /></div>
                 <div class="modelLabels">
                   <strong>{{ row.modelName }}</strong>
-                  <span v-if="row.keyName" class="keyName">凭证名称 {{ row.keyName }}</span>
+                  <span v-if="row.keyName" class="keyName">Tên chứng thực {{ row.keyName }}</span>
                 </div>
               </div>
               <span class="taskId">{{ row.taskId }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="Trạng thái" width="100">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="消费 / 耗时" minWidth="110">
+        <el-table-column label="Chi phí / thời gian" minWidth="110">
           <template #default="{ row }">
             <div class="recordMetrics">
               <span>{{ formatAmount(row.amount) }}</span>
-              <span v-if="row.duration !== null" class="duration">{{ numberFormat.format(row.duration) }} 秒</span>
+              <span v-if="row.duration !== null" class="duration">{{ numberFormat.format(row.duration) }} giây</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="创建 / 完成时间" minWidth="165">
+        <el-table-column label="Ngày tạo / ngày hoàn tất" minWidth="165">
           <template #default="{ row }">
             <div class="recordTimes">
               <time>{{ formatTime(row.createdAt) }}</time>
@@ -48,8 +48,8 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="详情" width="65" align="right">
-          <template #default="{ row }"><el-button link type="primary" :aria-label="`查看任务 ${row.taskId} 的详情`" @click="openDetails(row as TaskRecord)">查看</el-button></template>
+        <el-table-column label="Chi tiết" width="65" align="right">
+          <template #default="{ row }"><el-button link type="primary" :aria-label="`Xem tác vụ ${row.taskId} - chi tiết`" @click="openDetails(row as TaskRecord)">Xem</el-button></template>
         </el-table-column>
       </el-table>
     </div>
@@ -66,7 +66,7 @@
       size="small"
       @update:currentPage="changePage"
       @update:pageSize="changePageSize" />
-    <el-dialog v-model="detailsVisible" title="任务详情" width="min(640px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+    <el-dialog v-model="detailsVisible" title="Chi tiết tác vụ" width="min(640px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <div v-if="selectedRecord" class="taskDetails">
         <div class="detailHeading">
           <div class="modelAvatar" aria-hidden="true"><modelIcon :model="selectedRecord.modelName" :size="28" /></div>
@@ -74,21 +74,21 @@
           <el-tag :type="statusType(selectedRecord.status)">{{ statusLabel(selectedRecord.status) }}</el-tag>
         </div>
         <dl class="detailFields">
-          <div class="fullWidth"><dt>任务 ID</dt><dd>{{ selectedRecord.taskId }}</dd></div>
-          <div v-if="selectedRecord.keyName"><dt>凭证名称</dt><dd>{{ selectedRecord.keyName }}</dd></div>
-          <div><dt>消费金额</dt><dd>{{ formatAmount(selectedRecord.amount) }}</dd></div>
-          <div><dt>耗时</dt><dd>{{ selectedRecord.duration === null ? "" : `${numberFormat.format(selectedRecord.duration)} 秒` }}</dd></div>
-          <div><dt>创建时间</dt><dd>{{ formatTime(selectedRecord.createdAt) }}</dd></div>
-          <div><dt>完成时间</dt><dd>{{ formatTime(selectedRecord.completedAt) }}</dd></div>
-          <div v-if="selectedRecord.errorReason" class="fullWidth failureReason"><dt>失败原因</dt><dd>{{ selectedRecord.errorReason }}</dd></div>
+          <div class="fullWidth"><dt>ID tác vụ</dt><dd>{{ selectedRecord.taskId }}</dd></div>
+          <div v-if="selectedRecord.keyName"><dt>Tên chứng thực</dt><dd>{{ selectedRecord.keyName }}</dd></div>
+          <div><dt>Chi phí</dt><dd>{{ formatAmount(selectedRecord.amount) }}</dd></div>
+          <div><dt>Thời gian thực hiện</dt><dd>{{ selectedRecord.duration === null ? "" : `${numberFormat.format(selectedRecord.duration)} giây` }}</dd></div>
+          <div><dt>Ngày tạo</dt><dd>{{ formatTime(selectedRecord.createdAt) }}</dd></div>
+          <div><dt>Ngày hoàn tất</dt><dd>{{ formatTime(selectedRecord.completedAt) }}</dd></div>
+          <div v-if="selectedRecord.errorReason" class="fullWidth failureReason"><dt>Nguyên nhân thất bại</dt><dd>{{ selectedRecord.errorReason }}</dd></div>
         </dl>
-        <el-button v-if="resultUrl" class="resultButton" tag="a" :href="resultUrl" target="_blank" rel="noopener noreferrer" type="primary" :icon="IconExternalLink">查看结果</el-button>
-        <section v-else-if="resultText" class="resultData"><h4>结果数据</h4><pre>{{ resultText }}</pre></section>
+        <el-button v-if="resultUrl" class="resultButton" tag="a" :href="resultUrl" target="_blank" rel="noopener noreferrer" type="primary" :icon="IconExternalLink">Xem kết quả</el-button>
+        <section v-else-if="resultText" class="resultData"><h4>Dữ liệu kết quả</h4><pre>{{ resultText }}</pre></section>
       </div>
     </el-dialog>
-    <el-dialog v-model="consumptionVisible" title="消耗查询" width="min(560px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+    <el-dialog v-model="consumptionVisible" title="Tra cứu chi phí" width="min(560px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <el-form :id="consumptionFormId" class="consumptionForm" labelPosition="top" :disabled="consumptionLoading" @submit.prevent="queryConsumption">
-        <el-form-item label="时间范围" :error="rangeError">
+        <el-form-item label="Khoảng thời gian" :error="rangeError">
           <el-date-picker
             v-model="dateRange"
             class="dateRange"
@@ -98,18 +98,18 @@
             :endPlaceholder="translate('结束时间')"
             :rangeSeparator="translate('至')" />
         </el-form-item>
-        <el-form-item label="凭证（选填）">
-          <el-input v-model="accountCredential" type="password" showPassword autocomplete="off" placeholder="输入凭证，留空查询全部" />
+        <el-form-item label="Chứng thực (tùy chọn)">
+          <el-input v-model="accountCredential" type="password" showPassword autocomplete="off" placeholder="Nhập chứng thực; để trống để tra cứu tất cả" />
         </el-form-item>
       </el-form>
       <el-alert v-if="consumptionError" :title="consumptionError" type="error" :closable="false" showIcon />
       <dl v-if="consumption" class="consumptionResult" aria-live="polite">
-        <div><dt>消费金额</dt><dd>{{ formatAmount(consumption.total) }}</dd></div>
-        <div><dt>请求次数</dt><dd>{{ numberFormat.format(consumption.count) }}</dd></div>
+        <div><dt>Chi phí</dt><dd>{{ formatAmount(consumption.total) }}</dd></div>
+        <div><dt>Số lượt yêu cầu</dt><dd>{{ numberFormat.format(consumption.count) }}</dd></div>
       </dl>
       <template #footer>
-        <el-button @click="consumptionVisible = false">关闭</el-button>
-        <el-button type="primary" nativeType="submit" :form="consumptionFormId" :loading="consumptionLoading" :disabled="!consumptionReady">查询</el-button>
+        <el-button @click="consumptionVisible = false">Đóng</el-button>
+        <el-button type="primary" nativeType="submit" :form="consumptionFormId" :loading="consumptionLoading" :disabled="!consumptionReady">Tra cứu</el-button>
       </template>
     </el-dialog>
   </section>

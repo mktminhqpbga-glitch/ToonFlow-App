@@ -1,22 +1,22 @@
-# 文本节点
+# Node văn bản
 
-使用 Markdown 编写、保存和生成正文，可用于剧本、分镜说明或素材分析。
+Viết, lưu và tạo nội dung với Markdown, phù hợp cho kịch bản, mô tả phân cảnh và phân tích tư liệu.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 输入支持文本、图片和视频参考。
-- 输出节点当前的完整 Markdown 字符串，可连接支持文本输入的下游节点。
+- Hỗ trợ văn bản, ảnh và video làm tham chiếu.
+- Xuất toàn bộ chuỗi Markdown hiện tại để nối với các node phía sau hỗ trợ đầu vào văn bản.
 
-## 使用方法
+## Cách sử dụng
 
-1. 节点内以 Markdown 预览正文；点击“编辑”打开富文本编辑器，也可切换到原文编辑 Markdown。
-2. 需要 AI 生成时，选中节点，在下方输入要求并选择模型；没有模型时先在设置中添加。
-3. 可连接参考节点，在提示词中说明如何使用这些参考内容。
-4. 点击生成按钮，文本会逐步显示；新生成的内容会替换当前文本输出。
-5. 生成结束后可继续手工编辑，再将文本输出连接到后续制作节点。
+1. Node hiển thị bản xem trước Markdown; bấm **Chỉnh sửa** để mở trình soạn thảo văn bản phong phú hoặc chuyển sang chỉnh Markdown nguồn.
+2. Nếu cần AI tạo nội dung, chọn node, nhập yêu cầu và mô hình bên dưới. Nếu chưa có mô hình, thêm trong phần Cài đặt.
+3. Có thể nối các node tham chiếu và mô tả cách sử dụng tư liệu đó trong prompt.
+4. Bấm **Tạo**; văn bản xuất hiện dần và nội dung mới sẽ thay thế đầu ra hiện tại.
+5. Sau khi tạo, bạn vẫn có thể chỉnh sửa bằng tay rồi nối đầu ra với node tiếp theo.
 
-正文自动保存到节点的 `content.md`，下载使用 `.md` 格式。磁盘内容发生冲突时，可先查看并复制当前正文，再选择重新读取磁盘；下方的 AI 提示词仍独立编辑。
+Nội dung chính tự lưu vào content.md của node; bản tải về có đuôi .md. Nếu nội dung trên đĩa xung đột, trước tiên hãy xem và sao chép bản hiện tại rồi chọn đọc lại tệp trên đĩa. Prompt AI phía dưới được chỉnh sửa độc lập.
 
-节点自带 Markdown 编辑和预览实现，仅复用宿主提供的 Tiptap、Marked 与 DOMPurify 依赖。富文本编辑会规范化 Markdown；需要保留原始 HTML 写法时，请使用原文模式。
+Node tự xử lý chỉnh sửa và xem trước Markdown, tái sử dụng Tiptap, Marked và DOMPurify từ ứng dụng. Trình soạn thảo phong phú có thể chuẩn hóa cú pháp Markdown; dùng chế độ mã nguồn nếu cần giữ nguyên cách viết HTML gốc.
 
-图片与视频参考的理解能力取决于所选模型。
+Khả năng hiểu ảnh/video tham chiếu phụ thuộc vào mô hình đã chọn.

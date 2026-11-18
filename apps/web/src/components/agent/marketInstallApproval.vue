@@ -2,8 +2,8 @@
   <el-card v-if="tool.status === 'running' && tool.question" class="marketInstallApproval" shadow="never">
     <strong>{{ tool.question.title }}</strong>
     <p>{{ tool.question.question }}</p>
-    <el-button :disabled="!directory || submitted === tool.question.callId" @click="answer(false)">取消</el-button>
-    <el-button type="primary" :disabled="!directory || submitted === tool.question.callId" @click="answer(true)">确认安装</el-button>
+    <el-button :disabled="!directory || submitted === tool.question.callId" @click="answer(false)">Hủy</el-button>
+    <el-button type="primary" :disabled="!directory || submitted === tool.question.callId" @click="answer(true)">Xác nhận cài đặt</el-button>
   </el-card>
 </template>
 
@@ -24,7 +24,7 @@ async function answer(approved: boolean) {
     await http({ method: "POST", url: "/api/agent/answer", data: { directory, callId, values: { approved } } });
   } catch (error) {
     if (submitted.value === callId) submitted.value = "";
-    ElMessage.error(error instanceof Error ? error.message : "请求失败");
+    ElMessage.error(error instanceof Error ? error.message : "Yêu cầu thất bại");
   }
 }
 </script>

@@ -1,17 +1,17 @@
 <template>
-  <el-dialog v-model="visible" title="供应商开发工具" :width="provider ? 'min(1120px, calc(100vw - 32px))' : 'min(560px, calc(100vw - 32px))'" alignCenter appendToBody destroyOnClose :closeOnClickModal="false" @closed="reset">
+  <el-dialog v-model="visible" title="Công cụ phát triển nhà cung cấp" :width="provider ? 'min(1120px, calc(100vw - 32px))' : 'min(560px, calc(100vw - 32px))'" alignCenter appendToBody destroyOnClose :closeOnClickModal="false" @closed="reset">
     <div class="providerDebug" :class="{ hasProvider: !!provider }">
       <div class="sourceBar">
         <div class="sourceInfo">
-          <el-text tag="strong">{{ fileName || '选择本地供应商文件' }}</el-text>
-          <el-text size="small" type="info">每次运行自动读取文件最新内容{{ modifiedAt ? ` · ${modifiedAt}` : '' }}</el-text>
+          <el-text tag="strong">{{ fileName || 'Chọn tệp nhà cung cấp cục bộ' }}</el-text>
+          <el-text size="small" type="info">Tự động đọc nội dung mới nhất của tệp mỗi lần chạy{{ modifiedAt ? ` · ${modifiedAt}` : '' }}</el-text>
         </div>
-        <el-button v-if="fileName" :icon="IconRefresh" :loading="action === 'refresh'" :disabled="busy" @click="refreshFile">执行并加载配置</el-button>
-        <el-button :icon="IconFolderOpen" :loading="action === 'select'" :disabled="busy" @click="selectFile">选择文件</el-button>
+        <el-button v-if="fileName" :icon="IconRefresh" :loading="action === 'refresh'" :disabled="busy" @click="refreshFile">Chạy và tải cấu hình</el-button>
+        <el-button :icon="IconFolderOpen" :loading="action === 'select'" :disabled="busy" @click="selectFile">Chọn tệp</el-button>
       </div>
       <providerTestPanel v-if="provider" ref="testPanel" :source="source" :provider="provider" :disabled="!!action" :beforeRun="refreshProvider" @busyChange="testing = $event">
         <template #actions>
-          <el-button :icon="IconDownload" :disabled="busy || !source" :loading="action === 'install'" @click="install">安装供应商</el-button>
+          <el-button :icon="IconDownload" :disabled="busy || !source" :loading="action === 'install'" @click="install">Cài đặt nhà cung cấp</el-button>
         </template>
       </providerTestPanel>
       <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" showIcon />
@@ -56,10 +56,10 @@ async function readSource(signal: AbortSignal): Promise<SourceFile> {
     const { data } = await axios.post<{ data: SourceFile }>("/api/desktop/providerFile/read", { token: desktopToken.value }, { headers: desktopHeaders, signal });
     return data.data;
   }
-  if (!handle.value) throw new Error("请先选择供应商文件");
-  if (handle.value.requestPermission && await handle.value.requestPermission({ mode: "read" }) !== "granted") throw new Error("请允许读取供应商文件");
+  if (!handle.value) throw new Error("Hãy chọn tệp nhà cung cấp trước");
+  if (handle.value.requestPermission && await handle.value.requestPermission({ mode: "read" }) !== "granted") throw new Error("Vui lòng cho phép đọc tệp nhà cung cấp");
   const file = await handle.value.getFile();
-  if (!/\.ts$/i.test(file.name) || file.size > 2 * 1024 * 1024) throw new Error("请选择不超过 2 MB 的 .ts 文件");
+  if (!/\.ts$/i.test(file.name) || file.size > 2 * 1024 * 1024) throw new Error("Vui lòng chọn tệp .ts không vượt quá 2 MB");
   return { name: file.name, source: await file.text(), lastModified: file.lastModified };
 }
 
@@ -93,8 +93,8 @@ async function selectFile() {
       fileName.value = data.data.name;
     } else {
       const picker = (window as Window & { showOpenFilePicker?: (options: unknown) => Promise<FileHandle[]> }).showOpenFilePicker;
-      if (!picker) throw new Error("当前环境不支持文件授权，请使用 HTTPS／localhost 下的 Chrome、Edge 或桌面端");
-      const [selected] = await picker.call(window, { multiple: false, types: [{ description: "TypeScript 供应商", accept: { "text/plain": [".ts"] } }] });
+      if (!picker) throw new Error("Môi trường hiện tại không hỗ trợ cấp quyền tệp. Hãy dùng Chrome, Edge qua HTTPS/localhost hoặc ứng dụng desktop.");
+      const [selected] = await picker.call(window, { multiple: false, types: [{ description: "Nhà cung cấp TypeScript", accept: { "text/plain": [".ts"] } }] });
       if (!selected) return;
       const file = await selected.getFile();
       signal.throwIfAborted();
@@ -127,7 +127,7 @@ async function install() {
     await axios.post("/api/providers/media/add", { source: source.value }, { signal: owner.signal });
     owner.signal.throwIfAborted();
     invalidateNodeModels("media");
-    ElMessage.success("供应商已安装，可在媒体模型设置中配置使用");
+    ElMessage.success("Đã cài nhà cung cấp, có thể cấu hình trong mục Mô hình media");
   } catch (error) { if (!owner.signal.aborted) showError(error); }
   finally { if (controller === owner) { controller = undefined; action.value = ""; } }
 }

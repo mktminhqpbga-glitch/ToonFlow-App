@@ -1,6 +1,6 @@
 <template>
   <header class="agentMenu">
-    <el-button v-if="parentFile" class="backButton" text circle :icon="IconArrowLeft" aria-label="返回父 Agent" title="返回父 Agent" @click="emit('back')" />
+    <el-button v-if="parentFile" class="backButton" text circle :icon="IconArrowLeft" aria-label="Quay lại Agent cha" title="Quay lại Agent cha" @click="emit('back')" />
     <el-input
       v-if="editingName && !parentFile"
       ref="nameInput"
@@ -8,7 +8,7 @@
       class="conversationName"
       size="small"
       :maxlength="80"
-      aria-label="对话名称"
+      aria-label="Tên cuộc trò chuyện"
       @keydown.enter="saveName"
       @keydown.esc.prevent="editingName = false"
       @blur="saveName" />
@@ -18,14 +18,14 @@
     <div class="menuActions">
       <el-popover v-if="subAgents?.length" v-model:visible="subAgentsVisible" trigger="click" placement="bottom-end" :width="340" :showArrow="false" :popperStyle="{ maxWidth: 'calc(100vw - 24px)' }">
         <template #reference>
-          <el-button class="subAgentTrigger" text circle :aria-label="`子 Agent，共 ${subAgents.length} 个`" :aria-expanded="subAgentsVisible" title="子 Agent">
+          <el-button class="subAgentTrigger" text circle :aria-label="`Agent con, tổng cộng ${subAgents.length}`" :aria-expanded="subAgentsVisible" title="Agent con">
             <icon-users-group :size="16" />
             <span class="subAgentCount" aria-hidden="true">{{ subAgents.length }}</span>
           </el-button>
         </template>
         <div class="subAgentMenu">
-          <div class="subAgentHeader">子 Agent <span>{{ subAgents.length }}</span></div>
-          <ul class="subAgentList" aria-label="子 Agent 列表">
+          <div class="subAgentHeader">Agent con <span>{{ subAgents.length }}</span></div>
+          <ul class="subAgentList" aria-label="Danh sách Agent con">
             <li v-for="item in subAgents" :key="item.file" class="subAgentItem">
               <button
                 class="subAgentSelect"
@@ -33,7 +33,7 @@
                 type="button"
                 :aria-current="item.file === sessionFile ? 'true' : undefined"
                 @click="selectSubAgent(item.file)">
-                <span class="statusDot" :data-status="item.status" role="img" :aria-label="subAgentStatusLabels[item.status] ?? '状态待确认'" :title="subAgentStatusLabels[item.status] ?? '状态待确认'" />
+                <span class="statusDot" :data-status="item.status" role="img" :aria-label="subAgentStatusLabels[item.status] ?? 'Chưa xác nhận trạng thái'" :title="subAgentStatusLabels[item.status] ?? 'Chưa xác nhận trạng thái'" />
                 <span class="subAgentInfo">
                   <span class="subAgentName" :title="item.name">{{ item.name }}</span>
                   <span v-if="item.result || item.task" class="subAgentSummary">{{ item.result || item.task }}</span>
@@ -44,13 +44,13 @@
           </ul>
         </div>
       </el-popover>
-      <el-button v-if="!parentFile" text circle aria-label="新建对话" title="新建对话" @click="emit('newChat')"><icon-message-plus :size="16" /></el-button>
+      <el-button v-if="!parentFile" text circle aria-label="Tạo cuộc trò chuyện mới" title="Tạo cuộc trò chuyện mới" @click="emit('newChat')"><icon-message-plus :size="16" /></el-button>
       <el-popover v-if="!parentFile" v-model:visible="historyVisible" trigger="click" placement="bottom-end" :width="280" :showArrow="false" @show="emit('history')">
         <template #reference>
-          <el-button text circle :loading="loading" :icon="IconHistory" :aria-expanded="historyVisible" aria-label="历史对话" title="历史对话" />
+          <el-button text circle :loading="loading" :icon="IconHistory" :aria-expanded="historyVisible" aria-label="Lịch sử hội thoại" title="Lịch sử hội thoại" />
         </template>
-        <div class="historyList" role="group" aria-label="历史对话">
-          <p v-if="!history.length" class="historyTips" role="status">{{ loading ? "正在加载对话…" : "暂无历史对话，点击“新建对话”开始。" }}</p>
+        <div class="historyList" role="group" aria-label="Lịch sử hội thoại">
+          <p v-if="!history.length" class="historyTips" role="status">{{ loading ? "Đang tải hội thoại…" : "Chưa có hội thoại nào; nhấn “Tạo cuộc trò chuyện mới” để bắt đầu." }}</p>
           <div
             v-for="item in history"
             :key="item.file"
@@ -66,18 +66,18 @@
               <span class="historyName">{{ item.name }}</span>
               <icon-check v-if="item.file === sessionFile" :size="15" />
             </button>
-            <el-button class="historyAction" text circle :aria-label="`重命名对话 ${item.name}`" title="重命名对话" @click.stop="renameHistory(item)">
+            <el-button class="historyAction" text circle :aria-label="`Đổi tên cuộc trò chuyện ${item.name}`" title="Đổi tên cuộc trò chuyện" @click.stop="renameHistory(item)">
               <icon-pencil :size="14" />
             </el-button>
-            <el-button v-if="history.length > 1" class="historyAction" text circle :aria-label="`移除历史对话 ${item.name}`" title="移除历史对话" @click.stop="emit('remove', item.file)">
+            <el-button v-if="history.length > 1" class="historyAction" text circle :aria-label="`Xóa khỏi lịch sử hội thoại ${item.name}`" title="Xóa khỏi lịch sử hội thoại" @click.stop="emit('remove', item.file)">
               <icon-trash :size="14" />
             </el-button>
           </div>
         </div>
       </el-popover>
-      <el-button text circle :icon="IconAdjustmentsHorizontal" aria-label="节点工具控制" title="节点工具控制" @click="configVisible = true" />
+      <el-button text circle :icon="IconAdjustmentsHorizontal" aria-label="Kiểm soát công cụ node" title="Kiểm soát công cụ node" @click="configVisible = true" />
       <slot name="actions" />
-      <el-button text circle aria-label="关闭对话" title="关闭" @click="emit('close')"><icon-x :size="16" /></el-button>
+      <el-button text circle aria-label="Đóng cuộc trò chuyện" title="Đóng" @click="emit('close')"><icon-x :size="16" /></el-button>
     </div>
   </header>
   <nodeToolsDialog v-model="configVisible" />
@@ -112,8 +112,8 @@ const nameDraft = ref("");
 const nameInput = ref<InputInstance>();
 const configVisible = ref(false);
 const subAgentStatusLabels: Record<string, string> = {
-  pending: "准备中", running: "执行中", completed: "已完成", error: "失败",
-  limited: "达到限制", cancelled: "已取消", inputRequired: "等待补充", unknown: "状态待确认",
+  pending: "Đang chuẩn bị", running: "Đang thực hiện", completed: "Đã hoàn tất", error: "Thất bại",
+  limited: "Đã đạt giới hạn", cancelled: "Đã hủy", inputRequired: "Đang chờ bổ sung", unknown: "Chưa xác nhận trạng thái",
 };
 
 watch(() => [props.sessionFile, props.parentFile], () => {
@@ -148,11 +148,11 @@ function saveName(event: Event) {
 }
 
 async function renameHistory(item: AgentHistory) {
-  const result = await ElMessageBox.prompt("请输入对话名称", "重命名对话", {
+  const result = await ElMessageBox.prompt("Hãy nhập tên cuộc trò chuyện", "Đổi tên cuộc trò chuyện", {
     inputValue: item.name,
-    confirmButtonText: "保存",
-    cancelButtonText: "取消",
-    inputValidator: value => !!value?.trim() && value.trim().length <= 80 || "请输入 1–80 个字符的对话名称",
+    confirmButtonText: "Lưu",
+    cancelButtonText: "Hủy",
+    inputValidator: value => !!value?.trim() && value.trim().length <= 80 || "Hãy nhập tên cuộc trò chuyện dài từ 1 đến 80 ký tự",
   }).catch(() => null);
   if (result) emit("rename", item.file, result.value.trim());
 }

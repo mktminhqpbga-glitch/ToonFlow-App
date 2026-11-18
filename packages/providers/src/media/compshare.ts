@@ -1,5 +1,5 @@
 ﻿/**
- * 优云智算 ModelVerse 媒体模型适配器
+ * Youyun AI ModelVerse 媒体模型适配器
  *
  * 依据（开发者提供的平台文档：https://www.compshare.cn/docs/modelverse/models/quick-start 及各模型页）：
  * - 认证鉴权：请求头 Authorization: Bearer <API Key>，主地址 https://api.modelverse.cn
@@ -82,7 +82,7 @@ type Context = {
 };
 
 const API_BASE = "https://api.modelverse.cn";
-/** MiniMax H3 视频工作台（优云智算）的接口地址。 */
+/** MiniMax H3 视频工作台（Youyun AI）的接口地址。 */
 const H3_BASE = "https://cp.compshare.cn";
 /** MiniMax H3 任务轮询间隔（文档建议 3 秒一次）。 */
 const H3_POLL_INTERVAL = 3000;
@@ -182,7 +182,7 @@ function normalizeKey(value: unknown): string {
 function requireModelVerseKey(context: Context): string {
   const apiKey = normalizeKey(context.config.apiKey);
   if (!apiKey) {
-    throw new Error("请先在供应商配置中填写 API Key");
+    throw new Error("Hãy điền API Key trong cấu hình nhà cung cấp trước");
   }
   return apiKey;
 }
@@ -191,7 +191,7 @@ function requireModelVerseKey(context: Context): string {
 function requireH3Key(context: Context): string {
   const apiKey = normalizeKey(context.config.minimaxApiKey);
   if (!apiKey) {
-    throw new Error("请先填写 MiniMax API Key（在优云智算视频工作台的 API 窗口创建，通常是 sk-ml- 开头）");
+    throw new Error("Hãy nhập MiniMax API Key (tạo trong mục API của Studio video Youyun AI, thường bắt đầu bằng sk-ml-)");
   }
   return apiKey;
 }
@@ -246,7 +246,7 @@ async function readErrorBody(response: { status: number; text(): Promise<string>
     raw = "";
   }
   if (!raw) {
-    return new RequestError(response.status, "请求失败，HTTP " + response.status);
+    return new RequestError(response.status, "Yêu cầu thất bại, HTTP " + response.status);
   }
   let parsed: unknown = undefined;
   try {
@@ -261,13 +261,13 @@ async function readErrorBody(response: { status: number; text(): Promise<string>
     const code = typeof source.code === "string" ? source.code : "";
     const detail = tool.errorMessage(source);
     if (detail && code) {
-      return new RequestError(response.status, "请求失败，HTTP " + response.status + "（" + code + "）：" + detail);
+      return new RequestError(response.status, "Yêu cầu thất bại, HTTP " + response.status + " (" + code + "): " + detail);
     }
     if (detail) {
-      return new RequestError(response.status, "请求失败，HTTP " + response.status + "：" + detail);
+      return new RequestError(response.status, "Yêu cầu thất bại, HTTP " + response.status + ": " + detail);
     }
   }
-  return new RequestError(response.status, "请求失败，HTTP " + response.status + "：" + tool.errorMessage(raw));
+  return new RequestError(response.status, "Yêu cầu thất bại, HTTP " + response.status + ": " + tool.errorMessage(raw));
 }
 
 async function parseJsonBody(response: { json(): Promise<unknown> }): Promise<Record<string, unknown>> {
@@ -275,10 +275,10 @@ async function parseJsonBody(response: { json(): Promise<unknown> }): Promise<Re
   try {
     payload = await response.json();
   } catch {
-    throw new Error("接口返回的内容不是有效 JSON，无法解析生成结果");
+    throw new Error("Phản hồi API không phải JSON hợp lệ, không thể phân tích kết quả tạo nội dung");
   }
   if (!payload || typeof payload !== "object") {
-    throw new Error("接口返回结构异常，未找到生成结果");
+    throw new Error("Cấu trúc phản hồi API bất thường, không tìm thấy kết quả tạo nội dung");
   }
   return payload as Record<string, unknown>;
 }
@@ -308,7 +308,7 @@ function friendlyError(error: unknown): Error {
   if (error instanceof Error) {
     return error;
   }
-  return new Error("调用 ModelVerse 失败，请稍后重试");
+  return new Error("Gọi ModelVerse thất bại, vui lòng thử lại sau");
 }
 
 function ensureHttpUrl(value: unknown): string {
@@ -363,7 +363,7 @@ function guessAudioMimeFromUrl(url: string): string {
 function decodeBase64(data: string): Uint8Array {
   const cleaned = data.replace(/\s/g, "");
   if (!cleaned || !/^[A-Za-z0-9+/]+={0,2}$/.test(cleaned)) {
-    throw new Error("参考素材的 Base64 数据无效，无法上传给 ModelVerse");
+    throw new Error("Dữ liệu Base64 của tài nguyên tham chiếu không hợp lệ, không thể tải lên ModelVerse");
   }
   const binary = atob(cleaned);
   const bytes = new Uint8Array(binary.length);
@@ -406,11 +406,11 @@ async function toBinaryBytes(
   }
   const url = ensureHttpUrl(input.url);
   if (!url) {
-    throw new Error("参考素材地址无效，只支持 HTTP(S) 地址或素材数据");
+    throw new Error("Địa chỉ tài nguyên tham chiếu không hợp lệ; chỉ hỗ trợ HTTP(S) hoặc dữ liệu tài nguyên");
   }
   const response = await context.tool.fetch(url, { signal: createSignal(context, timeoutMs) });
   if (!response.ok) {
-    throw new Error("读取参考素材失败，HTTP " + response.status);
+    throw new Error("Đọc tài nguyên tham chiếu thất bại, HTTP " + response.status);
   }
   const buffer = await response.arrayBuffer();
   const contentType = response.headers.get("content-type");
@@ -423,7 +423,7 @@ function toImageUrl(input: MediaInput, fallbackMime: string): string {
   if (input.type === "url") {
     const url = ensureHttpUrl(input.url);
     if (!url) {
-      throw new Error("参考图地址无效，只支持 HTTP(S) 地址或图片数据");
+      throw new Error("Địa chỉ ảnh tham chiếu không hợp lệ; chỉ hỗ trợ HTTP(S) hoặc dữ liệu ảnh");
     }
     return url;
   }
@@ -440,7 +440,7 @@ async function toAudioUrl(context: Context, input: MediaInput): Promise<string> 
   if (input.type === "url") {
     const url = ensureHttpUrl(input.url);
     if (!url) {
-      throw new Error("参考音频地址无效，只支持 HTTP(S) 地址或音频数据");
+      throw new Error("Địa chỉ âm thanh tham chiếu không hợp lệ; chỉ hỗ trợ HTTP(S) hoặc dữ liệu âm thanh");
     }
     return url;
   }
@@ -521,23 +521,23 @@ function validateGptImagePixels(size: string): string {
   const trimmed = size.trim();
   const parsed = parseSizeValue(trimmed);
   if (!parsed) {
-    throw new Error("这类模型的尺寸需要写成 1K、2K、4K，或 1024x1024 这样的宽x高像素值");
+    throw new Error("Kích thước cho mô hình này phải theo dạng 1K, 2K, 4K hoặc rộng×cao tính bằng pixel, ví dụ 1024x1024");
   }
   const { width, height } = parsed;
   if (width % 16 !== 0 || height % 16 !== 0) {
-    throw new Error("这类模型的宽和高都必须是 16 的倍数");
+    throw new Error("Chiều rộng và chiều cao của mô hình này đều phải chia hết cho 16");
   }
   const pixels = width * height;
   if (pixels < 655360 || pixels > 8294400) {
-    throw new Error("这类模型的像素总数需在 655360 到 8294400 之间，例如 1024x1024");
+    throw new Error("Tổng số pixel của mô hình này phải từ 655360 đến 8294400, ví dụ 1024x1024");
   }
   const maxSide = Math.max(width, height);
   const minSide = Math.min(width, height);
   if (maxSide > 3840) {
-    throw new Error("这类模型的宽高最大 3840 像素");
+    throw new Error("Chiều rộng và chiều cao tối đa của mô hình này là 3840 pixel");
   }
   if (maxSide / minSide > 3) {
-    throw new Error("这类模型的宽高比最大 3:1");
+    throw new Error("Tỉ lệ cạnh lớn nhất của mô hình này là 3:1");
   }
   return width + "x" + height;
 }
@@ -549,12 +549,12 @@ function resolveGptImageSize(rawSize: string, rawRatio: string): string {
   const tierKey = size.toUpperCase();
   const isTier = tierKey === "1K" || tierKey === "2K" || tierKey === "4K";
   if (size && !isTier && !parseSizeValue(size) && /^[\d.]+k$/i.test(tierKey)) {
-    throw new Error("这类模型的清晰度只支持 1K、2K、4K");
+    throw new Error("Mô hình này chỉ hỗ trợ độ phân giải 1K, 2K, 4K");
   }
   let effectiveRatio = ratio;
   if (size && !isTier && !parseSizeValue(size)) {
     if (ratio && ratio !== size) {
-      throw new Error("比例和尺寸都填了，请只填一处");
+      throw new Error("Đã nhập cả tỉ lệ và kích thước; vui lòng chỉ nhập một trong hai");
     }
     effectiveRatio = size;
   }
@@ -564,7 +564,7 @@ function resolveGptImageSize(rawSize: string, rawRatio: string): string {
   const tier = isTier ? tierKey : "1K";
   const ratioKey = effectiveRatio || "1:1";
   if (IMAGE_RATIOS.indexOf(ratioKey) === -1) {
-    throw new Error("这类模型支持的画面比例为：" + IMAGE_RATIOS.join("、"));
+    throw new Error("Tỉ lệ khung hình được hỗ trợ là: " + IMAGE_RATIOS.join("、"));
   }
   return GPT_IMAGE_SIZE_MAP[tier][ratioKey];
 }
@@ -577,11 +577,11 @@ function resolveQwenSize(rawSize: string, rawRatio: string): string {
   if (parsed) {
     const pixels = parsed.width * parsed.height;
     if (parsed.width < 512 || parsed.height < 512 || pixels > 4194304) {
-      throw new Error("这类模型的尺寸需在 512x512 到 2048x2048 之间");
+      throw new Error("Kích thước của mô hình này phải từ 512x512 đến 2048x2048");
     }
     const ratioValue = parsed.width / parsed.height;
     if (ratioValue < 1 / 8 || ratioValue > 8) {
-      throw new Error("这类模型的宽高比需在 1:8 到 8:1 之间");
+      throw new Error("Tỉ lệ khung hình của mô hình này phải từ 1:8 đến 8:1");
     }
     return parsed.width + "*" + parsed.height;
   }
@@ -590,17 +590,17 @@ function resolveQwenSize(rawSize: string, rawRatio: string): string {
     return "";
   }
   if (IMAGE_RATIOS.indexOf(ratioKey) === -1) {
-    throw new Error("这类模型支持的画面比例为：" + IMAGE_RATIOS.join("、"));
+    throw new Error("Tỉ lệ khung hình được hỗ trợ là: " + IMAGE_RATIOS.join("、"));
   }
   return GPT_IMAGE_SIZE_MAP["1K"][ratioKey].replace("x", "*");
 }
 
 function ensureNoUnsupportedImageOptions(protocol: string, request: ImageRequest): void {
   if (Object.keys(request.other ?? {}).length > 0) {
-    throw new Error("这类模型暂不支持自定义扩展参数");
+    throw new Error("Mô hình này chưa hỗ trợ tham số mở rộng tùy chỉnh");
   }
   if (protocol !== "gpt" && request.quality !== undefined && request.quality.trim()) {
-    throw new Error("这类模型不支持画质档位参数");
+    throw new Error("Mô hình này không hỗ trợ tham số mức chất lượng ảnh");
   }
 }
 
@@ -647,7 +647,7 @@ function normalizeMode(mode: string | string[] | undefined): string {
 function collectImageAssets(payload: Record<string, unknown>, fallbackMime: string): MediaAsset[] {
   const data = payload.data;
   if (!Array.isArray(data) || data.length === 0) {
-    throw new Error("接口未返回生成结果");
+    throw new Error("API không trả về kết quả tạo nội dung");
   }
   const assets: MediaAsset[] = [];
   const failures: string[] = [];
@@ -658,7 +658,7 @@ function collectImageAssets(payload: Record<string, unknown>, fallbackMime: stri
     const entry = item as Record<string, unknown>;
     if (entry.error && typeof entry.error === "object") {
       const failed = entry.error as Record<string, unknown>;
-      failures.push(typeof failed.message === "string" ? failed.message : "接口未说明原因");
+      failures.push(typeof failed.message === "string" ? failed.message : "API không cung cấp nguyên nhân");
       continue;
     }
     const url = ensureHttpUrl(entry.url);
@@ -679,9 +679,9 @@ function collectImageAssets(payload: Record<string, unknown>, fallbackMime: stri
   }
   if (assets.length === 0) {
     if (failures.length > 0) {
-      throw new Error("生成失败：" + failures.join("；"));
+      throw new Error("Tạo nội dung thất bại: " + failures.join("; "));
     }
-    throw new Error("接口未返回可用的生成结果");
+    throw new Error("API không trả về kết quả tạo nội dung dùng được");
   }
   return assets;
 }
@@ -689,7 +689,7 @@ function collectImageAssets(payload: Record<string, unknown>, fallbackMime: stri
 function collectGeminiImageAssets(payload: Record<string, unknown>): MediaAsset[] {
   const candidates = payload.candidates;
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    throw new Error("接口未返回生成结果");
+    throw new Error("API không trả về kết quả tạo nội dung");
   }
   const assets: MediaAsset[] = [];
   for (const candidate of candidates) {
@@ -727,7 +727,7 @@ function collectGeminiImageAssets(payload: Record<string, unknown>): MediaAsset[
     }
   }
   if (assets.length === 0) {
-    throw new Error("接口未返回图片，可能只返回了文字说明");
+    throw new Error("API không trả về ảnh, có thể chỉ trả lời bằng văn bản");
   }
   return assets;
 }
@@ -735,19 +735,19 @@ function collectGeminiImageAssets(payload: Record<string, unknown>): MediaAsset[
 async function generateGeminiImage(context: Context, request: ImageRequest, apiKey: string): Promise<MediaAsset[]> {
   const prompt = request.prompt.trim();
   if (!prompt) {
-    throw new Error("请先填写图片提示词");
+    throw new Error("Vui lòng nhập prompt tạo ảnh");
   }
   const size = (request.size ?? "").trim().toUpperCase();
   const ratio = (request.ratio ?? "").trim();
   if (size && ["512", "1K", "2K", "4K"].indexOf(size) === -1) {
-    throw new Error("这类模型的清晰度只支持 512、1K、2K、4K");
+    throw new Error("Mô hình này chỉ hỗ trợ độ phân giải 512, 1K, 2K, 4K");
   }
   if (ratio && IMAGE_RATIOS.indexOf(ratio) === -1) {
-    throw new Error("这类模型支持的画面比例为：" + IMAGE_RATIOS.join("、"));
+    throw new Error("Tỉ lệ khung hình được hỗ trợ là: " + IMAGE_RATIOS.join("、"));
   }
   const images = request.images ?? [];
   if (images.length > 0 || request.mask) {
-    throw new Error("这类模型目前只支持文字生成图片，暂不能传入参考图");
+    throw new Error("Mô hình này hiện chỉ hỗ trợ tạo ảnh từ văn bản, chưa nhận ảnh tham chiếu");
   }
   const imageConfig: Record<string, unknown> = {};
   if (ratio) {
@@ -775,30 +775,30 @@ async function generateGeminiImage(context: Context, request: ImageRequest, apiK
 async function generateGptImage(context: Context, request: ImageRequest, apiKey: string): Promise<MediaAsset[]> {
   const prompt = request.prompt.trim();
   if (!prompt) {
-    throw new Error("请先填写图片提示词");
+    throw new Error("Vui lòng nhập prompt tạo ảnh");
   }
   if (request.n !== undefined && (request.n < 1 || request.n > 10)) {
-    throw new Error("这类图片模型一次可生成 1 到 10 张图片");
+    throw new Error("Mô hình ảnh này có thể tạo từ 1 đến 10 ảnh mỗi lần");
   }
   const outputFormat = request.outputFormat ? request.outputFormat.trim().toLowerCase().replace("jpg", "jpeg") : "png";
   if (outputFormat !== "png" && outputFormat !== "jpeg") {
-    throw new Error("这类模型只支持 png 或 jpeg 输出格式");
+    throw new Error("Mô hình này chỉ hỗ trợ đầu ra PNG hoặc JPEG");
   }
   // 画质默认 medium
   let quality = "medium";
   if (request.quality !== undefined && request.quality.trim()) {
     quality = request.quality.trim().toLowerCase();
     if (quality !== "low" && quality !== "medium" && quality !== "high") {
-      throw new Error("这类模型的画质只支持 low、medium、high");
+      throw new Error("Mô hình này chỉ hỗ trợ chất lượng low, medium, high");
     }
   }
   const size = resolveGptImageSize(request.size ?? "", request.ratio ?? "");
   const images = request.images ?? [];
   if (images.length > 1) {
-    throw new Error("这类模型只支持传入 1 张参考图");
+    throw new Error("Mô hình này chỉ nhận 1 ảnh tham chiếu");
   }
   if (images.length === 0 && request.mask) {
-    throw new Error("遮罩需要配合一张参考图一起使用");
+    throw new Error("Mặt nạ phải được dùng kèm một ảnh tham chiếu");
   }
   const fields: Array<[string, string]> = [
     ["model", request.model],
@@ -1068,7 +1068,7 @@ function resolveSeedreamRatioSize(model: string, rawSize: string, rawRatio: stri
   }
   const supported = Object.keys(entry.tiers[entry.defaultTier]);
   if (supported.indexOf(ratio) === -1) {
-    throw new Error("这类模型支持的画面比例为：" + supported.join("、"));
+    throw new Error("Tỉ lệ khung hình được hỗ trợ là: " + supported.join("、"));
   }
   let tier = entry.defaultTier;
   if (pixelSize) {
@@ -1092,7 +1092,7 @@ function resolveSeedreamRatioSize(model: string, rawSize: string, rawRatio: stri
 async function generateOpenAiImage(context: Context, request: ImageRequest, apiKey: string): Promise<MediaAsset[]> {
   const prompt = request.prompt.trim();
   if (!prompt) {
-    throw new Error("请先填写图片提示词");
+    throw new Error("Vui lòng nhập prompt tạo ảnh");
   }
   const lower = request.model.toLowerCase();
   const isSeedream = lower.indexOf("seedream") !== -1;
@@ -1101,18 +1101,18 @@ async function generateOpenAiImage(context: Context, request: ImageRequest, apiK
   const singleOnly = isStep1x || isQwenImageEdit;
   const images = request.images ?? [];
   if (singleOnly && images.length > 1) {
-    throw new Error("这类模型只支持传入 1 张参考图");
+    throw new Error("Mô hình này chỉ nhận 1 ảnh tham chiếu");
   }
-  // 官网「图片生成 API」：Seedream 5.0 pro / flash 最多 10 张参考图，5.0 lite / 4.5 / 4.0 最多 14 张
+  // 官网「图片生成 API」：Seedream 5.0 pro / flash 最多 10 ảnh tham chiếu，5.0 lite / 4.5 / 4.0 最多 14 张
   const seedreamMaxReferences = /seedream-5-0-(pro|flash)/.test(lower) ? 10 : 14;
   if (isSeedream && images.length > seedreamMaxReferences) {
-    throw new Error("这类模型最多支持 " + seedreamMaxReferences + " 张参考图");
+    throw new Error("Mô hình này hỗ trợ tối đa " + seedreamMaxReferences + " ảnh tham chiếu");
   }
   if (isStep1x && images.length === 0) {
-    throw new Error("这类模型需要一张参考图");
+    throw new Error("Mô hình này yêu cầu một ảnh tham chiếu");
   }
   if (isSeedream && request.n !== undefined && request.n > 1) {
-    throw new Error("这类模型每次只生成一张图片");
+    throw new Error("Mô hình này chỉ tạo một ảnh mỗi lần");
   }
   const bodyObject: Record<string, unknown> = { model: request.model, prompt };
   if (request.n !== undefined && !isSeedream) {
@@ -1151,18 +1151,18 @@ async function generateOpenAiImage(context: Context, request: ImageRequest, apiK
   return collectImageAssets(payload, "image/png");
 }
 
-/** Qwen Image 3.0：同步生图，支持 1-3 张参考图与反向提示词。 */
+/** Qwen Image 3.0：同步生图，支持 1-3 ảnh tham chiếu与反向提示词。 */
 async function generateQwen3Image(context: Context, request: ImageRequest, apiKey: string): Promise<MediaAsset[]> {
   const prompt = request.prompt.trim();
   if (!prompt) {
-    throw new Error("请先填写图片提示词");
+    throw new Error("Vui lòng nhập prompt tạo ảnh");
   }
   const images = request.images ?? [];
   if (images.length > 3) {
-    throw new Error("这类模型最多支持 3 张参考图");
+    throw new Error("Mô hình này hỗ trợ tối đa 3 ảnh tham chiếu");
   }
   if (request.n !== undefined && (request.n < 1 || request.n > 6)) {
-    throw new Error("这类模型一次可生成 1 到 6 张图片");
+    throw new Error("Mô hình này có thể tạo từ 1 đến 6 ảnh mỗi lần");
   }
   const size = resolveQwenSize(request.size ?? "", request.ratio ?? "");
   const bodyObject: Record<string, unknown> = { model: request.model, prompt };
@@ -1203,7 +1203,7 @@ type VideoReferenceLabels = {
 function referencePrompt(request: VideoRequest, labels: Partial<VideoReferenceLabels> = {}) {
   return request.prompt.trim().replace(/\{\{ref (\d+)\}\}/g, (marker, number: string) => {
     const reference = request.referenceOrder?.[Number(number) - 1];
-    if (!reference) throw new Error(`引用标记 ${marker} 缺少素材映射，请更新视频节点或提供 referenceOrder`);
+    if (!reference) throw new Error(`Dấu tham chiếu ${marker} thiếu ánh xạ tài nguyên, hãy cập nhật node video hoặc cung cấp referenceOrder`);
     if (reference.type === "text") return `参考 ${Number(number)}`;
     const label =
       "index" in reference
@@ -1211,7 +1211,7 @@ function referencePrompt(request: VideoRequest, labels: Partial<VideoReferenceLa
           ? labels[reference.type]?.[reference.index]
           : undefined
         : labels[reference.type];
-    if (!label) throw new Error(`当前模型或模式不支持引用标记 ${marker} 对应的素材，请调整提示词或生成模式`);
+    if (!label) throw new Error(`Mô hình hoặc chế độ hiện tại không hỗ trợ dấu tham chiếu ${marker} cho tài nguyên tương ứng; hãy chỉnh prompt hoặc chế độ tạo nội dung`);
     return label;
   });
 }
@@ -1229,7 +1229,7 @@ async function buildSeedanceBody(context: Context, request: VideoRequest): Promi
   if (mode === "singleImage") {
     const firstFrame = request.firstFrame ?? images[0];
     if (!firstFrame) {
-      throw new Error("这种模式需要一张首帧图片");
+      throw new Error("Chế độ này cần một ảnh khung hình đầu tiên");
     }
     content.push({
       type: "image_url",
@@ -1263,7 +1263,7 @@ async function buildSeedanceBody(context: Context, request: VideoRequest): Promi
     for (const video of videos) {
       const url = ensureHttpUrl(video.type === "url" ? video.url : "");
       if (!url) {
-        throw new Error("参考视频目前只支持 HTTP(S) 地址");
+        throw new Error("Video tham chiếu hiện chỉ hỗ trợ địa chỉ HTTP(S)");
       }
       content.push({ type: "video_url", video_url: { url }, role: "reference_video" });
       labels.video.push(`视频${labels.video.length + 1}`);
@@ -1273,7 +1273,7 @@ async function buildSeedanceBody(context: Context, request: VideoRequest): Promi
       labels.audio.push(`音频${labels.audio.length + 1}`);
     }
   } else if (hasFirstFrame || hasLastFrame || images.length > 0 || videos.length > 0 || audios.length > 0) {
-    throw new Error("当前是纯文字生成视频模式，不能同时传入图片、视频或音频");
+    throw new Error("Hiện đang ở chế độ tạo video thuần văn bản, không thể đồng thời gửi ảnh, video hoặc âm thanh");
   }
   content[0]!.text = referencePrompt(request, request.model.toLowerCase().includes("seedance") ? labels : {});
   const parameters: Record<string, unknown> = {};
@@ -1303,7 +1303,7 @@ async function buildHailuoBody(context: Context, request: VideoRequest): Promise
     const frame = await toBinaryBytes(context, request.firstFrame, SUBMIT_TIMEOUT, "image/jpeg");
     input.first_frame_image = "data:" + frame.mimeType + ";base64," + bytesToBase64(frame.data);
   } else if (mode !== "text") {
-    throw new Error("这种模式需要一张首帧图片");
+    throw new Error("Chế độ này cần một ảnh khung hình đầu tiên");
   }
   const parameters: Record<string, unknown> = {};
   if (request.duration !== undefined) {
@@ -1334,12 +1334,12 @@ async function buildViduBody(context: Context, request: VideoRequest): Promise<V
   const isReference = modeLower.indexOf("imagereference") !== -1 || (lower.indexOf("reference") !== -1 && (request.images ?? []).length > 0);
   if (isExtend) {
     if (!request.videos || request.videos.length === 0) {
-      throw new Error("视频延长需要传入一段参考视频");
+      throw new Error("Kéo dài video cần có một video tham chiếu");
     }
     const video = request.videos[0];
     const url = ensureHttpUrl(video.type === "url" ? video.url : "");
     if (!url) {
-      throw new Error("视频延长只支持 HTTP(S) 地址的参考视频");
+      throw new Error("Kéo dài video chỉ hỗ trợ địa chỉ HTTP(S) của video tham chiếu");
     }
     input.video_url = url;
     if (request.lastFrame) {
@@ -1348,12 +1348,12 @@ async function buildViduBody(context: Context, request: VideoRequest): Promise<V
     parameters.vidu_type = "extend";
   } else if (isLipSync) {
     if (!request.videos || request.videos.length === 0) {
-      throw new Error("对口型需要传入一段参考视频");
+      throw new Error("Đồng bộ khẩu hình cần có một video tham chiếu");
     }
     const video = request.videos[0];
     const url = ensureHttpUrl(video.type === "url" ? video.url : "");
     if (!url) {
-      throw new Error("对口型只支持 HTTP(S) 地址的参考视频");
+      throw new Error("Đồng bộ khẩu hình chỉ hỗ trợ địa chỉ HTTP(S) của video tham chiếu");
     }
     input.video_url = url;
     const text = typeof request.other?.text === "string" ? (request.other.text as string) : "";
@@ -1362,16 +1362,16 @@ async function buildViduBody(context: Context, request: VideoRequest): Promise<V
     } else if (text) {
       input.text = text;
     } else {
-      throw new Error("对口型需要一段参考音频，或一段要朗读的文字");
+      throw new Error("Đồng bộ khẩu hình cần một âm thanh tham chiếu hoặc văn bản cần đọc");
     }
     parameters.vidu_type = "lip-sync";
   } else if (isReference) {
     const images = request.images ?? [];
     if (images.length === 0) {
-      throw new Error("参考生视频需要至少 1 张参考图");
+      throw new Error("Tạo video từ tham chiếu yêu cầu ít nhất một ảnh tham chiếu");
     }
     if (images.length > 7) {
-      throw new Error("参考生视频最多支持 7 张参考图");
+      throw new Error("Tạo video từ tham chiếu hỗ trợ tối đa 7 ảnh tham chiếu");
     }
     input.images = images.map((image) => toImageUrl(image, "image/png"));
     parameters.vidu_type = "reference2video";
@@ -1380,7 +1380,7 @@ async function buildViduBody(context: Context, request: VideoRequest): Promise<V
     }
   } else if (mode === "startEndRequired") {
     if (!request.firstFrame || !request.lastFrame) {
-      throw new Error("这种模式需要同时提供首帧和尾帧两张图片");
+      throw new Error("Chế độ này cần cả ảnh khung đầu và khung cuối");
     }
     input.first_frame_url = toImageUrl(request.firstFrame, "image/png");
     input.last_frame_url = toImageUrl(request.lastFrame, "image/png");
@@ -1392,7 +1392,7 @@ async function buildViduBody(context: Context, request: VideoRequest): Promise<V
     }
   } else {
     if (!request.firstFrame) {
-      throw new Error("这种模式需要一张首帧图片");
+      throw new Error("Chế độ này cần một ảnh khung hình đầu tiên");
     }
     input.first_frame_url = toImageUrl(request.firstFrame, "image/png");
     parameters.vidu_type = "img2video";
@@ -1418,7 +1418,7 @@ async function buildWanBody(context: Context, request: VideoRequest): Promise<Vi
   const parameters: Record<string, unknown> = {};
   if (isI2V) {
     if (!request.firstFrame) {
-      throw new Error("这种模式需要一张首帧图片");
+      throw new Error("Chế độ này cần một ảnh khung hình đầu tiên");
     }
     input.first_frame_url = toImageUrl(request.firstFrame, "image/png");
     if (request.lastFrame && lower.indexOf("wan2.2-i2v") !== -1) {
@@ -1468,7 +1468,7 @@ async function submitTask(context: Context, body: unknown, apiKey: string): Prom
   const output = payload.output && typeof payload.output === "object" ? (payload.output as Record<string, unknown>) : undefined;
   const taskId = output && typeof output.task_id === "string" ? output.task_id : "";
   if (!taskId) {
-    throw new Error("提交任务失败：接口未返回任务编号");
+    throw new Error("Gửi tác vụ thất bại: API không trả về ID tác vụ");
   }
   return { taskId, apiKey };
 }
@@ -1478,10 +1478,10 @@ async function waitForTask(context: Context, handle: TaskHandle, totalTimeout: n
   const deadline = Date.now() + totalTimeout;
   while (true) {
     if (context.signal?.aborted) {
-      throw new Error("已取消等待生成结果，远端任务可能仍在运行");
+      throw new Error("Đã hủy chờ kết quả, tác vụ từ xa có thể vẫn đang chạy");
     }
     if (Date.now() >= deadline) {
-      throw new Error("等待生成结果超时，可以稍后重新发起");
+      throw new Error("Hết thời gian chờ kết quả tạo nội dung; có thể gửi tác vụ mới sau");
     }
     const statusPayload = await requestJson(context, API_BASE + "/v1/tasks/status?task_id=" + encodeURIComponent(handle.taskId), {
       method: "GET",
@@ -1494,19 +1494,19 @@ async function waitForTask(context: Context, handle: TaskHandle, totalTimeout: n
       const urls = output && Array.isArray(output.urls) ? output.urls : [];
       const valid = urls.map((value) => ensureHttpUrl(value)).filter((value) => Boolean(value));
       if (valid.length === 0) {
-        throw new Error("任务已完成，但没有返回可用的结果地址");
+        throw new Error("Tác vụ đã hoàn thành nhưng không trả về địa chỉ kết quả hợp lệ");
       }
       return valid;
     }
     if (status === "Failure") {
-      const reason = output && typeof output.error_message === "string" ? output.error_message : "接口未说明原因";
-      throw Object.assign(new Error("生成失败：" + reason), { code: "MEDIA_TASK_FAILED" });
+      const reason = output && typeof output.error_message === "string" ? output.error_message : "API không cung cấp nguyên nhân";
+      throw Object.assign(new Error("Tạo nội dung thất bại: " + reason), { code: "MEDIA_TASK_FAILED" });
     }
     if (status === "Expired") {
-      throw Object.assign(new Error("任务已过期，请重新发起"), { code: "MEDIA_TASK_FAILED" });
+      throw Object.assign(new Error("Tác vụ đã hết hạn, vui lòng gửi lại"), { code: "MEDIA_TASK_FAILED" });
     }
     if (status === "Cancelled" || status === "Canceled") {
-      throw Object.assign(new Error("任务已被取消"), { code: "MEDIA_TASK_FAILED" });
+      throw Object.assign(new Error("Tác vụ đã bị hủy"), { code: "MEDIA_TASK_FAILED" });
     }
     // 除上述终态外都按「还在处理中」继续轮询（例如平台新增的 moderating 之类状态），
     // 避免因为状态名不认识就提前报错；真正的失败仍由 Failure/Expired 分支处理。
@@ -1542,19 +1542,19 @@ async function buildH3Content(context: Context, request: VideoRequest, content: 
   const isReference = modeLower.indexOf("reference") !== -1 || images.length > 1 || videos.length > 0 || audios.length > 0;
   if (isReference) {
     if (images.length > 9) {
-      throw new Error("MiniMax H3 最多支持 9 张参考图");
+      throw new Error("MiniMax H3 hỗ trợ tối đa 9 ảnh tham chiếu");
     }
     if (videos.length > 3) {
-      throw new Error("MiniMax H3 最多支持 3 个参考视频");
+      throw new Error("MiniMax H3 hỗ trợ tối đa 3 video tham chiếu");
     }
     if (audios.length > 3) {
-      throw new Error("MiniMax H3 最多支持 3 段参考音频");
+      throw new Error("MiniMax H3 hỗ trợ tối đa 3 đoạn âm thanh tham chiếu");
     }
     if (images.length + videos.length + audios.length > 12) {
-      throw new Error("MiniMax H3 的参考素材合计最多 12 个");
+      throw new Error("MiniMax H3 hỗ trợ tổng cộng tối đa 12 tài nguyên tham chiếu");
     }
     if (audios.length > 0 && images.length === 0 && videos.length === 0) {
-      throw new Error("参考音频不能单独使用，请同时提供至少一张参考图或一个参考视频");
+      throw new Error("Không thể chỉ dùng âm thanh tham chiếu; hãy thêm ít nhất một ảnh hoặc video tham chiếu");
     }
     for (const image of images) {
       content.push({ type: "image_url", image_url: { url: toImageUrl(image, "image/png") }, role: "reference_image" });
@@ -1563,7 +1563,7 @@ async function buildH3Content(context: Context, request: VideoRequest, content: 
     for (const video of videos) {
       const url = ensureHttpUrl(video.type === "url" ? video.url : "");
       if (!url) {
-        throw new Error("MiniMax H3 的参考视频目前只支持 HTTP(S) 地址");
+        throw new Error("Video tham chiếu của MiniMax H3 hiện chỉ hỗ trợ địa chỉ HTTP(S)");
       }
       content.push({ type: "video_url", video_url: { url }, role: "reference_video" });
       labels.video.push(`<Video ${labels.video.length + 1}>`);
@@ -1597,17 +1597,17 @@ async function generateH3Video(context: Context, request: VideoRequest, apiKey: 
   const audios = request.audios ?? [];
   const hasFrame = request.firstFrame !== undefined || request.lastFrame !== undefined;
   if (!prompt && !hasFrame && images.length === 0 && videos.length === 0 && audios.length === 0) {
-    throw new Error("请先填写视频提示词，或提供首帧/参考素材");
+    throw new Error("Vui lòng nhập prompt video hoặc cung cấp khung đầu/tài nguyên tham chiếu");
   }
   if (request.duration !== undefined && (request.duration < 4 || request.duration > 30)) {
-    throw new Error("MiniMax H3 的视频时长需要在 4 到 30 秒之间");
+    throw new Error("Thời lượng video MiniMax H3 phải từ 4 đến 30 giây");
   }
   const resolutions = ["480P", "768P", "1080P", "2K", "4K"];
   let resolution = "768P";
   if (request.resolution !== undefined && request.resolution.trim()) {
     resolution = request.resolution.trim().toUpperCase();
     if (resolutions.indexOf(resolution) === -1) {
-      throw new Error("MiniMax H3 的分辨率只支持 480P、768P、1080P、2K、4K");
+      throw new Error("MiniMax H3 chỉ hỗ trợ độ phân giải 480P, 768P, 1080P, 2K, 4K");
     }
   }
   const ratios = ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
@@ -1615,7 +1615,7 @@ async function generateH3Video(context: Context, request: VideoRequest, apiKey: 
   if (request.ratio !== undefined && request.ratio.trim()) {
     ratio = request.ratio.trim();
     if (ratios.indexOf(ratio) === -1) {
-      throw new Error("MiniMax H3 的画面比例只支持 adaptive、21:9、16:9、4:3、1:1、3:4、9:16");
+      throw new Error("MiniMax H3 chỉ hỗ trợ tỉ lệ adaptive, 21:9, 16:9, 4:3, 1:1, 3:4, 9:16");
     }
   }
   const other = request.other ?? {};
@@ -1658,7 +1658,7 @@ async function generateH3Video(context: Context, request: VideoRequest, apiKey: 
   });
   const taskId = typeof submitPayload.task_id === "string" ? submitPayload.task_id : "";
   if (!taskId) {
-    throw new Error("提交 MiniMax H3 任务失败：接口未返回任务编号");
+    throw new Error("Gửi tác vụ MiniMax H3 thất bại: API không trả về ID tác vụ");
   }
   await context.saveTaskData?.({ kind: "h3Video", taskId, model: request.model, deadline: Date.now() + H3_TOTAL_TIMEOUT });
   return waitForH3Video(context, taskId, apiKey);
@@ -1668,10 +1668,10 @@ async function waitForH3Video(context: Context, taskId: string, apiKey: string):
   const deadline = Date.now() + H3_TOTAL_TIMEOUT;
   while (true) {
     if (context.signal?.aborted) {
-      throw new Error("已取消等待视频生成结果，远端任务可能仍在运行");
+      throw new Error("Đã hủy chờ kết quả video, tác vụ từ xa có thể vẫn đang chạy");
     }
     if (Date.now() >= deadline) {
-      throw new Error("等待 MiniMax H3 视频结果超时，可以稍后重新发起");
+      throw new Error("Hết thời gian chờ kết quả video MiniMax H3; có thể gửi tác vụ mới sau");
     }
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, H3_POLL_INTERVAL);
@@ -1685,7 +1685,7 @@ async function waitForH3Video(context: Context, taskId: string, apiKey: string):
       );
     });
     if (context.signal?.aborted) {
-      throw new Error("已取消等待视频生成结果，远端任务可能仍在运行");
+      throw new Error("Đã hủy chờ kết quả video, tác vụ từ xa có thể vẫn đang chạy");
     }
     const statusPayload = await requestJson(context, H3_BASE + "/minimax/v2/query/video_generation/" + encodeURIComponent(taskId), {
       method: "GET",
@@ -1698,22 +1698,22 @@ async function waitForH3Video(context: Context, taskId: string, apiKey: string):
       const contentField = task && task.content && typeof task.content === "object" ? (task.content as Record<string, unknown>) : undefined;
       const url = contentField ? ensureHttpUrl(contentField.url) : "";
       if (!url) {
-        throw new Error("MiniMax H3 任务已完成，但没有返回可用的视频地址");
+        throw new Error("MiniMax H3 hoàn tất nhưng không có địa chỉ video hợp lệ");
       }
       return [{ mediaType: "video" as MediaType, type: "url" as const, url, mimeType: "" }];
     }
     if (status === "failed") {
       const failed = task && task.error && typeof task.error === "object" ? (task.error as Record<string, unknown>) : undefined;
-      const reason = failed && typeof failed.message === "string" ? failed.message : "接口未说明原因";
-      throw Object.assign(new Error("MiniMax H3 生成失败：" + reason), { code: "MEDIA_TASK_FAILED" });
+      const reason = failed && typeof failed.message === "string" ? failed.message : "API không cung cấp nguyên nhân";
+      throw Object.assign(new Error("Tạo video MiniMax H3 thất bại: " + reason), { code: "MEDIA_TASK_FAILED" });
     }
     if (status === "cancelled") {
-      throw Object.assign(new Error("MiniMax H3 任务已被取消"), { code: "MEDIA_TASK_FAILED" });
+      throw Object.assign(new Error("Tác vụ MiniMax H3 đã bị hủy"), { code: "MEDIA_TASK_FAILED" });
     }
     if (status === "blocked") {
       const blocked = task && task.error && typeof task.error === "object" ? (task.error as Record<string, unknown>) : undefined;
-      const reason = blocked && typeof blocked.message === "string" ? blocked.message : "内容未通过审核";
-      throw Object.assign(new Error("MiniMax H3 任务被审核拦截：" + reason), { code: "MEDIA_TASK_FAILED" });
+      const reason = blocked && typeof blocked.message === "string" ? blocked.message : "Nội dung không vượt qua kiểm duyệt";
+      throw Object.assign(new Error("Tác vụ MiniMax H3 bị kiểm duyệt chặn: " + reason), { code: "MEDIA_TASK_FAILED" });
     }
     // 其余状态（queued、running、moderating 等，含平台后续新增的排队/审核阶段）继续轮询，
     // 直到成功、失败、被拦截，或到达总等待上限。
@@ -1722,11 +1722,11 @@ async function waitForH3Video(context: Context, taskId: string, apiKey: string):
 
 export default {
   id: "compshare",
-  label: "优云智算（支持30秒）",
+  label: "Youyun AI (hỗ trợ 30 giây)",
   icon: "data:image/webp;base64,UklGRrIEAABXRUJQVlA4IKYEAACwHACdASqAAIAAPlEojkWjoqEUC4RUOAUEsZOACshg/IF9F9uuYENt15fvulv4nP+S/lfYO8xX7AetJ6L/QA/wHUO7xj+53oq3hpXLaX9PfNP8g2oN0ryI5xH8WBNYIxASaOpGWbHVhMRvffDAog2oVmCU+vla84NqXJGiLa51ZBlAnajgeDd5xodsqvUvGQfQhlnkJxos+18ksB+mszh7/L8eLkBBsP2HJaoWAYw8k1/nKoCh+S0qFY6+Iwg/Y09tMNh556MM9Z7/L7WQVU4ouPEscY/0ALZJhZ4tei+xRl6IertQnQqW/PgUJmcsAP79nJzusj9cFOfFWwhdNAIFr9+vv1hhKikDp6WFkU203jKYviAGyS+J4uQtQUMoW8aQAwghvdtOP93MJ6wasAcPa6A5QwIqRezhlJCfwV1ugcHA1WdIWulOwYn/y4MILLfa51Q6vXXxuYe/kZUMvkpa3aaHl4fsX6zrQSZY5qzPmpPpZ+1tFYDJP/y/rh6h9rK1aT/lQnX/FeSk4OO5/2WjXL0vWqVCWw1Kr29QxfQFaxM9noNALm8zW6Hk0JQLdUuBTtG7r7fPZV1fEybTq9WW9tzGReXxpYvi6RypTxLrAQC1O5d385YWaLWVFp1VSHAAutd0EIyGj4OMoQaOrneF0NVSX3krJiAITbJqXLe5ECt/lNYGoAt9Rybyej+YXQBIuEBn72/nnf90ztwvpSvMH/3MsfxF5o/WijNadedW1sY72FyVcOSmND6ZPVmgw/rEFPs1zAdfFhVX7JP9ffll0UknDyafjBdDMn7OGbiZ3DIsFJIqroxusWqEjizCrq4ds+TynGCPVQ/lp8//D6F8MmQ6R+aRn+f4yfTOj0RBeqfORZx4yM+7+bvIm7vRqJkPD7qLNL69IB32mrNe9o1T/gYHfcxMalvCUkLeWDDv5sQSUR3VMENHPlsSqaXOSC6AoVk9JYoTibLGc45B35u3an2nRXe9H8dQhNZ6MRpWhEmIEJ3oTVyCsTSfDTwm40dLormlbIJlROoyb011vm9l12kB0iROLxr96nk99vmiF8kY3QZcN2P/5SA3SqrncD3H5HTbvjzx5xvYmeb6F0EFpE/xI3/om1SiSR4O/bHOvkB15jaoIOzNmtX7PlAlYqspDgwRUyuH0nFepR/yx5JSOXmegKyiBuwz42YUmljSNrXasas6Wuz8y5egRWtvNi3HDtxURRkMCcDKIN5kUd7Zav0NT+rynTOSTN2SCmEm6At+NIP4qRCu9OXJAGw7+59ZNtDXK/IuwdWObWZo+b9wToBoypaMqyN/VKdnacmVMwzrEQK6mzqusSVDFExXBiHIdlyfiey59cQ5GLQD/lgnltTmEw6x8lj5YhnWhTUtQX8+96IShf4sDrtmtS5SA8uK+TNYjkTyvr0/7TulOe2n8Nd4JOyxp71t8k7Uwfo5bgpJR7UBgv2ZJgLU6t+zgOImh7hse1RE6ScNzhXpss0k5AMpMIqaz4wB36XHu3jPpLb1XyTv/CujPjDjUb2wOKJSerxrWjiZJekcLyy+MCaoWSUmF4kjKk6pNgDl0MkYdgeBTnCAAA==",
   version: "2.0.2",
   readme:
-    "优云智算\n\n**优云智算 API Key**：图片与视频模型用，获取地址 https://console.compshare.cn/light-gpu/api-keys\n**MiniMax API Key**：只有 `MiniMax-H3` 用，获取地址 https://www.compshare.cn/video-studio",
+    "Youyun AI\n\n**Youyun AI API Key**：Dùng cho mô hình ảnh và video; lấy tại https://console.compshare.cn/light-gpu/api-keys\n**MiniMax API Key**：Chỉ dùng cho `MiniMax-H3`; lấy tại https://www.compshare.cn/video-studio",
   rules: [
     {
       type: "input",
@@ -1746,7 +1746,7 @@ export default {
   models: [
     {
       id: "MiniMax-H3",
-      label: "MiniMax H3（文/图/参考素材生视频 · 视频工作台）",
+      label: "MiniMax H3 (video từ chữ/ảnh/tài nguyên tham chiếu · Studio video)",
       type: "video",
       mode: ["text", "singleImage", "endFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],
       audio: "optional",
@@ -1760,7 +1760,7 @@ export default {
     },
     {
       id: "doubao-seedream-5-0-pro-260628",
-      label: "doubao-seedream 5.0 Pro（文生图 / 多参考图）",
+      label: "doubao-seedream 5.0 Pro (tạo ảnh từ chữ / nhiều ảnh tham chiếu)",
       type: "image",
       mode: ["text", "multiReference"],
       imageSizes: ["1K", "1.5K", "2K"],
@@ -1768,7 +1768,7 @@ export default {
     },
     {
       id: "doubao-seedream-5-0-260128",
-      label: "doubao-seedream 5.0（文生图 / 多参考图）",
+      label: "doubao-seedream 5.0 (tạo ảnh từ chữ / nhiều ảnh tham chiếu)",
       type: "image",
       mode: ["text", "multiReference"],
       imageSizes: ["2K", "3K", "4K"],
@@ -1776,7 +1776,7 @@ export default {
     },
     {
       id: "qwen-image-3.0",
-      label: "Qwen Image 3.0（文生图 / 参考图编辑）",
+      label: "Qwen Image 3.0 (tạo ảnh từ chữ / chỉnh ảnh tham chiếu)",
       type: "image",
       mode: ["text", "multiReference"],
       imageSizes: ["1024x1024", "1536x1024", "1024x1536", "2048x2048", "1280x720", "720x1280"],
@@ -1784,7 +1784,7 @@ export default {
     },
     {
       id: "qwen-image-3.0-pro",
-      label: "Qwen Image 3.0 Pro（文生图 / 参考图编辑）",
+      label: "Qwen Image 3.0 Pro (tạo ảnh từ chữ / chỉnh ảnh tham chiếu)",
       type: "image",
       mode: ["text", "multiReference"],
       imageSizes: ["1024x1024", "1536x1024", "1024x1536", "2048x2048", "1280x720", "720x1280"],
@@ -1792,7 +1792,7 @@ export default {
     },
     {
       id: "gpt-image-2",
-      label: "gpt-image-2（文生图 / 单图编辑）",
+      label: "gpt-image-2 (tạo ảnh từ chữ / chỉnh sửa một ảnh)",
       type: "image",
       mode: ["text", "singleImage"],
       imageSizes: ["1K", "2K", "4K"],
@@ -1800,7 +1800,7 @@ export default {
     },
     {
       id: "Qwen/Qwen-Image",
-      label: "Qwen-Image（文生图）",
+      label: "Qwen-Image (tạo ảnh từ chữ)",
       type: "image",
       mode: ["text"],
       imageSizes: ["1024x1024", "1280x720", "720x1280", "1536x1536"],
@@ -1808,7 +1808,7 @@ export default {
     },
     {
       id: "Qwen/Qwen-Image-Edit",
-      label: "Qwen-Image-Edit（单图编辑）",
+      label: "Qwen-Image-Edit (chỉnh sửa một ảnh)",
       type: "image",
       mode: ["singleImage"],
       imageSizes: ["1024x1024", "1280x720", "720x1280", "1536x1536"],
@@ -1816,7 +1816,7 @@ export default {
     },
     {
       id: "doubao-seedance-2-0-260128",
-      label: "doubao-seedance 2.0（文/图生视频 / 参考素材）",
+      label: "doubao-seedance 2.0 (tạo video từ chữ/ảnh / tài nguyên tham chiếu)",
       type: "video",
       mode: ["text", "singleImage", "startEndRequired", ["imageReference:9", "videoReference:3", "audioReference:3"]],
       audio: "optional",
@@ -1828,7 +1828,7 @@ export default {
     this.signal?.throwIfAborted();
     const model = typeof request.model === "string" ? request.model.trim() : "";
     if (!model) {
-      throw new Error("未指定图片模型");
+      throw new Error("Chưa chỉ định mô hình ảnh");
     }
     const apiKey = requireModelVerseKey(this);
     const protocol = imageProtocolOf(model);
@@ -1852,7 +1852,7 @@ export default {
     this.signal?.throwIfAborted();
     const model = typeof request.model === "string" ? request.model.trim() : "";
     if (!model) {
-      throw new Error("未指定视频模型");
+      throw new Error("Chưa chỉ định mô hình video");
     }
     if (isH3Model(model)) {
       const apiKey = requireH3Key(this);
@@ -1869,7 +1869,7 @@ export default {
       prompt: request.prompt && request.prompt.trim() ? request.prompt : promptOptional ? "" : "",
     });
     if (!promptOptional && !normalized.prompt.trim()) {
-      throw new Error("请先填写视频提示词");
+      throw new Error("Vui lòng nhập prompt tạo video");
     }
     const protocol = videoProtocolOf(model);
     try {
@@ -1890,7 +1890,7 @@ export default {
   async resumeTask(this: Context, data: ProviderTaskData): Promise<MediaAsset[]> {
     if ((data.kind !== "modelVerseVideo" && data.kind !== "h3Video") || typeof data.taskId !== "string" || !data.taskId
       || typeof data.model !== "string" || !data.model || typeof data.deadline !== "number" || !Number.isFinite(data.deadline)) {
-      throw new Error("视频任务恢复数据无效");
+      throw new Error("Dữ liệu khôi phục tác vụ video không hợp lệ");
     }
     if (data.kind === "h3Video") return waitForH3Video(this, data.taskId, requireH3Key(this));
     const urls = await waitForTask(this, { taskId: data.taskId, apiKey: requireModelVerseKey(this) }, VIDEO_TOTAL_TIMEOUT);

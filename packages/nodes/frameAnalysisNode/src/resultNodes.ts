@@ -24,15 +24,15 @@ export function useResultNodes() {
   }
 
   function verify(dimensions: ResultDimensions) {
-    if (findNode(node.id) !== node) throw new Error("逐帧拉片节点已变化，请重新开始");
-    if (!nodeTypes?.value?.canvasGroup) throw new Error("当前画布不支持分组");
+    if (findNode(node.id) !== node) throw new Error("Node phân tích video đã thay đổi, hãy bắt đầu lại");
+    if (!nodeTypes?.value?.canvasGroup) throw new Error("Canvas hiện tại không hỗ trợ nhóm");
     const required = [
-      { enabled: dimensions.frames, type: "remote-imageNode", label: "图片" },
-      { enabled: dimensions.clips, type: "remote-videoNode", label: "视频" },
-      { enabled: dimensions.audio, type: "remote-audioNode", label: "音频" },
+      { enabled: dimensions.frames, type: "remote-imageNode", label: "Ảnh" },
+      { enabled: dimensions.clips, type: "remote-videoNode", label: "Video" },
+      { enabled: dimensions.audio, type: "remote-audioNode", label: "Âm thanh" },
     ];
     const missing = required.filter(item => item.enabled && !nodeTypes?.value?.[item.type]);
-    if (missing.length) throw new Error(`请先启用${missing.map(item => item.label).join("、")}节点插件`);
+    if (missing.length) throw new Error(`Hãy bật plugin node ${missing.map(item => item.label).join(", ")} trước`);
   }
 
   function create(result: AnalysisResult) {
@@ -42,14 +42,14 @@ export function useResultNodes() {
     const groups: { node: Node; width: number; height: number }[] = [];
     const previewWidth = Math.max(180, result.height > 0 ? 240 * result.width / result.height : 320) + 18;
     const dimensions = [
-      { key: "frames", type: "remote-imageNode", output: "image", dataType: "IMAGE", mimeType: "image/jpeg", label: "分镜", prefix: "S", width: previewWidth, height: 300 },
-      { key: "clips", type: "remote-videoNode", output: "video", dataType: "VIDEO", mimeType: "video/mp4", label: "动态参考", prefix: "M", width: previewWidth, height: 300 },
-      { key: "audio", type: "remote-audioNode", output: "audio", dataType: "AUDIO", mimeType: "audio/mp4", label: "原音轨", prefix: "A", width: 360, height: 220 },
+      { key: "frames", type: "remote-imageNode", output: "image", dataType: "IMAGE", mimeType: "image/jpeg", label: "Khung hình", prefix: "S", width: previewWidth, height: 300 },
+      { key: "clips", type: "remote-videoNode", output: "video", dataType: "VIDEO", mimeType: "video/mp4", label: "Video tham chiếu", prefix: "M", width: previewWidth, height: 300 },
+      { key: "audio", type: "remote-audioNode", output: "audio", dataType: "AUDIO", mimeType: "audio/mp4", label: "Âm thanh gốc", prefix: "A", width: 360, height: 220 },
     ] as const;
 
     for (const dimension of dimensions) {
       const media = dimension.key === "audio"
-        ? result.audio ? [{ path: result.audio, label: "A01 · 原音轨", sceneIndex: 0 }] : []
+        ? result.audio ? [{ path: result.audio, label: "A01 · Âm thanh gốc", sceneIndex: 0 }] : []
         : result.scenes.flatMap(scene => {
           const path = dimension.key === "frames" ? scene.image : scene.video;
           return path ? [{
@@ -73,7 +73,7 @@ export function useResultNodes() {
           style: { width: `${width}px`, height: `${height}px` },
           connectable: false,
           expandParent: false,
-          data: { label: `${dimension.label}${dimension.key === "audio" ? "" : `组${String(offset / 12 + 1).padStart(2, "0")}`} · ${node.data.label || "逐帧拉片"}` },
+          data: { label: `${dimension.label}${dimension.key === "audio" ? "" : ` nhóm ${String(offset / 12 + 1).padStart(2, "0")}`} · ${node.data.label || "Phân tích khung hình"}` },
         };
         groups.push({ node: group, width, height });
         nodes.push(group);

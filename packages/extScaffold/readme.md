@@ -1,10 +1,10 @@
-# 文档扩展脚手架
+# Bộ khung mở rộng tài liệu
 
-文档页使用 Dockview 管理标签、分屏与关闭流程。`packages/ext/*` 中每个工作区子包提供一种文件编辑器、预览器或画布节点展示器。扩展只接收宿主提供的 `context`，不导入 `apps/web/src`。
+Trang tài liệu dùng Dockview để quản lý tab, chia màn hình và quy trình đóng. Mỗi gói con workspace trong `packages/ext/*` cung cấp một trình sửa tệp, trình xem trước hoặc trình hiển thị node Canvas. Extension chỉ nhận `context` do ứng dụng chủ cung cấp, không import `apps/web/src`.
 
-## 创建扩展
+## Tạo extension
 
-在仓库根目录执行：
+Chạy tại thư mục gốc repository:
 
 ```sh
 bun packages/extScaffold/create.ts myEditor
@@ -13,9 +13,9 @@ bun run --cwd packages/ext/myEditor typecheck
 bun run --cwd packages/ext/myEditor build
 ```
 
-参数是小驼峰名称，不带 `ext-`；例如 `myEditor` 生成 ID `ext-myEditor` 和包名 `@toonflow/ext-myeditor`。已有同名目录时拒绝创建。命令只创建目录和文件，不隐式安装依赖、构建或修改宿主配置。
+Tham số phải là tên camelCase, không kèm `ext-`. Ví dụ `myEditor` tạo ID `ext-myEditor` và tên gói `@toonflow/ext-myeditor`. Nếu thư mục cùng tên đã tồn tại, lệnh sẽ từ chối tạo. Lệnh chỉ tạo thư mục và tệp, không ngầm cài dependency, build hoặc sửa cấu hình ứng dụng chủ.
 
-写入中途失败时保留已创建文件，修复原因后可补齐或手动清理；脚手架不会递归删除目录回滚。
+Nếu thao tác ghi thất bại giữa chừng, những tệp đã tạo được giữ lại. Sau khi sửa nguyên nhân, có thể tạo bù hoặc dọn thủ công; bộ khung không tự xóa đệ quy thư mục để hoàn tác.
 
 ```text
 packages/ext/myEditor/
@@ -29,9 +29,9 @@ packages/ext/myEditor/
     index.vue
 ```
 
-生成的组件可直接编辑文本，并演示由扩展自己声明的图标和字号设置。修改 `src/metadata.ts` 的扩展显示名、图标、文件后缀与配置规则，再实现 `src/index.vue` 的内容。
+Thành phần được tạo có thể chỉnh văn bản trực tiếp và minh họa cài đặt biểu tượng, cỡ chữ do extension tự khai báo. Hãy sửa tên hiển thị, biểu tượng, phần mở rộng tệp và quy tắc cấu hình trong `src/metadata.ts`, sau đó triển khai nội dung `src/index.vue`.
 
-## 扩展声明
+## Khai báo extension
 
 ```ts
 // src/metadata.ts
@@ -47,7 +47,7 @@ export default {
 } satisfies Omit<ExtDefinition, "load">;
 ```
 
-入口 `src/index.ts` 将声明与组件加载函数组合：
+Điểm vào `src/index.ts` kết hợp khai báo với hàm tải thành phần:
 
 ```ts
 import { defineExt } from "@toonflow/ext-scaffold/runtime";
@@ -56,17 +56,17 @@ import metadata from "./metadata";
 export default defineExt({ ...metadata, load: () => import("./index.vue") });
 ```
 
-`id` 在所有扩展中唯一，格式为 `ext-` 加小驼峰名称，例如 `ext-image`、`ext-canvasNode`；目录与变量仍使用小驼峰。后缀不带点，使用小写字母或数字。`resourceKind` 为 `file` 或 `canvasNode`，画布节点扩展允许空后缀数组。文本编辑器设置 `text: true`，宿主才会预载文本并开放文档读写能力；图片等二进制预览省略此标记。
+`id` phải duy nhất trên tất cả extension, theo dạng `ext-` cộng tên camelCase, ví dụ `ext-image`, `ext-canvasNode`; tên thư mục và biến vẫn dùng camelCase. Phần mở rộng tệp không có dấu chấm, chỉ dùng chữ thường hoặc số. `resourceKind` là `file` hoặc `canvasNode`; extension node Canvas được phép dùng mảng phần mở rộng rỗng. Trình sửa văn bản phải đặt `text: true` để ứng dụng chủ nạp trước văn bản và cấp quyền đọc/ghi tài liệu; trình xem trước tệp nhị phân như ảnh không đặt cờ này.
 
-可选 `icon` 是图片 URL，允许 `http:`、`https:`，或 SVG、PNG、JPEG、WebP、GIF、AVIF 的 `data:image` URL。图标随扩展产物声明，宿主只按图片展示；未声明时使用通用文件图标。内置扩展和生成模板使用内嵌 SVG，无需额外图片请求。
+`icon` tùy chọn là URL ảnh, cho phép `http:`, `https:` hoặc URL `data:image` của SVG, PNG, JPEG, WebP, GIF, AVIF. Biểu tượng được khai báo cùng sản phẩm extension, ứng dụng chủ chỉ hiển thị như ảnh; nếu không khai báo sẽ dùng biểu tượng tệp chung. Extension tích hợp sẵn và mẫu tạo dùng SVG nhúng, không cần yêu cầu tải ảnh thêm.
 
-可选 `configRules` 复用插件市场现有的 form-create `Rule[]`，每条 `rule.value` 提供默认值，不另建设置 schema。规则必须可序列化为 JSON，最多 100 项；不能包含函数。未声明或空数组时不显示该扩展的设置入口。
+`configRules` tùy chọn tái sử dụng `Rule[]` form-create hiện có của chợ plugin; mỗi `rule.value` cung cấp giá trị mặc định, không lập schema cài đặt riêng. Quy tắc phải tuần tự hóa được thành JSON, tối đa 100 mục, không chứa hàm. Nếu không khai báo hoặc dùng mảng rỗng, ứng dụng không hiển thị mục cài đặt của extension.
 
-布局 `children` 和条件 `control[].rule` 中的字段同样保存。隐藏且未提交的条件字段不触发服务端必填校验。
+Các trường trong bố cục `children` và điều kiện `control[].rule` cũng được lưu. Trường điều kiện đang ẩn và chưa gửi sẽ không kích hoạt kiểm tra bắt buộc phía server.
 
-宿主从 `data/ext/` 枚举已安装且启用的扩展，按需加载 UMD 产物和 `load()` 返回的组件，无需修改 web 工作区依赖或静态注册表。同一后缀有多个可用扩展时，宿主弹出“打开方式”选择，可设置默认关联；文件树右键“打开方式”可以重新选择。脚手架不会自动覆盖原有文件关联。
+Ứng dụng chủ liệt kê các extension đã cài và đang bật từ `data/ext/`, tải sản phẩm UMD và thành phần do `load()` trả về khi cần; không phải sửa dependency của workspace web hoặc bảng đăng ký tĩnh. Khi một phần mở rộng tệp có nhiều extension khả dụng, ứng dụng chủ hiển thị hộp chọn “Mở bằng” và có thể đặt liên kết mặc định; menu chuột phải “Mở bằng” ở cây tệp cho phép chọn lại. Bộ khung không tự ghi đè liên kết tệp hiện có.
 
-## 组件上下文
+## Ngữ cảnh thành phần
 
 ```ts
 import type { ExtContext } from "@toonflow/ext-scaffold/runtime";
@@ -74,34 +74,34 @@ import type { ExtContext } from "@toonflow/ext-scaffold/runtime";
 const props = defineProps<{ context: ExtContext }>();
 ```
 
-| 字段 | 用途 |
+| Trường | Mục đích |
 | --- | --- |
-| `resource` | 资源身份，包括工作区目录、相对路径、标签名；画布节点另含 `nodeId`。 |
-| `files` | 固定到资源工作区的文件能力，包含 `read`、`readText`、`readJson`、`write`、`writeJson`、`list`、`rename`、`copy`、`reveal`、`remove`、`mkdir`、`acquireUrl`。 |
-| `text`、`loading`、`error`、`dirty` | 宿主管理的文本与加载、保存状态。通过 `updateText()` 提交编辑；不要直接修改宿主状态，`loading` 同时表示文件操作期间暂停编辑。 |
-| `active` | 文档页是否激活；画布节点据此挂载或释放展示，媒体组件可据此暂停。 |
-| `config` | 当前扩展配置，包含规则默认值和已保存值；宿主在市场设置更新后同步。不要直接修改以代替保存。 |
-| `saveConfig(config)` | 保存当前扩展声明的配置并更新宿主状态，失败抛出异常。市场设置使用同一持久化入口。 |
-| `updateText(text)` | 更新当前标签文本，由宿主管理保存队列，不另起一份自动保存。 |
-| `flushSave()` | 等待当前标签的修改保存完成，失败抛出异常。 |
-| `writeClipboardText(text)` | 通过宿主的桌面或浏览器剪贴板能力复制文本。 |
-| `openFile(path)` | 打开同一工作区的相对路径，由宿主管理文件关联、节点映射和标签去重。 |
-| `location` | 可选的当前视图定位请求，包含从 1 开始的 `line`、`column`、待选中 `query` 和变化标记 `revision`。扩展监听后定位自身编辑器；不参与正文保存。 |
-| `mountNode(element)` | 仅画布节点提供。将原节点界面展示到元素，返回释放展示的方法；卸载时须调用。 |
+| `resource` | Danh tính tài nguyên, gồm thư mục workspace, đường dẫn tương đối, tên tab; với node Canvas còn có `nodeId`. |
+| `files` | Các thao tác tệp được giới hạn vào workspace chứa tài nguyên, gồm `read`, `readText`, `readJson`, `write`, `writeJson`, `list`, `rename`, `copy`, `reveal`, `remove`, `mkdir`, `acquireUrl`. |
+| `text`, `loading`, `error`, `dirty` | Văn bản và trạng thái tải/lưu do ứng dụng chủ quản lý. Gửi chỉnh sửa bằng `updateText()`; không sửa trực tiếp trạng thái chủ. `loading` cũng cho biết tạm dừng chỉnh sửa trong lúc thao tác tệp. |
+| `active` | Trang tài liệu có đang hoạt động không; node Canvas dựa vào đó để gắn hoặc giải phóng phần hiển thị, thành phần phương tiện có thể tạm dừng tương ứng. |
+| `config` | Cấu hình extension hiện tại, gồm giá trị mặc định của quy tắc và giá trị đã lưu; ứng dụng chủ đồng bộ sau khi cài đặt trên chợ plugin thay đổi. Không sửa trực tiếp để thay cho lưu. |
+| `saveConfig(config)` | Lưu cấu hình mà extension hiện tại khai báo và cập nhật trạng thái chủ; ném ngoại lệ nếu thất bại. Cài đặt chợ plugin dùng cùng điểm lưu bền vững. |
+| `updateText(text)` | Cập nhật văn bản của tab hiện tại; hàng đợi lưu do ứng dụng chủ quản lý, không tạo cơ chế tự lưu riêng. |
+| `flushSave()` | Chờ các chỉnh sửa của tab hiện tại lưu xong; ném ngoại lệ khi thất bại. |
+| `writeClipboardText(text)` | Sao chép văn bản qua tính năng clipboard của ứng dụng chủ trên desktop hoặc trình duyệt. |
+| `openFile(path)` | Mở đường dẫn tương đối trong cùng workspace; liên kết tệp, ánh xạ node và loại tab trùng do ứng dụng chủ quản lý. |
+| `location` | Yêu cầu định vị trong chế độ xem hiện tại (tùy chọn), gồm `line`, `column` bắt đầu từ 1, `query` cần chọn và dấu thay đổi `revision`. Extension lắng nghe rồi định vị trình sửa của mình; không tham gia lưu nội dung. |
+| `mountNode(element)` | Chỉ cung cấp cho node Canvas. Hiển thị giao diện node gốc trong phần tử, trả về phương thức giải phóng hiển thị; phải gọi khi unmount. |
 
-文本保存支持 UTF-8（有或无 BOM）和带 BOM 的 UTF-16 LE/BE，并保留原编码。不支持的编码会拒绝打开，不修改原文件。宿主保存前核对读取时的文件版本；发现外部修改时停止覆盖，保留当前编辑内容，供用户选择载入磁盘版本或另存副本。扩展应通过 `context.updateText(text)` 编辑当前文档，不要调用 `context.files.write()` 绕过宿主的编码、保存队列和冲突保护。
+Lưu văn bản hỗ trợ UTF-8 (có hoặc không có BOM) và UTF-16 LE/BE có BOM, đồng thời giữ nguyên mã hóa ban đầu. Nếu mã hóa không được hỗ trợ, ứng dụng từ chối mở và không sửa tệp gốc. Trước khi lưu, ứng dụng chủ đối chiếu phiên bản tệp lúc đọc; nếu phát hiện chỉnh sửa từ bên ngoài, ngừng ghi đè và giữ nội dung đang sửa để người dùng chọn tải phiên bản trên đĩa hoặc lưu bản sao. Extension phải chỉnh tài liệu hiện tại qua `context.updateText(text)`; không gọi `context.files.write()` để vượt qua cơ chế mã hóa, hàng đợi lưu và bảo vệ xung đột của ứng dụng chủ.
 
-同一文件可以在多个分屏视图展示，正文与保存状态共用一个会话。组件应监听 `context.text` 接收另一视图的修改，光标、查找与编辑模式保留在各自组件中。关闭一个视图不会取消其他视图的保存；画布节点保留唯一运行实例，分屏仅移动其视图。
+Một tệp có thể xuất hiện trong nhiều ô chia màn hình; nội dung và trạng thái lưu dùng chung một phiên. Thành phần phải theo dõi `context.text` để nhận sửa đổi từ ô khác, trong khi con trỏ, tìm kiếm và chế độ sửa giữ riêng trong từng thành phần. Đóng một ô không hủy việc lưu của ô khác; node Canvas giữ một instance chạy duy nhất, chia màn hình chỉ di chuyển phần hiển thị của nó.
 
-二进制预览通过 `context.files.acquireUrl(path)` 取得 `{ url: Promise<string>, release() }`。无论加载完成与否，资源切换或组件卸载时都要调用 `release()`。不要自行撤销共享 URL。文件操作失败须交给界面呈现，路径必须为当前工作区内的相对路径。
+Xem trước tệp nhị phân dùng `context.files.acquireUrl(path)` để nhận `{ url: Promise<string>, release() }`. Dù đã tải xong hay chưa, khi chuyển tài nguyên hoặc unmount thành phần đều phải gọi `release()`. Không tự thu hồi URL chia sẻ. Giao diện phải hiển thị lỗi thao tác tệp; đường dẫn bắt buộc là đường dẫn tương đối trong workspace hiện tại.
 
-`files.copy(path, target)` 只在此工作区内复制，目标已存在时拒绝覆盖；目录复制禁止符号链接，失败可能保留部分目标内容，错误数据中的 `partial` 与 `target` 会说明。`files.reveal(path)` 只支持桌面客户端或本机 Windows/macOS 开发页面，远程访问会被拒绝。
+`files.copy(path, target)` chỉ sao chép trong workspace này, từ chối ghi đè nếu đích đã tồn tại. Khi sao chép thư mục, symlink bị cấm; thất bại có thể để lại một phần nội dung đích, được mô tả qua `partial` và `target` trong dữ liệu lỗi. `files.reveal(path)` chỉ hỗ trợ ứng dụng desktop hoặc trang phát triển chạy cục bộ trên Windows/macOS; truy cập từ xa sẽ bị từ chối.
 
-## 共享 Markdown 编辑依赖
+## Dependency chỉnh sửa Markdown dùng chung
 
-Tiptap、marked 和 DOMPurify 通过构建配置的 external 复用宿主依赖。编辑器、预览组件、工具栏和生命周期由各扩展或节点在自己的包内实现，不导入宿主组件，也没有组件转发层。子包使用这些依赖时声明与宿主兼容的 peerDependencies：当前 Tiptap 各包为 `3.31.3`，`marked` 为 `18.0.13`，`dompurify` 为 `3.4.16`。
+Tiptap, marked và DOMPurify dùng lại dependency của ứng dụng chủ qua thiết lập external khi build. Trình sửa, thành phần xem trước, thanh công cụ và vòng đời được mỗi extension hoặc node triển khai trong gói riêng, không import thành phần chủ và không có lớp chuyển tiếp thành phần. Khi dùng những dependency này, gói con phải khai báo peerDependencies tương thích với ứng dụng chủ: hiện các gói Tiptap là `3.31.3`, `marked` là `18.0.13` và `dompurify` là `3.4.16`.
 
-直接使用依赖原有 API：
+Dùng trực tiếp API gốc của dependency:
 
 ```ts
 import { Editor } from "@tiptap/core";
@@ -115,15 +115,15 @@ const editor = new Editor({
 });
 ```
 
-共享模块包括 `@tiptap/core`、`@tiptap/vue-3`、`@tiptap/starter-kit`、`@tiptap/markdown`，以及 `extension-find-and-replace`、`extension-highlight`、`extension-image`、`extension-list`、`extension-subscript`、`extension-superscript`、`extension-table`、`extension-text-align`（均为 `@tiptap/` 前缀）；还包括 `@tiptap/pm/model`、`@tiptap/pm/state`、`@tiptap/pm/view`、`marked` 和 `dompurify`。构建产物引用 `window.toonflowTiptapHost` 中对应的依赖，不重复打包这些实现。
+Các module dùng chung gồm `@tiptap/core`, `@tiptap/vue-3`, `@tiptap/starter-kit`, `@tiptap/markdown` và `extension-find-and-replace`, `extension-highlight`, `extension-image`, `extension-list`, `extension-subscript`, `extension-superscript`, `extension-table`, `extension-text-align` (tất cả có tiền tố `@tiptap/`); ngoài ra có `@tiptap/pm/model`, `@tiptap/pm/state`, `@tiptap/pm/view`, `marked` và `dompurify`. Sản phẩm build tham chiếu các dependency tương ứng trong `window.toonflowTiptapHost`, không đóng gói trùng các phần triển khai này.
 
-Tiptap 统一使用具名导入，例如 `{ StarterKit }`、`{ Image }`、`{ Highlight }`、`{ Superscript }`、`{ Subscript }`、`{ TextAlign }`、`{ FindAndReplace }`。当前 Vite 8 UMD 的默认导入会取整个外部模块对象，不能用于这些共享模块；DOMPurify 单独共享默认函数，继续使用 `import DOMPurify from "dompurify"`。无需启用影响所有依赖的旧版 CJS 兼容开关。
+Tiptap thống nhất dùng named import, ví dụ `{ StarterKit }`, `{ Image }`, `{ Highlight }`, `{ Superscript }`, `{ Subscript }`, `{ TextAlign }`, `{ FindAndReplace }`. Với Vite 8 UMD hiện tại, default import lấy toàn bộ đối tượng module bên ngoài nên không thể dùng cho các module chia sẻ này. DOMPurify riêng biệt chia sẻ hàm mặc định, tiếp tục dùng `import DOMPurify from "dompurify"`. Không cần bật cờ tương thích CJS cũ ảnh hưởng tất cả dependency.
 
-宿主先检查 UMD 是否引用 `toonflowTiptapHost`，仅在需要时动态加载共享依赖，后续复用同一个 ES 模块；普通图片、视频或纯文本插件不会因此预载 Tiptap。组件的挂载、销毁、隐藏状态、正文更新和文件保存仍由各包管理。使用共享依赖的产物需要配套宿主版本。
+Ứng dụng chủ trước tiên kiểm tra UMD có tham chiếu `toonflowTiptapHost` không, chỉ tải dependency chia sẻ động khi cần, sau đó dùng lại cùng module ES. Plugin ảnh, video hoặc văn bản thuần thông thường sẽ không vì thế mà tải Tiptap trước. Việc mount, hủy, ẩn thành phần, cập nhật nội dung và lưu tệp vẫn do từng gói quản lý. Sản phẩm dùng dependency chia sẻ phải đi kèm phiên bản ứng dụng chủ tương thích.
 
-## 独立构建与开发
+## Build và phát triển độc lập
 
-`viteConfig.ts` 使用共享配置：
+`viteConfig.ts` sử dụng cấu hình chia sẻ:
 
 ```ts
 import { createExtConfig } from "@toonflow/ext-scaffold";
@@ -132,9 +132,9 @@ import metadata from "./src/metadata.ts";
 export default createExtConfig(metadata, import.meta.url);
 ```
 
-声明文件不导入组件，避免配置打包器提前解析 Vue 文件。每次重建重新读取声明及其依赖，后缀、图标与设置变更会同步进入 UMD 元数据；修改扩展 ID 后须重启构建。
+Tệp khai báo không import thành phần để tránh bộ đóng gói cấu hình phân tích tệp Vue quá sớm. Mỗi lần build lại sẽ đọc lại khai báo và các dependency; thay đổi phần mở rộng, biểu tượng và cài đặt được đồng bộ vào metadata UMD. Sau khi đổi ID extension phải khởi động lại tiến trình build.
 
-产物为 `build/ext/<id>.umd.js`，例如 `build/ext/ext-image.umd.js`，包含 `toonflowExt` JSON 元数据注释、版本、说明文档和自动注入的组件样式。产物导出 `window.toonflowExts[id]`，结构为 `ExtDefinition`。Vue、Element Plus 与 Toonflow 语言状态由宿主共享：
+Sản phẩm là `build/ext/<id>.umd.js`, ví dụ `build/ext/ext-image.umd.js`; gồm chú thích metadata JSON `toonflowExt`, phiên bản, tài liệu hướng dẫn và style thành phần được tự chèn. Sản phẩm export `window.toonflowExts[id]` theo cấu trúc `ExtDefinition`. Vue, Element Plus và trạng thái ngôn ngữ Toonflow được chia sẻ từ ứng dụng chủ:
 
 ```ts
 import * as vue from "vue";
@@ -144,8 +144,8 @@ import * as i18n from "@toonflow/i18n/vue";
 Object.assign(window, { toonflowExtHost: { vue, elementPlus, i18n } });
 ```
 
-运行时使用 `@toonflow/ext-scaffold/runtime`；构建配置使用 `@toonflow/ext-scaffold`，避免把 Vite 与文件系统代码打包到浏览器。Element Plus 的基础样式由宿主加载，扩展自身的组件样式会打入产物。
+Runtime dùng `@toonflow/ext-scaffold/runtime`, cấu hình build dùng `@toonflow/ext-scaffold` để tránh đóng gói Vite và mã hệ thống tệp vào trình duyệt. Style cơ bản của Element Plus do ứng dụng chủ tải, style thành phần của extension được đóng vào sản phẩm.
 
-`bun run --cwd packages/ext/myEditor dev` 持续构建，并把产物原子替换到 `data/ext/`，供本机插件市场与文档宿主读取。`NODE_ENV=dev` 或 `--mode development` 的单次构建同样同步；生产构建只输出 `build/ext/`。
+`bun run --cwd packages/ext/myEditor dev` build liên tục và thay thế sản phẩm trong `data/ext/` theo cách nguyên tử để chợ plugin và ứng dụng chủ tài liệu cục bộ đọc. Build một lần với `NODE_ENV=dev` hoặc `--mode development` cũng đồng bộ tương tự; build production chỉ ghi vào `build/ext/`.
 
-市场元数据包含 `id`、`displayName`、可选 `icon`、`configRules`、`extensions`、`resourceKind`、可选 `text`、`version` 和 `readme`。`load` 留在运行时导出，不写入 JSON 元数据。插件市场负责安装、更新与启停，脚手架负责声明、生成和独立构建。
+Metadata của chợ plugin gồm `id`, `displayName`, `icon` tùy chọn, `configRules`, `extensions`, `resourceKind`, `text` tùy chọn, `version` và `readme`. `load` vẫn là export runtime, không ghi vào metadata JSON. Chợ plugin phụ trách cài, cập nhật, bật/tắt; bộ khung phụ trách khai báo, tạo và build độc lập.

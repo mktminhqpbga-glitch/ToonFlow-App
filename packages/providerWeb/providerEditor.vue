@@ -98,7 +98,7 @@
 <script setup lang="ts">
 /// <reference path="./env.d.ts" />
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
-import { translate } from "@toonflow/i18n/vue";
+import { translate, translateFormRules } from "@toonflow/i18n/vue";
 import { ElAlert, ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElInputNumber, ElOption, ElSegmented, ElSelect, ElTable, ElTableColumn, ElTag } from "element-plus";
 import formCreate, { type Api, type Options } from "./formCreate";
 import modelEditor from "./modelEditorDialog.vue";
@@ -129,8 +129,8 @@ const emit = defineEmits<{ save: [provider: ProviderConfiguration]; reload: [] }
 const presets = [
   { kind: "text", id: "deepSeek", label: "DeepSeek", source: deepSeekSource },
   { kind: "media", id: "apiMart", label: "APIMart", source: apiMartSource },
-  { kind: "media", id: "metaso", label: "秘塔", source: metasoSource },
-  { kind: "media", id: "compshare", label: "优刻得", source: compshareSource },
+  { kind: "media", id: "metaso", label: "MetaSo", source: metasoSource },
+  { kind: "media", id: "compshare", label: "UCloud", source: compshareSource },
 ];
 const availablePresets = computed(() => presets.filter(item => item.kind === props.kind));
 const method = ref("manual");
@@ -173,7 +173,7 @@ function applyDescription(value: ProviderDescription) {
   description.value = clone(value);
   draft.value = { kind: value.kind, id: value.id, label: value.label, source: value.source, config: clone(value.config) };
   models.value = clone(value.models);
-  formRules.value = formCreate.copyRules(value.rules ?? []);
+  formRules.value = translateFormRules(formCreate.copyRules(value.rules ?? []));
   formValues.value = clone(value.config);
   formApi.value = undefined;
   headers.value = JSON.stringify(value.config.headers ?? {}, null, 2);

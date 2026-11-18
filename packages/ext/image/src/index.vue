@@ -1,15 +1,15 @@
 <template>
   <section class="imageDocument">
     <header class="imageToolbar">
-      <el-button text size="small" :disabled="!imageUrl" aria-label="缩小" @click="changeZoom(1 / 1.25)">−</el-button>
+      <el-button text size="small" :disabled="!imageUrl" aria-label="Thu nhỏ" @click="changeZoom(1 / 1.25)">−</el-button>
       <span aria-live="polite">{{ Math.round(scale * 100) }}%</span>
-      <el-button text size="small" :disabled="!imageUrl" aria-label="放大" @click="changeZoom(1.25)">＋</el-button>
-      <el-button text size="small" :disabled="!imageUrl" @click="fit = false; zoom = 1">原始大小</el-button>
-      <el-button text size="small" :disabled="!imageUrl" :aria-pressed="fit" @click="fit = true">适应窗口</el-button>
+      <el-button text size="small" :disabled="!imageUrl" aria-label="Phóng to" @click="changeZoom(1.25)">＋</el-button>
+      <el-button text size="small" :disabled="!imageUrl" @click="fit = false; zoom = 1">Kích thước gốc</el-button>
+      <el-button text size="small" :disabled="!imageUrl" :aria-pressed="fit" @click="fit = true">Vừa cửa sổ</el-button>
     </header>
     <div ref="viewport" class="imagePreview" :aria-busy="loading || preparingPreview" @wheel="onWheel">
       <img v-if="previewSrc && !previewError" :src="previewSrc" :alt="context.resource.label" :style="naturalWidth ? { width: `${naturalWidth * scale}px`, height: `${naturalHeight * scale}px` } : undefined" @load="imageLoaded" @error="handleError" />
-      <div v-if="preparingPreview" class="imageStatus" role="status">正在生成兼容预览…</div>
+      <div v-if="preparingPreview" class="imageStatus" role="status">Đang tạo bản xem trước tương thích…</div>
       <div v-else-if="error || previewError" class="imageError" role="alert">{{ error || previewError }}</div>
     </div>
   </section>
@@ -66,7 +66,7 @@ watch(() => [props.context.resource.directory, props.context.resource.path], asy
     const url = await shared.url;
     if (!cancelled) imageUrl.value = url;
   } catch (reason) {
-    if (!cancelled) error.value = reason instanceof Error ? reason.message : "图片读取失败";
+    if (!cancelled) error.value = reason instanceof Error ? reason.message : "Không thể đọc ảnh";
   } finally {
     if (!cancelled) loading.value = false;
   }

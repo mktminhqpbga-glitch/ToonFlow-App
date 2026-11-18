@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onScopeDispose, provide, shallowReactive, shallowRef, ref, watch, type ComponentPublicInstance } from "vue";
 import type { CanvasContext } from "@toonflow/tool-canvas/runtime";
+import type { PromptItem } from "@/lib/promptLibrary";
 import { waitForControlValue } from "@/lib/mcpControl";
 import canvasPanel from "./index.vue";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
@@ -65,7 +66,7 @@ watch(canvases, (current, previous) => {
   });
   if (!entries.value.some(entry => entry.key === activeKey.value)) activeKey.value = entries.value[0]?.key ?? "";
 }, { flush: "sync" });
-onScopeDispose(() => lifetime.abort(new Error("工作区已关闭")));
+onScopeDispose(() => lifetime.abort(new Error("Không gian làm việc đã đóng")));
 
 function setInstance(key: string, value: Element | ComponentPublicInstance | null) {
   if (value) instances.set(key, value as CanvasInstance);
@@ -89,12 +90,12 @@ async function ensureCanvas(fileName: string, signal?: AbortSignal, activate = f
   fileName = canonicalCanvasPath(fileName);
   if (!canvases.value.some(canvas => canvas.id === fileName)) {
     const directory = workspaceStore.project?.directory;
-    if (!directory) throw new Error("请先选择工作目录");
+    if (!directory) throw new Error("Hãy chọn thư mục làm việc trước");
     const data = await useWorkspaceFiles(directory).readJson<{ toonflowCanvas?: boolean; nodes?: unknown[]; edges?: unknown[]; viewport?: { x: number; y: number; zoom: number } }>(fileName);
     checkDirectory(directory);
     callSignal.throwIfAborted();
     if (data?.toonflowCanvas !== true || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || !data.viewport
-      || ![data.viewport.x, data.viewport.y, data.viewport.zoom].every(Number.isFinite) || data.viewport.zoom <= 0) throw new Error("画布文件格式无效");
+      || ![data.viewport.x, data.viewport.y, data.viewport.zoom].every(Number.isFinite) || data.viewport.zoom <= 0) throw new Error("Định dạng tệp Canvas không hợp lệ");
     fileName = canonicalCanvasPath(fileName);
     if (!canvases.value.some(canvas => canvas.id === fileName)) canvases.value = [...canvases.value, { id: fileName, name: canvasName(fileName) }];
   }
@@ -122,37 +123,37 @@ async function ensureCanvas(fileName: string, signal?: AbortSignal, activate = f
 }
 
 async function activateCanvas(fileName: string, signal?: AbortSignal) {
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
   await ensureCanvas(fileName, signal, true);
 }
 
 async function focusDocumentNode(directory: string, canvasPath: string, nodeId: string) {
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
   checkDirectory(directory);
   const panel = await ensureCanvas(canvasPath, undefined, true);
   checkDirectory(directory);
   await nextTick();
   const node = panel.findMentionNode(nodeId);
-  if (!node) throw new Error("节点已删除，请刷新文件树");
-  if (node.hidden) throw new Error("节点已隐藏，无法在画布上聚焦");
+  if (!node) throw new Error("Node đã bị xóa, hãy làm mới cây tệp");
+  if (node.hidden) throw new Error("Node đang bị ẩn, không thể định vị trên Canvas");
   const context = panel.getCanvasContext();
-  if (!context) throw new Error("画布尚未就绪");
+  if (!context) throw new Error("Canvas chưa sẵn sàng");
   await context.call({ name: "selectNodes", args: { nodeIds: [nodeId] } }, lifetime.signal);
   const result = await context.call({ name: "fitCanvas", args: { nodeIds: [nodeId] } }, lifetime.signal) as { fitted: boolean };
   checkDirectory(directory);
-  if (!result.fitted) throw new Error("节点尚未完成尺寸测量，请稍后重试");
+  if (!result.fitted) throw new Error("Chưa đo xong kích thước node, vui lòng thử lại sau");
 }
 
 async function mountDocumentNode(directory: string, canvasPath: string, nodeId: string, target: HTMLElement) {
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
-  if (!directory || workspaceStore.project?.directory !== directory) throw new Error("工作目录已切换，请重新打开节点");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
+  if (!directory || workspaceStore.project?.directory !== directory) throw new Error("Thư mục làm việc đã thay đổi, hãy mở lại node");
   const panel = await ensureCanvas(canvasPath);
-  if (workspaceStore.project?.directory !== directory) throw new Error("工作目录已切换，请重新打开节点");
+  if (workspaceStore.project?.directory !== directory) throw new Error("Thư mục làm việc đã thay đổi, hãy mở lại node");
   return panel.mountDocumentNode(directory, panel.canvasId, nodeId, target);
 }
 
 async function observeDocumentNode(directory: string, canvasPath: string, nodeId: string, onState: (state: NodeDocumentState) => void) {
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
   checkDirectory(directory);
   const panel = await ensureCanvas(canvasPath);
   checkDirectory(directory);
@@ -172,7 +173,7 @@ async function resolveDocumentNodeFile(directory: string, path: string) {
     const textPath = node.data?.textPath ?? `assets/${node.id}/content.md`;
     if (typeof textPath === "string" && identity(textPath) === identity(path)) matches.push({ canvasPath: source.path, nodeId: node.id, label: node.data?.label || node.id });
   }
-  if (matches.length > 1) throw new Error("多个画布共用此节点正文，请先创建独立画布副本，再从对应节点编辑");
+  if (matches.length > 1) throw new Error("Nhiều Canvas đang dùng chung nội dung node này. Hãy tạo bản sao Canvas riêng rồi chỉnh sửa từ node tương ứng");
   return matches[0];
 }
 
@@ -224,7 +225,7 @@ async function flushSave(action?: () => Promise<void>) {
 
 function relativePath(path: string) {
   const parts = path.replaceAll("\\", "/").split("/").filter(part => part && part !== ".");
-  if (!parts.length || path.startsWith("/") || path.startsWith("\\") || /^[a-z][a-z\d+.-]*:/i.test(path) || parts.includes("..")) throw new Error("请选择工作区内的文件或目录");
+  if (!parts.length || path.startsWith("/") || path.startsWith("\\") || /^[a-z][a-z\d+.-]*:/i.test(path) || parts.includes("..")) throw new Error("Hãy chọn tệp hoặc thư mục nằm trong không gian làm việc");
   return parts.join("/");
 }
 
@@ -232,7 +233,7 @@ function containsPath(parent: string, path: string) { return path === parent || 
 function canvasName(path: string) { return path.split("/").at(-1)!.replace(/\.json$/i, ""); }
 function checkDirectory(directory: string) {
   lifetime.signal.throwIfAborted();
-  if (!directory || workspaceStore.project?.directory !== directory) throw new Error("工作目录已切换，本次文件操作已停止");
+  if (!directory || workspaceStore.project?.directory !== directory) throw new Error("Thư mục làm việc đã thay đổi, thao tác tệp này đã dừng");
 }
 
 function checkNodeResources(path: string) {
@@ -248,7 +249,7 @@ function checkNodeResources(path: string) {
         if (typeof reference !== "string" || !reference || /^(?:[a-z][a-z\d+.-]*:|[\\/])/i.test(reference)) continue;
         const resource = reference.replaceAll("\\", "/").split("/").filter(part => part && part !== ".").join("/").toLowerCase();
         // ACT: 包含撤销历史，并保守合并大小写；节点资源仍被运行时持有时拒绝移动，避免后台生成写回旧路径。
-        if (containsPath(requested, resource) || containsPath(resource, requested)) throw new Error(`“${path}”仍被画布“${panel.canvasId}”中的节点使用，无法重命名或移动`);
+        if (containsPath(requested, resource) || containsPath(resource, requested)) throw new Error(`“${path}” vẫn đang được Canvas “${panel.canvasId}” sử dụng; không thể đổi tên hoặc di chuyển`);
       }
     }
   }
@@ -256,12 +257,12 @@ function checkNodeResources(path: string) {
 
 async function performFileAction(directory: string, action: "copy" | "rename" | "move" | "mkdir" | "delete", path: string, target?: string, nodeId?: string) {
   checkDirectory(directory);
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
   path = relativePath(path);
-  if (!["copy", "rename", "move", "mkdir", "delete"].includes(action)) throw new Error("不支持的文件操作");
-  if (nodeId && action !== "delete") throw new Error("此操作不支持画布节点");
+  if (!["copy", "rename", "move", "mkdir", "delete"].includes(action)) throw new Error("Thao tác tệp không được hỗ trợ");
+  if (nodeId && action !== "delete") throw new Error("Thao tác này không hỗ trợ node Canvas");
   if (action !== "delete" && action !== "mkdir") {
-    if (!target) throw new Error("请提供目标文件名");
+    if (!target) throw new Error("Hãy nhập tên tệp đích");
     target = relativePath(target);
     if (target === path) return;
   }
@@ -272,7 +273,7 @@ async function performFileAction(directory: string, action: "copy" | "rename" | 
       const panel = await ensureCanvas(path);
       checkDirectory(directory);
       const context = panel.getCanvasContext();
-      if (!context) throw new Error("画布尚未就绪");
+      if (!context) throw new Error("Canvas chưa sẵn sàng");
       await context.call({ name: "deleteNodes", args: { nodeIds: [nodeId] } }, lifetime.signal);
       checkDirectory(directory);
       return;
@@ -286,7 +287,7 @@ async function performFileAction(directory: string, action: "copy" | "rename" | 
       if (stored.length) {
         const replacement = await findRemainingCanvas(files, path, lifetime.signal);
         checkDirectory(directory);
-        if (!replacement) throw new Error("项目里需要保留至少一个画布。你可以先新建一个，再删除这个画布。");
+        if (!replacement) throw new Error("Dự án phải có ít nhất một Canvas. Hãy tạo Canvas mới trước khi xóa Canvas này.");
         if (!canvases.value.some(canvas => canvas.id === replacement.id)) canvases.value = [...canvases.value, replacement];
       }
       for (const canvas of stored) {
@@ -342,7 +343,7 @@ async function performFileAction(directory: string, action: "copy" | "rename" | 
 }
 
 async function readDocumentNode(...args: Parameters<CanvasInstance["readDocumentNode"]>) {
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
   checkDirectory(args[0]);
   const instance = await ensureCanvas(args[1]);
   checkDirectory(args[0]);
@@ -351,7 +352,7 @@ async function readDocumentNode(...args: Parameters<CanvasInstance["readDocument
 }
 
 async function saveDocumentNode(...args: Parameters<CanvasInstance["saveDocumentNode"]>) {
-  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  if (fileActionBusy) throw new Error("Đang thao tác với tệp trong không gian làm việc, vui lòng thử lại sau");
   checkDirectory(args[0]);
   const instance = await ensureCanvas(args[1]);
   checkDirectory(args[0]);
@@ -389,30 +390,28 @@ const mentionSource: MentionCanvasSource = {
     const panel = mentionInstance(canvasId);
     if (!panel) return;
     const node = panel.findMentionNode(nodeId);
-    if (!node) throw new Error("节点已删除，请重新选择");
+    if (!node) throw new Error("Node đã bị xóa, vui lòng chọn lại");
     return mentionNodeOutputs(node);
   },
   selectCanvas(canvasId, nodeId, outputId) {
     const panel = mentionInstance(canvasId);
     if (!panel) return;
     const node = panel.findMentionNode(nodeId);
-    if (!node) throw new Error("节点已删除，请重新选择");
+    if (!node) throw new Error("Node đã bị xóa, vui lòng chọn lại");
     const directory = workspaceStore.project?.directory;
-    if (!directory) throw new Error("请先打开工作区");
+    if (!directory) throw new Error("Hãy mở không gian làm việc trước");
     return createCanvasMention(node, canvasId, outputId, async path => {
       const text = await useWorkspaceFiles(directory).readText(path, 400001);
-      if (text.length > 100000) throw new Error("文本引用最多支持 100000 个字符，请缩小内容后重试");
+      if (text.length > 100000) throw new Error("Tham chiếu văn bản hỗ trợ tối đa 100000 ký tự, hãy rút ngắn nội dung rồi thử lại");
       return text;
     });
   },
 };
 
 defineExpose({ canvasId, canvasReady, canvasListReady, getCanvasContext, readDocumentNode, readDocumentNodes, focusDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, resolveDocumentNodeFile, performFileAction, flushSave, cancelSave,
+  applyPromptTemplate: (item: PromptItem, options?: { nodeId?: string; includeReferences?: boolean }) => activeInstance.value?.applyPromptTemplate(item, options) ?? Promise.resolve(false),
   addNodeAtPointer: () => activeInstance.value?.addNodeAtPointer(),
-  importWorkspaceMedia: (path: string, mimeType: string) => activeInstance.value?.importWorkspaceMedia(path, mimeType) ?? Promise.resolve(false),
   openNodeSearch: () => activeInstance.value?.openNodeSearch(),
-  openMaterialPresets: () => activeInstance.value?.openMaterialPresets(),
-  openCharacterStudio: () => activeInstance.value?.openCharacterStudio(),
   mentionSource,
   get saveBusy() { return fileActionBusy || [...instances.values()].some(panel => panel.saveBusy); },
 });

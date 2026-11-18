@@ -3,10 +3,10 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { transformSource } from "../i18n/src/transform.ts";
 import type { Rule } from "@form-create/element-ui";
 import { z } from "zod";
 import postcssConfig from "../../postcss.config.ts";
+import { i18nPlugin } from "@toonflow/i18n/vite";
 
 const tiptapGlobals = {
   "@tiptap/core": "toonflowTiptapHost.core",
@@ -37,7 +37,7 @@ export interface NodeConfig {
   serverTool?: string;
 }
 
-export function createNodeConfig(config: NodeConfig, configUrl: string, options: { outDir?: string; syncToData?: boolean; localizeBuiltIn?: boolean } = {}) {
+export function createNodeConfig(config: NodeConfig, configUrl: string, options: { outDir?: string; syncToData?: boolean } = {}) {
   const { name: nodeName } = config;
   const metadata = {
     displayName: config.displayName.trim(),
@@ -45,13 +45,13 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
     github: config.github.trim(),
     configRules: z.array(z.record(z.string(), z.json())).max(100).parse(config.configRules ?? []),
   };
-  if (!metadata.displayName) throw new Error("插件显示名不能为空");
+  if (!metadata.displayName) throw new Error("Tên hiển thị plugin không được trống");
   if (metadata.github) {
     const githubUrl = new URL(metadata.github);
-    if (githubUrl.origin !== "https://github.com" || githubUrl.username || githubUrl.password) throw new Error("GitHub 地址必须是 https://github.com 下的地址");
+    if (githubUrl.origin !== "https://github.com" || githubUrl.username || githubUrl.password) throw new Error("URL GitHub phải thuộc https://github.com");
   }
   const root = fileURLToPath(new URL(".", configUrl));
-  if (!/^[a-z][a-zA-Z0-9]*$/.test(nodeName)) throw new Error(`节点名必须使用小驼峰：${nodeName}`);
+  if (!/^[a-z][a-zA-Z0-9]*$/.test(nodeName)) throw new Error(`Tên node phải theo camelCase bắt đầu bằng chữ thường: ${nodeName}`);
   const fileName = `${nodeName}.umd.js`;
   const outDir = options.outDir ? resolve(root, options.outDir) : fileURLToPath(new URL("../../build/nodes", import.meta.url));
   const dataDir = fileURLToPath(new URL("../../data/nodes", import.meta.url));
@@ -60,22 +60,8 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
   return defineConfig({
     root,
     css: { postcss: postcssConfig },
-    // Built-in UMD nodes bundle their own scoped UI translator; the package is
-    // resolved to the existing workspace source without changing external plugin dependencies.
-    ...(options.localizeBuiltIn ? { resolve: { alias: {
-      "@toonflow/i18n/vue": fileURLToPath(new URL("../i18n/src/vue.ts", import.meta.url)),
-    } } } : {}),
-
     plugins: [
-      ...(options.localizeBuiltIn ? [{
-        name: "toonflowBuiltInNodeI18n",
-        enforce: "pre" as const,
-        transform(source: string, id: string) {
-          const path = id.replaceAll("\\\\", "/");
-          if (!/\/packages\/(?:nodeShared|nodeScaffold|nodes\/[^/]+)\/src\/[^?]+\.(?:vue|ts)$/.test(path)) return;
-          return transformSource(source, path);
-        },
-      }] : []),
+      i18nPlugin({ pluginUi: true }),
       vue(),
       {
         name: "syncNodeFile",
@@ -85,13 +71,13 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
         },
         async generateBundle(_options, bundle) {
           const chunk = bundle[fileName];
-          if (!chunk || chunk.type !== "chunk") throw new Error(`未生成节点文件：${fileName}`);
-          if (Object.keys(bundle).length !== 1) throw new Error(`节点必须构建为单个脚本，不能包含未内联的资源：${nodeName}`);
+          if (!chunk || chunk.type !== "chunk") throw new Error(`Không tạo được tệp node: ${fileName}`);
+          if (Object.keys(bundle).length !== 1) throw new Error(`Node phải build thành một script, không chứa tài nguyên chưa nội tuyến: ${nodeName}`);
           const packagePath = resolve(root, "package.json");
           this.addWatchFile(packagePath);
           const packageInfo = JSON.parse(await readFile(packagePath, "utf8"));
           const version = typeof packageInfo.version === "string" ? packageInfo.version.trim() : "";
-          if (!version) throw new Error(`节点 package.json 缺少有效的 version：${nodeName}`);
+          if (!version) throw new Error(`package.json node thiếu version hợp lệ: ${nodeName}`);
           const readmePath = resolve(root, "readme.md");
           this.addWatchFile(readmePath);
           const readme = await readFile(readmePath, "utf8").catch((error: NodeJS.ErrnoException) => {
@@ -105,12 +91,12 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
             serverTool = await readFile(toolPath, "utf8");
             const toolHeader = serverTool.match(/^\/\*! toonflowTool:([^\r\n]*) \*\/(?:\r?\n|$)/)?.[1];
             if (!toolHeader || JSON.parse(toolHeader).name !== nodeName || Buffer.byteLength(serverTool, "utf8") > 20 * 1024 * 1024) {
-              throw new Error(`节点配套服务必须是同名且不超过 20 MB 的已构建工具：${nodeName}`);
+              throw new Error(`Dịch vụ đi kèm node phải là công cụ đã build cùng tên, tối đa 20 MB: ${nodeName}`);
             }
           }
           // 压缩后再写入，防止元数据注释被移除。
           chunk.code = `/*! toonflowNode:${JSON.stringify({ ...metadata, version, readme, ...(serverTool ? { serverTool } : {}) }).replaceAll("/", "\\u002f")} */\n${chunk.code}`;
-          if (Buffer.byteLength(chunk.code, "utf8") > 20 * 1024 * 1024) throw new Error(`节点与配套服务合计不能超过 20 MB：${nodeName}`);
+          if (Buffer.byteLength(chunk.code, "utf8") > 20 * 1024 * 1024) throw new Error(`Node và dịch vụ đi kèm không được vượt tổng 20 MB: ${nodeName}`);
         },
         async writeBundle() {
           if (!syncToData) return;
@@ -140,7 +126,7 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
         fileName: () => fileName,
       },
       rolldownOptions: {
-        external: ["vue", "@vue/runtime-core", "@vue/runtime-dom", "@vue-flow/core", "element-plus", "three", "@toonflow/model-icons", "@earendil-works/pi-agent-core", "@earendil-works/pi-ai", ...Object.keys(tiptapGlobals)],
+        external: ["vue", "@vue/runtime-core", "@vue/runtime-dom", "@vue-flow/core", "element-plus", "three", "@toonflow/model-icons", "@earendil-works/pi-agent-core", "@earendil-works/pi-ai", "@toonflow/i18n/vue", ...Object.keys(tiptapGlobals)],
         output: {
           exports: "default",
           globals: {
@@ -154,6 +140,7 @@ export function createNodeConfig(config: NodeConfig, configUrl: string, options:
             "@toonflow/model-icons": "toonflowNodeHost.modelIcons",
             "@earendil-works/pi-agent-core": "toonflowNodeHost.ai",
             "@earendil-works/pi-ai": "toonflowNodeHost.ai",
+            "@toonflow/i18n/vue": "toonflowNodeHost.i18n",
           },
         },
       },

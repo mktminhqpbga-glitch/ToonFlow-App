@@ -6,7 +6,9 @@ import { currentIdentity } from "@/utils/multiTenant/context";
 import { t } from "@/lib/i18n";
 
 export async function getAgentModelConfiguration(providerId: string, modelId: string, thinkingLevel?: ThinkingLevel) {
+  if (providerId === "aiChrome") throw new Error("AI chrome hiện dùng qua các node. Agent SDK chưa được nối vào transport này.");
   const configured = await getConfiguredModel(providerId, modelId);
+  if ((configured.route?.providerId ?? providerId) === "muse2Api") throw new Error("Muse2API (Python / Go) chưa được tích hợp gọi công cụ qua Agent SDK; hãy dùng model Muse trong node văn bản.");
   const actor = currentIdentity();
   if (configured.execution && !actor) throw Object.assign(new Error("请先登录 Toonflow"), { status: 401 });
   // ACT: 旧版用 off 保存默认档位；模型未声明关闭能力时按默认处理，显式支持 off 的模型仍可关闭。

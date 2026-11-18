@@ -1,18 +1,18 @@
 <template>
-  <span class="mentionContent"><template v-for="(part, index) in parts" :key="index"><el-tooltip v-if="part.mention" :content="sourceLabel(part.mention)" :showArrow="false"><button class="mentionTag" type="button" :aria-label="`预览 ${mentionName(part.mention)}`" @click="preview(part.mention.id)"><mentionThumbnail v-if="mentionThumbnailProps(part.mention).thumbnail" class="inlineMentionThumbnail" v-bind="mentionThumbnailProps(part.mention)" :directory="directory"><icon-at :size="13" /></mentionThumbnail><icon-at v-else :size="13" /><span class="mentionLabel">{{ mentionName(part.mention) }}</span></button></el-tooltip><template v-else>{{ part.text }}</template></template></span>
-  <el-dialog v-model="previewVisible" :title="selected?.label || '提及内容'" width="min(720px, 90vw)" alignCenter appendToBody destroyOnClose>
+  <span class="mentionContent"><template v-for="(part, index) in parts" :key="index"><el-tooltip v-if="part.mention" :content="sourceLabel(part.mention)" :showArrow="false"><button class="mentionTag" type="button" :aria-label="`Xem trước ${mentionName(part.mention)}`" @click="preview(part.mention.id)"><mentionThumbnail v-if="mentionThumbnailProps(part.mention).thumbnail" class="inlineMentionThumbnail" v-bind="mentionThumbnailProps(part.mention)" :directory="directory"><icon-at :size="13" /></mentionThumbnail><icon-at v-else :size="13" /><span class="mentionLabel">{{ mentionName(part.mention) }}</span></button></el-tooltip><template v-else>{{ part.text }}</template></template></span>
+  <el-dialog v-model="previewVisible" :title="selected?.label || 'Nội dung được tham chiếu'" width="min(720px, 90vw)" alignCenter appendToBody destroyOnClose>
     <div v-if="selected" class="mentionPreview">
       <p class="mentionSource">{{ sourceLabel(selected) }}</p>
-      <p v-if="loading || preparingPreview || error || previewError" :role="error || previewError ? 'alert' : 'status'">{{ loading ? '正在读取…' : preparingPreview ? '正在生成兼容预览…' : error || previewError }}</p>
+      <p v-if="loading || preparingPreview || error || previewError" :role="error || previewError ? 'alert' : 'status'">{{ loading ? 'Đang đọc…' : preparingPreview ? 'Đang tạo bản xem trước tương thích…' : error || previewError }}</p>
       <img v-else-if="mediaSrc && ['IMAGE', 'MASK'].includes(selected.dataType)" :src="mediaSrc" :alt="selected.label" @load="handleLoaded" @error="handleError" />
       <video v-else-if="mediaSrc && selected.dataType === 'VIDEO'" :src="mediaSrc" controls playsinline preload="auto" @loadeddata="handleLoaded" @error="handleError" />
       <audio v-else-if="mediaSrc && selected.dataType === 'AUDIO'" :src="mediaSrc" controls preload="auto" @loadeddata="handleLoaded" @error="handleError" />
       <p v-else-if="selected.dataType === 'FILE'" class="fileName"><icon-file :size="20" />{{ selected.label }}</p>
       <template v-else-if="selected.dataType !== 'NODE'">
         <pre>{{ textValue.slice(0, 12000) }}</pre>
-        <p v-if="textValue.length > 12000">…（预览已截取，发送保留完整内容）</p>
+        <p v-if="textValue.length > 12000">… (bản xem trước đã được cắt bớt, nội dung đầy đủ vẫn được gửi)</p>
       </template>
-      <el-button v-if="removable" text type="danger" @click="removeSelected">移除此引用</el-button>
+      <el-button v-if="removable" text type="danger" @click="removeSelected">Xóa tham chiếu này</el-button>
     </div>
   </el-dialog>
 </template>
@@ -45,7 +45,7 @@ const textValue = computed(() => {
 
 function sourceLabel(mention: AgentMention) {
   return mention.source.kind === "asset" ? t`全局素材 / ${mention.source.path}`
-    : `${[mention.source.canvasName, mention.source.nodeName, mention.source.outputName].filter(Boolean).join(" / ")}（${mention.source.nodeId}）`;
+    : `${[mention.source.canvasName, mention.source.nodeName, mention.source.outputName].filter(Boolean).join(" / ")} (${mention.source.nodeId})`;
 }
 
 function preview(id: string) {
@@ -80,9 +80,9 @@ watch([previewVisible, selected, () => props.directory], async ([visible, mentio
       release = preview.release;
       const url = await preview.url;
       if (!controller.signal.aborted) previewUrl.value = url;
-    } else throw new Error("引用文件不存在");
+    } else throw new Error("Tệp tham chiếu không tồn tại");
   } catch (cause) {
-    if (!controller.signal.aborted) error.value = axios.isAxiosError(cause) ? cause.response?.data?.message || "无法读取引用文件，文件可能已被删除" : cause instanceof Error ? cause.message : "无法读取引用";
+    if (!controller.signal.aborted) error.value = axios.isAxiosError(cause) ? cause.response?.data?.message || "Không đọc được tệp tham chiếu, có thể tệp đã bị xóa" : cause instanceof Error ? cause.message : "Không đọc được tham chiếu";
   } finally {
     if (!controller.signal.aborted) loading.value = false;
   }

@@ -1,56 +1,56 @@
-# 逐帧拉片
+# Phân tích video theo khung hình
 
-在视频节点或视频生成节点的上方点击“逐帧拉片”，创建拉片节点并自动连接当前视频；也可以单独添加拉片节点并选择视频。开始后提取关键帧、分镜视频和原音轨，在画布中生成独立素材节点。可选择开启 AI 辅助拉片，根据填写的分析重点生成逐镜头说明和全片总结。
+Bấm **Phân tích khung hình** trên thanh công cụ node Video hoặc Tạo video để tạo node phân tích và tự nối video hiện tại; cũng có thể thêm node phân tích riêng rồi chọn video. Khi bắt đầu, công cụ trích keyframe, clip từng cảnh và âm thanh gốc thành các node tài nguyên độc lập. Có thể bật AI để mô tả mỗi cảnh và tổng kết phim theo trọng tâm phân tích đã nhập.
 
-- **分镜**：每个镜头输出一张接近中间时刻的原分辨率 JPG。
-- **动态**：按检测切点输出 H.264/AAC MP4，保留片段声音。
-- **原音轨**：提取视频第一条音轨为 M4A，包含对白、音乐和环境音，不做背景音乐分离。
-- **拉片清单**：在上槽“查看结果”打开的报告中下载 JSON，包含切点、参数、文件路径及已完成的 AI 描述。
+- **Phân cảnh:** mỗi cảnh có một ảnh JPG giữ độ phân giải gốc, ở gần thời điểm giữa cảnh.
+- **Chuyển động:** xuất clip MP4 H.264/AAC theo các điểm cắt được phát hiện, giữ âm thanh của clip.
+- **Âm thanh gốc:** trích track âm thanh đầu tiên thành M4A, bao gồm lời thoại, nhạc và âm thanh môi trường; không tách nhạc nền.
+- **Danh sách phân tích:** tải JSON trong báo cáo mở bằng **Xem kết quả** ở thanh công cụ trên. Chứa điểm cắt, tham số, đường dẫn và mô tả AI đã hoàn tất.
 
-拉片节点只保留视频输入端口，没有右侧输出端口。生成的独立图片、视频、音频节点可继续连接其他流程，素材分组按种类和镜头顺序排列。
+Node phân tích chỉ có cổng video đầu vào, không có đầu ra bên phải. Các node ảnh/video/âm thanh được tạo độc lập có thể nối vào luồng tiếp theo và được nhóm theo loại tư liệu, thứ tự cảnh.
 
-界面复用 Toonflow 的节点框架、视频播放器、提示词输入和按供应商分组的语言模型选择，沿用软件主题与选中后展开的底部操作卡片。“查看结果”仅放在上槽，报告沿用宿主素材预览的左侧镜头目录、右侧画面与说明布局，可切换关键帧和视频片段；仅加载当前选中的素材，关闭或切换时停止播放并释放文件引用。整段分析仅在有结果时显示，以标题和段落排版。点击视频工具栏中的“逐帧拉片”只创建并连接节点，不自动处理视频或调用模型。
+Giao diện tái sử dụng khung node, trình phát video, ô prompt và bộ chọn mô hình văn bản theo nhà cung cấp của Toonflow, sử dụng theme và thẻ hành động phía dưới khi chọn node. **Xem kết quả** chỉ xuất hiện trên thanh công cụ phía trên. Báo cáo có mục lục cảnh bên trái, hình/mô tả bên phải; chuyển giữa keyframe và video, chỉ nạp mục đang chọn, dừng phát và giải phóng tệp khi đóng hoặc đổi mục. Phần tổng hợp toàn phim chỉ hiện khi có kết quả, theo tiêu đề và đoạn văn. Bấm nút phân tích ở node video chỉ tạo và nối node, không tự chạy xử lý hoặc gọi AI.
 
-## 本地检测
+## Phát hiện cắt cảnh cục bộ
 
-本地检测无需 Python、视觉模型或模型 API。每个解码帧按真实时间戳分析，最长边缩到 256 像素，不降低帧率。“逐帧”指检测遍历全部解码帧，关键帧输出仍为每镜头一张。
+Không cần Python, mô hình thị giác hoặc API mô hình. Mỗi frame được giải mã theo timestamp thật, cạnh dài nhất thu còn 256 pixel nhưng không giảm tốc độ khung hình. **Theo từng frame** nghĩa là kiểm tra tất cả frame đã giải mã; đầu ra vẫn chỉ một keyframe mỗi cảnh.
 
-检测分值由 **75% 的 RGB 空间差异 + 25% 的平滑色彩直方图差异**组成，范围为 0～100，是本检测器自己的量纲。
+Điểm phát hiện được tính từ **75% chênh lệch không gian RGB và 25% chênh lệch biểu đồ màu đã làm mượt**, trên thang 0–100 riêng của bộ phát hiện.
 
-- **Adaptive**：以近 1.2 秒变化分值的中位数估计运动背景，最多保留 180 帧；触发阈值为 `max(4, 中位数) × 切镜阈值`，默认切镜阈值为 3。
-- **Content**：直接使用绝对变化分值，默认阈值为 27。
-- **最短镜头**：默认 0.6 秒。候选切点需形成局部峰值，间距不足时保留更强候选；短暂回到原画面的闪帧会被抑制，不足最小时长的尾段并入前一镜头。
+- **Adaptive:** lấy trung vị điểm thay đổi trong khoảng gần 1,2 giây để ước tính chuyển động nền, giữ tối đa 180 frame; ngưỡng là `max(4, trung vị) × ngưỡng cắt cảnh`, mặc định ngưỡng cắt là 3.
+- **Content:** dùng điểm thay đổi tuyệt đối, ngưỡng mặc định 27.
+- **Cảnh ngắn nhất:** mặc định 0,6 giây. Điểm cắt phải là đỉnh cục bộ; khi các điểm quá gần nhau giữ điểm mạnh hơn. Frame chớp tạm rồi quay về hình cũ bị hạn chế, đoạn đuôi ngắn hơn mức tối thiểu được nhập vào cảnh trước.
 
-调低阈值可增加切点，调高可减少切点；没有切点时整段视频作为一个镜头。检测主要针对画面变化，不保证覆盖渐变转场或语义变化，也不承诺与其他检测器结果一致。
+Giảm ngưỡng có thể tăng số điểm cắt, tăng ngưỡng có thể giảm. Nếu không có điểm cắt, cả video là một cảnh. Bộ phát hiện dựa trên biến đổi hình ảnh, không bảo đảm bắt hết chuyển cảnh mờ dần hoặc biến đổi ngữ nghĩa và không nhất thiết giống bộ phát hiện khác.
 
-解码使用临时 RGB 分块，处理后删除。内存保留当前所需帧、分块和时间戳；解码快于分析时，临时磁盘占用可能增长。视频切割会重编码，耗时与原视频分辨率、时长和镜头数量有关。
+Giải mã dùng các khối RGB tạm thời rồi xóa sau khi xử lý; RAM giữ frame/khối/timestamp đang cần. Khi giải mã nhanh hơn phân tích, dung lượng đĩa tạm có thể tăng. Các clip bị cắt được mã hóa lại, thời gian phụ thuộc độ phân giải, thời lượng và số cảnh.
 
-## AI 辅助拉片
+## AI hỗ trợ phân tích
 
-新节点默认关闭 AI 辅助，仅执行本地拆分，已有节点保留之前的开关状态。手动开启后，从宿主已有语言模型配置中选择模型，并开启“分镜”或“动态”。所选模型需要支持图片理解；模型列表来自宿主配置，不代表已验证每个模型的图片能力。可在提示词输入中填写最多 2000 字的分析重点，例如构图、人物调度、运镜或剪辑节奏；同一要求会用于逐镜头分析和全片总结。只有点击开始拉片或 AI 分析按钮才会发送请求，费用由所选模型供应商决定。
+Node mới mặc định tắt AI và chỉ tách cảnh cục bộ; node cũ giữ trạng thái công tắc trước đó. Khi bật thủ công, chọn mô hình văn bản đã được cài trong ứng dụng và bật **Phân cảnh** hoặc **Chuyển động**. Mô hình phải hiểu ảnh; có tên trong danh sách không chứng minh đã kiểm thử khả năng thị giác. Có thể nhập trọng tâm phân tích tối đa 2.000 ký tự (bố cục, di chuyển diễn viên, chuyển động camera, nhịp dựng...). Yêu cầu này dùng cho cả phân tích từng cảnh và tổng kết. Chỉ gửi AI khi người dùng bấm bắt đầu phân tích hoặc nút phân tích AI; phí tính theo nhà cung cấp.
 
-本地结果先保存，再依次分析各镜头。每个镜头通常抽取前、中、后 3 张画面，短镜头去除重复帧；AI 参考图缩放到 640×640 范围内。旧清单没有时序采样信息时，可使用已有的单张关键帧，运镜固定标为“无法确认”。
+Kết quả cục bộ được lưu trước, sau đó lần lượt phân tích từng cảnh. Thường lấy ba frame đầu, giữa và cuối; cảnh ngắn loại các frame trùng. Ảnh cho AI thu trong phạm vi 640 × 640. Danh sách cũ không lưu thời điểm lấy mẫu có thể dùng keyframe duy nhất và đánh dấu chuyển động máy quay là **Không thể xác nhận**.
 
-每个镜头发起一次请求，补充景别、拍摄角度、运动和画面描述；随后再由语言模型根据这些镜头记录生成全片总结。每次 AI 分析最多处理 200 个镜头，本地分镜与素材提取不受这个镜头数量限制。请求不自动重试。
+Mỗi cảnh gửi một yêu cầu để xác định cỡ cảnh, góc quay, chuyển động và mô tả hình. Sau đó dùng mô hình văn bản tổng hợp toàn phim dựa trên các ghi chép đó. Một lượt AI tối đa 200 cảnh; tách cảnh và tư liệu cục bộ không bị giới hạn này. Không tự gửi lại request.
 
-返回内容通过校验后，写入新的 AI 清单并更新素材标题；在“拉片报告”中查看逐镜头说明、整体概述、叙事结构、节奏、剪辑及分析重点的回应。AI 失败或取消会保留已有本地结果，可单独补充或重新执行 AI 分析，无需再次切割视频。逐镜头分析全部完成而整段归纳失败时，保存逐镜头结果并显示失败原因；保持相同模型和分析重点时，可只重试归纳。
+Khi kết quả qua kiểm tra, lưu danh sách AI mới, cập nhật tên tư liệu và hiển thị trong báo cáo: mô tả từng cảnh, tổng quan, cấu trúc tự sự, nhịp dựng, cách cắt và phản hồi trọng tâm người dùng. Nếu AI lỗi hoặc bị hủy, các kết quả cục bộ vẫn được giữ; có thể bổ sung hoặc chạy lại AI mà không cắt video lại. Nếu tất cả cảnh đã phân tích nhưng phần tổng hợp thất bại, lưu phần từng cảnh cùng lỗi; nếu giữ nguyên mô hình/trọng tâm, có thể chỉ chạy lại tổng hợp.
 
-采样画面只能支持有限的运动推断，证据不足时应标为“无法确认”或“可能”。AI 不接收音轨，不分析声音、配乐或台词。
+Frame được lấy mẫu chỉ cho phép suy luận chuyển động có giới hạn; thiếu chứng cứ phải ghi **Không thể xác nhận** hoặc **Có thể**. AI không nhận track âm thanh, không phân tích tiếng, nhạc hoặc lời thoại.
 
-## 安装与构建
+## Cài đặt và build
 
-子包位于 `packages/nodes/frameAnalysisNode`，由宿主现有节点构建流程打包。复用宿主已有的 FFmpeg、模型、工作区文件和画布接口，无需 Python 或独立服务。对应素材维度需要启用图片、视频、音频节点插件；FFmpeg 需要支持 rawvideo、segment、libx264 和 AAC。
+Node thuộc `packages/nodes/frameAnalysisNode` và được build bằng luồng node hiện có. Dùng lại FFmpeg, mô hình, tệp workspace và API Canvas, không cần Python hoặc dịch vụ riêng. Muốn tạo node tư liệu độc lập, cần bật plugin node ảnh/video/âm thanh tương ứng. FFmpeg cần hỗ trợ rawvideo, segment, libx264 và AAC.
 
-在仓库根目录执行：
+Tại thư mục gốc repository:
 
-```powershell
+~~~powershell
 bun install
 bun run --filter '@toonflow/node-frame-analysis' typecheck
 bun run --filter '@toonflow/node-frame-analysis' build
-```
+~~~
 
-产物为 `build/nodes/frameAnalysisNode.umd.js`；根目录 `build:nodes` 会包含本节点。开发时使用 `bun run --filter '@toonflow/node-frame-analysis' build --mode development` 同步到 `data/nodes`。视频与视频生成节点的入口分别随对应节点包构建。
+Kết quả nằm tại `build/nodes/frameAnalysisNode.umd.js`; lệnh gốc `build:nodes` cũng gồm node này. Khi phát triển, dùng `bun run --filter '@toonflow/node-frame-analysis' build --mode development` để đồng bộ vào `data/nodes`. Các nút truy cập phân tích từ Video/Tạo video thuộc gói node tương ứng.
 
-运行产物保存在工作区 `assets/节点ID/analysis…`。本地处理取消或失败时清理尚未提交的本次文件；成功产物保留供画布撤销和素材节点使用，重复拉片生成新分组。AI 临时参考图会在处理完成、取消或失败后清理。
+Tư liệu tạo ra lưu trong workspace theo `assets/ID-node/analysis…`. Nếu tác vụ cục bộ hủy hoặc thất bại, các tệp chưa được ghi nhận của lượt đó được dọn; kết quả thành công được giữ để Undo hoặc sử dụng trong các node tư liệu. Phân tích lại tạo nhóm mới. Ảnh tham chiếu AI tạm sẽ được xóa khi xử lý xong, hủy hoặc lỗi.
 
-开发验证使用类型检查、构建和必要的本地手动操作。本轮未发送真实模型请求，模型实际返回质量及供应商兼容性尚未实测。
+Việc kiểm chứng phát triển dùng typecheck, build và thao tác cục bộ thích hợp. Trong lượt dịch giao diện này không gửi yêu cầu AI thực; chất lượng phản hồi của mô hình và tính tương thích của nhà cung cấp chưa được kiểm chứng.

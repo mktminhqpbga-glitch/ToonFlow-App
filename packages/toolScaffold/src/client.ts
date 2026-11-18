@@ -1,4 +1,5 @@
 import * as vueRuntime from "vue";
+import * as i18n from "@toonflow/i18n/vue";
 import * as elementPlusRuntime from "element-plus";
 import axios from "axios";
 import formCreate from "@form-create/element-ui";
@@ -9,10 +10,10 @@ export type { BrowserAsrState, BrowserAsrResult, BrowserAsrError, BrowserAsrOpti
 
 type ToolRenderer = { name: string; tools: string[]; url: string };
 const toolWindow = window as typeof window & {
-  toonflowToolHost?: { vue: typeof vueRuntime; elementPlus: typeof elementPlusRuntime; axios: typeof axios; formCreate: typeof formCreate };
+  toonflowToolHost?: { vue: typeof vueRuntime; elementPlus: typeof elementPlusRuntime; axios: typeof axios; formCreate: typeof formCreate; i18n: typeof i18n };
   toonflowToolViews?: Record<string, Record<string, Component>>;
 };
-toolWindow.toonflowToolHost = { vue: vueRuntime, elementPlus: elementPlusRuntime, axios, formCreate };
+toolWindow.toonflowToolHost = { vue: vueRuntime, elementPlus: elementPlusRuntime, axios, formCreate, i18n };
 const componentLoads = new Map<string, { pending: Promise<Record<string, Component>>; components: Map<string, Component> }>();
 let rendererRequest: Promise<ToolRenderer[]> | undefined;
 
@@ -28,7 +29,7 @@ export async function loadToolComponent(toolName: string): Promise<Component | u
   // ACT: 只合并并发查询；新卡片重新查询安装状态，组件按内容版本复用。
   rendererRequest ??= axios.get<{ code: number; data: ToolRenderer[]; message?: string }>("/api/tools/renderers")
     .then(({ data }) => {
-      if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "工具界面列表无效");
+      if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "Danh sách giao diện công cụ không hợp lệ");
       const urls = new Set(data.data.map(renderer => renderer?.url));
       for (const url of componentLoads.keys()) {
         if (!urls.has(url)) componentLoads.delete(url);
@@ -38,13 +39,13 @@ export async function loadToolComponent(toolName: string): Promise<Component | u
   const matches = (await rendererRequest).filter(item => Array.isArray(item?.tools) && item.tools.includes(toolName));
   if (matches.length > 1) {
     for (const renderer of matches) componentLoads.delete(renderer.url);
-    throw new Error(`工具界面名称重复：${toolName}`);
+    throw new Error(`Tên giao diện công cụ bị trùng: ${toolName}`);
   }
   const renderer = matches[0];
   if (!renderer) return;
   if (!/^[a-z][a-zA-Z0-9]*$/.test(renderer.name) ||
     !new RegExp(`^/api/tools/client\\?name=${renderer.name}&version=[a-f0-9]{64}$`).test(renderer.url)) {
-    throw new Error("工具界面地址无效");
+    throw new Error("Địa chỉ giao diện công cụ không hợp lệ");
   }
   let load = componentLoads.get(renderer.url);
   if (!load) {
@@ -54,10 +55,10 @@ export async function loadToolComponent(toolName: string): Promise<Component | u
       script.onload = () => {
         script.remove();
         const components = toolWindow.toonflowToolViews?.[renderer.name];
-        if (!components || typeof components !== "object") reject(new Error(`工具包未导出界面：${renderer.name}`));
+        if (!components || typeof components !== "object") reject(new Error(`Gói công cụ không export giao diện: ${renderer.name}`));
         else resolve(components);
       };
-      script.onerror = () => { script.remove(); reject(new Error("工具界面脚本加载失败")); };
+      script.onerror = () => { script.remove(); reject(new Error("Không tải được script giao diện công cụ")); };
       document.head.append(script);
     }).catch(error => {
       if (componentLoads.get(renderer.url)?.pending === pending) componentLoads.delete(renderer.url);
@@ -69,7 +70,7 @@ export async function loadToolComponent(toolName: string): Promise<Component | u
   const components = await load.pending;
   const component = Object.hasOwn(components, toolName) ? components[toolName] : undefined;
   if (!component || (typeof component !== "object" && typeof component !== "function")) {
-    throw new Error(`工具包未导出 ${toolName} 组件`);
+    throw new Error(`Gói công cụ không export ${toolName} component`);
   }
   load.components.set(toolName, vueRuntime.markRaw(component));
   return component;

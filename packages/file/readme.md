@@ -1,6 +1,6 @@
-# 文件基础能力
+# Năng lực thao tác tệp cơ bản
 
-`@toonflow/file` 是 Node/Bun 共用的文件操作入口，只管理原子提交和进程内文件队列。全局文件由所属模块决定路径；工作区文件仍先经过 server 的 `resolveWorkspacePath`、业务锁和接口权限校验。模块保留安装事务、回滚、数据格式及错误提示。
+`@toonflow/file` là điểm vào thao tác tệp dùng chung cho Node/Bun, chỉ quản lý ghi nguyên tử và hàng đợi tệp trong tiến trình. Đường dẫn tệp toàn cục do module sở hữu quyết định; tệp workspace vẫn phải qua `resolveWorkspacePath` của server, khóa nghiệp vụ và kiểm tra quyền API trước. Module sử dụng vẫn chịu trách nhiệm giao dịch cài đặt, rollback, định dạng dữ liệu và thông báo lỗi.
 
 ```ts
 import { readFile, writeAtomic } from "@toonflow/file";
@@ -9,16 +9,16 @@ await writeAtomic(absolutePath, JSON.stringify(snapshot));
 const content = await readFile(absolutePath, "utf8");
 ```
 
-- `writeAtomic` / `writeAtomicSync`：同目录短随机临时文件、`wx` 创建、完整写入后重命名；`exclusive: true` 在 Windows Bun 和移动端使用系统独占重命名，其他环境用硬链接提交，目标文件已存在时报 `EEXIST`，不覆盖已有文件、目录或符号链接。默认权限 `0o600`，不自动创建父目录，不合并快照，不保证断电持久性。
-- 普通 `writeFile`、`appendFile`、`copyFile` 保留标准库语义并参与队列。需要完整覆盖的业务快照显式选择原子接口；追加、开发热更新复制和安装 staging 不改成另一种操作。
-- `async-mutex` 负责 FIFO 队列：同文件最多 64 个并发读，写入独占，不同文件并行。Windows 路径忽略大小写；多路径按固定顺序获取，避免互相等待。调用模块负责 realpath、链接和目录层级的事务边界。
-- 读写流、`open` 返回的句柄、`opendir` 返回的目录持有访问许可直到关闭；调用方必须结束、取消或关闭它们。排队最多等待 30 秒，支持 `withFileAccess` 的 AbortSignal；同步调用碰到本进程未结束的冲突操作立即报 `EBUSY`。
-- 路径读写流支持 AbortSignal 和 `destroy()`，等待许可时取消不会在稍后打开或截断文件；底层关闭失败且句柄仍可能有效时保留许可。不接受外部 `fd` 或自定义 `fs` 绕过队列，已有文件句柄使用 `open` 返回对象的流方法。第三方 Semaphore 的已取消等待项会排到原位置后释放许可，不会执行业务操作，期间仍保留原有先后顺序。
-- `rename` 和原子提交使用 `stubborn-fs` 有限重试，最多约 5 秒；持续占用仍抛出原始错误。不要重试整个多步安装事务，也不要重试已经消费的输入流。原子写入只清理本次创建的临时文件，关闭或清理失败不能掩盖原始写入错误；提交成功后的临时文件清理失败仅记录警告，不将已保存内容报告为失败。
-- `withFileAccess(paths, kind, action, signal?)` 供 HTTP/SDK 等模块适配原生 I/O；回调必须等操作真正完成。它不是可重入锁，不在相同路径的回调里再次调用本包的受管 I/O；需要组合操作时由业务模块决定事务范围。
+- `writeAtomic` / `writeAtomicSync`: tạo tệp tạm tên ngẫu nhiên ngắn trong cùng thư mục với cờ `wx`, ghi đầy đủ rồi đổi tên. Với `exclusive: true`, Bun trên Windows và mobile dùng đổi tên độc quyền của hệ thống; môi trường khác dùng hard link để commit. Nếu đích đã tồn tại, trả `EEXIST`, không ghi đè tệp, thư mục hoặc symbolic link. Quyền mặc định `0o600`; không tự tạo thư mục cha, không gộp các snapshot, không bảo đảm bền vững dữ liệu khi mất điện.
+- Các thao tác `writeFile`, `appendFile`, `copyFile` thông thường vẫn theo ngữ nghĩa thư viện chuẩn và tham gia hàng đợi. Snapshot nghiệp vụ cần thay thế toàn bộ phải chọn rõ API nguyên tử. Không âm thầm chuyển thao tác append, sao chép khi hot reload hoặc staging lúc cài đặt thành loại thao tác khác.
+- `async-mutex` quản lý hàng đợi FIFO: tối đa 64 lượt đọc đồng thời trên cùng tệp, ghi độc quyền; tệp khác nhau có thể xử lý song song. Đường dẫn trên Windows không phân biệt chữ hoa/thường; với nhiều đường dẫn, lấy khóa theo thứ tự cố định để tránh deadlock. Module gọi chịu trách nhiệm `realpath`, liên kết và giới hạn giao dịch ở cấp thư mục.
+- Luồng đọc/ghi, handle do `open` trả về và thư mục do `opendir` trả về đều giữ quyền truy cập cho đến khi đóng; bên gọi phải hoàn tất, hủy hoặc đóng chúng. Thời gian chờ hàng đợi tối đa 30 giây, hỗ trợ `AbortSignal` qua `withFileAccess`. Lời gọi đồng bộ gặp thao tác xung đột chưa xong trong cùng tiến trình sẽ báo `EBUSY` ngay.
+- Luồng đọc/ghi theo đường dẫn hỗ trợ `AbortSignal` và `destroy()`; hủy trong lúc chờ quyền truy cập sẽ không mở hoặc cắt ngắn tệp về sau. Nếu việc đóng cấp thấp thất bại và handle có thể vẫn còn hiệu lực, tiếp tục giữ quyền truy cập. Không nhận `fd` hoặc `fs` tùy biến từ ngoài để vượt hàng đợi; handle đã mở dùng phương thức stream của đối tượng trả về từ `open`. Phần tử đang chờ đã hủy trong semaphore bên thứ ba vẫn chờ tới vị trí cũ rồi trả quyền, không thực thi nghiệp vụ và không phá thứ tự ban đầu.
+- `rename` và commit nguyên tử dùng số lần thử lại hữu hạn của `stubborn-fs`, tối đa khoảng 5 giây; nếu tệp vẫn bị giữ, ném lỗi gốc. Không thử lại toàn bộ giao dịch cài đặt nhiều bước hoặc input stream đã bị tiêu thụ. Ghi nguyên tử chỉ dọn tệp tạm do chính lượt này tạo, lỗi đóng/dọn không được che lỗi ghi ban đầu. Nếu commit đã thành công mà dọn tệp tạm thất bại, chỉ ghi cảnh báo, không báo nội dung đã lưu là thất bại.
+- `withFileAccess(paths, kind, action, signal?)` cho phép HTTP/SDK và module khác thích nghi với I/O gốc; callback phải chờ thao tác thực sự kết thúc. Đây không phải khóa tái nhập: không gọi lại các thao tác I/O được quản lý bởi gói từ callback trên cùng đường dẫn. Nếu cần tổ hợp thao tác, module nghiệp vụ quyết định phạm vi giao dịch.
 
-Bun 文件方法从 `@toonflow/file/bun` 导入 `file`、`write`。返回值保持真实 Blob 身份，`text/json/arrayBuffer/bytes/formData/stream/write/delete/unlink` 接入队列；字符串、URL 和字节路径共用同一文件队列。`file` 不接受外部 fd；同步 `FileSink.writer` 不暴露，流式写入使用 `createWriteStream`。把 Blob 交给 `Response` 等原生消费者后，消费生命周期由调用模块负责；需要与修改协调时在模块中使用 `withFileAccess`。
+Các phương thức Bun về tệp được import qua `@toonflow/file/bun`: `file`, `write`. Giá trị trả về giữ đúng danh tính Blob; `text/json/arrayBuffer/bytes/formData/stream/write/delete/unlink` tham gia hàng đợi. Đường dẫn dạng chuỗi, URL và byte dùng chung hàng đợi tệp. `file` không nhận fd từ ngoài; `FileSink.writer` đồng bộ không được cung cấp, ghi luồng dùng `createWriteStream`. Khi Blob được giao cho đối tượng tiêu thụ gốc như `Response`, module gọi quản lý vòng đời tiêu thụ; cần phối hợp với sửa đổi thì dùng `withFileAccess` trong module.
 
-`write` 和 `file(...).write` 只接受非流数据；`Response`、`Request`、`ReadableStream` 使用标准 `pipeline` 配合 `createWriteStream`，并向流和 `pipeline` 同时传入取消信号。Bun 1.3.14 的部分异常输入流会使原生 `Bun.write` 永不结束，本包直接拒绝这些输入，避免占住文件队列。
+`write` và `file(...).write` chỉ nhận dữ liệu không phải stream. `Response`, `Request`, `ReadableStream` dùng `pipeline` chuẩn cùng `createWriteStream`, truyền tín hiệu hủy cho cả stream và `pipeline`. Một số đầu vào stream bất thường ở Bun 1.3.14 khiến `Bun.write` không bao giờ hoàn tất; gói từ chối trực tiếp những đầu vào đó để tránh giữ hàng đợi tệp.
 
-本包不接管第三方库内部文件系统、外部进程、C#/NSIS 或操作系统的文件锁；SDK 持久化、配置、HTTP、FFmpeg 和安装器保持各自模块边界。不在这里引入业务 SDK，也不全局修改 `node:fs`。
+Gói không chiếm quyền quản lý hệ thống tệp bên trong thư viện bên thứ ba, tiến trình ngoài, C#/NSIS hoặc khóa tệp của hệ điều hành. Lưu trữ bền vững của SDK, cấu hình, HTTP, FFmpeg và bộ cài vẫn giữ ranh giới module riêng. Không đưa SDK nghiệp vụ vào đây hoặc sửa `node:fs` trên toàn ứng dụng.

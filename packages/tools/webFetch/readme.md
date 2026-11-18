@@ -1,25 +1,25 @@
-# 读取网页
+# Đọc trang web
 
-让 Agent 读取指定公开网址的正文，适合总结文章、核对资料或分析公开文本与 JSON。
+Cho Agent đọc nội dung từ URL công khai cụ thể, phù hợp tóm tắt bài viết, xác minh thông tin hoặc phân tích văn bản/JSON.
 
-## 使用方式
+## Cách sử dụng
 
-在对话中提供网址和任务，例如：“阅读这个网页，提炼与视频制作有关的要点，并注明来源。”
-本工具读取已知网址；需要先寻找相关网站时，可配合“联网搜索”。
+Gửi URL và yêu cầu trong cuộc trò chuyện, ví dụ: “Đọc trang này, rút ra các điểm liên quan đến sản xuất video và ghi nguồn”.
+Công cụ đọc URL đã biết. Khi cần tìm trang trước, có thể phối hợp với công cụ **Tìm kiếm web**.
 
-## 支持的功能
+## Tính năng
 
-- 从静态 HTML 中提取文字，也可读取文本和 JSON。
-- 返回实际网址、HTTP 状态和正文，内容超过限制时标记已截断。
-- 使用 Bun 原生 fetch 读取 HTTP(S) 地址，不执行网页脚本，不允许网址中携带用户名或密码。
-- 最多跟随 5 次重定向，每一跳都校验协议；最多读取 2 MiB 解压后的响应正文。
-- 沿用运行环境的 DNS 和网络，不预判域名解析后的地址，兼容代理 Fake-IP。此工具不提供内网隔离，需要隔离时应由部署环境限制网络访问。
+- Trích chữ từ HTML tĩnh, đọc văn bản và JSON.
+- Trả URL thực, trạng thái HTTP, nội dung và đánh dấu khi đã cắt bớt.
+- Dùng fetch tích hợp của Bun để đọc HTTP(S), không chạy script của trang, không nhận URL chứa tên đăng nhập hoặc mật khẩu.
+- Theo tối đa 5 lần chuyển hướng, kiểm tra giao thức mỗi lần; đọc tối đa 2 MiB nội dung đã giải nén.
+- Dùng DNS và cấu hình mạng của môi trường chạy, không tự đoán địa chỉ IP sau DNS; hỗ trợ môi trường proxy Fake-IP. Công cụ không tự cô lập mạng nội bộ; nếu cần, môi trường triển khai phải chặn ở tầng mạng.
 
-## 配置
+## Cấu hình
 
-在“设置 → 插件市场 → 已安装”找到“读取网页”，点击“配置”。
+Trong **Cài đặt → Chợ tiện ích → Đã cài**, tìm **Đọc trang web** rồi bấm **Cấu hình**.
 
-- “超时（毫秒）”：默认 20000，可设为 1000–60000。
-- “正文最大字符数”：默认 40000，可设为 1000–100000；超过上限的正文会截断。
+- **Thời gian chờ (ms):** mặc định 20.000; có thể đặt 1.000–60.000.
+- **Số ký tự nội dung tối đa:** mặc định 40.000; cho phép 1.000–100.000, nội dung vượt sẽ bị cắt.
 
-无需 API Key。依赖脚本渲染的网页可能无法获得完整内容。
+Không yêu cầu API Key. Trang cần JavaScript để render có thể không lấy được nội dung hoàn chỉnh.

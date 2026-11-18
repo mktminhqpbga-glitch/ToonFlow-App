@@ -18,22 +18,22 @@
         <div class="providerFooter">
           <div class="providerMeta">
             <el-tag v-if="item.version" size="small" type="info" effect="plain">v{{ item.version }}</el-tag>
-            <el-text size="small" type="info">{{ item.models.length }} 个模型</el-text>
+            <el-text size="small" type="info">{{ item.models.length }} mô hình</el-text>
           </div>
           <el-space class="itemActions" wrap>
-            <el-button v-if="item.modelsUrl" text :icon="IconDownload" :loading="fetchingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError || !item.revision" @click="fetchModels(item)">获取模型</el-button>
-            <el-button text :icon="IconEdit" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError" @click="editProvider(item)">编辑模型</el-button>
-            <el-button text :icon="IconCode" :disabled="!!fetchingFile || !!deletingFile || !item.revision" @click="editProviderCode(item)">编辑代码</el-button>
-            <el-popconfirm title="确定删除此供应商及其模型？" confirmButtonText="删除" cancelButtonText="取消" @confirm="deleteProvider(item)">
-              <template #reference><el-button text type="danger" :icon="IconTrash" :loading="deletingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !item.revision">删除</el-button></template>
+            <el-button v-if="item.modelsUrl" text :icon="IconDownload" :loading="fetchingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError || !item.revision" @click="fetchModels(item)">Lấy mô hình</el-button>
+            <el-button text :icon="IconEdit" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError" @click="editProvider(item)">Sửa mô hình</el-button>
+            <el-button text :icon="IconCode" :disabled="!!fetchingFile || !!deletingFile || !item.revision" @click="editProviderCode(item)">Sửa mã nguồn</el-button>
+            <el-popconfirm title="Bạn có chắc muốn xóa nhà cung cấp và các mô hình của họ?" confirmButtonText="Xóa" cancelButtonText="Hủy" @confirm="deleteProvider(item)">
+              <template #reference><el-button text type="danger" :icon="IconTrash" :loading="deletingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !item.revision">Xóa</el-button></template>
             </el-popconfirm>
           </el-space>
         </div>
       </el-card>
     </div>
     <div class="providerActions">
-      <el-button class="addButton" :icon="IconPlus" @click="openAdd('builtin')">添加供应商</el-button>
-      <el-button class="addButton" :icon="IconSettings" @click="openAdd('custom')">添加自定义供应商</el-button>
+      <el-button class="addButton" :icon="IconPlus" @click="openAdd('builtin')">Thêm nhà cung cấp</el-button>
+      <el-button class="addButton" :icon="IconSettings" @click="openAdd('custom')">Thêm nhà cung cấp tùy chỉnh</el-button>
     </div>
     <component :is="mediaProviderDialog" v-model="providerDialogVisible" :mode="addMode" :provider="editingSourceProvider" @added="saveProviderItem" @saved="saveProviderItem" />
     <component :is="editProviderDialog" v-model="editorVisible" :provider="editingProvider" @saved="saveProviderItem" />
@@ -83,7 +83,7 @@ async function loadProviders() {
     const { data } = await axios.get<{ data: MediaProvider[] }>("/api/providers/media/list");
     if (request === loadRequest) providers.value = data.data;
   } catch (error) {
-    if (request === loadRequest) ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : "读取媒体供应商失败");
+    if (request === loadRequest) ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : "Đọc nhà cung cấp media thất bại");
   }
 }
 
@@ -114,12 +114,12 @@ async function fetchModels(provider: MediaProvider) {
     const { data } = await axios.post<{ code: number; data: MediaProvider; message: string }>("/api/providers/media/models", {
       fileName: provider.fileName, revision: provider.revision,
     }, { timeout: 35000 });
-    if (data.code !== 200 || !data.data) throw new Error(data.message || "获取模型失败");
+    if (data.code !== 200 || !data.data) throw new Error(data.message || "Không lấy được mô hình");
     saveProviderItem(data.data);
     invalidateNodeModels("media");
-    ElMessage.success("模型列表已更新");
+    ElMessage.success("Đã cập nhật danh sách mô hình");
   } catch (error) {
-    ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : "获取模型失败，请重试");
+    ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : "Không lấy được mô hình, vui lòng thử lại");
   } finally { fetchingFile.value = ""; }
 }
 
@@ -142,7 +142,7 @@ async function deleteProvider(provider: MediaProvider) {
     });
   } catch (error) {
     const message = axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : translate("删除失败，请重试");
-    ElMessage.error(deleted ? `供应商已删除，但相关连接配置清理失败：${message}` : message);
+    ElMessage.error(deleted ? `Đã xóa nhà cung cấp nhưng không thể dọn cấu hình kết nối liên quan: ${message}` : message);
   } finally { deletingFile.value = ""; }
 }
 

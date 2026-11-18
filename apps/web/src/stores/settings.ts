@@ -1,5 +1,5 @@
-import { defaultLanguage, resolveUiLanguage } from "@/lib/defaultLanguage";
 import axios from "axios";
+import { normalizeLocale } from "@toonflow/i18n";
 import { computed, nextTick, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { getNodeModelKey, invalidateNodeModels, readNodeModels, subscribeNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
@@ -47,12 +47,12 @@ export const settingsStorage = {
   },
 };
 
-export const defaultUiSettings = { theme: "dark", language: defaultLanguage, primaryColor: "#409eff", fontScale: 100, mobileScale: 75, radius: 8, startupAnimation: true };
+export const defaultUiSettings = { theme: "dark", language: "vi", primaryColor: "#409eff", fontScale: 100, mobileScale: 75, radius: 8, startupAnimation: true };
 export const uiSettings = computed(() => {
   const raw = settings.value.ui;
   const ui = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   return {
-    language: resolveUiLanguage(ui.language, ui.languageChosen === true),
+    language: ui.language === "system" ? "system" as const : normalizeLocale(ui.language) ?? "vi" as const,
     theme: ui.theme === "light" || ui.theme === "dark" || ui.theme === "system" ? ui.theme : defaultUiSettings.theme,
     primaryColor: typeof ui.primaryColor === "string" && /^#[\da-f]{6}$/i.test(ui.primaryColor) ? ui.primaryColor : defaultUiSettings.primaryColor,
     fontScale: typeof ui.fontScale === "number" && Number.isFinite(ui.fontScale) ? Math.min(125, Math.max(85, ui.fontScale)) : defaultUiSettings.fontScale,
@@ -64,7 +64,7 @@ export const uiSettings = computed(() => {
 
 export function updateUiSettings(patch: Partial<typeof defaultUiSettings>) {
   const current = settings.value.ui;
-  settings.value = { ...settings.value, ui: { ...(current && typeof current === "object" && !Array.isArray(current) ? current : {}), ...patch, ...(Object.hasOwn(patch, "language") ? { languageChosen: true } : {}) } };
+  settings.value = { ...settings.value, ui: { ...(current && typeof current === "object" && !Array.isArray(current) ? current : {}), ...patch } };
 }
 
 export const generalSettings = computed(() => {
@@ -159,9 +159,9 @@ export async function refreshToonflowProvider() {
   }
 }
 
-type ResolvedAiModel = { providerId: string; providerLabel: string; modelId: string; routeId?: string; label: string; contextWindow: number; reasoningLevels: ThinkingLevel[] };
+type ResolvedAiModel = { supportsAgent?: boolean; providerId: string; providerLabel: string; modelId: string; routeId?: string; label: string; contextWindow: number; reasoningLevels: ThinkingLevel[] };
 const availableModels = ref<ResolvedAiModel[]>([]);
-export const modelChoices = computed(() => availableModels.value.map(model => ({ ...model, value: getNodeModelKey(model) })));
+export const modelChoices = computed(() => availableModels.value.filter(model => model.supportsAgent !== false).map(model => ({ ...model, value: getNodeModelKey(model) })));
 
 function applyModelReasoning(models: ResolvedAiModel[]) {
   availableModels.value = models;

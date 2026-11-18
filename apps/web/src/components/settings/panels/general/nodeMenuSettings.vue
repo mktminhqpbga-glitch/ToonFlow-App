@@ -1,30 +1,30 @@
 <template>
   <section class="nodeMenuSettings" aria-labelledby="nodeMenuTitle" :aria-busy="loading">
     <div class="menuHeader">
-      <h3 id="nodeMenuTitle">节点菜单管理</h3>
+      <h3 id="nodeMenuTitle">Quản lý menu node</h3>
       <div class="menuActions">
-        <el-button text size="small" :icon="IconRestore" :disabled="loading || !!loadError" @click="resetMenu">恢复默认</el-button>
+        <el-button text size="small" :icon="IconRestore" :disabled="loading || !!loadError" @click="resetMenu">Khôi phục mặc định</el-button>
       </div>
     </div>
-    <p class="description">像右键菜单一样整理节点。拖动调整顺序或移入子菜单，点击眼睛隐藏，修改后自动保存。</p>
+    <p class="description">Sắp xếp node như menu chuột phải. Kéo để đổi thứ tự hoặc đưa vào menu con, nhấn biểu tượng mắt để ẩn; thay đổi được tự động lưu.</p>
     <div v-if="loadError" class="loadError" role="alert">
       <span>{{ loadError }}</span>
-      <el-button size="small" :loading="loading" @click="loadNodes">重试</el-button>
+        <el-button size="small" :loading="loading" @click="loadNodes">Thử lại</el-button>
     </div>
-    <p v-else-if="loading" class="description" role="status">正在读取节点列表…</p>
+    <p v-else-if="loading" class="description" role="status">Đang đọc danh sách node…</p>
     <template v-else>
-      <div class="menuBoard" role="region" aria-label="节点菜单编辑器" @dragleave="leaveBoard">
+      <div class="menuBoard" role="region" aria-label="Trình chỉnh sửa menu node" @dragleave="leaveBoard">
         <section
           v-for="column in menuColumns"
           :key="column.id"
           class="menuCard"
           :class="{ dropAtEnd: dropTarget?.parentId === column.id && dropTarget?.mode === 'end' }"
-          :aria-label="`${levelNames[column.depth - 1]}菜单`"
+          :aria-label="`${levelNames[column.depth - 1]}menu`"
           :data-menu-id="column.id || 'root'"
           @dragover="previewDrop($event, column)"
           @drop="dropItem($event, column)">
           <header class="cardHeader">
-            <span class="cardLevel">{{ levelNames[column.depth - 1] }}菜单</span>
+            <span class="cardLevel">{{ levelNames[column.depth - 1] }}menu</span>
             <h4 :title="column.label">{{ column.label }}</h4>
           </header>
           <div class="menuList">
@@ -47,10 +47,10 @@
               @dragend="endDrag"
               @dragover.stop="previewDrop($event, column, item)"
               @drop.stop="dropItem($event, column, item)">
-              <button class="itemSelect" type="button" :aria-label="`选择${nodeDisplayLabel(item)}`" :aria-pressed="selectedId === item.id" @click="selectItem(item)">
+              <button class="itemSelect" type="button" :aria-label="`Chọn ${item.label}`" :aria-pressed="selectedId === item.id" @click="selectItem(item)">
                 <component :is="item.children ? openGroups.includes(item.id) ? IconFolderOpen : IconFolder : nodeIcons[item.type ?? ''] ?? IconBox" class="itemIcon" :size="18" aria-hidden="true" />
-                <span class="itemLabel" :title="nodeDisplayLabel(item)">{{ nodeDisplayLabel(item) }}</span>
-                <span v-if="item.type && disabledTypes.has(item.type)" class="itemStatus" title="已停用">停用</span>
+                <span class="itemLabel" :title="item.label">{{ item.label }}</span>
+                <span v-if="item.type && disabledTypes.has(item.type)" class="itemStatus" title="Đã tắt">Đã tắt</span>
               </button>
               <div class="rowActions" @dragstart.stop.prevent>
                 <el-popover
@@ -65,21 +65,21 @@
                   @update:visible="visible => setEditingVisible(item.id, visible)"
                   @afterEnter="focusName">
                   <template #reference>
-                    <button class="rowAction" type="button" :aria-label="`编辑${nodeDisplayLabel(item)}`" title="编辑" @click.stop>
+                    <button class="rowAction" type="button" :aria-label="`Sửa ${item.label}`" title="Sửa" @click.stop>
                       <icon-edit :size="14" aria-hidden="true" />
                     </button>
                   </template>
                   <div v-if="editing?.item.id === item.id" class="menuItemEditor" @keydown.stop @keydown.esc="setEditingVisible(item.id, false)">
-                    <div class="editorHeader">{{ editing.item.children ? '编辑菜单' : '编辑节点' }}</div>
+                    <div class="editorHeader">{{ editing.item.children ? 'Sửa menu' : 'Sửa node' }}</div>
                     <label class="editorField">
-                      <span>{{ editing.item.children ? '菜单名称' : '节点别名（留空恢复原名）' }}</span>
+                      <span>{{ editing.item.children ? 'Tên menu' : 'Bí danh node (để trống để khôi phục tên gốc)' }}</span>
                       <el-input
                         ref="nameInputs"
                         v-model="itemName"
                         maxlength="40"
                         size="small"
                         :placeholder="originalName"
-                        :aria-label="editing.item.children ? '分组名称' : '节点别名'"
+                        :aria-label="editing.item.children ? 'Tên nhóm' : 'Bí danh node'"
                         @blur="renameItem"
                         @keydown.enter.prevent="renameItem" />
                     </label>
@@ -89,28 +89,28 @@
                   class="rowAction visibilityButton"
                   :class="{ isHidden: item.hidden }"
                   type="button"
-                  :aria-label="`${item.hidden ? '显示' : '隐藏'}${nodeDisplayLabel(item)}`"
-                  :title="item.hidden ? '显示' : '隐藏'"
+                  :aria-label="`${item.hidden ? 'Hiện' : 'Ẩn'} ${item.label}`"
+                  :title="item.hidden ? 'Hiện' : 'Ẩn'"
                   :aria-pressed="!item.hidden"
                   @click.stop="setVisible(item, item.hidden)"
                   @keydown.stop>
                   <icon-eye-off v-if="item.hidden" :size="14" aria-hidden="true" />
                   <icon-eye v-else :size="14" aria-hidden="true" />
                 </button>
-                <button v-if="item.children" class="rowAction deleteButton" type="button" :aria-label="`移除${nodeDisplayLabel(item)}菜单`" title="移除菜单，保留子项" @click.stop="removeGroup(item.id)">
+                <button v-if="item.children" class="rowAction deleteButton" type="button" :aria-label="`Xóa menu ${item.label}`" title="Xóa menu và giữ các mục con" @click.stop="removeGroup(item.id)">
                   <icon-folder-minus :size="14" aria-hidden="true" />
                 </button>
               </div>
               <icon-chevron-right v-if="item.children" class="submenuArrow" :size="14" aria-hidden="true" />
             </div>
-            <div v-if="!column.items.length" class="emptyDrop" :aria-label="`${levelNames[column.depth - 1]}菜单空白投放区`">
+            <div v-if="!column.items.length" class="emptyDrop" :aria-label="`${levelNames[column.depth - 1]}Vùng trống để thả vào menu`">
               <icon-drag-drop :size="22" aria-hidden="true" />
-              <span>拖入节点{{ column.depth < 3 ? "或子菜单" : "" }}</span>
+              <span>Kéo node vào{{ column.depth < 3 ? "hoặc menu con" : "" }}</span>
             </div>
           </div>
           <button v-if="column.depth < 3" class="newGroupButton" type="button" @click="addGroup(column.id)">
             <icon-plus :size="15" aria-hidden="true" />
-            新建{{ levelNames[column.depth] }}菜单
+            Tạo{{ levelNames[column.depth] }}menu
           </button>
         </section>
       </div>
@@ -119,7 +119,6 @@
 </template>
 
 <script setup lang="ts">
-import { nodeDisplayLabel } from "@/lib/nodeDisplayLabel";
 import axios from "axios";
 import { translate } from "@toonflow/i18n/vue";
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue";
@@ -176,7 +175,7 @@ const menuEntries = computed(() => {
 const editing = computed(() => menuEntries.value.find(entry => entry.item.id === editingId.value));
 const originalName = computed(() => installedNodes.value.find(node => node.type === editing.value?.item.type)?.label ?? "");
 const menuColumns = computed(() => {
-  const columns: MenuColumn[] = [{ id: "", depth: 1, label: "添加节点", items: menuItems.value }];
+  const columns: MenuColumn[] = [{ id: "", depth: 1, label: "Thêm node", items: menuItems.value }];
   for (const id of openGroups.value) {
     const item = columns.at(-1)!.items.find(item => item.id === id);
     if (!item?.children || columns.length === 3) break;
@@ -294,8 +293,8 @@ function addGroup(parentId: string) {
   const parent = menuEntries.value.find(entry => entry.item.id === parentId);
   if (parentId && (!parent?.item.children || parent.depth >= 2)) return;
   const labels = new Set(menuEntries.value.filter(entry => entry.item.children).map(entry => entry.item.label));
-  let label = "新分组";
-  for (let index = 2; labels.has(label); index++) label = `新分组 ${index}`;
+  let label = "Nhóm mới";
+  for (let index = 2; labels.has(label); index++) label = `Nhóm mới ${index}`;
   const group = { id: `group:${crypto.randomUUID()}`, label, hidden: false, children: [] };
   (parent?.item.children ?? menuItems.value).push(group);
   selectItem(group);
@@ -308,7 +307,7 @@ function renameItem() {
   if (!item) return;
   const label = itemName.value.trim();
   if (!item.type && !label) {
-    ElMessage.warning("分组名称不能为空");
+    ElMessage.warning("Tên nhóm không được để trống");
     itemName.value = item.label;
     return;
   }
@@ -357,12 +356,12 @@ async function loadNodes() {
     });
     if (request !== loadRequest) return;
     if (data.code !== 200 || !Array.isArray(data.data) || data.data.some(node => !node || typeof node.name !== "string" || !/^[a-z][a-zA-Z0-9]*$/.test(node.name))) {
-      throw new Error("节点列表格式错误");
+      throw new Error("Danh sách node có định dạng không hợp lệ");
     }
     installedNodes.value = data.data.map(node => ({ type: `remote-${node.name}`, label: typeof node.displayName === "string" && node.displayName ? node.displayName : node.name, enabled: node.enabled !== false }));
     loadError.value = "";
   } catch {
-    if (request === loadRequest) loadError.value = "节点列表读取失败，请重试。已保存的菜单配置仍会保留。";
+    if (request === loadRequest) loadError.value = "Đọc danh sách node thất bại, vui lòng thử lại. Cấu hình menu đã lưu vẫn được giữ.";
   } finally {
     if (request === loadRequest) loading.value = false;
   }

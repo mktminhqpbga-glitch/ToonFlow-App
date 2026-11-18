@@ -1,7 +1,6 @@
 <template>
   <div class="multiTenantPage">
     <adminWeb :request="requestAdmin" :logoUrl="logoUrl" :creationUrl="creationUrl.href" :accountName="currentUser?.userName" @enabledChange="applyMultiTenantEnabled" @back="openCreation" />
-    <desktopQuit v-if="actualPlatform.isDesktop" />
   </div>
 </template>
 
@@ -10,7 +9,6 @@ import { onBeforeUnmount } from "vue";
 import adminWeb from "@toonflow/multi-tenant-admin-web";
 import type { UserIdentity } from "@toonflow/multi-tenant-user-web/types";
 import logoUrl from "@toonflow/assets/logo.svg";
-import desktopQuit from "@/components/desktopQuit.vue";
 import http from "@/lib/http";
 import { actualPlatform } from "@/lib/platform";
 import { applyMultiTenantEnabled, settings } from "@/stores/settings";

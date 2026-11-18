@@ -8,10 +8,10 @@ export type AudioProcessingOptions = { outputPath: string; pcm?: PcmOptions } & 
 
 function normalizePath(path: string) {
   if (!path || /[\x00-\x1f]/.test(path) || /^(?:[\\/]|[a-z][a-z\d+.-]*:)/i.test(path) || path.split(/[\\/]+/).includes("..")) {
-    throw new Error("音频处理必须使用工作区相对路径");
+    throw new Error("Xử lý âm thanh phải dùng đường dẫn tương đối trong không gian làm việc");
   }
   const normalized = path.split(/[\\/]+/).filter(part => part && part !== ".").join("/").toLowerCase();
-  if (!normalized) throw new Error("音频处理路径不能为空");
+  if (!normalized) throw new Error("Đường dẫn xử lý âm thanh không được rỗng");
   return normalized;
 }
 
@@ -44,22 +44,22 @@ function runCommand(command: BrowserFfmpegCommand, signal?: AbortSignal) {
 /** 调用方负责输出目录、唯一文件名和失败清理，处理结果不会覆盖原音频。 */
 export async function processAudio(ffmpeg: BrowserFfmpegFactory, source: string, options: AudioProcessingOptions, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  if (normalizePath(source) === normalizePath(options.outputPath)) throw new Error("输出文件不能覆盖原音频");
-  if (!["speed", "clip"].includes(options.action)) throw new Error("未知的音频处理操作");
+  if (normalizePath(source) === normalizePath(options.outputPath)) throw new Error("Tệp đầu ra không được ghi đè âm thanh gốc");
+  if (!["speed", "clip"].includes(options.action)) throw new Error("Thao tác xử lý âm thanh không xác định");
   if (options.action === "speed" && (!Number.isFinite(options.speed) || options.speed < 0.1 || options.speed > 4)) {
-    throw new Error("音频速度须在 0.1 至 4 倍之间");
+    throw new Error("Tốc độ âm thanh phải từ 0,1 đến 4 lần");
   }
-  if (options.pcm && !getPcmOptions(options.pcm)) throw new Error("PCM 采样率、声道数或采样格式无效");
+  if (options.pcm && !getPcmOptions(options.pcm)) throw new Error("Tần số lấy mẫu PCM, số kênh hoặc định dạng mẫu không hợp lệ");
   const inputOptions = options.pcm ? ["-f", options.pcm.format, "-sample_rate", String(options.pcm.sampleRate), "-channels", String(options.pcm.channels)] : [];
   const media = await probeAudio(ffmpeg, source, signal, inputOptions);
   const audio = media.streams.find(stream => stream.codec_type === "audio");
-  if (!audio) throw new Error("文件不包含音轨");
+  if (!audio) throw new Error("Tệp không có luồng âm thanh");
   const duration = Math.max(...[audio.duration, media.format.duration].map(Number).filter(value => Number.isFinite(value) && value > 0));
-  if (!Number.isFinite(duration) || duration <= 0) throw new Error("无法读取有效的音频时长");
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Không đọc được thời lượng âm thanh hợp lệ");
   if (options.action === "clip" && (!Array.isArray(options.segments) || options.segments.length === 0
     || options.segments.some(segment => !segment || !Number.isFinite(segment.start) || !Number.isFinite(segment.end)
       || segment.start < 0 || segment.end <= segment.start || segment.end > duration))) {
-    throw new Error("每个片段须满足 0 ≤ 开始时间 < 结束时间 ≤ 音频时长");
+    throw new Error("Mỗi đoạn phải thỏa mãn 0 ≤ thời điểm bắt đầu < thời điểm kết thúc ≤ thời lượng âm thanh");
   }
 
   const command = ffmpeg(source).output(options.outputPath).noVideo().audioCodec("aac").audioBitrate(192).format("ipod")
@@ -82,7 +82,7 @@ export async function processAudio(ffmpeg: BrowserFfmpegFactory, source: string,
   const result = await probeAudio(ffmpeg, options.outputPath, signal);
   const resultDuration = Number(result.format.duration);
   if (!Number.isFinite(resultDuration) || resultDuration <= 0 || !result.streams.some(stream => stream.codec_type === "audio")) {
-    throw new Error("生成的音频文件无效");
+    throw new Error("Tệp âm thanh được tạo không hợp lệ");
   }
   return { duration: resultDuration };
 }

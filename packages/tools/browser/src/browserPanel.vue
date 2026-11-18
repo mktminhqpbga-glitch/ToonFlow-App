@@ -1,35 +1,35 @@
 <template>
-  <section v-if="tools.length" class="browserPanel" aria-label="浏览器画面">
+  <section v-if="tools.length" class="browserPanel" aria-label="Màn hình trình duyệt">
       <header class="browserHeader">
         <icon-browser :size="14" aria-hidden="true" />
-        <span class="browserTitle" :title="session?.url || session?.title">{{ browserAddress || session?.title || "网页浏览器" }}</span>
-        <el-button text size="small" :disabled="!frame" @click="expanded = true"><icon-maximize :size="12" aria-hidden="true" /><span>放大</span></el-button>
+        <span class="browserTitle" :title="session?.url || session?.title">{{ browserAddress || session?.title || "Trình duyệt web" }}</span>
+        <el-button text size="small" :disabled="!frame" @click="expanded = true"><icon-maximize :size="12" aria-hidden="true" /><span>Phóng to</span></el-button>
       </header>
     <teleport :to="dialogScreenTarget || 'body'" :disabled="!expanded || !dialogScreenTarget">
       <div class="browserPanelScreen" :class="{ expandedScreen: expanded }" :aria-busy="status === 'connecting' || status === 'waiting'" @pointerdown="capturePointer" @mousedown.prevent="downScreen" @pointermove="moveScreen" @pointerup="upScreen" @mouseup="upScreen" @pointercancel="resetInput" @lostpointercapture="lostPointer" @pointerleave="leaveScreen" @click.prevent @auxclick.prevent @contextmenu.prevent @wheel.prevent="wheelScreen">
-        <img v-if="frame" ref="frameImage" class="browserFrame" :src="frame" :alt="session?.title ? `${session.title}的浏览器画面` : '浏览器实时画面'" draggable="false" @error="frameError" />
+        <img v-if="frame" ref="frameImage" class="browserFrame" :src="frame" :alt="session?.title ? `${session.title} — màn hình trình duyệt` : 'Hình ảnh trực tiếp từ trình duyệt'" draggable="false" @error="frameError" />
         <div v-if="status !== 'live' && !(status === 'paused' && frame)" class="browserNotice" role="status" aria-live="polite">
           <icon-loader-2 v-if="status === 'connecting' || status === 'waiting'" class="is-loading" :size="22" aria-hidden="true" />
           <icon-alert-circle v-else-if="status === 'error'" :size="22" aria-hidden="true" />
           <icon-browser v-else :size="22" aria-hidden="true" />
           <span>{{ connectionMessage || statusLabel }}</span>
         </div>
-        <textarea ref="keyboardInput" class="browserKeyboardInput" aria-label="输入到网页" autocomplete="off" autocapitalize="off" spellcheck="false" :disabled="!canInteract" @keydown="keyScreen" @keyup="keyScreen" @blur="resetInput" @input="textScreen" @compositionstart="composing = true" @compositionend="commitComposition" />
+        <textarea ref="keyboardInput" class="browserKeyboardInput" aria-label="Nhập vào trang web" autocomplete="off" autocapitalize="off" spellcheck="false" :disabled="!canInteract" @keydown="keyScreen" @keyup="keyScreen" @blur="resetInput" @input="textScreen" @compositionstart="composing = true" @compositionend="commitComposition" />
       </div>
     </teleport>
     <footer class="browserFooter">
-      <span class="browserOperation" role="status">{{ toolError ? "操作未完成" : operationLabel || "网页浏览器" }}</span>
+      <span class="browserOperation" role="status">{{ toolError ? "Thao tác chưa hoàn tất" : operationLabel || "Trình duyệt web" }}</span>
       <span class="browserStatus" :class="{ liveStatus: status === 'live' }" role="status"><span class="statusDot" aria-hidden="true" />{{ statusLabel }}</span>
     </footer>
     <p v-if="toolError || inputError" class="browserToolError" role="alert">{{ inputError || toolError }}</p>
-    <el-dialog v-model="expanded" class="browserPanelDialog" title="浏览器画面" width="80%" alignCenter appendToBody destroyOnClose :showClose="false" :closeOnClickModal="false" :closeOnPressEscape="false" @closed="keyboardInput?.blur()">
+    <el-dialog v-model="expanded" class="browserPanelDialog" title="Màn hình trình duyệt" width="80%" alignCenter appendToBody destroyOnClose :showClose="false" :closeOnClickModal="false" :closeOnPressEscape="false" @closed="keyboardInput?.blur()">
       <template #header>
-        <div class="browserHeader"><icon-browser :size="16" aria-hidden="true" /><span class="browserTitle" :title="session?.url">{{ session?.title || browserAddress || "网页浏览器" }}</span><el-button text size="small" @click="expanded = false"><icon-x :size="15" aria-hidden="true" /><span>关闭</span></el-button></div>
-        <nav class="browserNavigation" aria-label="网页导航">
-          <el-button text size="small" :disabled="!canNavigate || !session?.canGoBack" @click="navigateBrowser({ type: 'back' })"><icon-arrow-left :size="14" aria-hidden="true" /><span>返回</span></el-button>
-          <el-button text size="small" :disabled="!canNavigate || !session?.canGoForward" @click="navigateBrowser({ type: 'forward' })"><icon-arrow-right :size="14" aria-hidden="true" /><span>前进</span></el-button>
-          <el-button text size="small" :disabled="!canNavigate" :loading="navigationPending" @click="navigateBrowser({ type: 'reload' })"><icon-refresh v-if="!navigationPending" :size="14" aria-hidden="true" /><span>刷新</span></el-button>
-          <el-input ref="addressInput" v-model="addressDraft" class="browserAddressInput" size="small" aria-label="网页地址" placeholder="输入网址，按 Enter 访问" :disabled="!canNavigate" @blur="finishAddressEdit" @keydown.enter="navigateAddress" />
+        <div class="browserHeader"><icon-browser :size="16" aria-hidden="true" /><span class="browserTitle" :title="session?.url">{{ session?.title || browserAddress || "Trình duyệt web" }}</span><el-button text size="small" @click="expanded = false"><icon-x :size="15" aria-hidden="true" /><span>Đóng</span></el-button></div>
+        <nav class="browserNavigation" aria-label="Điều hướng web">
+          <el-button text size="small" :disabled="!canNavigate || !session?.canGoBack" @click="navigateBrowser({ type: 'back' })"><icon-arrow-left :size="14" aria-hidden="true" /><span>Quay lại</span></el-button>
+          <el-button text size="small" :disabled="!canNavigate || !session?.canGoForward" @click="navigateBrowser({ type: 'forward' })"><icon-arrow-right :size="14" aria-hidden="true" /><span>Tiếp theo</span></el-button>
+          <el-button text size="small" :disabled="!canNavigate" :loading="navigationPending" @click="navigateBrowser({ type: 'reload' })"><icon-refresh v-if="!navigationPending" :size="14" aria-hidden="true" /><span>Tải lại</span></el-button>
+          <el-input ref="addressInput" v-model="addressDraft" class="browserAddressInput" size="small" aria-label="Địa chỉ web" placeholder="Nhập địa chỉ, nhấn Enter để mở" :disabled="!canNavigate" @blur="finishAddressEdit" @keydown.enter="navigateAddress" />
         </nav>
       </template>
       <p v-if="inputError || toolError" class="browserNavigationError" role="alert">{{ inputError || toolError }}</p>
@@ -88,25 +88,25 @@ const browserAddress = computed(() => {
   try { return new URL(url).host || url; } catch { return url; }
 });
 const statusLabel = computed(() => ({
-  waiting: session.value ? "等待画面…" : latestTool.value?.status === "running" ? "正在启动浏览器…" : "暂无浏览器画面",
-  connecting: "正在连接…", live: "实时画面", paused: "已暂停观看", ended: "会话已结束", error: "画面连接失败",
+  waiting: session.value ? "Đang chờ hình ảnh…" : latestTool.value?.status === "running" ? "Đang mở trình duyệt…" : "Chưa có hình ảnh trình duyệt",
+  connecting: "Đang kết nối…", live: "Hình ảnh trực tiếp", paused: "Đã tạm dừng xem", ended: "Phiên đã kết thúc", error: "Kết nối hình ảnh thất bại",
 })[status.value]);
 const toolError = computed(() => {
   const tool = latestTool.value;
-  if (tool?.status === "interrupted") return "浏览器操作已中断";
+  if (tool?.status === "interrupted") return "Thao tác trình duyệt bị gián đoạn";
   if (tool?.status !== "error") return "";
   try {
     const result: unknown = JSON.parse(tool.result ?? "null");
     if (result && typeof result === "object" && "error" in result && typeof result.error === "string") return result.error;
-  } catch { /* 工具失败也可能返回普通文本。 */ }
-  return tool.result?.trim() || "浏览器操作失败";
+  } catch { /* 工具失败也可能Quay lại普通文本。 */ }
+  return tool.result?.trim() || "Thao tác trình duyệt thất bại";
 });
 const operationLabel = computed(() => {
   const tool = latestTool.value;
   if (!tool || tool.status === "error" || tool.status === "interrupted") return "";
-  const labels: Record<string, string> = { open: "打开网页", navigate: "访问网页", snapshot: "读取页面快照", read: "读取正文", hover: "悬停页面", click: "点击页面", type: "填写内容", pressKey: "发送按键", scroll: "滚动页面", screenshot: "截取画面", tabs: "查看标签页", newTab: "打开标签页", selectTab: "切换标签页", closeTab: "关闭标签页", close: "关闭浏览器" };
+  const labels: Record<string, string> = { open: "Mở trang web", navigate: "Truy cập trang web", snapshot: "Đọc ảnh chụp trang", read: "Đọc nội dung", hover: "Di chuột trên trang", click: "Nhấp trên trang", type: "Nhập nội dung", pressKey: "Gửi phím", scroll: "Cuộn trang", screenshot: "Chụp màn hình", tabs: "Xem các tab", newTab: "Mở tab", selectTab: "Chuyển tab", closeTab: "Đóng tab", close: "Đóng trình duyệt" };
   const label = typeof tool.args?.action === "string" ? labels[tool.args.action] : undefined;
-  return label ? `${label}${tool.status === "running" ? "…" : "完成"}` : "";
+  return label ? `${label}${tool.status === "running" ? "…" : "hoàn tất"}` : "";
 });
 let streamController: AbortController | undefined;
 let sessionIdentity = "";
@@ -161,7 +161,7 @@ function navigateAddress(event: Event | KeyboardEvent) {
     const url = new URL(addressDraft.value.trim());
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error();
     navigateBrowser({ type: "navigate", url: url.href });
-  } catch { inputError.value = "请输入不含账号密码的有效 HTTP/HTTPS 网页地址"; }
+  } catch { inputError.value = "Hãy nhập URL HTTP/HTTPS hợp lệ, không chứa tên đăng nhập hoặc mật khẩu"; }
 }
 
 function navigateBrowser(input: Extract<BrowserInput, { type: "navigate" | "back" | "forward" | "reload" }>) {
@@ -206,7 +206,7 @@ function stopStream() {
   streamController = undefined;
 }
 
-function endSession(message = "该浏览器会话已结束，无法继续观看") {
+function endSession(message = "Phiên trình duyệt đã kết thúc, không thể tiếp tục xem") {
   resetInput();
   sessionEnded = true;
   status.value = "ended";
@@ -237,7 +237,7 @@ watch([() => props.active, browserScope, () => session.value?.browserSessionId, 
 function receiveEvent(event: BrowserStreamEvent, sessionId: string) {
   if (event.type === "state") {
     const state = event.session;
-    if (!state || state.browserSessionId !== sessionId || typeof state.tabId !== "string" || typeof state.url !== "string" || typeof state.title !== "string" || !["running", "closed"].includes(state.status)) throw new Error("浏览器状态无效");
+    if (!state || state.browserSessionId !== sessionId || typeof state.tabId !== "string" || typeof state.url !== "string" || typeof state.title !== "string" || !["running", "closed"].includes(state.status)) throw new Error("Trạng thái trình duyệt không hợp lệ");
     if (state.tabId !== session.value?.tabId) { frame.value = ""; resetInput(); }
     session.value = state;
     if (state.status === "closed") { endSession(); return false; }
@@ -245,14 +245,14 @@ function receiveEvent(event: BrowserStreamEvent, sessionId: string) {
   }
   if (event.type === "frame") {
     if (event.sessionId !== sessionId || event.tabId !== session.value?.tabId) return true;
-    if (event.mimeType !== "image/jpeg" || typeof event.data !== "string" || !event.data) throw new Error("浏览器画面无效");
+    if (event.mimeType !== "image/jpeg" || typeof event.data !== "string" || !event.data) throw new Error("Hình ảnh trình duyệt không hợp lệ");
     frameViewport.value = { width: event.width, height: event.height };
     frame.value = `data:image/jpeg;base64,${event.data}`;
     connectionMessage.value = "";
     status.value = "live";
   }
   if (event.type === "closed" && event.sessionId === sessionId) { endSession(); return false; }
-  if (event.type === "error") throw new Error(typeof event.message === "string" ? event.message : "浏览器画面连接失败");
+  if (event.type === "error") throw new Error(typeof event.message === "string" ? event.message : "Không kết nối được luồng hình ảnh trình duyệt");
   return true;
 }
 
@@ -266,9 +266,9 @@ async function connect(scope: BrowserScope, sessionId: string, controller: Abort
     if (response.status === 404) { endSession(); return; }
     if (!response.ok) {
       const result = await response.json().catch(() => null);
-      throw new Error(result?.message || `浏览器画面请求失败（${response.status}）`);
+      throw new Error(result?.message || `Yêu cầu hình ảnh trình duyệt thất bại (${response.status}）`);
     }
-    if (!response.body || !response.headers.get("content-type")?.includes("application/x-ndjson")) throw new Error("未收到浏览器画面流");
+    if (!response.body || !response.headers.get("content-type")?.includes("application/x-ndjson")) throw new Error("Không nhận được luồng hình ảnh trình duyệt");
     reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let pending = "";
     while (true) {
@@ -281,16 +281,16 @@ async function connect(scope: BrowserScope, sessionId: string, controller: Abort
       for (const line of lines) {
         if (!line.trim()) continue;
         const event: unknown = JSON.parse(line);
-        if (!event || typeof event !== "object" || !("type" in event)) throw new Error("浏览器画面事件无效");
+        if (!event || typeof event !== "object" || !("type" in event)) throw new Error("Sự kiện hình ảnh trình duyệt không hợp lệ");
         if (!receiveEvent(event as BrowserStreamEvent, sessionId)) return;
       }
-      if (done) throw new Error("浏览器画面连接已中断");
+      if (done) throw new Error("Luồng hình ảnh trình duyệt bị gián đoạn");
     }
   } catch (error) {
     if (controller.signal.aborted || streamController !== controller) return;
     resetInput();
     status.value = "error";
-    connectionMessage.value = error instanceof Error ? error.message : "浏览器画面连接失败";
+    connectionMessage.value = error instanceof Error ? error.message : "Không kết nối được luồng hình ảnh trình duyệt";
   } finally {
     await reader?.cancel().catch(() => {});
     reader?.releaseLock();
@@ -301,7 +301,7 @@ async function connect(scope: BrowserScope, sessionId: string, controller: Abort
 function frameError() {
   resetInput();
   status.value = "error";
-  connectionMessage.value = "浏览器画面读取失败";
+  connectionMessage.value = "Không đọc được hình ảnh trình duyệt";
 }
 
 function focusInput() {
@@ -348,12 +348,12 @@ async function drainInput() {
       const result = await response.json();
       if (controller.signal.aborted) continue;
       if (response.status === 404) { endSession(result.message); continue; }
-      if (!response.ok || result.code !== 200) throw new Error(result.message || "网页操作失败");
+      if (!response.ok || result.code !== 200) throw new Error(result.message || "Thao tác trên trang web thất bại");
       if (["navigate", "back", "forward", "reload"].includes(input.type)) receiveEvent({ type: "state", session: result.data }, target.sessionId);
       inputError.value = "";
     } catch (error) {
       if (!controller.signal.aborted) {
-        inputError.value = error instanceof Error ? error.message : "网页操作失败";
+        inputError.value = error instanceof Error ? error.message : "Thao tác trên trang web thất bại";
         resetInput();
       }
     } finally {

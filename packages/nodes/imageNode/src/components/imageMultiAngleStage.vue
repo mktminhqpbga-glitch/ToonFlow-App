@@ -11,8 +11,8 @@
         :class="{ cameraViewHandle: viewMode === 'camera' }"
         :style="viewMode === 'orbit' ? handleStyle : undefined"
         :disabled="disabled"
-        :aria-label="`相机，水平环绕 ${azimuth} 度，垂直俯仰 ${elevation} 度，距离 ${distance}；方向键调整角度，Shift 微调，加减键调整距离`"
-        title="拖动调整相机角度；方向键调整，Shift 微调，加减键调整距离"
+        :aria-label="`Camera, xoay ngang ${azimuth} độ, góc cao thấp ${elevation} độ, khoảng cách ${distance}; dùng phím mũi tên để chỉnh, giữ Shift để chỉnh từng độ, phím cộng trừ để chỉnh khoảng cách`"
+        title="Kéo để đổi góc máy; phím mũi tên để chỉnh, Shift để chỉnh từng độ, cộng trừ để chỉnh khoảng cách"
         @pointerdown.stop.prevent="startDrag"
         @pointermove="moveDrag"
         @pointerup="finishDrag"
@@ -23,12 +23,12 @@
           <rect x="3" y="6" width="13" height="12" rx="2" />
           <path d="m16 10 5-3v10l-5-3" stroke-linejoin="round" />
         </svg>
-        <span>相机</span>
+        <span>Máy ảnh</span>
       </button>
-      <span v-if="imageLoading || imageFailed" class="imageStatus" role="status">{{ imageLoading ? '正在载入参考图…' : '参考图加载失败' }}</span>
-      <span class="stageHint">{{ viewMode === 'orbit' ? '拖动相机改变角度 · 拖动空白旋转总览' : '仅显示原图平面透视 · 拖动相机图标调整机位' }}</span>
+      <span v-if="imageLoading || imageFailed" class="imageStatus" role="status">{{ imageLoading ? 'Đang tải ảnh tham chiếu…' : 'Không tải được ảnh tham chiếu' }}</span>
+      <span class="stageHint">{{ viewMode === 'orbit' ? 'Kéo máy ảnh để thay đổi góc · Kéo vùng trống để xoay toàn cảnh' : 'Xem mặt phẳng ảnh gốc · Kéo biểu tượng máy ảnh để đổi vị trí' }}</span>
     </template>
-    <div v-else class="stageFallback" role="status">3D 预览不可用，请使用角度控件调整相机</div>
+    <div v-else class="stageFallback" role="status">Không thể xem trước 3D, hãy dùng thanh chỉnh góc máy</div>
   </div>
 </template>
 
@@ -154,10 +154,10 @@ function render() {
   grid.scale.set(distance + 0.6, 1, distance + 0.6);
   handleStyle.value = project(targetCamera.position);
   directionLabels.value = [
-    { text: "原始机位 · 0°", style: project(new three.Vector3(0, -0.3, 4.8)) },
-    { text: "后方 · 180°", style: project(new three.Vector3(0, -0.3, -distance - 0.25)) },
-    { text: "原图左 · −90°", style: project(new three.Vector3(-distance - 0.25, -0.3, 0)) },
-    { text: "原图右 · 90°", style: project(new three.Vector3(distance + 0.25, -0.3, 0)) },
+    { text: "Vị trí gốc · 0°", style: project(new three.Vector3(0, -0.3, 4.8)) },
+    { text: "Phía sau · 180°", style: project(new three.Vector3(0, -0.3, -distance - 0.25)) },
+    { text: "Trái ảnh gốc · −90°", style: project(new three.Vector3(-distance - 0.25, -0.3, 0)) },
+    { text: "Phải ảnh gốc · 90°", style: project(new three.Vector3(distance + 0.25, -0.3, 0)) },
   ];
   // ACT: 单张图片只表示参考平面，背面用纯色避免镜像误导；主体的新视角仍由生成模型补全。
   renderer.render(scene, overview ? overviewCamera : targetCamera);

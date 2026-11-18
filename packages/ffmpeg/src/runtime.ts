@@ -17,36 +17,36 @@ const native = ffmpeg.prototype as FfmpegInternals;
 /** 原生 fluent 工厂；文件路径相对工作区解析，不修改库的全局原型。 */
 export function createFfmpeg(directory: string): typeof ffmpeg {
   const root = realpathSync(directory);
-  if (!statSync(root).isDirectory()) throw new Error("FFmpeg 工作区必须是目录");
+  if (!statSync(root).isDirectory()) throw new Error("Workspace FFmpeg phải là thư mục");
 
   function assertWithin(path: string) {
     const offset = relative(root, path);
     if (offset === ".." || offset.startsWith(`..${sep}`) || isAbsolute(offset)) {
-      throw Object.assign(new Error("FFmpeg 只能操作当前工作区内的文件"), { status: 403 });
+      throw Object.assign(new Error("FFmpeg chỉ được thao tác với tệp bên trong workspace hiện tại"), { status: 403 });
     }
   }
 
   function resolvePath(path: string, folder = false): string {
     if (!path || /[\x00-\x1f]/.test(path) || (/^[a-z][a-z\d+.-]*:/i.test(path) && !/^[a-z]:[\\/]/i.test(path))) {
-      throw new Error("FFmpeg 文件路径无效，不能使用协议或设备路径");
+      throw new Error("Đường dẫn FFmpeg không hợp lệ; không dùng URI hoặc đường dẫn thiết bị");
     }
     const target = resolve(root, path);
     assertWithin(target);
     if (process.platform === "win32" && target.slice(parse(target).root.length).split(/[\\/]/).some(part =>
       /[:<>"|?*]|[. ]$/.test(part) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) {
-      throw new Error("FFmpeg 文件路径无效");
+      throw new Error("Đường dẫn tệp FFmpeg không hợp lệ");
     }
     let parent = target;
     while (true) {
       try {
         const actual = resolve(realpathSync(parent), relative(parent, target));
         assertWithin(actual);
-        if (!folder && actual === root) throw new Error("FFmpeg 文件路径不能是工作区根目录");
+        if (!folder && actual === root) throw new Error("Đường dẫn tệp FFmpeg không thể là thư mục gốc workspace");
         return actual;
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         // 悬空链接不能当作普通的待创建文件，缺失父目录则继续检查最近的已有祖先。
-        if (lstatSync(parent, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error("FFmpeg 不能操作悬空符号链接");
+        if (lstatSync(parent, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error("FFmpeg không thể thao tác với liên kết tượng trưng bị hỏng");
         const ancestor = dirname(parent);
         if (ancestor === parent) throw error;
         parent = ancestor;

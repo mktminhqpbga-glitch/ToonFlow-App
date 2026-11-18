@@ -102,7 +102,7 @@ async function completeSetup() {
   padding: 8px;
   background: var(--el-bg-color);
   color: var(--el-text-color-primary);
-  font-family: var(--el-font-family);
+  font-family: var(--appFontFamily);
 
   .pageLanguage {
     position: fixed;

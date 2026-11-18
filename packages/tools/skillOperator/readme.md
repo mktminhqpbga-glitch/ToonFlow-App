@@ -1,18 +1,18 @@
-# Skill 操作器
+# Quản lý kỹ năng
 
-通过一个 `skillOperator` 工具统一查询、读取、新建和修改技能。源码说明在构建时嵌入 `.tool.js`，安装只需这个 JS 文件。
+Dùng công cụ `skillOperator` để liệt kê, đọc, tạo và sửa kỹ năng. Tài liệu mô tả được nhúng vào gói .tool.js khi build, nên khi cài chỉ cần tệp JS này.
 
-读取、新建、修改三个配置开关默认开启；关闭某项后，该操作从工具参数中移除，执行时也会拒绝。目录查询始终可用。这些开关只约束本工具，不替代其他工具的文件权限。
+Ba công tắc cấu hình Đọc, Tạo, Sửa mặc định bật. Khi tắt, thao tác tương ứng bị bỏ khỏi tham số và bị từ chối khi gọi. Danh sách kỹ năng vẫn đọc được; các công tắc chỉ áp dụng cho công cụ này, không thay quyền tệp của công cụ khác.
 
-| action | 用途 | 参数 |
+| action | Mục đích | Tham số |
 | --- | --- | --- |
-| `list` | 实时列出技能名称、描述、来源及路径 | 可选 `scope` |
-| `read` | 读取技能正文或引用资料 | `name`，可选 `scope`、`path` |
-| `create` | 新建技能或资料文件，不覆盖已有文件 | `name`、`content`，可选 `scope`、`path` |
-| `update` | 用完整内容修改已有文件 | `name`、`content`，可选 `scope`、`path` |
+| `list` | Liệt kê tên, mô tả, nguồn và đường dẫn kỹ năng hiện tại | `scope` tùy chọn |
+| `read` | Đọc nội dung kỹ năng hoặc tài liệu tham chiếu | `name`, tùy chọn `scope` và `path` |
+| `create` | Tạo kỹ năng/tài liệu mới, không ghi đè | `name`, `content`; `scope`, `path` tùy chọn |
+| `update` | Thay toàn bộ nội dung tệp hiện có | `name`, `content`; `scope`, `path` tùy chọn |
 
-`scope` 为 `workspace`（当前工作区 `skill/`）或 `global`（全局 `data/skills/`）。读取、修改未指定范围时，同名技能优先使用工作区版本；新建默认工作区。可指定全局范围访问被覆盖的版本。
+`scope` có thể là `workspace` (thư mục skill/ trong dự án) hoặc `global` (thư mục data/skills/). Nếu không chỉ định phạm vi khi đọc hoặc sửa, kỹ năng trong workspace được ưu tiên khi trùng tên; tạo mới mặc định trong workspace. Dùng phạm vi toàn cục để truy cập bản bị che bởi kỹ năng cùng tên.
 
-`path` 相对于该技能的目录，默认 `SKILL.md`。可使用 `references/example.md` 操作附带资料，禁止越出技能目录。新技能先创建 `SKILL.md`，名称使用小驼峰；正文必须包含有效的 YAML frontmatter，`name` 与技能名称一致，`description` 不为空。修改前先读取原内容。
+`path` tương đối từ thư mục kỹ năng, mặc định `SKILL.md`. Có thể dùng `references/example.md` để thao tác tài liệu kèm theo, không cho phép ra ngoài thư mục kỹ năng. Khi tạo kỹ năng mới phải tạo SKILL.md trước, tên theo camelCase; nội dung phải có YAML frontmatter hợp lệ với `name` đúng và `description` không rỗng. Trước khi cập nhật phải đọc bản hiện tại.
 
-目录按调用实时扫描，新建后可立即查询、读取；`/skill:名称` 仍可手动调用。列表中的 `disableModelInvocation` 表示该技能是否仅适用于用户主动指定。
+Danh mục được quét trực tiếp mỗi lần gọi; vừa tạo có thể tra cứu hoặc đọc ngay. Có thể gọi thủ công bằng cú pháp /skill:tên. Cờ `disableModelInvocation` cho biết kỹ năng chỉ được gọi khi người dùng chỉ định rõ hay không.

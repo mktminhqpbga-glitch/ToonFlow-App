@@ -1,6 +1,6 @@
 <template>
   <footer class="variationFooter">
-    <el-select :modelValue="selectedModel ? settings.model : ''" class="modelSelect" filterable :loading="modelsLoading" :disabled="busy" placeholder="选择图片模型" :aria-label="`${label}模型`" noDataText="请先在设置中添加图片模型" placement="top-start" @update:modelValue="settings.model = $event" @visible-change="visible => visible && refreshModels()">
+    <el-select :modelValue="selectedModel ? settings.model : ''" class="modelSelect" filterable :loading="modelsLoading" :disabled="busy" placeholder="Chọn mô hình tạo ảnh" :aria-label="`Mô hình ${label}`" noDataText="Hãy thêm mô hình ảnh trong phần Cài đặt" placement="top-start" @update:modelValue="settings.model = $event" @visible-change="visible => visible && refreshModels()">
       <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
       <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
         <el-option v-for="model in provider.models" :key="model.modelId" :label="model.label" :value="getNodeModelKey(model)">
@@ -9,13 +9,13 @@
       </el-option-group>
     </el-select>
     <el-popover trigger="click" placement="top" :width="220" :disabled="busy || !selectedModel" :showArrow="false">
-      <template #reference><el-button class="sizeButton" text :disabled="busy || !selectedModel" :aria-label="`${label}输出设置`">{{ settings.ratio || '比例' }} · {{ settings.size || '分辨率' }}</el-button></template>
+      <template #reference><el-button class="sizeButton" text :disabled="busy || !selectedModel" :aria-label="`Cài đặt đầu ra ${label}`">{{ settings.ratio || 'Tỉ lệ' }} · {{ settings.size || 'Độ phân giải' }}</el-button></template>
       <div class="variationSettings nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @wheel.stop @keydown.stop>
-        <label>分辨率<el-select v-model="settings.size" :disabled="busy" :aria-label="`${label}分辨率`"><el-option v-for="size in sizeOptions" :key="size" :label="size" :value="size" /></el-select></label>
-        <label>比例<el-select v-model="settings.ratio" :disabled="busy" :aria-label="`${label}比例`" @change="ratioFromSource = false"><el-option v-for="ratio in ratioOptions" :key="ratio" :label="ratio" :value="ratio" /></el-select></label>
+        <label>Độ phân giải<el-select v-model="settings.size" :disabled="busy" :aria-label="`Độ phân giải ${label}`"><el-option v-for="size in sizeOptions" :key="size" :label="size" :value="size" /></el-select></label>
+        <label>Tỉ lệ khung hình<el-select v-model="settings.ratio" :disabled="busy" :aria-label="`Tỉ lệ ${label}`" @change="ratioFromSource = false"><el-option v-for="ratio in ratioOptions" :key="ratio" :label="ratio" :value="ratio" /></el-select></label>
       </div>
     </el-popover>
-    <el-button type="primary" :icon="IconSparkles" :loading="generating" :disabled="busy || modelsLoading || !source || !selectedModel || !prompt.trim()" @click="generate">{{ buttonLabel ?? '生成图片' }}</el-button>
+    <el-button type="primary" :icon="IconSparkles" :loading="generating" :disabled="busy || modelsLoading || !source || !selectedModel || !prompt.trim()" @click="generate">{{ buttonLabel ?? 'Tạo ảnh' }}</el-button>
   </footer>
 </template>
 
@@ -28,6 +28,7 @@ import { getNodeModelKey, useNodeAi, useNodeModelSelection, useNodeToolsContext,
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
 import modelLabel from "@toonflow/node-shared/modelLabel";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
+import { interpolateNodePrompt, resolveNodePrompt } from "@toonflow/node-shared/nodePrompts";
 import { useImageVariationNode } from "../useImageVariationNode";
 
 const props = defineProps<{
@@ -35,6 +36,9 @@ const props = defineProps<{
   source?: NodeMediaValue;
   aspectRatio: number;
   prompt: string;
+  promptId?: string;
+  parameterSummary?: string;
+  promptVariables?: Record<string, string | number>;
   label: string;
   buttonLabel?: string;
   disabled?: boolean;
@@ -95,7 +99,7 @@ async function refreshModels() {
       const choice = modelGroups.value[0]?.models[0];
       props.settings.model = choice ? getNodeModelKey(choice) : "";
     }
-  } catch (error) { if (!disposed) showNodeError(error, "模型读取失败"); }
+  } catch (error) { if (!disposed) showNodeError(error, "Không tải được danh sách mô hình"); }
   finally { modelsLoading.value = false; }
 }
 
@@ -104,15 +108,22 @@ async function generate() {
   const controller = generationController = new AbortController();
   generating.value = true;
   try {
-    const { nodeId, edgeId } = await createVariation({ ...props.settings, label: props.label, prompt: props.prompt }, controller.signal);
+    const parameters = props.parameterSummary?.trim();
+    const prompt = props.promptId ? await resolveNodePrompt(props.promptId, props.prompt, controller.signal) : props.prompt;
+    // Các số trên điều khiển luôn đi kèm yêu cầu, kể cả prompt ẩn đã được thay thế.
+    const renderedPrompt = interpolateNodePrompt(prompt, props.promptVariables);
+    // Prompt gốc đã có đầy đủ số liệu. Nếu người dùng sửa prompt, bổ sung
+    // khối thông số cuối cùng để các điều khiển không bị xóa hoặc ghi đè.
+    const finalPrompt = parameters && prompt !== props.prompt ? `${renderedPrompt}\n\n${parameters}` : renderedPrompt;
+    const { nodeId, edgeId } = await createVariation({ ...props.settings, label: props.label, prompt: finalPrompt }, controller.signal);
     const createdNode = findNode(nodeId);
     await getNodeTools().call({ nodeId, name: "node:getConfig", args: {} }, controller.signal);
     if (!createdNode || findNode(nodeId) !== createdNode || !getEdges.value.some(edge => edge.id === edgeId && edge.source === id && edge.sourceHandle === "image" && edge.target === nodeId && edge.targetHandle === "in")) {
-      throw new Error("新节点或原图连接已变化，请在新节点中检查后生成");
+      throw new Error("Node mới hoặc kết nối ảnh gốc đã thay đổi. Hãy kiểm tra node trước khi tạo.");
     }
     await getNodeTools().call({ nodeId, name: "node:generateImage", args: {} }, controller.signal);
     emit("generated");
-  } catch (error) { if (!controller.signal.aborted && !disposed) showNodeError(error, `${props.label}失败`); }
+  } catch (error) { if (!controller.signal.aborted && !disposed) showNodeError(error, `Tạo ảnh ${props.label} thất bại`); }
   finally { generating.value = false; generationController = undefined; }
 }
 </script>

@@ -14,10 +14,10 @@ export function useNodeAsr() {
     async transcribe(path: string, options: BrowserAudioAsrOptions = {}) {
       const signal = options.signal ? AbortSignal.any([lifetime.signal, options.signal]) : lifetime.signal;
       signal.throwIfAborted();
-      if (!isBrowserAudioAsrSupported()) throw new DOMException("当前浏览器暂不支持音频转文本，可以换个浏览器再试。", "NotSupportedError");
+      if (!isBrowserAudioAsrSupported()) throw new DOMException("Trình duyệt hiện tại chưa hỗ trợ chuyển âm thanh thành văn bản; hãy thử trình duyệt khác.", "NotSupportedError");
       const content = await files.getWorkspaceFiles().read(path);
       signal.throwIfAborted();
-      if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("音频不能为空且不能超过 100 MB");
+      if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("Âm thanh không được để trống và không được vượt quá 100 MB");
       const url = URL.createObjectURL(new Blob([content]));
       try {
         return await transcribeBrowserAudio(url, { ...options, signal });

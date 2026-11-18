@@ -1,27 +1,27 @@
-# 插件开发工具
+# Công cụ phát triển plugin
 
-这是 Toonflow 的内置工具，源码位于 `packages/tools/pluginDeveloper`，随默认工具构建和打包。节点和工具的源码编译复用现有脚手架与工作区依赖，无需注册本地链接。
+Đây là công cụ tích hợp của Toonflow, mã nguồn tại `packages/tools/pluginDeveloper`, được build và đóng gói cùng các công cụ mặc định. Việc biên dịch node và công cụ tái sử dụng framework cùng phụ thuộc workspace, không cần tự tạo symlink cục bộ.
 
-在本工具目录构建，产物为仓库根目录的 `build/tools/pluginDeveloper.tool.js`。常用依赖会预编译并压成 ZIP 嵌入该文件，构建时按最终 JS 的实际字节数限制在 10 MB 以下：
+Build trong thư mục này tạo `build/tools/pluginDeveloper.tool.js` ở gốc repository. Các phụ thuộc phổ biến được biên dịch trước, nén ZIP và nhúng vào gói; giới hạn kích thước JS cuối cùng dưới 10 MB:
 
-```sh
+~~~sh
 bun run build
-```
+~~~
 
-仓库根目录的 `bun run build:tools` 会一并构建此工具；`bun run dev:plugins` 或以 `NODE_ENV=dev` 构建时同步到 `data/tools/`。
+Từ gốc repository, `bun run build:tools` cũng build công cụ này. Chạy `bun run dev:plugins` hoặc build với `NODE_ENV=dev` để đồng bộ vào `data/tools/`.
 
-执行类型检查：
+Typecheck:
 
-```sh
+~~~sh
 bun run typecheck
-```
+~~~
 
-需要维护完整 SDK 时，可单独构建当前系统与架构的归档和校验清单，产物写入本工具目录的 `build/`：
+Khi cần bảo trì SDK đầy đủ, có thể build riêng kho lưu trữ và danh sách kiểm tra cho hệ điều hành/kiến trúc hiện tại, kết quả trong thư mục `build/` của công cụ:
 
-```sh
+~~~sh
 bun run build:sdk
-```
+~~~
 
-工具以单个 `.tool.js` 随应用提供。首次 `build` 校验并解开内置 ZIP，之后复用缓存。使用宿主 Zod 的工具、普通 CSS 的 Vue 界面和使用节点骨架、共享组件的节点可直接离线构建。缓存位于工具文件同级的 `pluginResources/pluginDeveloper/`，卸载时一并清理。`guide` 直接读取内置文档。
+Công cụ được phân phối thành một tệp .tool.js. Lần build đầu kiểm tra và giải nén ZIP tích hợp, các lần sau dùng cache. Plugin dùng công cụ Zod của host, UI Vue với CSS thường hoặc node dùng framework và component dùng chung có thể build offline. Cache nằm cạnh tệp tool trong `pluginResources/pluginDeveloper/` và được dọn khi gỡ cài đặt. Thao tác `guide` đọc tài liệu tích hợp.
 
-项目显式使用仅完整 SDK 提供的依赖时，构建才会尝试复用或下载兼容的 1.2.0 完整 SDK。项目语法和路径校验错误直接返回给调用方。
+Khi dự án phụ thuộc vào phần chỉ có trong SDK đầy đủ, build mới cố gắng dùng lại hoặc tải bản SDK 1.2.0 tương thích. Lỗi cú pháp và kiểm tra đường dẫn được trả trực tiếp cho bên gọi.

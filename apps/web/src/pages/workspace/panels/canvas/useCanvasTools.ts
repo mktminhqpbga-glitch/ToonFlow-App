@@ -1,4 +1,5 @@
 import { inject, nextTick, watch, type Ref } from "vue";
+import { t, translate } from "@toonflow/i18n/vue";
 import { useVueFlow, type XYPosition } from "@vue-flow/core";
 import { useNodeEvent, useNodeToolsContext, validateConnection } from "@toonflow/nodes-scaffold/runtime";
 import { canvasSchemas, isNodeToolAllowed, type CanvasContext, type CanvasToolCall } from "@toonflow/tool-canvas/runtime";
@@ -53,7 +54,7 @@ export function useCanvasTools(options: {
 
   function findNode(nodeId: string) {
     const node = flow.findNode(nodeId);
-    if (!node) throw new Error(`节点不存在：${nodeId}`);
+    if (!node) throw new Error(t`节点不存在：${nodeId}`);
     return node;
   }
 
@@ -104,7 +105,7 @@ export function useCanvasTools(options: {
                   return nextContext.call({ name: "getCanvas", args: {} }, callSignal);
                 }
                 const binding = options.getCanvasBinding();
-                if (binding.id !== result) throw Object.assign(new Error("画布已再次切换，请重新发送消息"), { code: "CANVAS_UNAVAILABLE" });
+                if (binding.id !== result) throw Object.assign(new Error(translate("画布已再次切换，请重新发送消息")), { code: "CANVAS_UNAVAILABLE" });
                 id = binding.id;
                 canvasSignal = binding.signal;
                 canvasSignal.throwIfAborted();
@@ -123,7 +124,7 @@ export function useCanvasTools(options: {
         } catch (error) {
           if (signal?.aborted) throw signal.reason;
           if (canvasSignal.aborted || workspaceSignal.aborted || callSignal.aborted) {
-            throw Object.assign(new Error(error instanceof Error ? error.message : "画布已不可用，请重新发送消息"), { code: "CANVAS_UNAVAILABLE" });
+            throw Object.assign(new Error(error instanceof Error ? error.message : translate("画布已不可用，请重新发送消息")), { code: "CANVAS_UNAVAILABLE" });
           }
           throw error;
         } finally {
@@ -135,7 +136,7 @@ export function useCanvasTools(options: {
 
   async function execute(request: CanvasToolCall, signal: AbortSignal, canvasId: string): Promise<unknown> {
     signal.throwIfAborted();
-    if (!canvasId && !["getCanvas", "addCanvas", "switchCanvas", "developPlugin"].includes(request.name)) throw new Error("请先选择画布");
+    if (!canvasId && !["getCanvas", "addCanvas", "switchCanvas", "developPlugin"].includes(request.name)) throw new Error(translate("请先选择画布"));
     if (isCanvasRead(request.name)) {
       await nextTick();
       signal.throwIfAborted();
@@ -145,13 +146,13 @@ export function useCanvasTools(options: {
       case "developPlugin": {
         const args = pluginDevelopmentSchema.parse(request.args);
         const directory = workspaceStore.project?.directory;
-        if (!directory) throw new Error("请先选择工作目录");
+        if (!directory) throw new Error(translate("请先选择工作目录"));
         const develop = <T>(action: typeof args.action | "previewInstall" = args.action, installDigest?: string) =>
           http<T>({ method: "POST", url: "/api/plugins/develop", data: { directory, ...args, action, installDigest }, signal, timeout: 360000 });
         if (args.action === "upload") return openPluginUpload(() => develop<PluginUploadDraft>(), signal);
         if (args.action !== "install") return develop();
         const preview = await develop<PluginInstallPreview>("previewInstall");
-        if (!preview || (preview.type !== "node" && preview.type !== "tool") || !preview.fileName || !/^[a-f0-9]{64}$/.test(preview.digest)) throw new Error("安装接口未返回有效的插件名称");
+        if (!preview || (preview.type !== "node" && preview.type !== "tool") || !preview.fileName || !/^[a-f0-9]{64}$/.test(preview.digest)) throw new Error(translate("安装接口未返回有效的插件名称"));
         const allowed = await confirmPluginInstall({ type: preview.type, name: preview.fileName, source: `${directory}/${args.path}` }, signal);
         signal.throwIfAborted();
         if (!allowed) return { installed: false, status: "declined" };
@@ -160,7 +161,7 @@ export function useCanvasTools(options: {
           signal.throwIfAborted();
           const { type, name } = result;
           if ((type !== "node" && type !== "tool") || typeof name !== "string" || !/^[a-z][a-zA-Z0-9]*$/.test(name)) {
-            throw new Error("安装接口未返回有效的插件名称");
+            throw new Error(translate("安装接口未返回有效的插件名称"));
           }
           await options.reloadPlugin(type, name);
           return { ...result, installed: true, refreshed: true, ...(type === "tool" ? { nextTurn: true } : {}) };
@@ -170,12 +171,12 @@ export function useCanvasTools(options: {
       }
       case "transcribeAudio": {
         const { path, lang } = asrRequestSchema.parse(request.args);
-        if (!isBrowserAudioAsrSupported()) throw new Error("当前浏览器或 WebView 不支持音频文件语音识别");
+        if (!isBrowserAudioAsrSupported()) throw new Error(translate("当前浏览器或 WebView 不支持音频文件语音识别"));
         const directory = workspaceStore.project?.directory;
-        if (!directory) throw new Error("请先选择工作目录");
+        if (!directory) throw new Error(translate("请先选择工作目录"));
         const content = await useWorkspaceFiles(directory).read(path);
         signal.throwIfAborted();
-        if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("音频不能为空且不能超过 100 MB");
+        if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error(translate("音频不能为空且不能超过 100 MB"));
         const url = URL.createObjectURL(new Blob([content]));
         try {
           return await transcribeBrowserAudio(url, { lang, signal });
@@ -203,7 +204,7 @@ export function useCanvasTools(options: {
       case "addNode": {
         const args = canvasSchemas.addNode.parse(request.args);
         const type = options.availableNodes.value.find(node => node.type === args.type);
-        if (!type) throw new Error("节点类型未启用或尚未加载，请先查询 getCanvas");
+        if (!type) throw new Error(translate("节点类型未启用或尚未加载，请先查询 getCanvas"));
         const id = crypto.randomUUID();
         flow.addNodes({ id, type: type.type, position: nodePosition(args.position), data: { label: args.label ?? type.label } });
         await nextTick();
@@ -215,16 +216,16 @@ export function useCanvasTools(options: {
         const idSet = new Set(nodeIds);
         const nodes = nodeIds.map(findNode);
         nodes.forEach(node => {
-          if (node.deletable === false) throw new Error(`节点不允许删除：${node.id}`);
+          if (node.deletable === false) throw new Error(t`节点不允许删除：${node.id}`);
           if (flow.getNodes.value.some(item => item.parentNode === node.id && !idSet.has(item.id))) {
-            throw new Error(`请先删除此节点的子节点：${node.id}`);
+            throw new Error(t`请先删除此节点的子节点：${node.id}`);
           }
-          if (flow.getConnectedEdges(node.id).some(edge => edge.deletable === false)) throw new Error(`节点存在不可删除的连接：${node.id}`);
+          if (flow.getConnectedEdges(node.id).some(edge => edge.deletable === false)) throw new Error(t`节点存在不可删除的连接：${node.id}`);
         });
         for (const node of nodes) {
           await useNodeEvent(node.id, flow).emit("delete");
           signal.throwIfAborted();
-          if (flow.findNode(node.id) !== node) throw new Error("节点已被替换，请重新查询画布");
+          if (flow.findNode(node.id) !== node) throw new Error(translate("节点已被替换，请重新查询画布"));
         }
         const edgeIds = flow.getEdges.value.filter(edge => idSet.has(edge.source) || idSet.has(edge.target)).map(edge => edge.id);
         flow.removeNodes(nodeIds, true);
@@ -233,7 +234,7 @@ export function useCanvasTools(options: {
       }
       case "moveNodes": {
         const { moves } = canvasSchemas.moveNodes.parse(request.args);
-        moves.forEach(move => { if (findNode(move.nodeId).draggable === false) throw new Error(`节点不允许移动：${move.nodeId}`); });
+        moves.forEach(move => { if (findNode(move.nodeId).draggable === false) throw new Error(t`节点不允许移动：${move.nodeId}`); });
         moves.forEach(move => flow.updateNode(move.nodeId, { position: nodePosition(move.position) }));
         await nextTick();
         return { nodes: moves.map(move => nodeInfo(move.nodeId)) };
@@ -252,13 +253,13 @@ export function useCanvasTools(options: {
           const sourceNode = findNode(connection.source);
           const targetNode = findNode(connection.target);
           if (!flow.nodesConnectable.value || sourceNode.connectable === false || targetNode.connectable === false) {
-            throw new Error(`节点不允许连接：${connection.source} -> ${connection.target}`);
+            throw new Error(t`节点不允许连接：${connection.source} -> ${connection.target}`);
           }
           const existing = edges.find(edge => edge.source === connection.source && edge.target === connection.target
             && edge.sourceHandle === connection.sourceHandle && edge.targetHandle === connection.targetHandle);
           if (existing) return { id: existing.id, connection, isNew: false };
           if (!validateConnection(connection, { sourceNode, targetNode, nodes: flow.getNodes.value, edges })) {
-            throw new Error(`连接无效：${connection.source} -> ${connection.target}，请检查端口方向、数据类型以及目标节点的连接规则`);
+            throw new Error(t`连接无效：${connection.source} -> ${connection.target}，请检查端口方向、数据类型以及目标节点的连接规则`);
           }
           const id = crypto.randomUUID();
           // ACT: 候选边只参与本批校验，全部通过后再一次提交画布。
@@ -277,8 +278,8 @@ export function useCanvasTools(options: {
         const { edgeIds } = canvasSchemas.deleteEdges.parse(request.args);
         edgeIds.forEach(edgeId => {
           const edge = flow.findEdge(edgeId);
-          if (!edge) throw new Error(`连线不存在：${edgeId}`);
-          if (edge.deletable === false) throw new Error(`连线不允许删除：${edgeId}`);
+          if (!edge) throw new Error(t`连线不存在：${edgeId}`);
+          if (edge.deletable === false) throw new Error(t`连线不允许删除：${edgeId}`);
         });
         const nodeIds = [...new Set(edgeIds.flatMap(id => {
           const edge = flow.findEdge(id)!;
@@ -291,7 +292,7 @@ export function useCanvasTools(options: {
       case "selectNodes": {
         const { nodeIds } = canvasSchemas.selectNodes.parse(request.args);
         const nodes = nodeIds.map(findNode);
-        if (nodes.some(node => node.selectable === false)) throw new Error("节点不允许选择");
+        if (nodes.some(node => node.selectable === false)) throw new Error(translate("节点不允许选择"));
         flow.removeSelectedElements();
         flow.addSelectedNodes(nodes);
         await nextTick();
@@ -315,10 +316,10 @@ export function useCanvasTools(options: {
       }
       case "nodeTools": {
         const args = canvasSchemas.nodeTools.parse(request.args);
-        if (!isNodeToolAllowed(args.name, agentNodeToolPermissions.value)) throw new Error(`Agent 已禁止调用节点函数 ${args.name}，请在顶部节点工具控制中调整权限`);
+        if (!isNodeToolAllowed(args.name, agentNodeToolPermissions.value)) throw new Error(t`Agent 已禁止调用节点函数 ${args.name}，请在顶部节点工具控制中调整权限`);
         return getNodeTools().call(args, signal);
       }
-      default: throw new Error(`未知画布操作：${request.name}`);
+      default: throw new Error(t`未知画布操作：${request.name}`);
     }
   }
 }

@@ -1,13 +1,13 @@
-# 音频生成节点
+# Node tạo âm thanh
 
-根据提示词、文本及可选的参考图片或音频生成音频。模型列表来自媒体模型设置，仅显示音频模型。
+Tạo âm thanh từ prompt, văn bản và ảnh hoặc âm thanh tham chiếu tùy chọn. Danh sách mô hình lấy từ Cài đặt → Mô hình đa phương tiện và chỉ hiển thị mô hình âm thanh.
 
-## 使用方法
+## Cách sử dụng
 
-1. 选中节点，选择音频模型并输入文本或音频效果描述。
-2. 按需连接参考节点。文本数量不限；图片和音频互斥，合计最多连接一个。
-3. 打开生成设置，选择中文或英文、采样率及输出格式；具体支持范围由供应商校验。
-4. 点击生成，需要中止时点击停止；失败或取消会保留已有输出。
-5. 生成后可播放、下载、截取、变速或替换音频，与普通音频节点使用相同操作。
+1. Chọn node, chọn mô hình âm thanh rồi nhập văn bản hoặc mô tả hiệu ứng âm thanh.
+2. Nối node tham chiếu khi cần. Số lượng văn bản không giới hạn; ảnh và âm thanh tham chiếu loại trừ nhau, tổng cộng chỉ được nối tối đa một.
+3. Mở cài đặt tạo để chọn ngôn ngữ, tần số lấy mẫu và định dạng đầu ra. Nhà cung cấp xác minh giới hạn hỗ trợ thực tế.
+4. Bấm **Tạo**; muốn ngắt thì bấm **Dừng**. Thất bại hoặc hủy không xóa đầu ra trước đó.
+5. Sau khi tạo có thể phát, tải xuống, cắt, đổi tốc độ hoặc thay âm thanh như node âm thanh thông thường.
 
-截取和变速会在右侧生成新的普通音频节点，需要启用音频节点插件。PCM 等浏览器不支持的格式仍可下载。
+Cắt và đổi tốc độ sẽ tạo node âm thanh thường mới ở bên phải; cần bật plugin node âm thanh. Định dạng PCM hoặc định dạng trình duyệt không hỗ trợ vẫn có thể tải xuống.

@@ -17,6 +17,7 @@ export default Router().post("/", validateFields({
     return;
   }
   const cwd = await u.workspace.resolveWorkspace(req, directory);
+  if (parsed.data.providerId === "aiChrome") u.aiChrome.authorize(req);
   const owner = u.multiTenant.requestIdentity(req);
   if (taskId) {
     if (req.aborted || res.destroyed) return;

@@ -1,10 +1,10 @@
 <template>
-  <el-dialog v-model="visible" title="快速打开" width="min(620px, 94vw)" top="12vh" :closeOnClickModal="false" @closed="cancel" @opened="input?.focus()">
+  <el-dialog v-model="visible" title="Mở nhanh" width="min(620px, 94vw)" top="12vh" :closeOnClickModal="false" @closed="cancel" @opened="input?.focus()">
     <div class="quickOpen" @keydown.down.prevent="step(1)" @keydown.up.prevent="step(-1)" @keydown.enter.prevent="choose(selected)">
-      <el-input ref="input" v-model="query" placeholder="输入文件路径或节点名称" aria-label="快速打开文件" clearable />
-      <p class="status" role="status">{{ loading ? '正在读取工作区…' : `已找到 ${entries.length} 个文件与节点` }}{{ results.length > 100 ? '，仅展示前 100 个匹配，请缩小范围' : '' }}</p>
+      <el-input ref="input" v-model="query" placeholder="Nhập đường dẫn tệp hoặc tên node" aria-label="Mở nhanh tệp" clearable />
+      <p class="status" role="status">{{ loading ? 'Đang đọc workspace…' : `Đã tìm thấy ${entries.length} tệp và node` }}{{ results.length > 100 ? ', chỉ hiển thị 100 kết quả đầu tiên; hãy thu hẹp tìm kiếm' : '' }}</p>
       <el-alert v-if="error" :title="error" type="warning" :closable="false" />
-      <div class="resultList" role="listbox" aria-label="快速打开结果">
+      <div class="resultList" role="listbox" aria-label="Kết quả mở nhanh">
         <button v-for="(item, index) in results.slice(0, 100)" :key="item.key" class="resultItem" :class="{ selected: selected === index }" role="option" :aria-selected="selected === index" @click="choose(index)">
           <img v-if="icon(item)" :src="icon(item)" alt="" />
           <span class="label">{{ item.selection.label }}</span><small>{{ item.path }}</small>
@@ -64,7 +64,7 @@ async function open() {
       const { entries: children } = await files.list(pending[index]!, request.signal);
       for (const child of children) {
         request.signal.throwIfAborted();
-        if (++visited > 10000) { error.value = "工作区超过 10000 个条目，仅搜索已读取部分；其余文件可从文件树打开。"; return; }
+        if (++visited > 10000) { error.value = "Workspace có hơn 10.000 mục; chỉ tìm trong phần đã đọc. Có thể mở các tệp còn lại từ cây thư mục."; return; }
         if (child.type === "directory") { pending.push(child.path); continue; }
         if (/\.json$/i.test(child.path) && await isCanvasFile(files, child.path, request.signal)) {
           const canvas = await files.readJson<{ nodes?: { id: string; data?: { label?: string } }[] }>(child.path, request.signal);

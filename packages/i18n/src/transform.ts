@@ -43,6 +43,7 @@ function isDisplayProperty(node: ObjectProperty, parent: ObjectExpression, ances
   if (ancestors.some((ancestor) => ancestor.type === "ObjectProperty" && /^(?:data|outputs|inputs|inputValue|payload|body)$/.test(propertyName(ancestor) ?? ""))) return false;
   if (/(?:labels|titles|descriptions|tooltips)$/i.test(bindingName)) return true;
   if (!displayProperties.has(name)) return false;
+  if (name === "label" && ancestors.some(ancestor => ancestor.type === "ObjectProperty" && propertyName(ancestor) === "handles")) return true;
   if (/ButtonText$|^(?:groupLabel|placeholder|emptyText|loadingText|activeText|inactiveText|tooltip|inputErrorMessage|aria-label)$/.test(name)) return true;
   const siblings = parent.properties.flatMap((property) => property.type === "ObjectProperty" ? [propertyName(property)] : []);
   if (name === "message") return siblings.some((key) => key === "trigger" || key === "required" || key === "validator");

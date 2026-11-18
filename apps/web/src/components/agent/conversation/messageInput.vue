@@ -2,20 +2,20 @@
   <div class="messageInput" :class="{ draggingAttachments, voiceActive }" @dragenter.capture="dragEnterAttachments" @dragover.capture="dragOverAttachments" @dragleave.capture="dragLeaveAttachments" @drop.capture="dropAttachments">
     <div v-if="draggingAttachments" class="attachmentDropHint" role="status">
       <icon-paperclip :size="20" aria-hidden="true" />
-      <span>松开添加附件</span>
-      <small>图片、视频、文档或代码文件</small>
+      <span>Thả để thêm tệp đính kèm</span>
+      <small>Ảnh, video, tài liệu hoặc tệp mã nguồn</small>
     </div>
-    <div v-if="editingId" class="editingBanner"><span>编辑消息</span><el-button text size="small" :disabled="running || submitting || voiceActive" @click="cancelEdit">取消</el-button></div>
+    <div v-if="editingId" class="editingBanner"><span>Chỉnh sửa tin nhắn</span><el-button text size="small" :disabled="running || submitting || voiceActive" @click="cancelEdit">Hủy</el-button></div>
     <div
       class="senderResizeHandle"
       role="separator"
       aria-orientation="horizontal"
-      aria-label="调整输入框高度"
+      aria-label="Điều chỉnh chiều cao ô nhập"
       aria-valuemin="44"
       :aria-valuemax="senderMaxHeight"
       :aria-valuenow="senderHeight"
       tabindex="0"
-      title="拖动调整输入框高度"
+      title="Kéo để điều chỉnh chiều cao ô nhập"
       @focus="senderHeight = sender?.chatElement.rollBox.clientHeight ?? 44"
       @pointerdown="startSenderResize"
       @pointermove="moveSenderResize"
@@ -30,7 +30,7 @@
       <div v-if="voiceActive" class="voiceOverlay" role="status" aria-live="polite">
         <div class="voiceFeedback">
           <span class="voiceWave" aria-hidden="true"><span v-for="(level, index) in voiceBars" :key="index" :style="{ height: `${3 + level * 21}px` }" /></span>
-          <span>{{ voiceState === 'starting' ? '正在启动语音识别…' : voiceState === 'listening' ? '开始说话，松开结束' : '正在识别…' }}</span>
+          <span>{{ voiceState === 'starting' ? 'Đang khởi động nhận dạng giọng nói…' : voiceState === 'listening' ? 'Bắt đầu nói, thả để kết thúc' : 'Đang nhận dạng…' }}</span>
         </div>
         <div v-if="voiceText" class="voiceTranscript">{{ voiceText }}</div>
       </div>
@@ -40,12 +40,12 @@
     <div class="senderActions">
       <modelPopover v-model="selectedModel" v-model:reasoningEffort="reasoningEffort" :active="active" :disabled="disabled || running || submitting || voiceActive" />
       <input ref="attachmentInput" type="file" :accept="attachmentAccept" multiple hidden :disabled="locked || running" @change="selectAttachments" />
-      <el-button text circle :disabled="locked || running" aria-label="添加附件" :title="running ? '生成期间仅支持发送文字' : '添加附件'" @click="attachmentInput?.click()"><icon-paperclip :size="16" /></el-button>
+      <el-button text circle :disabled="locked || running" aria-label="Thêm tệp đính kèm" :title="running ? 'Trong lúc tạo, chỉ hỗ trợ gửi văn bản' : 'Thêm tệp đính kèm'" @click="attachmentInput?.click()"><icon-paperclip :size="16" /></el-button>
       <mentionMenu ref="mentionMenuRef" :directory="directory" :active="active" :disabled="locked || running || !directory" :query="mentionQuery" :editor="senderElement" :currentCanvasId="createCanvasContext?.()?.id" @open="captureMentionPosition" @select="insertMentions" @dismiss="mentionQuery = undefined" />
       <skillMenu ref="skillMenuRef" :directory="directory" :active="active" :disabled="locked || running || !directory" :query="skillQuery" :editor="senderElement" @select="selectSkill" @dismiss="skillQuery = undefined" />
       <el-button class="voiceButton" :class="{ voiceActive }" text circle :disabled="!voiceSupported || (!voiceActive && locked)" :aria-label="voiceButtonLabel" :aria-pressed="voiceActive" :title="voiceButtonLabel" @click="voiceActive ? cancelVoiceInput() : startVoiceInput()"><icon-microphone :size="18" /></el-button>
       <contextUsagePopover v-model:visible="contextMenuVisible" :usage="contextUsage" :stats="stats" :contextWindow="contextWindow" :disabled="voiceActive" />
-      <el-button v-if="running" class="stopButton" text circle :disabled="stopping" aria-label="停止生成" title="停止生成" @click="emit('stop')"><icon-player-stop-filled :size="14" /></el-button>
+      <el-button v-if="running" class="stopButton" text circle :disabled="stopping" aria-label="Dừng tạo" title="Dừng tạo" @click="emit('stop')"><icon-player-stop-filled :size="14" /></el-button>
       <el-button class="sendButton" type="primary" circle :disabled="locked || (running && !!editingId)" :aria-label="sendLabel" :title="sendTitle" @click="submitDraft()"><icon-arrow-up :size="16" /></el-button>
     </div>
   </div>
@@ -104,8 +104,8 @@ let senderResize: { pointerId: number; y: number; height: number } | undefined;
 const contextMenuVisible = ref(false);
 const running = computed(() => props.busy || props.remoteRunning);
 const locked = computed(() => props.disabled || props.submitting || props.stopping || props.deletingId !== undefined || restoringAttachment.value || voiceActive.value);
-const sendLabel = computed(() => running.value ? "排队发送" : editingId.value ? "重发消息" : "发送消息");
-const sendTitle = computed(() => running.value ? "排队发送，本轮完成后处理（Enter）；Ctrl/Cmd + Enter 引导当前任务" : `${sendLabel.value}（Enter）`);
+const sendLabel = computed(() => running.value ? "Gửi vào hàng đợi" : editingId.value ? "Gửi lại tin nhắn" : "Gửi tin nhắn");
+const sendTitle = computed(() => running.value ? "Xếp hàng gửi sau khi lượt hiện tại hoàn tất (Enter); Ctrl/Cmd + Enter để bổ sung hướng dẫn cho tác vụ hiện tại" : `${sendLabel.value} (Enter)`);
 const placeholder = computed(() => running.value ? translate("输入文字，Enter 排队，Ctrl/Cmd + Enter 引导…") : voiceSupported ? translate("输入消息，长按语音输入，@ 提及节点输出或全局素材…") : translate("输入消息，@ 提及节点输出或全局素材…"));
 const { voiceSupported, voiceState, voiceText, voiceActive, voiceButtonLabel, voiceLevel, armVoiceInput, startVoiceInput, clearVoicePress, cancelVoiceInput } = useVoiceInput({
   getSender: () => sender,
@@ -148,7 +148,7 @@ watch(running, value => {
 function submitDraft(mode: "steer" | "followUp" = "followUp") {
   if (locked.value || !props.active || (running.value && editingId.value)) return;
   if (running.value && (draftAttachments.value.length || sender?.getTagData().mention.length)) {
-    ElMessage.warning("生成期间仅支持发送文字，请先移除附件和提及；当前草稿已保留");
+    ElMessage.warning("Trong lúc tạo, chỉ hỗ trợ gửi văn bản; hãy xóa tệp đính kèm và lượt nhắc đến; bản nháp hiện tại vẫn được giữ");
     return;
   }
   if (running.value) emit("submit", mode);
@@ -200,7 +200,7 @@ async function insertMentions(mentions: AgentMention[]) {
   const instance = sender;
   if (!instance || locked.value || running.value || !props.active) return;
   const currentIds = new Set(instance.getTagData().mention.map(item => item.id));
-  if (currentIds.size + mentions.length > 20) return ElMessage.warning("每条消息最多提及 20 个输出或素材");
+  if (currentIds.size + mentions.length > 20) return ElMessage.warning("Mỗi tin nhắn được tham chiếu tối đa 20 đầu ra hoặc tài nguyên");
   insertingMentions = true;
   try {
     if (mentionPosition?.node.instance.$el.isConnected) mentionPosition.node.instance.focus(mentionPosition.node.offset);
@@ -212,7 +212,7 @@ async function insertMentions(mentions: AgentMention[]) {
       await instance.setMention({ id: mention.id, name: mentionName(mention) });
     }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "添加提及失败");
+    ElMessage.error(error instanceof Error ? error.message : "Thêm tham chiếu thất bại");
   } finally {
     mentionQuery.value = undefined;
     mentionPosition = undefined;
@@ -242,7 +242,7 @@ async function fillPrompt(prompt: string, attachments?: AgentAttachment[]) {
   const instance = sender;
   if (!instance || locked.value) return false;
   if (running.value && attachments?.length) {
-    ElMessage.warning("生成期间仅支持发送文字，当前草稿已保留");
+    ElMessage.warning("Trong lúc tạo, chỉ hỗ trợ gửi văn bản, bản nháp hiện tại vẫn được giữ");
     return false;
   }
   draftMentions.value = [];
@@ -331,7 +331,7 @@ async function restoreTextAttachment(index: number) {
     await instance.setText(`${instance.isEmpty(false) ? "" : "\n"}${text}`);
     if (sender === instance) draftAttachments.value = draftAttachments.value.filter(item => item !== attachment);
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "还原文本附件失败，请重试");
+    ElMessage.error(error instanceof Error ? error.message : "Khôi phục tệp văn bản đính kèm thất bại, vui lòng thử lại");
   } finally {
     restoringAttachment.value = false;
   }
@@ -346,7 +346,7 @@ function pasteAttachments(event: ClipboardEvent) {
     } catch (error) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      ElMessage.warning(error instanceof Error ? error.message : "无法添加文本附件");
+      ElMessage.warning(error instanceof Error ? error.message : "Không thể đính kèm tệp văn bản");
       return;
     }
   }
@@ -399,24 +399,24 @@ function dropAttachments(event: DragEvent) {
 
 function addAttachments(files: File[]) {
   if (locked.value) return;
-  if (running.value) return ElMessage.warning("生成期间仅支持发送文字，请在本轮完成后添加附件");
+  if (running.value) return ElMessage.warning("Trong lúc tạo, chỉ hỗ trợ gửi văn bản, hãy thêm tệp đính kèm sau khi lượt hiện tại hoàn tất");
   for (const file of files) {
     const readableMimeType = getReadableFileMimeType(file.name, file.type);
     const mimeType = readableMimeType ?? file.type.split(";")[0]!.trim().toLowerCase();
     if (!readableMimeType && !/^(image|video)\//.test(mimeType)) {
-      ElMessage.warning("只支持图片、视频和受支持的文本或文档文件");
+      ElMessage.warning("Chỉ hỗ trợ ảnh, video và các định dạng văn bản hoặc tài liệu tương thích");
       continue;
     }
     if (!file.size || file.size > 100 * 1024 * 1024) {
-      ElMessage.warning("附件不能为空且不能超过 100 MB");
+      ElMessage.warning("Tệp đính kèm không được rỗng hoặc vượt quá 100 MB");
       continue;
     }
     if (mimeType === "text/plain" && file.size > 400000) {
-      ElMessage.warning("文本附件不能超过 400 KB（400000 字节），请缩减内容后重试。");
+      ElMessage.warning("Tệp văn bản không được vượt quá 400 KB (400000 byte). Hãy giảm dung lượng rồi thử lại.");
       continue;
     }
     if (draftAttachments.value.length >= 20) {
-      ElMessage.warning("每条消息最多添加 20 个附件");
+      ElMessage.warning("Mỗi tin nhắn chỉ được đính kèm tối đa 20 tệp");
       break;
     }
     draftAttachments.value.push({ name: file.name, path: "", mimeType, file });

@@ -6,7 +6,7 @@
       size="small"
       :disabled="disabled"
       :aria-label="label"
-      placeholder="留空即不绑定"
+      placeholder="Để trống để bỏ gán"
       @keydown.stop
       @blur="commitInput"
       @keyup.enter="commitInput" />
@@ -18,13 +18,13 @@
         :disabled="disabled"
         :aria-label="label"
         :aria-pressed="recording"
-        :title="recording ? '按键录制，Esc 取消' : '点击修改快捷键'"
+        :title="recording ? 'Ghi nhận phím, Esc để hủy' : 'Nhấn để sửa phím tắt'"
         @click="draft = code; recording = true"
         @keydown.stop="capture"
         @keyup.stop="finishModifiers"
         @blur="cancelRecording">
-        <span v-if="recording" class="placeholder">请按快捷键…</span>
-        <span v-else-if="!draft" class="placeholder">未绑定</span>
+        <span v-if="recording" class="placeholder">Hãy bấm phím tắt…</span>
+        <span v-else-if="!draft" class="placeholder">Chưa gán</span>
         <span v-else class="bindings">
           <span v-for="(binding, index) in getShortcutBindings(draft)" :key="binding" class="binding">
             <span v-if="index" class="separator">/</span>
@@ -42,16 +42,16 @@
         size="small"
         :icon="IconX"
         :disabled="disabled"
-        :aria-label="`清除${label}`"
-        title="取消绑定"
+        :aria-label="`Xóa${label}`"
+        title="Bỏ gán"
         @click="setBinding('')" />
     </template>
     <el-dropdown v-if="allowNone" class="bindingOptions" :disabled="disabled" trigger="click" @command="setBinding" @visibleChange="optionsVisible = $event">
-      <el-button text size="small" :icon="optionsVisible ? IconChevronUp : IconChevronDown" :disabled="disabled" :aria-label="`设置${label}`" title="无需按键或取消绑定" />
+      <el-button text size="small" :icon="optionsVisible ? IconChevronUp : IconChevronDown" :disabled="disabled" :aria-label="`Đặt${label}`" title="Không dùng phím hoặc bỏ gán" />
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="None">无需按键</el-dropdown-item>
-          <el-dropdown-item command="">取消绑定</el-dropdown-item>
+          <el-dropdown-item command="None">Không cần phím</el-dropdown-item>
+          <el-dropdown-item command="">Bỏ gán</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>

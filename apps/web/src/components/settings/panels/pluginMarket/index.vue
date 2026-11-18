@@ -2,25 +2,25 @@
   <div class="pluginMarket">
     <div class="marketToolbar">
       <div class="marketHeader">
-        <nav class="marketNav" aria-label="插件列表">
-          <button class="navButton" type="button" :aria-pressed="isMarketTab" @click="activeTab = 'discover'">发现插件</button>
-          <button class="navButton" type="button" :aria-pressed="activeTab === 'installed'" @click="activeTab = 'installed'">已安装</button>
+        <nav class="marketNav" aria-label="Danh sách plugin">
+          <button class="navButton" type="button" :aria-pressed="isMarketTab" @click="activeTab = 'discover'">Khám phá plugin</button>
+          <button class="navButton" type="button" :aria-pressed="activeTab === 'installed'" @click="activeTab = 'installed'">Đã cài</button>
           <button class="navButton" type="button" :aria-pressed="activeTab === 'mcp'" @click="activeTab = 'mcp'">MCP</button>
           <button class="navButton" type="button" :aria-pressed="activeTab === 'ffmpeg'" @click="activeTab = 'ffmpeg'">FFmpeg</button>
         </nav>
         <div class="marketLinks">
           <el-button tag="a" href="https://api.toonflow.net/console/plugIn" target="_blank" rel="noopener noreferrer" size="small" text :icon="IconExternalLink">
-            网页版市场
+            Chợ plugin trực tuyến
           </el-button>
           <el-button tag="a" href="https://qcn7xdsqgc4z.feishu.cn/docx/KNBNd9naqolsy6xjAOCcEAkqnRd" target="_blank" rel="noopener noreferrer" size="small" text :icon="IconBook">
-            开发者文档
+            Tài liệu dành cho nhà phát triển
           </el-button>
         </div>
       </div>
       <div v-if="isMarketTab || activeTab === 'installed'" class="marketControls">
         <form class="marketSearch" role="search" @submit.prevent="applySearch">
-          <el-input v-model="searchQuery" size="small" placeholder="搜索插件" aria-label="搜索插件" clearable @clear="applySearch" />
-          <el-button size="small" nativeType="submit">搜索</el-button>
+          <el-input v-model="searchQuery" size="small" placeholder="Tìm plugin" aria-label="Tìm plugin" clearable @clear="applySearch" />
+          <el-button size="small" nativeType="submit">Tìm kiếm</el-button>
         </form>
         <div class="marketActions">
           <el-button
@@ -29,24 +29,24 @@
             plain
             :icon="IconCloudUpload"
             :disabled="!accountToken"
-            :title="accountToken ? '上传插件到市场' : '请先在账号与余额中登录'"
-            @click="openUpload()">上传插件</el-button>
+            :title="accountToken ? 'Đăng plugin lên chợ' : 'Hãy đăng nhập ở mục Tài khoản và số dư'"
+            @click="openUpload()">Tải plugin lên</el-button>
           <template v-if="activeTab === 'installed'">
-            <el-button size="small" type="primary" :icon="IconUpload" :loading="installing" aria-label="安装本地插件" @click="pluginFileInput?.click()">
-              安装插件
+            <el-button size="small" type="primary" :icon="IconUpload" :loading="installing" aria-label="Cài plugin từ máy" @click="pluginFileInput?.click()">
+              Cài plugin
             </el-button>
             <input ref="pluginFileInput" type="file" :accept="agentMarketEnabled ? '.umd.js,.tool.js,.agent.zip,.zip,.md,.tar,.tar.gz,.tgz' : '.umd.js,.tool.js,.zip,.md,.tar,.tar.gz,.tgz'" hidden @change="installFile" />
             <template v-if="agentMarketEnabled && selectedType === 'agent'">
-              <el-button size="small" :icon="IconLink" :disabled="loading || !canManageAgents" @click="agentConnectVisible = true">连接远程 Agent</el-button>
-              <el-button size="small" :icon="IconSettings" :disabled="loading || !canManageAgents" @click="a2aSettingsVisible = true">A2A 服务</el-button>
+              <el-button size="small" :icon="IconLink" :disabled="loading || !canManageAgents" @click="agentConnectVisible = true">Kết nối Agent từ xa</el-button>
+              <el-button size="small" :icon="IconSettings" :disabled="loading || !canManageAgents" @click="a2aSettingsVisible = true">Dịch vụ A2A</el-button>
             </template>
           </template>
         </div>
       </div>
       <div v-if="isMarketTab || activeTab === 'installed'" class="marketFilters">
-        <div class="typeFilters" role="group" aria-label="插件类型">
+        <div class="typeFilters" role="group" aria-label="Loại plugin">
           <button class="filterButton" type="button" :aria-pressed="selectedType === 'all'" @click="selectedType = 'all'">
-            全部
+            Tất cả
             <span v-if="activeTab === 'installed' && installedCounts.all !== undefined" class="filterCount">{{ installedCounts.all }}</span>
           </button>
           <button
@@ -55,7 +55,7 @@
             class="filterButton"
             type="button"
             :disabled="type === 'agent' && !agentMarketEnabled"
-            :title="type === 'agent' && !agentMarketEnabled ? '测试阶段，暂未开放' : undefined"
+            :title="type === 'agent' && !agentMarketEnabled ? 'Đang thử nghiệm, chưa mở' : undefined"
             :aria-pressed="selectedType === type"
             @click="selectedType = type">
             {{ category.label }}
@@ -63,11 +63,11 @@
           </button>
         </div>
         <div class="filterOptions">
-          <div class="personalFilters" role="group" aria-label="我的插件">
-            <button class="filterButton" type="button" :aria-pressed="selectedType === 'collection'" @click="selectedType = 'collection'">收藏</button>
-            <button class="filterButton" type="button" :aria-pressed="selectedType === 'my'" @click="selectedType = 'my'">我的</button>
+          <div class="personalFilters" role="group" aria-label="Plugin của tôi">
+            <button class="filterButton" type="button" :aria-pressed="selectedType === 'collection'" @click="selectedType = 'collection'">Yêu thích</button>
+            <button class="filterButton" type="button" :aria-pressed="selectedType === 'my'" @click="selectedType = 'my'">Của tôi</button>
           </div>
-          <el-checkbox v-if="activeTab === 'installed'" v-model="hideBuiltin" class="builtinFilter" size="small">隐藏内置插件</el-checkbox>
+          <el-checkbox v-if="activeTab === 'installed'" v-model="hideBuiltin" class="builtinFilter" size="small">Ẩn plugin tích hợp sẵn</el-checkbox>
         </div>
       </div>
     </div>
@@ -78,18 +78,18 @@
       <template v-if="activeTab === 'installed'">
         <el-alert v-for="message in visibleLoadErrors" :key="message" class="loadError" :title="message" type="error" :closable="false" showIcon />
         <el-alert v-if="pluginExistenceError" class="loadError" :title="pluginExistenceError" type="warning" :closable="false" showIcon>
-          <el-button size="small" @click="pluginExistenceRefreshKey++">重新检查</el-button>
+          <el-button size="small" @click="pluginExistenceRefreshKey++">Kiểm tra lại</el-button>
         </el-alert>
-        <p v-if="checkingPluginExistence" class="listStatus" role="status">正在检查插件是否已在市场中…</p>
+        <p v-if="checkingPluginExistence" class="listStatus" role="status">Đang kiểm tra plugin có trên chợ hay chưa…</p>
       </template>
-      <el-alert v-else-if="!accountToken" class="loadError" title="请先在账号与余额中登录 Toonflow 账号，再浏览和收藏插件。" type="info" :closable="false" showIcon />
+      <el-alert v-else-if="!accountToken" class="loadError" title="Hãy đăng nhập tài khoản Toonflow trong mục Tài khoản và số dư để khám phá và lưu plugin yêu thích." type="info" :closable="false" showIcon />
       <el-alert v-else-if="marketError" class="loadError" :title="marketError" type="error" :closable="false" showIcon>
-        <el-button size="small" @click="marketRefreshKey++">重试</el-button>
+        <el-button size="small" @click="marketRefreshKey++">Thử lại</el-button>
       </el-alert>
 
       <div
         class="pluginList"
-        :aria-label="`${selectedType === 'collection' ? '收藏' : selectedType === 'my' ? '我的' : tabs[activeTab]}列表`"
+        :aria-label="`${selectedType === 'collection' ? 'Yêu thích' : selectedType === 'my' ? 'Của tôi' : tabs[activeTab]}danh sách`"
         :aria-busy="activeTab === 'installed' ? loading : marketLoading">
         <el-card
           v-for="plugin in visiblePlugins"
@@ -104,19 +104,19 @@
           @click="openPlugin(plugin)"
           @keydown.enter.self.prevent="openPlugin(plugin)"
           @keydown.space.self.prevent="openPlugin(plugin)">
-          <img v-if="plugin.type === 'node' && plugin.coverUrl" class="pluginCover" :src="plugin.coverUrl" :alt="`${plugin.displayName} 节点截图`" loading="lazy" referrerpolicy="no-referrer" />
+          <img v-if="plugin.type === 'node' && plugin.coverUrl" class="pluginCover" :src="plugin.coverUrl" :alt="`${plugin.displayName} ảnh chụp node`" loading="lazy" referrerpolicy="no-referrer" />
           <div class="pluginHeader">
             <div class="pluginHeading">
               <h3 class="pluginName">
                 <component :is="pluginTypes[plugin.type].icon" :size="18" aria-hidden="true" />
-                <span class="pluginTitle">{{ plugin.displayName }}</span>
+                <span class="pluginTitle">{{ translate(plugin.displayName) }}</span>
                 <a
                   v-if="plugin.github"
                   class="repoLink"
                   :href="plugin.github"
                   target="_blank"
                   rel="noopener noreferrer"
-                  :aria-label="`${plugin.displayName} 的 GitHub`"
+                  :aria-label="`${plugin.displayName}  trên GitHub`"
                   title="GitHub"
                   @click.stop>
                   <icon-external-link :size="14" aria-hidden="true" />
@@ -125,8 +125,8 @@
               <span class="pluginId" :title="plugin.name">{{ plugin.name }}</span>
             </div>
             <div class="pluginTags">
-              <el-tag v-if="plugin.demoVideoUrl" type="info" size="small" effect="plain">效果演示</el-tag>
-              <el-tag v-if="plugin.builtin || installedByKey.get(`${plugin.type}:${plugin.name}`)?.builtin" type="info" size="small" effect="plain">内置</el-tag>
+              <el-tag v-if="plugin.demoVideoUrl" type="info" size="small" effect="plain">Video minh họa</el-tag>
+              <el-tag v-if="plugin.builtin || installedByKey.get(`${plugin.type}:${plugin.name}`)?.builtin" type="info" size="small" effect="plain">Tích hợp sẵn</el-tag>
               <el-tag
                 v-for="(tag, index) in plugin.tags"
                 :key="index"
@@ -141,9 +141,9 @@
           <p v-if="plugin.description" class="pluginDescription">{{ plugin.description }}</p>
           <div v-if="isMarketTab && selectedType === 'my'" class="reviewStatus" :class="{ rejected: plugin.state === 2 }">
             <el-tag :type="plugin.state === 1 ? 'success' : plugin.state === 2 ? 'danger' : 'warning'" size="small" effect="plain">
-              {{ plugin.state === 1 ? '已发布' : plugin.state === 2 ? '审核未通过' : '待审核' }}
+              {{ plugin.state === 1 ? 'Đã xuất bản' : plugin.state === 2 ? 'Không được duyệt' : 'Đang chờ duyệt' }}
             </el-tag>
-            <p v-if="plugin.state === 2 && plugin.rejectReason" class="reviewReason"><span>审核意见</span>{{ plugin.rejectReason }}</p>
+            <p v-if="plugin.state === 2 && plugin.rejectReason" class="reviewReason"><span>Nhận xét xét duyệt</span>{{ plugin.rejectReason }}</p>
           </div>
           <el-text v-if="plugin.loadError" type="danger" size="small">{{ plugin.loadError }}</el-text>
           <div v-if="plugin.author || plugin.version" class="pluginMeta">
@@ -151,21 +151,21 @@
             <span v-if="plugin.version" class="pluginVersion" type="info" size="small" effect="plain">v{{ plugin.version }}</span>
           </div>
           <div v-if="isMarketTab" class="pluginFooter" @click.stop>
-            <el-button size="small" :aria-label="`查看 ${plugin.displayName} 的详情`" @click="openPlugin(plugin)">查看详情</el-button>
+            <el-button size="small" :aria-label="`Xem ${plugin.displayName} - chi tiết`" @click="openPlugin(plugin)">Xem chi tiết</el-button>
             <el-button
               v-if="selectedType === 'my'"
               size="small"
               type="primary"
               :disabled="plugin.state === 0 || loading || deletingPlugins.has(plugin.key) || collectingPlugins.has(plugin.key) || pendingPlugins.has(plugin.key)"
-              :aria-label="`${plugin.state === 1 ? '更新版本' : plugin.state === 2 ? '修改后重新提交' : '等待审核'} ${plugin.displayName}`"
-              @click="openResubmit(plugin)">{{ plugin.state === 1 ? '更新版本' : plugin.state === 2 ? '修改后重新提交' : '等待审核' }}</el-button>
-            <el-text v-if="installLabel(plugin) === '已安装'" type="info" size="small">已安装</el-text>
+              :aria-label="`${plugin.state === 1 ? 'Cập nhật phiên bản' : plugin.state === 2 ? 'Chỉnh sửa và gửi lại' : 'Đang chờ duyệt'} ${plugin.displayName}`"
+              @click="openResubmit(plugin)">{{ plugin.state === 1 ? 'Cập nhật phiên bản' : plugin.state === 2 ? 'Chỉnh sửa và gửi lại' : 'Đang chờ duyệt' }}</el-button>
+            <el-text v-if="installLabel(plugin) === 'Đã cài'" type="info" size="small">Đã cài</el-text>
             <el-popconfirm
               v-else-if="pluginTypes[plugin.type].path && plugin.url && plugin.fileName"
               :title="`${translate(installLabel(plugin))}${pluginTypes[plugin.type].label}“${plugin.displayName}”（${plugin.fileName}）？`"
               width="280"
               :confirmButtonText="translate(installLabel(plugin))"
-              cancelButtonText="取消"
+              cancelButtonText="Hủy"
               @confirm="installMarketPlugin(plugin)">
               <template #reference>
                 <el-button
@@ -178,7 +178,7 @@
                 </el-button>
               </template>
             </el-popconfirm>
-            <el-text v-else type="info" size="small">{{ plugin.type === 'agent' && !agentMarketEnabled ? '测试阶段，暂未开放' : '暂不支持安装' }}</el-text>
+            <el-text v-else type="info" size="small">{{ plugin.type === 'agent' && !agentMarketEnabled ? 'Đang thử nghiệm, chưa mở' : 'Chưa hỗ trợ cài đặt' }}</el-text>
             <div v-if="plugin.state === 1 || selectedType === 'my'" class="pluginActions">
               <component
                 v-if="plugin.state === 1"
@@ -189,17 +189,17 @@
                 tabindex="0"
                 :aria-disabled="collectingPlugins.has(plugin.key) || deletingPlugins.has(plugin.key)"
                 :aria-pressed="plugin.isCollected === true"
-                :aria-label="`${plugin.isCollected ? '取消收藏' : '添加收藏'} ${plugin.displayName}`"
-                :title="plugin.isCollected ? '取消收藏' : '添加收藏'"
+                :aria-label="`${plugin.isCollected ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'} ${plugin.displayName}`"
+                :title="plugin.isCollected ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'"
                 @click="toggleCollection(plugin)"
                 @keydown.enter.prevent="toggleCollection(plugin)"
                 @keydown.space.prevent="toggleCollection(plugin)" />
               <el-popconfirm
                 v-if="selectedType === 'my'"
-                :title="`确定从市场删除“${plugin.displayName}”吗？`"
+                :title="`Bạn có chắc muốn xóa “${plugin.displayName}” khỏi chợ plugin?`"
                 width="280"
-                confirmButtonText="删除"
-                cancelButtonText="取消"
+                confirmButtonText="Xóa"
+                cancelButtonText="Hủy"
                 confirmButtonType="danger"
                 @confirm="deletePlugin(plugin)">
                 <template #reference>
@@ -209,20 +209,20 @@
                     plain
                     :loading="deletingPlugins.has(plugin.key)"
                     :disabled="deletingPlugins.has(plugin.key) || collectingPlugins.has(plugin.key) || pendingPlugins.has(plugin.key)"
-                    :aria-label="`从市场删除 ${plugin.displayName}`">删除</el-button>
+                    :aria-label="`Xóa khỏi chợ ${plugin.displayName}`">Xóa</el-button>
                 </template>
               </el-popconfirm>
             </div>
           </div>
           <div v-else class="pluginFooter pluginControls" @click.stop>
             <label class="pluginToggle">
-              <span>{{ plugin.enabled === false ? "已禁用" : "已启用" }}</span>
+              <span>{{ plugin.enabled === false ? "Đã tắt" : "Đã bật" }}</span>
               <el-switch
                 :modelValue="plugin.enabled !== false"
                 size="small"
                 :loading="pendingPlugins.has(plugin.key)"
                 :disabled="!canEditPlugin(plugin) || loading || pendingPlugins.has(plugin.key)"
-                :aria-label="`启用 ${plugin.displayName}`"
+                :aria-label="`Bật ${plugin.displayName}`"
                 @change="updatePlugin(plugin, 'setEnabled', $event === true)" />
             </label>
             <div class="pluginActions">
@@ -231,38 +231,38 @@
                 size="small"
                 :icon="IconCloudUpload"
                 :disabled="loading || pendingPlugins.has(plugin.key) || exportingPlugins.has(plugin.key)"
-                :aria-label="`上传 ${plugin.displayName} 到市场`"
-                title="上传到市场"
-                @click="openUpload(plugin)">上传</el-button>
+                :aria-label="`Đăng ${plugin.displayName} lên chợ plugin`"
+                title="Đăng lên chợ"
+                @click="openUpload(plugin)">Tải lên</el-button>
               <el-button
                 v-if="plugin.type === 'node' || plugin.type === 'skill' || plugin.type === 'tool' || plugin.type === 'ext' || (plugin.type === 'agent' && plugin.kind === 'local')"
                 size="small"
                 :icon="IconShare"
                 :loading="exportingPlugins.has(plugin.key)"
                 :disabled="loading || pendingPlugins.has(plugin.key) || (plugin.type === 'tool' && !canManageTools) || (plugin.type === 'agent' && !canManageAgents) || (plugin.type === 'ext' && !plugin.canManage)"
-                :aria-label="`导出分享 ${plugin.displayName}`"
-                title="导出分享"
+                :aria-label="`Xuất để chia sẻ ${plugin.displayName}`"
+                title="Xuất để chia sẻ"
                 @click="exportPlugin(plugin)" />
-              <el-button v-if="plugin.type === 'agent' && plugin.kind === 'local'" size="small" :disabled="!canManageAgents || loading || pendingPlugins.has(plugin.key)" @click="selectedAgent = plugin">编辑</el-button>
+              <el-button v-if="plugin.type === 'agent' && plugin.kind === 'local'" size="small" :disabled="!canManageAgents || loading || pendingPlugins.has(plugin.key)" @click="selectedAgent = plugin">Sửa</el-button>
               <el-button v-if="plugin.type === 'agent' && plugin.cardUrl" size="small" :icon="IconCopy" @click="copyCard(plugin.cardUrl)">Card</el-button>
               <el-badge v-if="(plugin.type === 'tool' || plugin.type === 'node' || plugin.type === 'ext') && plugin.configRules?.length" isDot :hidden="!hasMissingConfig(plugin)">
                 <el-button
                   size="small"
                   :disabled="!canConfigurePlugin(plugin) || loading || pendingPlugins.has(plugin.key)"
-                  :aria-label="`配置 ${plugin.displayName}${hasMissingConfig(plugin) ? '，有必填配置未填写' : ''}`"
+                  :aria-label="`Cấu hình ${plugin.displayName}${hasMissingConfig(plugin) ? ', còn trường bắt buộc chưa nhập' : ''}`"
                   @click="
                     selectedConfigPlugin = plugin;
                     configVisible = true;
                   ">
-                  配置
+                  Cấu hình
                 </el-button>
               </el-badge>
               <el-popconfirm
                 v-if="plugin.author !== 'Toonflow' || plugin.type === 'skill' || plugin.type === 'agent' || plugin.type === 'ext'"
-                :title="`确定卸载“${plugin.displayName}”${plugin.type === 'skill' ? '及其附属文件' : ''}吗？`"
+                :title="`Bạn có chắc muốn gỡ cài đặt “${plugin.displayName}”${plugin.type === 'skill' ? ' cùng các tệp đi kèm' : ''}?`"
                 width="280"
-                confirmButtonText="卸载"
-                cancelButtonText="取消"
+                confirmButtonText="Gỡ cài đặt"
+                cancelButtonText="Hủy"
                 confirmButtonType="danger"
                 hideIcon
                 @confirm="updatePlugin(plugin, 'uninstall')">
@@ -271,8 +271,8 @@
                     size="small"
                     :loading="pendingPlugins.has(plugin.key)"
                     :disabled="!canEditPlugin(plugin) || loading || pendingPlugins.has(plugin.key) || exportingPlugins.has(plugin.key)"
-                    :aria-label="`卸载 ${plugin.displayName}`">
-                    卸载
+                    :aria-label="`Gỡ cài đặt ${plugin.displayName}`">
+                    Gỡ cài đặt
                   </el-button>
                 </template>
               </el-popconfirm>
@@ -280,9 +280,9 @@
           </div>
         </el-card>
       </div>
-      <p v-if="activeTab === 'installed' ? loading : marketLoading" class="listStatus" role="status">正在加载插件…</p>
+      <p v-if="activeTab === 'installed' ? loading : marketLoading" class="listStatus" role="status">Đang tải plugin…</p>
       <p v-else-if="!visiblePlugins.length && (isMarketTab ? accountToken && !marketError : !visibleLoadErrors.length)" class="listStatus">
-        {{ activeTab === "installed" ? "暂无符合条件的已安装插件" : selectedType === "collection" ? "暂无符合条件的收藏插件" : selectedType === "my" ? "暂无符合条件的已上传插件" : "未找到相关插件" }}
+        {{ activeTab === "installed" ? "Không có plugin đã cài nào phù hợp" : selectedType === "collection" ? "Không có plugin yêu thích nào phù hợp" : selectedType === "my" ? "Không có plugin đã đăng nào phù hợp" : "Không tìm thấy plugin phù hợp" }}
       </p>
       <el-pagination
         v-if="isMarketTab && accountToken && !marketError"
@@ -320,14 +320,14 @@
         appendToBody
         destroyOnClose
         @closed="selectedPlugin = undefined">
-        <div class="pluginContent" tabindex="0" aria-label="插件详情">
+        <div class="pluginContent" tabindex="0" aria-label="Chi tiết plugin">
           <div v-if="selectedPlugin.id !== undefined" class="detailMeta">
             <el-tag :type="pluginTypes[selectedPlugin.type].tagType" size="small">{{ pluginTypes[selectedPlugin.type].label }}</el-tag>
             <span>{{ selectedPlugin.name }}</span>
             <span v-if="selectedPlugin.version">v{{ selectedPlugin.version }}</span>
             <span v-if="selectedPlugin.author">{{ selectedPlugin.author }}</span>
           </div>
-          <div v-if="selectedPlugin.tags?.length" class="detailLabels" aria-label="插件标签">
+          <div v-if="selectedPlugin.tags?.length" class="detailLabels" aria-label="Nhãn plugin">
             <el-tag
               v-for="(tag, index) in selectedPlugin.tags"
               :key="index"
@@ -337,18 +337,18 @@
               :style="getPluginTagStyle(tag.color)">{{ tag.text }}</el-tag>
           </div>
           <p v-if="selectedPlugin.description && selectedPlugin.id !== undefined" class="detailDescription">{{ selectedPlugin.description }}</p>
-          <img v-if="selectedPlugin.coverUrl" class="detailCover" :src="selectedPlugin.coverUrl" :alt="`${selectedPlugin.displayName} 插件封面`" referrerpolicy="no-referrer" />
-          <section v-if="selectedPlugin.demoVideoUrl" class="detailDemo" aria-label="效果演示">
-            <h3>效果演示</h3>
-            <el-alert v-if="demoVideoFailed" title="演示视频加载失败，请重试" type="error" :closable="false" showIcon>
-              <el-button size="small" @click="demoVideoFailed = false">重试</el-button>
+          <img v-if="selectedPlugin.coverUrl" class="detailCover" :src="selectedPlugin.coverUrl" :alt="`${selectedPlugin.displayName} ảnh bìa plugin`" referrerpolicy="no-referrer" />
+          <section v-if="selectedPlugin.demoVideoUrl" class="detailDemo" aria-label="Video minh họa">
+            <h3>Video minh họa</h3>
+            <el-alert v-if="demoVideoFailed" title="Không tải được video minh họa, vui lòng thử lại" type="error" :closable="false" showIcon>
+              <el-button size="small" @click="demoVideoFailed = false">Thử lại</el-button>
             </el-alert>
             <videoPlayer
               v-else
               :key="selectedPlugin.demoVideoUrl"
               class="demoPlayer"
               :src="selectedPlugin.demoVideoUrl"
-              :label="`${selectedPlugin.displayName} 效果演示`"
+              :label="`${selectedPlugin.displayName} Video minh họa`"
               :active="detailsVisible && visible"
               @error="demoVideoFailed = true" />
           </section>
@@ -388,10 +388,10 @@ const { visible = true } = defineProps<{ visible?: boolean }>();
 // ACT: Agent 插件市场仍在测试，暂时关闭入口。
 const agentMarketEnabled = false;
 const pluginTypes = {
-  node: { label: "节点", path: "nodes", icon: IconBox, tagType: "primary" },
-  ext: { label: "文件扩展", path: "ext", icon: IconFileText, tagType: "info" },
-  skill: { label: "技能", path: "skills", icon: IconBook, tagType: "success" },
-  tool: { label: "工具", path: "tools", icon: IconTool, tagType: "warning" },
+  node: { label: "Node", path: "nodes", icon: IconBox, tagType: "primary" },
+  ext: { label: "Tiện ích tệp", path: "ext", icon: IconFileText, tagType: "info" },
+  skill: { label: "Kỹ năng", path: "skills", icon: IconBook, tagType: "success" },
+  tool: { label: "Công cụ", path: "tools", icon: IconTool, tagType: "warning" },
   agent: { label: "Agent", path: agentMarketEnabled ? "agents" : null, icon: IconSparkles2, tagType: "danger" },
 } as const;
 const tabs = { get discover() { return translate("发现插件"); }, get installed() { return translate("已安装"); }, mcp: "MCP", ffmpeg: "FFmpeg" } as const;
@@ -633,7 +633,7 @@ watch(
     } catch (error) {
       if (!controller.signal.aborted && accountToken.value === token) {
         marketTotal.value = 0;
-        marketError.value = errorMessage(error, "加载插件市场失败，请重试");
+        marketError.value = errorMessage(error, "Tải chợ plugin thất bại, vui lòng thử lại");
       }
     } finally {
       if (!controller.signal.aborted && accountToken.value === token) marketLoading.value = false;
@@ -663,7 +663,7 @@ watch(
           });
           const items = type === "tool" ? data.data?.tools : type === "agent" ? data.data?.agents : data.data;
           if (data.code !== 200 || !Array.isArray(items) || items.some((item) => !item || typeof item.name !== "string"))
-            throw new Error(`${category.label}列表格式错误`);
+            throw new Error(`${category.label}danh sáchcó định dạng không hợp lệ`);
           if (controller.signal.aborted) return [];
           if (type === "tool") canManageTools.value = data.data.canManage === true;
           if (type === "agent") canManageAgents.value = data.data.canManage === true;
@@ -675,7 +675,7 @@ watch(
             configRules: markRaw(item.configRules ?? []),
           } as Plugin));
         } catch (error) {
-          if (!controller.signal.aborted) loadErrors.value[type] = errorMessage(error, `加载${category.label}失败，请重新打开列表重试`);
+          if (!controller.signal.aborted) loadErrors.value[type] = errorMessage(error, `Tải${category.label}thất bại, hãy mở lại danh sách rồi thử tiếp`);
           return [];
         }
       })
@@ -706,7 +706,7 @@ watch(
       pluginExistence.value = new Map(results.map(item => [`${item.type}:${item.identifier}`, item.exists]));
     } catch (error) {
       if (!controller.signal.aborted && accountToken.value === token) {
-        pluginExistenceError.value = errorMessage(error, "检查插件市场状态失败，请重试");
+        pluginExistenceError.value = errorMessage(error, "Không kiểm tra được trạng thái chợ plugin, vui lòng thử lại");
       }
     } finally {
       if (!controller.signal.aborted) checkingPluginExistence.value = false;
@@ -729,9 +729,9 @@ function errorMessage(error: unknown, fallback: string) {
 async function copyCard(url: string) {
   try {
     await writeClipboardText(url);
-    ElMessage.success("Agent Card 地址已复制");
+    ElMessage.success("Agent Card đã sao chép địa chỉ");
   } catch {
-    await ElMessageBox.alert(url, "Agent Card 地址", { confirmButtonText: "关闭" }).catch(() => {});
+    await ElMessageBox.alert(url, "Địa chỉ Agent Card", { confirmButtonText: "Đóng" }).catch(() => {});
   }
 }
 
@@ -744,14 +744,14 @@ function canEditPlugin(plugin: Plugin) {
 
 function installLabel(plugin: Plugin) {
   const installed = installedByKey.value.get(`${plugin.type}:${plugin.name}`);
-  if (!installed) return "安装";
+  if (!installed) return "Cài đặt";
   const [current, incoming] = [installed.version, plugin.version].map(value => {
     const version = parse(value ?? "");
     if (!version || version.raw.trim().startsWith("v")
       || version.prerelease.some(part => /^\d+$/.test(String(part)) && !Number.isSafeInteger(Number(part)))) return null;
     return version;
   });
-  return current && incoming && incoming.compare(current) > 0 ? "更新" : "已安装";
+  return current && incoming && incoming.compare(current) > 0 ? "Cập nhật" : "Đã cài";
 }
 
 async function toggleCollection(plugin: Plugin) {
@@ -768,9 +768,9 @@ async function toggleCollection(plugin: Plugin) {
     const current = marketPlugins.value.find(item => item.id === plugin.id);
     if (current) current.isCollected = collected;
     if (selectedType.value === "collection" || marketLoading.value) marketRefreshKey.value++;
-    ElMessage.success(collected ? "收藏成功" : "已取消收藏");
+    ElMessage.success(collected ? "Đã thêm vào yêu thích" : "Đã bỏ yêu thích");
   } catch (error) {
-    if (!controller.signal.aborted && accountToken.value === token) ElMessage.error(errorMessage(error, "修改收藏失败，请重试"));
+    if (!controller.signal.aborted && accountToken.value === token) ElMessage.error(errorMessage(error, "Không thể thay đổi mục yêu thích, vui lòng thử lại"));
   } finally {
     if (marketMutationController === controller) collectingPlugins.value.delete(plugin.key);
   }
@@ -791,9 +791,9 @@ async function deletePlugin(plugin: Plugin) {
     if (controller.signal.aborted || accountToken.value !== token) return;
     marketRefreshKey.value++;
     pluginExistenceRefreshKey.value++;
-    ElMessage.success(message || "插件已从市场删除");
+    ElMessage.success(message || "Đã xóa plugin khỏi chợ");
   } catch (error) {
-    if (!controller.signal.aborted && accountToken.value === token) ElMessage.error(errorMessage(error, "删除插件失败，请重试"));
+    if (!controller.signal.aborted && accountToken.value === token) ElMessage.error(errorMessage(error, "Xóa plugin thất bại, vui lòng thử lại"));
   } finally {
     if (marketMutationController === controller) deletingPlugins.value.delete(plugin.key);
   }
@@ -803,16 +803,16 @@ async function installMarketPlugin(plugin: Plugin) {
   const path = pluginTypes[plugin.type].path;
   if (!path || !plugin.url || !plugin.fileName || loading.value || pendingPlugins.value.has(plugin.key) || deletingPlugins.value.has(plugin.key)) return;
   const action = installLabel(plugin);
-  if (action === "已安装") return;
+  if (action === "Đã cài") return;
   pendingPlugins.value.add(plugin.key);
   try {
     const { data } = await axios.post(`/api/${path}/install`, { url: plugin.url, fileName: plugin.fileName, version: plugin.version }, { headers: requestHeaders });
-    if (data.code !== 200) throw new Error(data.message || "安装插件失败");
+    if (data.code !== 200) throw new Error(data.message || "Cài plugin thất bại");
     window.dispatchEvent(new CustomEvent("toonflow:plugin-installed", { detail: { type: plugin.type, name: data.data.name } }));
     if (plugin.type === "ext") window.dispatchEvent(new CustomEvent("toonflow:ext-updated", { detail: { name: data.data.name } }));
-    ElMessage.success(action === "更新" ? `${plugin.displayName}已更新` : `${plugin.displayName}已安装`);
+    ElMessage.success(action === "Cập nhật" ? `Đã cập nhật ${plugin.displayName}` : `Đã cài đặt ${plugin.displayName}`);
   } catch (error) {
-    ElMessage.error(errorMessage(error, "安装插件失败，请重试"));
+    ElMessage.error(errorMessage(error, "Cài plugin thất bại, vui lòng thử lại"));
   } finally {
     pendingPlugins.value.delete(plugin.key);
   }
@@ -836,12 +836,12 @@ async function installFile(event: Event) {
       : /\.(zip|md|tar|tar\.gz|tgz)$/i.test(file.name)
       ? "skill"
       : undefined;
-    if (!type) throw new Error("不支持这个安装文件。支持的格式：文件扩展 ext-*.umd.js；Agent .agent.zip；节点 .umd.js；工具 .tool.js；技能 .zip、.md、.tar、.tar.gz、.tgz。");
-    if (type === "agent" && !agentMarketEnabled) throw new Error("Agent 功能处于测试阶段，暂未开放安装");
+    if (!type) throw new Error("Không hỗ trợ tệp cài đặt này. Định dạng hỗ trợ: tiện ích ext-*.umd.js; Agent .agent.zip; node .umd.js; công cụ .tool.js; kỹ năng .zip, .md, .tar, .tar.gz, .tgz.");
+    if (type === "agent" && !agentMarketEnabled) throw new Error("Tính năng Agent đang thử nghiệm, chưa hỗ trợ cài đặt");
     await installPluginFile(type, file);
-    ElMessage.success(`${pluginTypes[type].label}已安装`);
+    ElMessage.success(`Đã cài đặt ${pluginTypes[type].label}`);
   } catch (error) {
-    ElMessage.error(errorMessage(error, "安装插件失败，请重试"));
+    ElMessage.error(errorMessage(error, "Cài plugin thất bại, vui lòng thử lại"));
   } finally {
     installing.value = false;
   }
@@ -869,7 +869,7 @@ async function exportPlugin(plugin: Plugin) {
       fileName
     );
   } catch (error) {
-    let message = errorMessage(error, "导出插件失败，请重试");
+    let message = errorMessage(error, "Xuất plugin thất bại, vui lòng thử lại");
     if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
       const data = await error.response.data
         .text()
@@ -900,7 +900,7 @@ async function updatePlugin(plugin: Plugin, action: "setEnabled" | "uninstall", 
       action === "uninstall"
         ? await axios.delete(url, { data: { name: plugin.name }, headers: requestHeaders })
         : await axios.put(url, { name: plugin.name, enabled }, { headers: requestHeaders });
-    if (data.code !== 200) throw new Error(data.message || `${actionLabel}失败`);
+    if (data.code !== 200) throw new Error(data.message || `${actionLabel} thất bại`);
     if (action === "uninstall") {
       installedPlugins.value = installedPlugins.value.filter((item) => item.key !== plugin.key);
       if (selectedSkill.value?.key === plugin.key) selectedSkill.value = undefined;
@@ -913,13 +913,13 @@ async function updatePlugin(plugin: Plugin, action: "setEnabled" | "uninstall", 
         detailsVisible.value = false;
         selectedPlugin.value = undefined;
       }
-      ElMessage.success("插件已卸载");
+      ElMessage.success("Đã gỡ cài đặt plugin");
     } else plugin.enabled = enabled;
     if (plugin.type === "node")
       window.dispatchEvent(new CustomEvent("toonflow:plugin-installed", { detail: { type: plugin.type, name: plugin.name } }));
     if (plugin.type === "ext") window.dispatchEvent(new CustomEvent("toonflow:ext-updated", { detail: { name: plugin.name } }));
   } catch (error) {
-    ElMessage.error(errorMessage(error, `${actionLabel}失败，请重试`));
+    ElMessage.error(errorMessage(error, `${actionLabel}thất bại, vui lòng thử lại`));
   } finally {
     pendingPlugins.value.delete(plugin.key);
   }

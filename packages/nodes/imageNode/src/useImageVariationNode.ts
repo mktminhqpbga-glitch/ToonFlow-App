@@ -10,8 +10,8 @@ export function useImageVariationNode() {
   return async function createVariation(input: { label: string; prompt: string; model: string; size: string; ratio: string; nodeId?: string; inpaint?: ImageInpaint }, signal?: AbortSignal) {
     const type = "remote-imageGenerationNode";
     signal?.throwIfAborted();
-    if (!nodeTypes?.value?.[type]) throw new Error("请先启用图片生成节点插件");
-    if (findNode(id) !== node) throw new Error("原节点已变化，请重新操作");
+    if (!nodeTypes?.value?.[type]) throw new Error("Hãy bật plugin node tạo ảnh trước");
+    if (findNode(id) !== node) throw new Error("Node gốc đã thay đổi, hãy thao tác lại");
     const nodeId = input.nodeId ?? crypto.randomUUID();
     const edgeId = crypto.randomUUID();
     const { label, prompt, model, size, ratio } = input;
@@ -28,7 +28,7 @@ export function useImageVariationNode() {
     await batchHistory(async () => {
       signal?.throwIfAborted();
       try {
-        addNodes({ id: nodeId, type, position: { x, y }, data: { label: `${node.data.label || "图片"} · ${label}`, model, size, ratio, prompt, promptModel: prompt.split("\n").map(text => [{ type: "Write", text }]), ...(input.inpaint ? { inpaint: input.inpaint } : {}) } });
+        addNodes({ id: nodeId, type, position: { x, y }, data: { label: `${node.data.label || "Ảnh"} · ${label}`, model, size, ratio, prompt, promptModel: prompt.split("\n").map(text => [{ type: "Write", text }]), ...(input.inpaint ? { inpaint: input.inpaint } : {}) } });
         addEdges({ id: edgeId, source: id, sourceHandle: "image", target: nodeId, targetHandle: "in" });
       } catch (error) {
         removeNodes(nodeId, true, false);

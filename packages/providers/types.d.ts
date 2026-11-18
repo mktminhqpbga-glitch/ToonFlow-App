@@ -23,7 +23,7 @@ interface ProviderModel<TRules extends readonly ProviderFormRule[] = readonly Pr
   imageRatios?: string[];
   durationResolutionMap?: { duration: number[]; resolution: string[] }[];
   voices?: { title: string; voice: string }[];
-  /** 模型专属的 form-create JSON 规则，节点表单值作为 request.other 传入。 */
+  /** Các rules JSON form-create riêng theo mô hình; giá trị từ biểu mẫu node được truyền vào request.other. */
   rules?: TRules;
 }
 
@@ -38,25 +38,25 @@ type ProviderConfig<TRules extends readonly ProviderFormRule[]> = {
 };
 
 type ProviderTaskValue = null | boolean | number | string | ProviderTaskValue[] | { [key: string]: ProviderTaskValue };
-/** 可持久化的恢复数据；不得包含密钥、请求凭据、二进制或运行时对象。 */
+/** Dữ liệu khôi phục được lưu bền vững; không chứa khóa, thông tin xác thực, binary hoặc đối tượng runtime. */
 type ProviderTaskData = { [key: string]: ProviderTaskValue };
 
 interface ProviderContext<TConfig = Record<string, unknown>> {
   config: TConfig;
   signal?: AbortSignal;
-  /** 异步任务接单后立即等待保存；旧宿主缺省此能力，使用可选链调用。 */
+  /** Khi tác vụ bất đồng bộ được nhận, chờ lưu trạng thái ngay; host cũ có thể chưa hỗ trợ nên dùng optional chaining. */
   saveTaskData?: (data: ProviderTaskData) => Promise<void>;
-  /** 宿主直接注入工具，供应商无需 import；FFmpeg 为按需安装的插件能力。 */
+  /** Host cung cấp các công cụ trực tiếp; adapter không cần import. FFmpeg được cài theo nhu cầu. */
   tool: ProviderTools;
 }
 
 interface MediaRequest {
   model: string;
-  /** 仅放供应商专属参数；公共字段的映射与支持范围由供应商校验。 */
+  /** Chỉ chứa tham số riêng của nhà cung cấp; nhà cung cấp phải kiểm tra khả năng hỗ trợ và ánh xạ các trường chung. */
   other?: Record<string, unknown>;
 }
 
-/** 抽象层的媒体来源；供应商负责转换为平台需要的 URL、文件或字节。 */
+/** Nguồn media trừu tượng; nhà cung cấp chuyển sang URL, tệp hoặc bytes mà nền tảng yêu cầu. */
 type MediaInput =
   | { type: "url"; url: string; mimeType?: string; name?: string }
   | { type: "base64"; data: string; mimeType: string; name?: string }
@@ -69,17 +69,17 @@ type MediaImageResizeOptions = { width?: number; height?: number; format?: "jpeg
 
 interface AudioConvertOptions {
   format: "wav" | "mp3";
-  /** 裁剪起点，单位秒，含边界；缺省为 0。 */
+  /** Thời điểm bắt đầu cắt, đơn vị giây, có tính mốc bắt đầu; mặc định 0. */
   startSeconds?: number;
-  /** 裁剪终点，单位秒，不含边界；缺省为音频末尾。 */
+  /** Thời điểm kết thúc cắt, đơn vị giây, không bao gồm mốc cuối; mặc định hết âm thanh. */
   endSeconds?: number;
-  /** 目标采样率；缺省保持原采样率。 */
+  /** Tần số lấy mẫu đích; mặc định giữ tần số nguồn. */
   sampleRate?: number;
-  /** mp3 比特率，单位 kbps；缺省 128，仅 format 为 mp3 时生效。 */
+  /** Bitrate MP3 tính bằng kbps; mặc định 128, chỉ dùng khi format là mp3. */
   bitrateKbps?: number;
 }
 
-/** 缺少可用 FFmpeg 时抛出；由宿主前端询问下载安装，供应商应继续向上抛出。 */
+/** Ném khi không có FFmpeg khả dụng; frontend hỏi người dùng cài đặt, adapter phải ném lỗi tiếp. */
 interface FfmpegRequiredError extends Error {
   name: "FfmpegRequiredError";
   code: "FFMPEG_REQUIRED";
@@ -88,29 +88,29 @@ interface FfmpegRequiredError extends Error {
 
 interface ProviderTools {
   fetch: typeof globalThis.fetch;
-  /** 提取供应商错误正文中的可读原因，并隐藏配置中的密钥和 URL 查询参数。 */
+  /** Trích nguyên nhân lỗi dễ đọc từ nội dung nhà cung cấp, đồng thời ẩn khóa và query parameter trong URL cấu hình. */
   errorMessage(value: unknown): string;
   hash: typeof Bun.hash;
   image: typeof Bun.Image;
-  /** 公共图片基础处理工具；供应商可在 processMedia 中按自身模型能力使用。 */
+  /** Công cụ xử lý ảnh chung; adapter có thể dùng trong processMedia theo khả năng thực của mô hình. */
   media: {
     inspectImage(input: MediaInput): Promise<MediaImageInfo>;
     resizeImage(input: MediaInput, options: MediaImageResizeOptions): Promise<MediaInput>;
   };
   /**
-   * 音频裁剪转码；仅接受 WAV 格式的内存字节并返回处理后的内存字节，不支持文件路径、URL 或其他压缩格式输入。
+   * Cắt/chuyển mã âm thanh; chỉ nhận bytes WAV trong bộ nhớ và trả bytes sau xử lý; không nhận đường dẫn tệp, URL hoặc định dạng nén khác.
    */
   audio: {
     convert(input: Uint8Array, options: AudioConvertOptions): Promise<{ data: Uint8Array; mimeType: string }>;
   };
   /**
-   * 获取绑定当前工作区的原生 @renmu/fluent-ffmpeg 工厂，沿用链式调用、事件、流和 ffprobe 回调。
-   * 仅显式文件路径经过工作区边界检查；原始参数、滤镜及清单中的间接 I/O 不是沙箱。
-   * 宿主始终注入此入口，调用时检查 FFmpeg/FFprobe；没有工作目录的调试上下文不能使用。
-   * 缺失时抛出 FfmpegRequiredError，并通知在线前端询问下载；不会后台自动安装。
-   * 安装后由用户重新发起操作，供应商不要捕获此错误后自动重试完整生成请求。
-   * 输出覆盖行为沿用原生库；调用方负责文件命名、处理 end/error 及通过 command.kill 取消运行。
-   * @throws {FfmpegRequiredError} 未安装或当前设置未找到可用的 FFmpeg。
+   * Lấy factory @renmu/fluent-ffmpeg do host cung cấp gắn với workspace hiện tại; hỗ trợ chuỗi lệnh, sự kiện, stream và callback ffprobe gốc.
+   * Chỉ đường dẫn tệp truyền trực tiếp mới được kiểm tra giới hạn workspace; I/O gián tiếp qua tham số, bộ lọc hoặc danh sách tệp không phải sandbox.
+   * Host luôn cung cấp hàm này; khi gọi mới kiểm tra FFmpeg/FFprobe. Không dùng ở ngữ cảnh debug thiếu workspace.
+   * Nếu chưa cài, ném FfmpegRequiredError và nhờ frontend hỏi có tải hay không; không tự cài ngầm.
+   * Sau cài đặt, người dùng tự khởi chạy lại; adapter không được bắt lỗi rồi tự gửi lại toàn bộ tác vụ.
+   * Quy tắc ghi đè đầu ra theo thư viện gốc; bên gọi quản lý tên tệp, sự kiện end/error và hủy bằng command.kill.
+   * @throws {FfmpegRequiredError} Chưa cài hoặc chưa tìm thấy FFmpeg khả dụng trong cấu hình hiện tại.
    * @example const ffmpeg = await this.tool.ffmpeg(); const command = ffmpeg("assets/input.mp4").videoCodec("libx264");
    */
   ffmpeg(): Promise<import("@toonflow/ffmpeg/types").FfmpegFactory>;
@@ -118,76 +118,76 @@ interface ProviderTools {
 
 interface ImageRequest extends MediaRequest {
   prompt: string;
-  /** 参考图。 */
+  /** Ảnh tham chiếu. */
   images?: MediaInput[];
   mask?: MediaInput;
-  /** 生成数量。 */
+  /** Số lượng kết quả tạo. */
   n?: number;
-  /** 画面宽高比，如 16:9。 */
+  /** Tỉ lệ khung hình, ví dụ 16:9. */
   ratio?: string;
-  /** 输出尺寸，如 1K、2K、4K 或 1024x1024；具体格式由供应商转换。 */
+  /** Kích thước đầu ra, ví dụ 1K, 2K, 4K hoặc 1024x1024; nhà cung cấp tự chuyển đổi định dạng. */
   size?: string;
-  /** 画质档位，如 low、medium、high，由供应商映射。 */
+  /** Mức chất lượng, ví dụ low, medium, high; do nhà cung cấp ánh xạ. */
   quality?: string;
-  /** 输出编码格式，如 png、jpeg、webp。 */
+  /** Định dạng mã hóa đầu ra, ví dụ png, jpeg, webp. */
   outputFormat?: string;
 }
 
 interface VideoRequest extends MediaRequest {
   prompt: string;
-  /** 当前生成模式；参考模式数组声明各类参考媒体数量上限。 */
+  /** Chế độ tạo hiện tại; mảng chế độ tham chiếu khai báo giới hạn số media tham chiếu từng loại. */
   mode?: VideoMode;
-  /** 参考图；首尾帧通过 firstFrame、lastFrame 单独传入。 */
+  /** Ảnh tham chiếu; khung đầu và cuối được truyền riêng qua firstFrame, lastFrame. */
   images?: MediaInput[];
   videos?: MediaInput[];
   audios?: MediaInput[];
   firstFrame?: MediaInput;
   lastFrame?: MediaInput;
-  /** 输出时长，单位秒；支持范围由供应商按模型校验。 */
+  /** Thời lượng đầu ra tính bằng giây; nhà cung cấp phải kiểm tra giới hạn mô hình. */
   duration?: number;
-  /** 画面宽高比，如 16:9。 */
+  /** Tỉ lệ khung hình, ví dụ 16:9. */
   ratio?: string;
-  /** 分辨率档位，如 720p、1080p。 */
+  /** Mức độ phân giải, ví dụ 720p, 1080p. */
   resolution?: string;
   generateAudio?: boolean;
   watermark?: boolean;
 }
 
-/** 基础音频生成参数；text、prompt 至少提供一项，非空校验与模型能力检查由供应商负责。 */
+/** Tham số tạo âm thanh cơ bản; phải có text hoặc prompt, nhà cung cấp tự kiểm tra giá trị không rỗng và khả năng mô hình. */
 type AudioRequest = MediaRequest & {
-  /** 待朗读的文本，用于文本转语音。 */
+  /** Văn bản cần đọc trong text-to-speech. */
   text?: string;
-  /** 音频创作或语音风格提示词，可与待朗读的 text 分开传入。 */
+  /** Prompt sáng tác âm thanh hoặc kiểu giọng nói, có thể tách riêng khỏi text cần đọc. */
   prompt?: string;
-  /** 参考音频，可附带该段音频的准确转写文本；上传或复刻流程由供应商处理。 */
+  /** Âm thanh tham chiếu; có thể kèm bản phiên âm chính xác. Nhà cung cấp xử lý upload hoặc sao chép giọng. */
   audios?: (MediaInput & { text?: string })[];
-  /** 音频创作参考图；数量以及能否与参考音频同传，由供应商按模型校验。 */
+  /** Ảnh tham chiếu để tạo âm thanh; nhà cung cấp kiểm tra số lượng và khả năng dùng cùng audio tham chiếu. */
   images?: MediaInput[];
-  /** 系统或已复刻的音色标识，由供应商映射到平台的音色参数。 */
+  /** ID giọng có sẵn hoặc được sao chép, do nhà cung cấp ánh xạ sang tham số giọng của nền tảng. */
   voice?: string;
-  /** 语速倍率，1 为正常语速；供应商负责转换平台的语速刻度。 */
+  /** Hệ số tốc độ đọc, 1 là bình thường; nhà cung cấp chuyển thành mức tốc độ của nền tảng. */
   speed?: number;
-  /** 音量增益，单位 dB，0 为原始音量；供应商负责转换平台的音量刻度。 */
+  /** Độ tăng âm lượng tính bằng dB; 0 là âm lượng gốc; nhà cung cấp chuyển đổi theo nền tảng. */
   volume?: number;
-  /** 抽象层以半音表示音调偏移，0 为原音调；供应商负责映射平台刻度并校验支持范围。 */
+  /** Độ lệch cao độ tính theo bán âm; 0 là cao độ gốc; nhà cung cấp ánh xạ và kiểm tra giới hạn nền tảng. */
   pitch?: number;
-  /** 情绪，如 happy、sad、angry；由供应商映射并校验模型及音色是否支持。 */
+  /** Cảm xúc, ví dụ happy, sad, angry; nhà cung cấp ánh xạ và kiểm tra model/giọng có hỗ trợ không. */
   emotion?: string;
-  /** 合成语言或方言，如 zh-CN、en、yue；由供应商映射，缺省沿用模型默认行为。 */
+  /** Ngôn ngữ/giọng địa phương, ví dụ zh-CN, en, yue; nhà cung cấp ánh xạ, mặc định theo model. */
   language?: string;
-  /** 是否规范化数字等文本的读法；支持语种与处理规则由供应商按模型校验。 */
+  /** Có chuẩn hóa cách đọc số và văn bản hay không; nhà cung cấp kiểm tra ngôn ngữ và quy tắc hỗ trợ. */
   normalizeText?: boolean;
-  /** 输出编码格式，如 mp3、wav、pcm、flac、opus；由供应商映射平台的格式名称。 */
+  /** Định dạng đầu ra, ví dụ mp3, wav, pcm, flac, opus; nhà cung cấp ánh xạ tên định dạng. */
   format?: string;
-  /** 输出采样率，单位 Hz。 */
+  /** Tần số lấy mẫu đầu ra (Hz). */
   sampleRate?: number;
-  /** 输出编码码率，单位 kbps；仅适用于支持配置码率的格式，由供应商转换平台单位。 */
+  /** Bitrate đầu ra (kbps); chỉ áp dụng định dạng cho phép chỉnh bitrate, do nhà cung cấp chuyển đơn vị. */
   bitrateKbps?: number;
 } & ({ text: string } | { prompt: string });
 
 /**
- * 三种生成函数统一返回最终媒体数组，不能返回任务 ID 或原始平台响应。
- * ACT: 保留聚合结果兼容旧调用；异步供应商可通过 saveTaskData 与 resumeTask 增加恢复能力。
+ * Ba hàm tạo media đều trả mảng media cuối cùng, không trả riêng task ID hoặc response thô từ nền tảng.
+ * ACT: Giữ tương thích với kết quả tổng hợp cũ; adapter bất đồng bộ có thể thêm lưu và khôi phục qua saveTaskData và resumeTask.
  */
 type GenerateMedia<TRequest, TConfig = Record<string, unknown>> = (
   this: ProviderContext<TConfig>,
@@ -203,63 +203,63 @@ interface ProviderUpdateInfo {
 interface ProviderDefinition<TRules extends readonly ProviderFormRule[] = readonly ProviderFormRule[]> {
   id: string;
   label: string;
-  /** 供应商品牌图标，支持图片 URL 或 data:image/...;base64,...。 */
+  /** Biểu tượng thương hiệu của nhà cung cấp, có thể là URL ảnh hoặc data:image/...;base64,... */
   icon?: string;
-  /** 适配文件版本，独立于模型版本；新增供应商应填写，缺省仅兼容旧文件。 */
+  /** Phiên bản adapter độc lập với phiên bản model; nên khai báo khi thêm mới, bỏ trống chỉ để tương thích tệp cũ. */
   version?: string;
   apiUrl?: string;
   /**
-   * 媒体模型列表 GET 地址，使用配置的 apiKey 作为 Bearer 凭据，返回 { data: 模型数组 }。
-   * 模型须含 id，type 可由 URL 的 type 参数或同名已有模型补全。
-   * 可选 modelInfo 对象提供模型能力（如 mode、audio、durationResolutionMap、imageSizes、imageRatios），获取时合并至模型顶层。
-   * 提供此字段后可手动获取模型列表。
+   * URL GET danh sách mô hình media; dùng apiKey cấu hình làm Bearer, trả { data: mảng mô hình }.
+   * Mỗi mô hình phải có id; type có thể bổ sung từ tham số type trong URL hoặc mô hình cùng ID đang có.
+   * Đối tượng modelInfo tùy chọn cung cấp khả năng (mode, audio, durationResolutionMap, imageSizes, imageRatios), được gộp vào mô hình khi lấy.
+   * Khi có trường này, người dùng có thể tự tải danh sách mô hình.
    */
   modelsUrl?: string;
   protocol?: "openai-completions" | "openai-responses" | "anthropic-messages";
-  /** 厂商说明的 Markdown 内容。 */
+  /** Mô tả nhà cung cấp dạng Markdown. */
   readme?: string;
   rules: TRules;
   models: ProviderModel[];
-  /** 检查供应商适配文件是否有更新。 */
+  /** Kiểm tra tệp adapter nhà cung cấp có cập nhật hay không. */
   checkForUpdates?: (this: ProviderContext<ProviderConfig<TRules>>) => Promise<ProviderUpdateInfo>;
-  /** 获取更新文件的完整源码；写入与应用由宿主负责。 */
+  /** Lấy mã nguồn đầy đủ của tệp cập nhật; host chịu trách nhiệm ghi và áp dụng. */
   updateVendor?: (this: ProviderContext<ProviderConfig<TRules>>) => Promise<string>;
   /**
-   * 只读估价，不创建生成任务或扣费。request.type 区分图片、视频和音频。
-   * 参考素材只传元信息，不传文件内容或地址；其余参数与对应生成请求一致。
-   * 返回 { price, tips }，由供应商自由提供价格展示文本与提示；null 表示当前参数无法估价，节点保留占位。
+   * Chỉ tra giá, không tạo tác vụ hay tính phí. request.type phân biệt ảnh, video, âm thanh.
+   * Tài nguyên tham chiếu chỉ truyền metadata, không truyền nội dung tệp hoặc địa chỉ; tham số khác giống request tạo tương ứng.
+   * Trả { price, tips }; nhà cung cấp tự đưa văn bản báo giá và nhắc nhở; null nghĩa chưa thể báo giá cho cấu hình này, node hiển thị chỗ trống.
    */
   getPrice?: (this: ProviderContext<ProviderConfig<TRules>>, request: ProviderPriceRequest) => Promise<ProviderPrice | null>;
-  /** 查询当前配置账户的余额；计价单位由供应商返回。 */
+  /** Tra số dư tài khoản nhà cung cấp đang cấu hình; đơn vị do nhà cung cấp trả về. */
   getBalance?: (this: ProviderContext<ProviderConfig<TRules>>) => Promise<ProviderBalance>;
-  /** 未实现的方法保持缺省，调用方据此判断能力是否可用。 */
+  /** Phương thức chưa triển khai để trống; bên gọi căn cứ vào đó xác định chức năng có sẵn. */
   generateImage?: GenerateMedia<ImageRequest, ProviderConfig<TRules>>;
   generateVideo?: GenerateMedia<VideoRequest, ProviderConfig<TRules>>;
   generateAudio?: GenerateMedia<AudioRequest, ProviderConfig<TRules>>;
-  /** 恢复原任务的等待，结果顺序与原 generate 保持一致；不重复提交已接单阶段。明确失败终态可抛出 code 为 MEDIA_TASK_FAILED 的错误。 */
+  /** Tiếp tục chờ tác vụ gốc, thứ tự kết quả giống generate; không gửi lại giai đoạn đã được tiếp nhận. Có thể ném lỗi code MEDIA_TASK_FAILED nếu trạng thái thất bại chắc chắn. */
   resumeTask?: (this: ProviderContext<ProviderConfig<TRules>>, data: ProviderTaskData) => Promise<MediaAsset[]>;
-  /** 可选的供应商媒体预处理；未实现时保持原请求。 */
+  /** Tiền xử lý media của nhà cung cấp (tùy chọn); nếu không triển khai thì giữ request gốc. */
   processMedia?: (this: ProviderContext<ProviderConfig<TRules>>, request: ImageRequest | VideoRequest | AudioRequest) => Promise<ImageRequest | VideoRequest | AudioRequest>;
 }
 
-/** 仅用于展示，不参与余额计算；没有额外提示时 tips 返回空字符串。 */
+/** Chỉ dùng hiển thị, không tham gia tính số dư; tips là chuỗi rỗng nếu không có lời nhắc. */
 interface ProviderPrice {
   price: string;
   tips: string;
 }
 
-/** 估价专用素材元信息；不包含 base64、二进制、URL 或本地路径。未知字段省略，不能视作 0。 */
+/** Metadata tài nguyên phục vụ báo giá; không có base64, binary, URL hay đường dẫn cục bộ. Bỏ trường chưa biết thay vì coi là 0. */
 interface ProviderPriceReference {
   mimeType: string;
   sizeBytes: number;
   width?: number;
   height?: number;
-  /** 参考视频或音频的时长，单位秒；不是输出时长。 */
+  /** Thời lượng video hoặc audio tham chiếu, tính bằng giây; không phải thời lượng đầu ra. */
   duration?: number;
   frameRate?: number;
 }
 
-/** 按实际参考素材的类别、数量和元信息计价；mode 仅描述生成模式，不能代替实际参考内容。 */
+/** Định giá theo loại, số lượng và metadata thật của tài nguyên tham chiếu; mode chỉ mô tả chế độ, không thay dữ liệu tham chiếu. */
 type ProviderPriceRequest =
   | ({ type: "image"; images?: ProviderPriceReference[]; mask?: ProviderPriceReference } & Omit<ImageRequest, "images" | "mask">)
   | ({ type: "video"; images?: ProviderPriceReference[]; videos?: ProviderPriceReference[]; audios?: ProviderPriceReference[]; firstFrame?: ProviderPriceReference; lastFrame?: ProviderPriceReference } & Omit<VideoRequest, "images" | "videos" | "audios" | "firstFrame" | "lastFrame">)
@@ -268,7 +268,7 @@ type ProviderPriceRequest =
 interface ProviderBalance {
   balance: number;
   unit: string;
-  /** null 表示密钥额度无限制；缺省表示供应商不提供独立密钥额度。 */
+  /** null nghĩa hạn mức khóa không giới hạn; bỏ trống nghĩa nhà cung cấp không cung cấp hạn mức khóa riêng. */
   keyBalance?: number | null;
   totalConsumption?: number;
   totalRecharge?: number;

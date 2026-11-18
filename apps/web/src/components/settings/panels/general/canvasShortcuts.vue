@@ -1,27 +1,27 @@
 <template>
   <section class="canvasShortcuts" aria-labelledby="canvasShortcutsTitle">
     <div class="shortcutHeader">
-      <h3 id="canvasShortcutsTitle">画布快捷键</h3>
+      <h3 id="canvasShortcutsTitle">Phím tắt Canvas</h3>
       <div class="shortcutActions">
         <el-dropdown trigger="click" @command="changeBindMode" @visibleChange="bindModeVisible = $event">
-          <el-button text size="small" aria-label="快捷键绑定方式">
-            {{ bindMode === 'listen' ? '按键录制' : '手动填写' }}
+          <el-button text size="small" aria-label="Cách gán phím tắt">
+            {{ bindMode === 'listen' ? 'Ghi nhận phím' : 'Nhập thủ công' }}
             <component :is="bindModeVisible ? IconChevronUp : IconChevronDown" :size="14" aria-hidden="true" />
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="listen" :icon="IconKeyboard">按键录制</el-dropdown-item>
-              <el-dropdown-item command="input" :icon="IconEdit">手动填写</el-dropdown-item>
+              <el-dropdown-item command="listen" :icon="IconKeyboard">Ghi nhận phím</el-dropdown-item>
+              <el-dropdown-item command="input" :icon="IconEdit">Nhập thủ công</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <el-button text size="small" :icon="IconRestore" @click="resetShortcuts">恢复默认</el-button>
+        <el-button text size="small" :icon="IconRestore" @click="resetShortcuts">Khôi phục mặc định</el-button>
       </div>
     </div>
     <p class="description">
-      {{ bindMode === "listen" ? "点击键帽录制，Esc 退出；右侧 × 取消绑定，箭头菜单可选择无需按键。" : "使用按键代号，如 Ctrl+KeyG / Alt+KeyG；None 表示无需按键，可写 None / Space；留空取消绑定，回车或移开焦点保存。" }}
+      {{ bindMode === "listen" ? "Nhấn ô phím để ghi nhận, Esc để thoát; dấu × ở bên phải để bỏ gán, dùng menu mũi tên để chọn không cần phím." : "Dùng tên phím như Ctrl+KeyG / Alt+KeyG; None là không cần phím, có thể nhập None / Space; để trống để bỏ gán, Enter hoặc rời ô để lưu." }}
     </p>
-    <p class="description">将画布平移设为无需按键前，请先把框选节点改成 Shift 等按键。</p>
+    <p class="description">Trước khi đặt kéo Canvas thành không cần phím, hãy gán thao tác khoanh chọn node sang phím như Shift.</p>
     <el-form class="shortcutList">
       <el-form-item v-for="field in canvasShortcutFields" :key="`${field.id}:${resetKey}`" class="shortcutItem" :error="issues[field.id]">
         <div class="shortcutRow">
@@ -33,15 +33,15 @@
             class="shortcutInput"
             :code="generalSettings.canvasShortcuts[field.id]"
             :mode="bindMode"
-            :label="`${field.label}快捷键`"
+            :label="`${field.label}Phím tắt`"
             :hold="field.hold"
             :allowNone="field.allowNone"
             @change="setShortcut(field.id, $event)" />
         </div>
       </el-form-item>
-      <div class="gestureRow"><span>触摸板缩放</span><span class="gestureValue"><icon-hand-two-fingers :size="16" />双指捏合</span></div>
-      <div class="gestureRow"><span>触摸板双指滑动</span><span class="gestureValue"><icon-hand-two-fingers :size="16" />跟随滚轮配置</span></div>
-      <div class="gestureRow"><span>鼠标平移</span><span class="gestureValue"><icon-mouse :size="16" />中键拖动</span></div>
+      <div class="gestureRow"><span>Thu phóng bằng bàn di chuột</span><span class="gestureValue"><icon-hand-two-fingers :size="16" />Chụm hai ngón tay</span></div>
+      <div class="gestureRow"><span>Vuốt hai ngón trên bàn di chuột</span><span class="gestureValue"><icon-hand-two-fingers :size="16" />Theo cài đặt con lăn</span></div>
+      <div class="gestureRow"><span>Kéo bằng chuột</span><span class="gestureValue"><icon-mouse :size="16" />Kéo bằng nút giữa</span></div>
     </el-form>
   </section>
 </template>
@@ -59,12 +59,12 @@ const bindModeVisible = ref(false);
 const resetKey = ref(0);
 const issues = ref<Partial<Record<CanvasShortcutAction, string>>>({});
 const shortcutDescriptions: Partial<Record<CanvasShortcutAction, string>> = {
-  copyOnDrag: "按住并拖动节点",
-  duplicateOnDrag: "按住并拖动节点",
-  zoom: "按配置滚动鼠标滚轮",
-  pan: "无需按键时，仅平移空白处",
-  selection: "左键拖动空白处框选",
-  multiSelection: "左键点击追加或取消选择",
+  copyOnDrag: "Nhấn giữ và kéo node",
+  duplicateOnDrag: "Nhấn giữ và kéo node",
+  zoom: "Cuộn chuột theo cấu hình",
+  pan: "Không cần phím thì chỉ kéo trên vùng trống",
+  selection: "Kéo chuột trái trên vùng trống để khoanh chọn",
+  multiSelection: "Nhấp chuột trái để thêm hoặc bỏ chọn",
 };
 
 function changeBindMode(mode: "listen" | "input") {

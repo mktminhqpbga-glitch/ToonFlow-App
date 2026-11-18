@@ -2,20 +2,20 @@
   <panel class="canvasMenuPanel" position="top-left">
     <el-card class="canvasMenu" shadow="never" :bodyStyle="{ padding: '2px 4px' }">
       <div class="menuContent">
-        <el-input v-model="projectNameDraft" class="workspaceNameInput" :style="{ '--workspaceName': JSON.stringify(projectNameDraft || ' ') }" size="small" :title="directory" :disabled="!workspaceStore.project" aria-label="项目名称"
+        <el-input v-model="projectNameDraft" class="workspaceNameInput" :style="{ '--workspaceName': JSON.stringify(projectNameDraft || ' ') }" size="small" :title="directory" :disabled="!workspaceStore.project" aria-label="Tên dự án"
           @keydown.stop @keydown.enter="saveProjectName" @keydown.esc.prevent="projectNameDraft = workspaceName" @blur="saveProjectName" />
         <el-divider direction="vertical" />
         <el-popover v-model:visible="canvasListVisible" trigger="click" placement="bottom-start" :width="320" :showArrow="false" :disabled="!directory">
           <template #reference>
-            <el-button class="canvasTrigger" text :loading="busy" :disabled="busy || !directory" aria-label="切换画布" :aria-expanded="canvasListVisible">
+            <el-button class="canvasTrigger" text :loading="busy" :disabled="busy || !directory" aria-label="Chuyển Canvas" :aria-expanded="canvasListVisible">
               <span>{{ activeCanvasName }}</span><component :is="canvasListVisible ? IconChevronUp : IconChevronDown" :size="14" aria-hidden="true" />
             </el-button>
           </template>
           <div ref="canvasPicker" class="canvasPicker" @keydown.esc="canvasListVisible = false">
             <div class="pickerToolbar">
-              <el-input v-model="searchQuery" :prefixIcon="IconSearch" placeholder="搜索画布" aria-label="搜索画布" clearable @keydown.esc.stop="searchQuery = ''" />
-              <el-button class="iconButton" text :icon="IconFolderPlus" :disabled="pickerBusy || editingId !== null || folderDraft !== null" title="新建文件夹" aria-label="新建画布文件夹" @click="startFolder" />
-              <el-button class="iconButton" text :icon="IconPlus" :disabled="pickerBusy || editingId !== null || folderDraft !== null" title="新增画布" aria-label="新增画布" @click="handleAddCanvas" />
+              <el-input v-model="searchQuery" :prefixIcon="IconSearch" placeholder="Tìm Canvas" aria-label="Tìm Canvas" clearable @keydown.esc.stop="searchQuery = ''" />
+              <el-button class="iconButton" text :icon="IconFolderPlus" :disabled="pickerBusy || editingId !== null || folderDraft !== null" title="Thư mục mới" aria-label="Tạo thư mục Canvas" @click="startFolder" />
+              <el-button class="iconButton" text :icon="IconPlus" :disabled="pickerBusy || editingId !== null || folderDraft !== null" title="Thêm Canvas" aria-label="Thêm Canvas" @click="handleAddCanvas" />
             </div>
             <el-scrollbar v-loading="loadingTree" maxHeight="min(440px, calc(100dvh - 198px))">
               <el-tree v-if="canvasListVisible" ref="canvasTree" class="canvasTree" :data="treeEntries" nodeKey="path" :props="{ label: 'name', isLeaf: entry => entry.type === 'file' || entry.draft || entry.empty === true }" lazy :load="loadTreeNode" :defaultExpandedKeys="expandedFolders" :autoExpandParent="false" :icon="IconChevronRight" :currentNodeKey="activeCanvasId" :filterNodeMethod="filterEntry" highlightCurrent emptyText="" @nodeClick="selectEntry" @nodeExpand="expandFolder" @nodeCollapse="collapseFolder">
@@ -23,11 +23,11 @@
                   <div class="canvasEntry" :title="data.path" @contextmenu="openItemMenu($event, data)">
                     <component v-if="data.type === 'directory'" :is="node.expanded && !node.isLeaf ? IconFolderOpen : IconFolder" class="folderIcon" :size="18" aria-hidden="true" />
                     <icon-vector v-else class="canvasIcon" :size="18" />
-                    <el-input v-if="data.draft" ref="folderInput" v-model="folderDraft" class="nameEditor" size="small" aria-label="文件夹名称" :disabled="busy" :maxlength="120" @click.stop @keydown.stop @keydown.enter.prevent="saveFolder" @keydown.esc.prevent="cancelFolder" @blur="saveFolder" />
-                    <el-input v-else-if="editingId === data.path" ref="nameInput" v-model="canvasName" class="nameEditor" size="small" :disabled="busy" :maxlength="120" :aria-label="newCanvasId === data.path ? '新画布名称' : '画布名称'" @click.stop @keydown.stop @keydown.enter="saveCanvas" @keydown.esc.prevent="finishEdit" @blur="saveCanvas" />
+                    <el-input v-if="data.draft" ref="folderInput" v-model="folderDraft" class="nameEditor" size="small" aria-label="Tên thư mục" :disabled="busy" :maxlength="120" @click.stop @keydown.stop @keydown.enter.prevent="saveFolder" @keydown.esc.prevent="cancelFolder" @blur="saveFolder" />
+                    <el-input v-else-if="editingId === data.path" ref="nameInput" v-model="canvasName" class="nameEditor" size="small" :disabled="busy" :maxlength="120" :aria-label="newCanvasId === data.path ? 'Tên Canvas mới' : 'Tên Canvas'" @click.stop @keydown.stop @keydown.enter="saveCanvas" @keydown.esc.prevent="finishEdit" @blur="saveCanvas" />
                     <span v-else class="entryName">{{ data.name }}</span>
                     <icon-check v-if="activeCanvasId === data.path" class="selectedIcon" :size="16" aria-hidden="true" />
-                    <el-button v-if="!data.draft && editingId !== data.path" class="moreButton" text :icon="IconDots" :disabled="pickerBusy || editingId !== null || folderDraft !== null" :aria-label="'更多 ' + data.name" title="更多" @click.stop="openItemMenu($event, data)" />
+                    <el-button v-if="!data.draft && editingId !== data.path" class="moreButton" text :icon="IconDots" :disabled="pickerBusy || editingId !== null || folderDraft !== null" :aria-label="'Tùy chọn khác: ' + data.name" title="Tùy chọn khác" @click.stop="openItemMenu($event, data)" />
                   </div>
                 </template>
               </el-tree>
@@ -40,9 +40,9 @@
     <div class="menuExtension"><slot /></div>
   </panel>
   <panel v-if="providerBalances.length" class="balanceMenuPanel" position="top-right">
-    <div class="balanceList" tabindex="0" aria-label="供应商余额">
+    <div class="balanceList" tabindex="0" aria-label="Số dư nhà cung cấp">
       <el-card v-for="item in providerBalances" :key="item.id" class="balanceCard" shadow="never" :bodyStyle="{ padding: '2px 4px' }">
-        <el-button class="balanceTrigger" text :loading="item.loading" :title="item.error || `点击刷新 ${item.label} 余额`" :aria-label="`刷新 ${item.label} 余额`" @click="refreshProviderBalance(item.id)">
+        <el-button class="balanceTrigger" text :loading="item.loading" :title="item.error || `Nhấn để làm mới ${item.label} số dư`" :aria-label="`Làm mới ${item.label} số dư`" @click="refreshProviderBalance(item.id)">
           <span class="providerLabel">{{ item.label }}</span>
           <span>{{ item.balance ? `${balanceFormat.format(Math.min(item.balance.balance, item.balance.keyBalance ?? Infinity))} ${item.balance.unit}` : '—' }}</span>
         </el-button>
@@ -54,17 +54,17 @@
       <el-dropdown-menu v-if="menuEntry">
         <el-dropdown-item command="move" :disabled="pickerBusy">
           <el-popover v-model:visible="moveVisible" trigger="hover" placement="right-start" :width="220" :offset="0" :showArrow="false" :showAfter="0" :hideAfter="150" :appendTo="canvasPicker">
-            <template #reference><span class="moveTrigger"><span class="moveLabel">移动到</span><icon-chevron-right :size="14" /></span></template>
-            <div class="moveDestinations" role="menu" aria-label="移动到目录" @click.stop @keydown.stop>
-              <el-button text :icon="IconFolderPlus" :disabled="pickerBusy" role="menuitem" @click="createMoveFolder">新建文件夹</el-button>
+            <template #reference><span class="moveTrigger"><span class="moveLabel">Di chuyển đến</span><icon-chevron-right :size="14" /></span></template>
+            <div class="moveDestinations" role="menu" aria-label="Di chuyển đến thư mục" @click.stop @keydown.stop>
+              <el-button text :icon="IconFolderPlus" :disabled="pickerBusy" role="menuitem" @click="createMoveFolder">Thư mục mới</el-button>
               <el-scrollbar maxHeight="260px">
                 <el-button v-for="folder in moveFolders" :key="folder.path" text :icon="IconFolder" :disabled="pickerBusy || destinationDisabled(folder.path)" role="menuitem" :title="folder.label" @click="moveEntry(folder.path)">{{ folder.label }}</el-button>
               </el-scrollbar>
             </div>
           </el-popover>
         </el-dropdown-item>
-        <el-dropdown-item command="rename" :disabled="pickerBusy">重命名</el-dropdown-item>
-        <el-dropdown-item class="deleteAction" command="delete" :disabled="pickerBusy || (menuEntry.type === 'directory' && !menuEntry.empty)" :title="menuEntry.type === 'directory' && !menuEntry.empty ? '请先移出或删除文件夹内的内容' : undefined">删除</el-dropdown-item>
+        <el-dropdown-item command="rename" :disabled="pickerBusy">Đổi tên</el-dropdown-item>
+        <el-dropdown-item class="deleteAction" command="delete" :disabled="pickerBusy || (menuEntry.type === 'directory' && !menuEntry.empty)" :title="menuEntry.type === 'directory' && !menuEntry.empty ? 'Hãy chuyển hoặc xóa nội dung trong thư mục trước' : undefined">Xóa</el-dropdown-item>
       </el-dropdown-menu>
     </template>
   </el-dropdown>
@@ -219,7 +219,7 @@ const loadTreeNode: LoadFunction = (node, resolve, reject) => {
   void loadDirectory(path).then(() => resolve(treeChildren(path))).catch(error => {
     reject();
     expandedFolders.value = expandedFolders.value.filter(value => value !== path);
-    if (!axios.isCancel(error) && !(error instanceof Error && error.name === "AbortError")) renameError.value = errorMessage(error, "读取文件夹失败");
+    if (!axios.isCancel(error) && !(error instanceof Error && error.name === "AbortError")) renameError.value = errorMessage(error, "Đọc thư mục thất bại");
   });
 };
 
@@ -235,7 +235,7 @@ watch(searchQuery, (query, _previous, onCleanup) => {
   if (!query.trim()) return;
   const controller = new AbortController();
   const timer = setTimeout(() => { void getCanvases(controller.signal).catch(error => {
-    if (!controller.signal.aborted) renameError.value = errorMessage(error, "搜索画布失败");
+    if (!controller.signal.aborted) renameError.value = errorMessage(error, "Tìm Canvas thất bại");
   }); }, 250);
   onCleanup(() => { clearTimeout(timer); controller.abort(); });
 });
@@ -248,7 +248,7 @@ watch(moveVisible, (visible, _previous, onCleanup) => {
   void listCanvasEntries(directory, "", true, controller.signal).then(loaded => {
     checkCanvasDirectory(directory, controller.signal);
     folders.value = loaded.folders;
-  }).catch(error => { if (!controller.signal.aborted) renameError.value = errorMessage(error, "读取移动目录失败"); });
+  }).catch(error => { if (!controller.signal.aborted) renameError.value = errorMessage(error, "Đọc thư mục đích thất bại"); });
 });
 
 async function refreshTree() {
@@ -307,7 +307,7 @@ watch(() => props.directory, async (directory, _previous, onCleanup) => {
     if (cancelled) return;
     if (!canvases.value.length) {
       try {
-        const canvas = await createCanvasFile(directory, "画布1", controller.signal);
+        const canvas = await createCanvasFile(directory, "Bản vẽ 1", controller.signal);
         checkCanvasDirectory(directory, controller.signal);
         mergeCanvases([canvas]);
       } catch (err) {
@@ -327,7 +327,7 @@ watch(() => props.directory, async (directory, _previous, onCleanup) => {
     if (canvases.value[0]) await applyCanvas(canvases.value[0].id, directory, controller.signal);
   } catch (err) {
     if (!cancelled) {
-      loadError.value = errorMessage(err, "读取画布失败");
+      loadError.value = errorMessage(err, "Đọc Canvas thất bại");
       if (!props.initialCanvasId) ElMessage.error(loadError.value);
     }
   } finally {
@@ -356,21 +356,21 @@ async function getCanvases(signal?: AbortSignal) {
 
 function getCanvasDirectory(signal?: AbortSignal) {
   signal?.throwIfAborted();
-  if (!props.directory) throw new Error("请先选择工作目录");
-  if (busy.value || editingId.value !== null) throw new Error("画布正在加载或编辑，请稍后重试");
+  if (!props.directory) throw new Error("Hãy chọn thư mục làm việc trước");
+  if (busy.value || editingId.value !== null) throw new Error("Canvas đang tải hoặc chỉnh sửa, vui lòng thử lại sau");
   return props.directory;
 }
 
 function checkCanvasDirectory(directory: string, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  if (props.directory !== directory) throw new Error("工作目录已切换，本次画布操作已停止");
+  if (props.directory !== directory) throw new Error("Thư mục làm việc đã thay đổi, thao tác Canvas này đã dừng");
 }
 
 async function applyCanvas(canvasId: string, directory: string, signal?: AbortSignal) {
   checkCanvasDirectory(directory, signal);
   const nextCanvas = canvases.value.find(canvas => canvas.id === canvasId);
   const currentCanvas = canvases.value.find(canvas => canvas.id === activeCanvasId.value);
-  if (!nextCanvas) throw new Error("画布不存在，请重新获取画布列表");
+  if (!nextCanvas) throw new Error("Canvas không tồn tại, hãy tải lại danh sách Canvas");
   if (nextCanvas === currentCanvas) return;
   if (currentCanvas && props.activateCanvas) {
     await props.activateCanvas(canvasId, signal);
@@ -381,7 +381,7 @@ async function applyCanvas(canvasId: string, directory: string, signal?: AbortSi
     const data = await useWorkspaceFiles(directory).readJson<Partial<NonNullable<Canvas["flow"]>> & { toonflowCanvas?: boolean } | null>(nextCanvas.id);
     checkCanvasDirectory(directory, signal);
     if (data?.toonflowCanvas !== true || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || !data.viewport
-      || ![data.viewport.x, data.viewport.y, data.viewport.zoom].every(Number.isFinite) || data.viewport.zoom <= 0) throw new Error("画布文件格式无效");
+      || ![data.viewport.x, data.viewport.y, data.viewport.zoom].every(Number.isFinite) || data.viewport.zoom <= 0) throw new Error("Định dạng tệp Canvas không hợp lệ");
     // 旧画布可能保存了临时导出进度，重新打开时任务已不存在。
     for (const node of data.nodes) if (node.type === "remote-videoNode" && node.data) delete node.data.exportProgress;
     nextCanvas.flow = { nodes: data.nodes, edges: data.edges, viewport: data.viewport };
@@ -420,7 +420,7 @@ async function handleSwitchCanvas(canvasId: string) {
   try {
     await switchCanvas(canvasId);
   } catch (err) {
-    if (props.directory === directory) ElMessage.error(errorMessage(err, "切换画布失败"));
+    if (props.directory === directory) ElMessage.error(errorMessage(err, "Chuyển Canvas thất bại"));
   }
 }
 
@@ -435,12 +435,12 @@ async function removeCanvas(canvas: Canvas) {
     const nextCanvas = await findRemainingCanvas(files, id, treeController.signal);
     checkCanvasDirectory(directory, treeController.signal);
     if (!nextCanvas) {
-      ElMessage.warning("项目里需要保留至少一个画布。你可以先新建一个，再删除这个画布。");
+      ElMessage.warning("Dự án cần có ít nhất một Canvas. Hãy tạo Canvas mới rồi xóa Canvas này.");
       return;
     }
     mergeCanvases([nextCanvas]);
-    const confirmed = await ElMessageBox.confirm(`确定删除画布“${canvas.name}”吗？对应的“${id}”文件及仅由这个画布使用的素材也会删除，其他画布共用的素材会保留。删除后无法恢复。`, "删除画布", {
-      type: "warning", confirmButtonText: "删除", cancelButtonText: "取消", closeOnClickModal: false,
+    const confirmed = await ElMessageBox.confirm(`Bạn có chắc muốn xóa Canvas “${canvas.name}”? Tệp tương ứng “${id}” và tài nguyên chỉ Canvas này sử dụng cũng sẽ bị xóa; tài nguyên dùng chung của các Canvas khác được giữ lại. Không thể khôi phục sau khi xóa.`, "Xóa Canvas", {
+      type: "warning", confirmButtonText: "Xóa", cancelButtonText: "Hủy", closeOnClickModal: false,
     }).then(() => true, () => false);
     if (!confirmed) return;
     checkCanvasDirectory(directory);
@@ -448,14 +448,14 @@ async function removeCanvas(canvas: Canvas) {
     const readNodes = async (canvasId: string) => {
       const data = await files.readJson<{ toonflowCanvas?: boolean; nodes?: { id: string; data?: unknown }[] }>(canvasId);
       if (data?.toonflowCanvas !== true || !Array.isArray(data.nodes) || data.nodes.some(node => !node || typeof node.id !== "string")) {
-        throw new Error(`无法确认画布“${canvasId}”的素材引用，已停止后续删除操作。`);
+        throw new Error(`Không thể xác nhận tham chiếu tài nguyên của Canvas “${canvasId}”; đã dừng các thao tác xóa tiếp theo.`);
       }
       return [...data.nodes, ...getRetainedNodes(canvasId)];
     };
     let removedNodes: { id: string; data?: unknown }[] = [];
     await props.flushSave(async () => {
       checkCanvasDirectory(directory);
-      if (canvas.id !== id || !canvases.value.includes(canvas)) throw new Error("画布已变更，请重新选择");
+      if (canvas.id !== id || !canvases.value.includes(canvas)) throw new Error("Canvas đã thay đổi, hãy chọn lại");
       removedNodes = await readNodes(id);
       if (!performFileAction) {
         await files.remove(id);
@@ -475,11 +475,11 @@ async function removeCanvas(canvas: Canvas) {
         if (!axios.isAxiosError<{ data?: { code?: string } }>(error) || error.response?.data.data?.code !== "ENOENT") throw error;
       })));
       const failed = results.flatMap((result, index) => result.status === "rejected" ? [assetDirectories[index]] : []);
-      if (failed.length) throw new Error(`画布已删除，但 ${failed.length} 个素材目录清理失败：${failed.join("、")}`);
+      if (failed.length) throw new Error(`Đã xóa Canvas nhưng không dọn dẹp được ${failed.length} thư mục tài nguyên: ${failed.join(", ")}`);
     });
-    if (props.directory === directory) ElMessage.success("画布已删除");
+    if (props.directory === directory) ElMessage.success("Đã xóa Canvas");
   } catch (err) {
-    if (props.directory === directory) ElMessage.error(errorMessage(err, "删除画布失败"));
+    if (props.directory === directory) ElMessage.error(errorMessage(err, "Xóa Canvas thất bại"));
   } finally {
     if (props.directory === directory) busy.value = false;
   }
@@ -491,7 +491,7 @@ async function createCanvasFile(directory: string, name?: string, signal?: Abort
   const flow = { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
   for (let number = 1; ; number++) {
     checkCanvasDirectory(directory, signal);
-    const canvasName = name ?? `画布${number}`;
+    const canvasName = name ?? `Bản vẽ ${number}`;
     const id = `${canvasName}.json`;
     try {
       await files.writeJson(id, { toonflowCanvas: true, ...flow }, true);
@@ -565,7 +565,7 @@ async function handleAddCanvas() {
     busy.value = false;
     await editCanvas(canvas);
   } catch (err) {
-    if (props.directory === directory) ElMessage.error(errorMessage(err, "新增画布失败"));
+    if (props.directory === directory) ElMessage.error(errorMessage(err, "Thêm Canvas thất bại"));
   } finally {
     if (props.directory === directory) busy.value = false;
   }
@@ -585,7 +585,7 @@ async function startFolder() {
   if (pickerBusy.value || editingId.value !== null || folderDraft.value !== null) return;
   searchQuery.value = "";
   renameError.value = "";
-  folderDraft.value = "新建文件夹";
+  folderDraft.value = "Thư mục mới";
   await nextTick();
   folderInput.value?.focus();
   folderInput.value?.select();
@@ -595,8 +595,8 @@ function cancelFolder() { if (!busy.value) folderDraft.value = null; }
 
 function normalizeFolderName(name: string) {
   name = normalizeCanvasName(name, "文件夹");
-  if (name.toLowerCase() === "assets") throw new Error("“assets”是保留的节点素材目录名称，请使用其他文件夹名称。");
-  if (name.toLowerCase() === ".agent") throw new Error("“.agent”是保留的 Agent 数据目录名称，请使用其他文件夹名称。");
+  if (name.toLowerCase() === "assets") throw new Error("“assets” là tên thư mục tài nguyên của node được dành riêng; hãy dùng tên khác.");
+  if (name.toLowerCase() === ".agent") throw new Error("“.agent” là tên thư mục dữ liệu Agent được dành riêng; hãy dùng tên khác.");
   return name;
 }
 
@@ -614,7 +614,7 @@ async function saveFolder(event?: Event) {
     folderDraft.value = null;
     await refreshTree();
   } catch (error) {
-    if (directory === props.directory) renameError.value = errorMessage(error, "创建文件夹失败");
+    if (directory === props.directory) renameError.value = errorMessage(error, "Tạo thư mục thất bại");
   } finally { if (directory === props.directory) busy.value = false; }
 }
 
@@ -637,7 +637,7 @@ function destinationDisabled(path: string) {
 
 async function relocateEntry(entry: CanvasEntry, target: string, directory: string) {
   checkCanvasDirectory(directory);
-  if (!performFileAction) throw new Error("工作区文件管理尚未就绪");
+  if (!performFileAction) throw new Error("Trình quản lý tệp không gian làm việc chưa sẵn sàng");
   await performFileAction(directory, "move", entry.path, target, entry.type === "directory" ? "directory" : "canvas");
   checkCanvasDirectory(directory);
   await refreshTree();
@@ -657,7 +657,7 @@ async function moveEntry(path: string, createFolder = false) {
     }
     await relocateEntry(entry, `${path ? `${path}/` : ""}${entry.path.split("/").at(-1)}`, directory);
   } catch (error) {
-    if (directory === props.directory) renameError.value = errorMessage(error, "移动失败");
+    if (directory === props.directory) renameError.value = errorMessage(error, "Di chuyển thất bại");
   } finally { if (directory === props.directory) busy.value = false; }
 }
 
@@ -665,13 +665,13 @@ async function createMoveFolder() {
   const directory = props.directory;
   itemMenu.value?.handleClose();
   try {
-    const { value } = await ElMessageBox.prompt("新文件夹将创建在画布根目录", "新建文件夹", {
-      inputValue: "新建文件夹", confirmButtonText: "创建并移动", cancelButtonText: "取消",
+    const { value } = await ElMessageBox.prompt("Thư mục mới sẽ được tạo tại gốc Canvas", "Thư mục mới", {
+      inputValue: "Thư mục mới", confirmButtonText: "Tạo và di chuyển", cancelButtonText: "Hủy",
       inputValidator: name => { try { normalizeFolderName(name); return true; } catch (error) { return (error as Error).message; } },
     });
     if (directory !== props.directory) return;
     await moveEntry(normalizeFolderName(value), true);
-  } catch (error) { if (error !== "cancel" && error !== "close") ElMessage.error(errorMessage(error, "创建文件夹失败")); }
+  } catch (error) { if (error !== "cancel" && error !== "close") ElMessage.error(errorMessage(error, "Tạo thư mục thất bại")); }
 }
 
 async function handleItemCommand(command: string) {
@@ -692,14 +692,14 @@ async function handleItemCommand(command: string) {
   renameError.value = "";
   try {
     if (command === "rename") {
-      const { value } = await ElMessageBox.prompt("文件夹名称", "重命名", {
-        inputValue: entry.name, confirmButtonText: "保存", cancelButtonText: "取消",
+      const { value } = await ElMessageBox.prompt("Tên thư mục", "Đổi tên", {
+        inputValue: entry.name, confirmButtonText: "Lưu", cancelButtonText: "Hủy",
         inputValidator: name => { try { normalizeFolderName(name); return true; } catch (error) { return (error as Error).message; } },
       });
       const name = normalizeFolderName(value);
       if (name !== entry.name) await relocateEntry(entry, `${parentPath(entry.path) ? `${parentPath(entry.path)}/` : ""}${name}`, directory);
     } else if (command === "delete") {
-      await ElMessageBox.confirm(`确定删除文件夹“${entry.name}”？`, "删除文件夹", { type: "warning", confirmButtonText: "删除", cancelButtonText: "取消" });
+    await ElMessageBox.confirm(`Bạn có chắc muốn xóa thư mục “${entry.name}”?`, "Xóa thư mục", { type: "warning", confirmButtonText: "Xóa", cancelButtonText: "Hủy" });
       checkCanvasDirectory(directory);
       // 只删除真实空目录；隐藏文件和普通文档也应阻止删除，不能依据过滤后的画布树递归删除。
       await useWorkspaceFiles(directory).remove(entry.path);
@@ -707,7 +707,7 @@ async function handleItemCommand(command: string) {
       await refreshTree();
     }
   } catch (error) {
-    if (directory === props.directory && error !== "cancel" && error !== "close") renameError.value = errorMessage(error, "文件夹操作失败");
+    if (directory === props.directory && error !== "cancel" && error !== "close") renameError.value = errorMessage(error, "Thao tác thư mục thất bại");
   } finally { if (directory === props.directory) busy.value = false; }
 }
 
@@ -724,7 +724,7 @@ function normalizeCanvasName(name: string, label = "画布") {
   name = name.trim();
   if (!name || name.length > 120 || /[<>:"/\\|?*\x00-\x1f]/.test(name) || /[. ]$/.test(name)
     || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) {
-    throw new Error(label === "文件夹" ? "文件夹名称不是有效文件名" : "画布名称不是有效文件名");
+    throw new Error(label === "文件夹" ? "Tên thư mục không phải tên tệp hợp lệ" : "Tên Canvas không phải tên tệp hợp lệ");
   }
   return name;
 }
@@ -732,7 +732,7 @@ function normalizeCanvasName(name: string, label = "画布") {
 async function renameCanvasFile(id: string, name: string, directory: string, signal?: AbortSignal) {
   checkCanvasDirectory(directory, signal);
   const canvas = canvases.value.find(item => item.id === id);
-  if (!canvas) throw new Error("画布不存在，请重新获取画布列表");
+  if (!canvas) throw new Error("Canvas không tồn tại, hãy tải lại danh sách Canvas");
   name = normalizeCanvasName(name);
   if (name === canvas.name) return;
   const target = `${id.slice(0, id.lastIndexOf("/") + 1)}${name}.json`;
@@ -790,7 +790,7 @@ async function saveCanvas(event?: Event) {
     await finishEdit();
   } catch (err) {
     if (props.directory === directory) {
-      renameError.value = errorMessage(err, "重命名画布失败");
+      renameError.value = errorMessage(err, "Đổi tên Canvas thất bại");
       canvasListVisible.value = true;
     }
   } finally {

@@ -6,11 +6,10 @@
     "./browserCapabilities": "./src/lib/browserCapabilities.ts"
   },
   "scripts": {
-    "dev": "bun scripts/packChromeCompanion.ts && vite --host",
-    "build": "bun scripts/packChromeCompanion.ts && vite build",
+    "dev": "vite --host",
+    "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc",
-    "dev:local": "bun scripts/packChromeCompanion.ts && vite --host 127.0.0.1"
+    "typecheck": "vue-tsc"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",

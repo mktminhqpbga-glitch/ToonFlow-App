@@ -1,30 +1,30 @@
 <template>
   <div class="audioClipEditor nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.capture="handleKeydown" @keydown.stop>
-    <audioPlayer ref="player" v-model:pcmOptions="pcmOptions" :src="src" :mimeType="mimeType" label="音频剪辑预览" :inert="disabled" @loadedmetadata="readDuration" @play="startPlayback">
+    <audioPlayer ref="player" v-model:pcmOptions="pcmOptions" :src="src" :mimeType="mimeType" label="Xem trước chỉnh sửa âm thanh" :inert="disabled" @loadedmetadata="readDuration" @play="startPlayback">
       <template #track="{ peaks }">
         <div class="timeline">
           <div class="timeRuler" @click="seekTimeline">
             <span v-for="tick in 6" :key="tick" :style="{ left: `${(tick - 1) * 20}%` }">{{ formatTime((tick - 1) * timelineDuration / 5) }}</span>
           </div>
-          <div class="segmentTrack" role="group" aria-label="音频剪辑轨道">
-            <button v-for="(clip, index) in clips" :key="index" class="segmentItem" :class="{ selected: selectedIndex === index }" :style="{ left: `${clip.offset / timelineDuration * 100}%`, width: `${clip.length / timelineDuration * 100}%` }" type="button" :disabled="disabled" :aria-pressed="selectedIndex === index" :aria-label="`片段 ${index + 1}，时长 ${clip.length.toFixed(2)} 秒`" @click="selectSegment(index, $event)" @keydown.left.prevent="seekAt(playhead - 0.1)" @keydown.right.prevent="seekAt(playhead + 0.1)" @keydown.delete.prevent="selectedIndex = index; removeSegment()">
-              <span class="segmentName">片段 {{ index + 1 }}</span>
+          <div class="segmentTrack" role="group" aria-label="Track cắt ghép âm thanh">
+            <button v-for="(clip, index) in clips" :key="index" class="segmentItem" :class="{ selected: selectedIndex === index }" :style="{ left: `${clip.offset / timelineDuration * 100}%`, width: `${clip.length / timelineDuration * 100}%` }" type="button" :disabled="disabled" :aria-pressed="selectedIndex === index" :aria-label="`Đoạn ${index + 1}, thời lượng ${clip.length.toFixed(2)} giây`" @click="selectSegment(index, $event)" @keydown.left.prevent="seekAt(playhead - 0.1)" @keydown.right.prevent="seekAt(playhead + 0.1)" @keydown.delete.prevent="selectedIndex = index; removeSegment()">
+              <span class="segmentName">Đoạn {{ index + 1 }}</span>
               <template v-if="peaks.length"><svg v-for="(part, partIndex) in clip.parts" :key="partIndex" class="segmentWaveform" :style="{ left: `${part.offset / clip.length * 100}%`, width: `${part.length / clip.length * 100}%` }" :viewBox="`${part.start / duration * 512} 0 ${part.length / duration * 512} 100`" preserveAspectRatio="none" aria-hidden="true"><rect v-for="(peak, bar) in peaks" :key="bar" :x="bar * 4 + 1" :y="50 - Math.max(2, peak * 78) / 2" width="2" :height="Math.max(2, peak * 78)" rx="1" /></svg></template>
-              <span class="segmentDuration">{{ clip.length.toFixed(2) }} 秒</span>
+              <span class="segmentDuration">{{ clip.length.toFixed(2) }} giây</span>
             </button>
           </div>
           <span v-if="segments.length" class="playhead" :style="{ left: `${playhead / timelineDuration * 100}%` }" aria-hidden="true" />
-          <input class="cursorInput" type="range" min="0" :max="totalDuration || 1" step="0.01" :value="playhead" :disabled="disabled || !valid" aria-label="剪辑游标" :aria-valuetext="`${formatTime(playhead)} / ${formatTime(totalDuration)}`" @pointerdown.stop @input="seekCursor" />
+          <input class="cursorInput" type="range" min="0" :max="totalDuration || 1" step="0.01" :value="playhead" :disabled="disabled || !valid" aria-label="Con trỏ cắt ghép" :aria-valuetext="`${formatTime(playhead)} / ${formatTime(totalDuration)}`" @pointerdown.stop @input="seekCursor" />
         </div>
       </template>
       <template #time><span>{{ formatTime(playhead) }}</span><span>/</span><span>{{ formatTime(totalDuration) }}</span></template>
     </audioPlayer>
     <div class="editActions">
-      <el-button :icon="IconArrowBackUp" :disabled="disabled || !undoStack.length" title="撤销（Ctrl+Z）" @click="undo">撤销</el-button>
-      <el-button :icon="IconArrowForwardUp" :disabled="disabled || !redoStack.length" title="恢复（Ctrl+Y）" @click="redo">恢复</el-button>
-      <el-button :icon="IconScissors" :disabled="disabled || !canSplit" @click="splitSegment">分割</el-button>
-      <el-button :icon="IconLink" :disabled="disabled || !canMerge" :title="selectedIndex > 0 ? '与前一片段粘合' : '与后一片段粘合'" @click="mergeSegment">粘合</el-button>
-      <el-button :icon="IconTrash" :disabled="disabled || !activeSegment" @click="removeSegment">删除选中片段</el-button>
+      <el-button :icon="IconArrowBackUp" :disabled="disabled || !undoStack.length" title="Hoàn tác (Ctrl+Z)" @click="undo">Hoàn tác</el-button>
+      <el-button :icon="IconArrowForwardUp" :disabled="disabled || !redoStack.length" title="Làm lại (Ctrl+Y)" @click="redo">Làm lại</el-button>
+      <el-button :icon="IconScissors" :disabled="disabled || !canSplit" @click="splitSegment">Tách đoạn</el-button>
+      <el-button :icon="IconLink" :disabled="disabled || !canMerge" :title="selectedIndex > 0 ? 'Ghép với đoạn trước' : 'Ghép với đoạn sau'" @click="mergeSegment">Ghép</el-button>
+      <el-button :icon="IconTrash" :disabled="disabled || !activeSegment" @click="removeSegment">Xóa đoạn đã chọn</el-button>
     </div>
   </div>
 </template>

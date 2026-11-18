@@ -5,6 +5,7 @@ import type { RemoteTeam } from "@/utils/teams";
 import type { A2aSettings } from "@/agent/a2a/settings";
 import type { desktopUpdateAttempt } from "@/types/desktop";
 import type { MobileLinkConfig } from "@/utils/mobileLink";
+import type { ChromeDevice, ChromeRelayConfig } from "@/utils/aiChrome/protocol";
 import { normalizeNodeMenu, serializeNodeMenu } from "@/lib/nodeMenu";
 import type { SavedMcpServer } from "@toonflow/mcp/client";
 
@@ -13,9 +14,7 @@ mkdirSync(dataDirectory, { recursive: true });
 const configDirectory = realpathSync(dataDirectory);
 process.env.TOONFLOW_DATA_DIR = configDirectory;
 
-const config = new conf<{ settings: Record<string, unknown>; pluginInstalledAt: Record<string, number>; mediaGenerationDisabledOnce: boolean; disabledSkills: string[]; mcpServers: SavedMcpServer[]; mcpBundles: Record<string, string>; toolConfigs: Record<string, Record<string, unknown>>; nodeConfigs: Record<string, Record<string, unknown>>; extConfigs: Record<string, Record<string, unknown>>; remoteConnections: Record<string, RemoteTeam>; a2a: A2aSettings; desktopUpdateAttempt: desktopUpdateAttempt; mobileLink: MobileLinkConfig;
-  chromeBridgeMode: "local" | "remote";
-  chromeBridgeRemote: { url: string; ownerKey: string; deviceId: string; secrets: Record<string, string> } }>({
+const config = new conf<{ aiBridge?: { source?: "original" | "custom"; customApiKey?: string }; aiChrome?: ChromeDevice; aiChromeRelay?: ChromeRelayConfig; settings: Record<string, unknown>; pluginInstalledAt: Record<string, number>; mediaGenerationDisabledOnce: boolean; disabledSkills: string[]; mcpServers: SavedMcpServer[]; mcpBundles: Record<string, string>; toolConfigs: Record<string, Record<string, unknown>>; nodeConfigs: Record<string, Record<string, unknown>>; extConfigs: Record<string, Record<string, unknown>>; remoteConnections: Record<string, RemoteTeam>; a2a: A2aSettings; desktopUpdateAttempt: desktopUpdateAttempt; mobileLink: MobileLinkConfig }>({
   cwd: configDirectory,
   configName: "settings",
   configFileMode: 0o600,

@@ -1,4 +1,3 @@
-import { defaultLanguage } from "@/lib/defaultLanguage";
 import { createApp, h, nextTick, ref, type App } from "vue";
 import { ElButton, ElResult } from "element-plus";
 import { isRtlLocale } from "@toonflow/i18n";
@@ -15,7 +14,9 @@ import { getMissingBrowserFeatures } from "@/lib/browserCapabilities";
 import { publicWeb } from "@/stores/multiTenant";
 import { detectLocale, locale, setLocale, translate } from "@toonflow/i18n/vue";
 
-setLocale(defaultLanguage === "system" ? detectLocale(navigator.languages) : defaultLanguage);
+// Khi chưa tải cài đặt của người dùng, hiển thị tiếng Việt mặc định.
+// Nếu người dùng đã chọn "Hệ thống" hoặc một ngôn ngữ khác, cấu hình sau đó sẽ ghi đè.
+setLocale("vi");
 document.documentElement.classList.toggle("dark", window.matchMedia("(prefers-color-scheme: dark)").matches);
 document.documentElement.lang = locale.value;
 document.documentElement.dir = isRtlLocale(locale.value) ? "rtl" : "ltr";
@@ -32,13 +33,13 @@ async function notifyDesktopReady(failed = false) {
     headers: { "x-toonflow-desktop": "1", "Content-Type": "application/json", "Accept-Language": locale.value },
     body: JSON.stringify({ failed }),
   });
-  if (!response.ok) throw new Error((await response.json()).message || `通知桌面就绪失败（${response.status}）`);
+  if (!response.ok) throw new Error((await response.json()).message || `Không thể thông báo trạng thái sẵn sàng cho desktop (HTTP ${response.status})`);
 }
 
 // ACT: 已安装客户端的自动更新不经过 NSIS；启动时阻止缺少所需 API 的旧 WebView2 进入业务页面。
 async function initialize() {
-  if (requiresWebView2Update) throw new Error("当前 Microsoft Edge WebView2 Runtime 版本过旧。请以管理员身份运行微软最新版安装器；若仍提示已安装，请修复 WebView2 或联系管理员检查更新服务。更新完成后，请完全退出 Toonflow 再重新打开。");
-  if (requiresMobileWebViewUpdate) throw new Error("当前移动端浏览器内核缺少 Toonflow 所需能力。请更新 Toonflow 和系统浏览器内核；部分系统需要通过系统更新升级。更新完成后，请完全退出并重新打开 Toonflow。");
+  if (requiresWebView2Update) throw new Error("Phiên bản Microsoft Edge WebView2 Runtime quá cũ. Hãy chạy trình cài đặt mới nhất của Microsoft với quyền quản trị; nếu vẫn báo đã cài, hãy sửa WebView2 hoặc liên hệ quản trị viên. Sau khi cập nhật, thoát hẳn Toonflow rồi mở lại.");
+  if (requiresMobileWebViewUpdate) throw new Error("Trình duyệt hệ thống trên thiết bị di động còn thiếu tính năng Toonflow cần dùng. Hãy cập nhật Toonflow và trình duyệt hệ thống; một số thiết bị cần nâng cấp hệ điều hành. Sau khi cập nhật, thoát hẳn rồi mở lại Toonflow.");
   const { session, app: tenantApp } = await initializeMultiTenant();
   app = tenantApp ?? await createCreationApp(session);
   app.mount("#app");
@@ -53,7 +54,7 @@ async function initialize() {
 }
 
 void initialize().catch(async (error) => {
-  console.error("页面初始化失败：", error);
+  console.error("Khởi tạo trang thất bại: ", error);
   if (isMounted) app?.unmount();
   const disconnecting = ref(false);
   const recoveryError = ref("");
@@ -63,17 +64,17 @@ void initialize().catch(async (error) => {
     recoveryError.value = "";
     try {
       const response = await fetch("/api/connection/disconnect", { method: "POST", headers: { "x-toonflow-workspace": "1" } });
-      if (!response.ok) throw new Error((await response.json()).message || "切回本机失败，请重试");
+      if (!response.ok) throw new Error((await response.json()).message || "Không thể chuyển lại sang chế độ trên máy; hãy thử lại");
       if ((await response.json()).restart === "mobile") window.location.href = "toonflow://restart";
     } catch (cause) {
-      recoveryError.value = cause instanceof Error ? cause.message : "切回本机失败，请重试";
+      recoveryError.value = cause instanceof Error ? cause.message : "Không thể chuyển lại sang chế độ trên máy; hãy thử lại";
       disconnecting.value = false;
     }
   }
   createApp({
     render: () => h(ElResult, {
       icon: "error",
-      title: requiresWebView2Update ? translate("需要更新 WebView2") : requiresMobileWebViewUpdate ? "需要更新系统浏览器内核" : translate("启动失败"),
+      title: requiresWebView2Update ? translate("需要更新 WebView2") : requiresMobileWebViewUpdate ? "Cần cập nhật trình duyệt hệ thống" : translate("启动失败"),
       subTitle: error instanceof Error ? error.message : translate("无法加载应用，请重试。"),
     }, {
       extra: () => [h(ElButton, {
@@ -89,5 +90,5 @@ void initialize().catch(async (error) => {
   }).mount("#app");
   await nextTick();
   // ACT: 错误页也要结束启动动画，但不能消费尚未注册监听的安装请求。
-  await notifyDesktopReady(true).catch((error) => console.error("显示启动错误页失败：", error));
+  await notifyDesktopReady(true).catch((error) => console.error("Không thể hiển thị trang lỗi khởi động: ", error));
 });

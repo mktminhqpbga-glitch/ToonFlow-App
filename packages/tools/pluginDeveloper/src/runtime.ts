@@ -11,14 +11,14 @@ export interface PluginDevelopmentHost {
 export type PluginDevelopmentHandler = (directory: string, input: unknown, host: PluginDevelopmentHost, signal?: AbortSignal) => Promise<unknown>;
 
 const pathSchema = z.string().min(1).max(1024).refine(path => !/^(?:[\\/]|[a-z][a-z\d+.-]*:)/i.test(path)
-  && !path.split(/[\\/]/).some(part => part === ".." || /[<>:"|?*\x00-\x1f]/.test(part)), "项目路径必须位于当前工作区内");
+  && !path.split(/[\\/]/).some(part => part === ".." || /[<>:"|?*\x00-\x1f]/.test(part)), "Đường dẫn dự án phải nằm trong workspace hiện tại.");
 
 export const pluginDevelopmentSchema = z.strictObject({
   action: z.enum(["guide", "build", "install", "upload"]),
-  type: z.enum(["node", "tool"]).optional().describe("guide 必填：SDK 类型"),
-  path: pathSchema.optional().describe("build、install、upload 必填：同一个工作区相对项目目录，如 plugins/myNode"),
+  type: z.enum(["node", "tool"]).optional().describe("Bắt buộc với guide: loại SDK"),
+  path: pathSchema.optional().describe("Bắt buộc với build, install, upload: thư mục dự án tương đối từ workspace, ví dụ plugins/myNode"),
 }).refine(input => input.action === "guide" ? !!input.type && !input.path : !!input.path && !input.type,
-  "guide 只需 type，其他操作只需项目目录 path");
+  "guide chỉ cần type; các thao tác khác chỉ cần thư mục dự án trong path.");
 
 export const pluginManifestSchema = z.strictObject({
   type: z.enum(["node", "tool"]),

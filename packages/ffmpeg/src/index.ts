@@ -45,7 +45,7 @@ export async function getToolStatus(directory: string, mode: FfmpegMode, formatE
     const path = hasDownload ? downloaded : mode === "download" ? null : Bun.which(executableName(name));
     const origin = path ? hasDownload ? "download" as const : "system" as const : null;
     try {
-      return [name, { path, origin, version: path ? await readVersionInWorker(path, name) : null, error: path ? null : "未找到可用程序" }] as const;
+      return [name, { path, origin, version: path ? await readVersionInWorker(path, name) : null, error: path ? null : "Không tìm thấy chương trình thực thi khả dụng" }] as const;
     } catch (error) {
       return [name, { path, origin, version: null, error: formatError(error) }] as const;
     }
@@ -58,14 +58,14 @@ async function checkDirectory(path: string) {
     if (error.code !== "ENOENT") throw error;
     return null;
   });
-  if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) throw messageError(msg`安装目录必须是普通文件夹：${path}`);
+  if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) throw messageError(msg`Thư mục cài đặt phải là thư mục thông thường: ${path}`);
   return stat !== null;
 }
 
 export async function installFfmpeg(directory: string, sourceId: SourceId, signal: AbortSignal, report: (state: DownloadState) => void) {
   const source = downloadSources.find(item => item.id === sourceId);
-  if (!source?.available) throw new Error("此下载源暂不可用，请选择其他下载源");
-  if (!build) throw messageError(msg`暂不支持自动下载 ${target} 版本`);
+  if (!source?.available) throw new Error("Nguồn tải này tạm thời không khả dụng; hãy chọn nguồn khác");
+    if (!build) throw messageError(msg`Hiện chưa hỗ trợ tải tự động phiên bản ${target}`);
   signal = AbortSignal.any([signal, AbortSignal.timeout(15 * 60 * 1000)]);
   signal.throwIfAborted();
   const parent = dirname(resolve(directory));
@@ -85,7 +85,7 @@ export async function installFfmpeg(directory: string, sourceId: SourceId, signa
       const asset = build[name];
       report({ phase: "downloading", file: name, received: 0 });
       const response = await fetch(`${source.urlPrefix}${asset.fileName}`, { signal });
-      if (!response.ok || !response.body) throw messageError(msg`${name} 下载失败（HTTP ${response.status}）`);
+      if (!response.ok || !response.body) throw messageError(msg`${name} Tải xuống thất bại（HTTP ${response.status}）`);
       const total = Number(response.headers.get("content-length")) || undefined;
       let received = 0;
       const hash = createHash("sha256");
@@ -93,20 +93,20 @@ export async function installFfmpeg(directory: string, sourceId: SourceId, signa
       await pipeline(Readable.from(response.body), new Transform({
         transform(chunk: Buffer, _encoding, callback) {
           received += chunk.length;
-          if (received > 128 * 1024 * 1024) return callback(new Error("下载文件超过允许大小"));
+          if (received > 128 * 1024 * 1024) return callback(new Error("Tệp tải xuống vượt quá dung lượng cho phép"));
           hash.update(chunk);
           report({ phase: "downloading", file: name, received, total });
           callback(null, chunk);
         },
       }), createWriteStream(compressed, { flags: "wx", signal }), { signal });
       report({ phase: "verifying", file: name, received, total });
-      if (hash.digest("hex") !== asset.sha256) throw messageError(msg`${name} 文件校验失败，请换源重试`);
+      if (hash.digest("hex") !== asset.sha256) throw messageError(msg`${name} Kiểm tra tính toàn vẹn tệp thất bại; hãy đổi nguồn rồi thử lại`);
       const binary = join(staged, executableName(name));
       let extracted = 0;
       await pipeline(createReadStream(compressed, { signal }), createGunzip(), new Transform({
         transform(chunk: Buffer, _encoding, callback) {
           extracted += chunk.length;
-          callback(extracted > 256 * 1024 * 1024 ? new Error("解压文件超过允许大小") : null, chunk);
+          callback(extracted > 256 * 1024 * 1024 ? new Error("Tệp giải nén vượt quá dung lượng cho phép") : null, chunk);
         },
       }), createWriteStream(binary, { flags: "wx", signal }), { signal });
       if (process.platform !== "win32") await chmod(binary, 0o755);
@@ -124,7 +124,7 @@ export async function installFfmpeg(directory: string, sourceId: SourceId, signa
         try { await rename(previous, destination); }
         catch {
           preserveBackup = true;
-          throw messageError(msg`安装失败且无法恢复旧版本，旧文件保留在 ${previous}`, { cause: error });
+          throw messageError(msg`Cài đặt thất bại và không thể khôi phục phiên bản trước; tệp cũ được giữ tại ${previous}`, { cause: error });
         }
       }
       throw error;
@@ -133,7 +133,7 @@ export async function installFfmpeg(directory: string, sourceId: SourceId, signa
     // 仅清理本次 mkdtemp 创建、且仍位于数据目录内的临时目录。
     if (!preserveBackup && dirname(temporary) === root) {
       await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch(error => {
-        console.warn(`FFmpeg 临时目录清理失败：${temporary}`, error);
+        console.warn(`Không thể dọn thư mục tạm FFmpeg: ${temporary}`, error);
       });
     }
   }

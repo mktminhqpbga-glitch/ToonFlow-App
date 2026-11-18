@@ -10,9 +10,9 @@
       popperClass="agentModelPopover"
       :popperStyle="{ padding: '20px', maxWidth: 'calc(100vw - 24px)' }">
       <template #reference>
-        <el-button class="modelButton" text :disabled="disabled" aria-label="模型与思考强度设置">
+        <el-button class="modelButton" text :disabled="disabled" aria-label="Cài đặt mô hình và mức độ suy luận">
           <modelIcon v-if="selectedModelChoice" :model="selectedModelChoice.modelId" :size="14" />
-          <modelLabel class="modelName" :label="selectedModelChoice?.label ?? '选择模型'" :providerId="selectedModelChoice?.providerId" />
+          <modelLabel class="modelName" :label="selectedModelChoice?.label ?? 'Chọn mô hình'" :providerId="selectedModelChoice?.providerId" />
           <template v-if="reasoningLevels.length">
             ·
             <span class="reasoningLabel">{{ reasoningLabel }}</span>
@@ -21,8 +21,8 @@
         </el-button>
       </template>
       <el-form class="modelOptions" labelPosition="top">
-        <el-form-item label="模型">
-          <el-select :modelValue="selectedModelChoice ? selectedModel : ''" filterable :disabled="disabled" :teleported="false" placeholder="选择模型" aria-label="选择模型" noDataText="请先在设置中添加模型" @update:modelValue="selectedModel = $event" @change="reasoningEffort = ''">
+        <el-form-item label="Mô hình">
+          <el-select :modelValue="selectedModelChoice ? selectedModel : ''" filterable :disabled="disabled" :teleported="false" placeholder="Chọn mô hình" aria-label="Chọn mô hình" noDataText="Hãy thêm mô hình trong Cài đặt trước" @update:modelValue="selectedModel = $event" @change="reasoningEffort = ''">
             <template #prefix><modelIcon v-if="selectedModelChoice" :model="selectedModelChoice.modelId" :size="18" /></template>
             <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModelChoice?.providerId" /></template>
             <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
@@ -35,7 +35,7 @@
             </el-option-group>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="reasoningLevels.length" label="思考强度">
+        <el-form-item v-if="reasoningLevels.length" label="Mức độ suy luận">
           <div class="reasoningSettings">
             <div class="reasoningGrid" role="radiogroup" aria-label="思考强度" :aria-describedby="`${reasoningId}Hint`" :style="{ gridTemplateColumns: `repeat(${reasoningColumns}, minmax(0, 1fr))` }">
               <label v-for="option in reasoningOptions" :key="option.value" class="reasoningOption">
@@ -65,7 +65,7 @@ const reasoningEffort = defineModel<string>("reasoningEffort", { default: "" });
 const props = withDefaults(defineProps<{ active?: boolean; disabled?: boolean }>(), { active: true, disabled: false });
 const visible = ref(false);
 const reasoningId = useId();
-const reasoningLabels: Record<ThinkingLevel, string> = { off: "关闭", minimal: "最小", low: "低", medium: "中", high: "高", xhigh: "极高", max: "最高" };
+const reasoningLabels: Record<ThinkingLevel, string> = { off: "Tắt", minimal: "Tối thiểu", low: "Thấp", medium: "Trung bình", high: "Cao", xhigh: "Rất cao", max: "Cao nhất" };
 const selectedModelChoice = useNodeModelSelection(modelChoices, selectedModel);
 const modelGroups = computed(() => {
   const groups = new Map<string, { id: string; label: string; models: Array<(typeof modelChoices.value)[number]> }>();
@@ -77,9 +77,9 @@ const modelGroups = computed(() => {
   return [...groups.values()];
 });
 const reasoningLevels = computed(() => selectedModelChoice.value?.reasoningLevels ?? []);
-const reasoningOptions = computed(() => [{ label: "默认", value: "" }, ...reasoningLevels.value.map(value => ({ label: reasoningLabels[value], value }))]);
+const reasoningOptions = computed(() => [{ label: "Mặc định", value: "" }, ...reasoningLevels.value.map(value => ({ label: reasoningLabels[value], value }))]);
 const reasoningColumns = computed(() => Math.min(4, reasoningOptions.value.length > 4 ? Math.ceil(reasoningOptions.value.length / 2) : reasoningOptions.value.length));
-const reasoningLabel = computed(() => reasoningOptions.value.find(item => item.value === reasoningEffort.value)?.label ?? "默认");
+const reasoningLabel = computed(() => reasoningOptions.value.find(item => item.value === reasoningEffort.value)?.label ?? "Mặc định");
 watch(modelChoices, items => {
   if (!selectedModel.value) selectedModel.value = items[0]?.value ?? "";
 }, { immediate: true });

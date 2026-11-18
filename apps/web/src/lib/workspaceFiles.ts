@@ -28,7 +28,7 @@ export default function useWorkspaceFiles(directory?: MaybeRefOrGetter<string | 
   const workspace = directory === undefined ? useWorkspaceStore() : undefined;
   function getDirectory() {
     const path = directory === undefined ? workspace?.project?.directory : toValue(directory);
-    if (!path) throw new Error("请先选择工作目录");
+    if (!path) throw new Error("Vui lòng chọn thư mục workspace trước");
     return path;
   }
 
@@ -86,7 +86,7 @@ export default function useWorkspaceFiles(directory?: MaybeRefOrGetter<string | 
   }
 
   async function readText(path: string, maxBytes?: number, signal?: AbortSignal) {
-    if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1)) throw new Error("读取字节数必须为正整数");
+    if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1)) throw new Error("Số byte cần đọc phải là số nguyên dương");
     try {
       const { data } = await client.get<string>("/read", {
         params: { directory: getDirectory(), path }, responseType: "text", transformResponse: [], signal,
@@ -106,7 +106,7 @@ export default function useWorkspaceFiles(directory?: MaybeRefOrGetter<string | 
   }
 
   async function readTextSnapshot(path: string, options?: { maxBytes?: number; signal?: AbortSignal }): Promise<TextSnapshot> {
-    if (options?.maxBytes !== undefined && (!Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1)) throw new Error("读取字节数必须为正整数");
+    if (options?.maxBytes !== undefined && (!Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1)) throw new Error("Số byte cần đọc phải là số nguyên dương");
     const { data } = await client.get<{ data: TextSnapshot }>("/read", {
       params: { directory: getDirectory(), path, snapshot: true, maxBytes: options?.maxBytes }, signal: options?.signal,
     });
@@ -147,8 +147,8 @@ export default function useWorkspaceFiles(directory?: MaybeRefOrGetter<string | 
   }
 
   async function reveal(path: string) {
-    if (actualPlatform.isRemoteConnection) throw new Error("远程项目文件无法在本机文件管理器中定位，请下载或导出后查看。");
-    if (actualPlatform.isMobile) throw new Error("移动端暂不支持在文件管理器中定位项目文件，请使用下载或导出保存文件。");
+    if (actualPlatform.isRemoteConnection) throw new Error("Không thể định vị tệp dự án từ xa trong trình quản lý tệp trên máy; hãy tải xuống hoặc xuất tệp để xem.");
+    if (actualPlatform.isMobile) throw new Error("Ứng dụng di động chưa hỗ trợ tìm tệp dự án trong trình quản lý tệp; hãy tải xuống hoặc xuất tệp để lưu.");
     await client.post("/reveal", { directory: getDirectory(), path });
   }
 

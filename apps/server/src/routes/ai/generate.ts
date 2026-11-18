@@ -5,6 +5,7 @@ import type { ModelFinalization, ModelOutcome, ModelRunFailure } from "@toonflow
 import { validateFields } from "@/lib/middleware";
 import u from "@/utils";
 import { translateError, translateMessage, validationOptions } from "@/lib/i18n";
+import { generateChromeText } from "@/utils/aiChrome/text";
 
 const textPart = z.object({ type: z.literal("text"), text: z.string(), textSignature: z.string().optional() });
 const imagePart = z.object({ type: z.literal("image"), data: z.string(), mimeType: z.string().startsWith("image/") });
@@ -54,6 +55,7 @@ const contextSchema: z.ZodType<Context> = z.object({
 
 const inputSchema = z.object({
   providerId: z.string().min(1), modelId: z.string().min(1),
+  chromeTabId: z.number().int().nonnegative().optional(),
   requestId: z.uuid().optional(),
   context: contextSchema,
   directory: z.string().min(1).max(4096).optional(),
@@ -62,6 +64,26 @@ const inputSchema = z.object({
 
 export default Router().post("/", validateFields(inputSchema.shape), async (req, res) => {
   const input = inputSchema.parse(req.body, validationOptions());
+  if (input.providerId === "aiChrome") {
+    u.aiChrome.authorize(req);
+    const controller = new AbortController();
+    const close = () => controller.abort();
+    res.once("close", close); req.once("aborted", close);
+    let heartbeat: ReturnType<typeof setInterval> | undefined;
+    const send = (event: object) => { if (!res.destroyed && !res.writableEnded) res.write(`data: ${JSON.stringify(event)}\n\n`); };
+    try {
+      const directory = input.references?.some(ref => ref.dataType !== "STRING") ? await u.workspace.resolveWorkspace(req, input.directory ?? "") : undefined;
+      res.set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" }); res.flushHeaders();
+      heartbeat = setInterval(() => { if (!res.destroyed && !res.writableEnded && !res.writableNeedDrain) res.write(": keepalive\n\n"); }, 20000);
+      const message = await generateChromeText({ ...input, directory }, controller.signal);
+      for (const part of message.content) if (part.type === "text") send({ type: "text", delta: part.text });
+      send({ type: "done", message });
+    } catch (error) {
+      if (!res.headersSent) throw error;
+      send({ type: "error", message: error instanceof Error ? error.message : "AI chrome không trả về kết quả." });
+    } finally { clearInterval(heartbeat); res.off("close", close); req.off("aborted", close); if (res.headersSent && !res.destroyed && !res.writableEnded) res.end(); }
+    return;
+  }
   const configured = await u.ai.getConfiguredModel(input.providerId, input.modelId);
   const controller = new AbortController();
   const identity = u.multiTenant.requestIdentity(req);

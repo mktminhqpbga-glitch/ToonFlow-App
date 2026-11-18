@@ -12,7 +12,7 @@ async function getProviderBalance(providerId: string, signal?: AbortSignal) {
   const { data } = await axios.post<{ code: number; data: BalanceSnapshot; message?: string }>("/api/ai/media/balance", {
     providerId,
   }, { signal, timeout: 25000, headers: { "x-toonflow-workspace": "1" } });
-  if (data.code !== 200) throw new Error(data.message || "余额查询失败，请重试");
+  if (data.code !== 200) throw new Error(data.message || "Không thể truy vấn số dư, vui lòng thử lại");
   if (entry && !signal?.aborted && providerBalances.value.includes(entry)) {
     if (entry.accountId !== data.data.accountId) entry.revision = -1;
     entry.accountId = data.data.accountId;
@@ -52,7 +52,7 @@ export function refreshProviderBalance(providerId: string, signal?: AbortSignal)
         // 服务重启后的旧 ID 不得留在批量订阅中，避免一个失败账户拖垮整组通知。
         entry.accountId = "";
         entry.error = axios.isAxiosError<{ message?: string }>(error)
-          ? error.response?.data?.message || error.message : error instanceof Error ? error.message : translate("余额查询失败，请重试");
+          ? error.response?.data?.message || error.message : error instanceof Error ? error.message : translate("Không thể truy vấn số dư, vui lòng thử lại");
       }
     } finally {
       if (balanceRequests.get(providerId) === request) {
@@ -136,7 +136,7 @@ export function useProviderBalances() {
     try {
       const { data } = await axios.get<{ code: number; data: BalanceProvider[] }>("/api/providers/media/list", { signal: controller.signal });
       if (controller.signal.aborted) return;
-      if (data.code !== 200 || !Array.isArray(data.data)) throw new Error("读取媒体供应商失败");
+      if (data.code !== 200 || !Array.isArray(data.data)) throw new Error("Không thể đọc danh sách nhà cung cấp media");
       providers = data.data;
       syncProviders();
       const pending = [...providerBalances.value];
@@ -150,7 +150,7 @@ export function useProviderBalances() {
       if (!controller.signal.aborted) scheduleSubscribe();
     } catch (error) {
       if (!controller.signal.aborted) {
-        for (const entry of providerBalances.value) entry.error = error instanceof Error ? error.message : translate("余额查询失败，请重试");
+        for (const entry of providerBalances.value) entry.error = error instanceof Error ? error.message : translate("Không thể truy vấn số dư, vui lòng thử lại");
         retryConnection();
       }
     } finally {

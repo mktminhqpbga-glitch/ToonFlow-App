@@ -1,8 +1,8 @@
 <template>
   <div v-if="viewportEmpty && !dismissed" class="canvasViewportHint" @pointerdown.stop @click.stop @dblclick.stop @wheel.stop>
-    <span class="hintText" role="status">当前视窗没有节点</span>
-    <el-button class="returnButton" type="primary" text @click="fitView({ duration: 250 })">返回节点</el-button>
-    <el-button class="closeButton" text aria-label="关闭提示" @click="dismissed = true">
+    <span class="hintText" role="status">Không có node trong vùng nhìn hiện tại</span>
+    <el-button class="returnButton" type="primary" text @click="fitView({ duration: 250 })">Quay lại các node</el-button>
+    <el-button class="closeButton" text aria-label="Đóng thông báo" @click="dismissed = true">
       <icon-x :size="14" aria-hidden="true" />
     </el-button>
   </div>

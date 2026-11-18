@@ -24,7 +24,7 @@ $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $dialog = [System.Windows.Forms.FolderBrowserDialog]::new()
-$dialog.Description = "选择工作目录"
+$dialog.Description = "Chọn thư mục làm việc"
 $owner = [System.Windows.Forms.Form]::new()
 $owner.ShowInTaskbar = $false
 $owner.Opacity = 0
@@ -37,7 +37,7 @@ try {
 } finally { $dialog.Dispose(); $owner.Dispose() }
 `;
   const macScript = `try
-  return POSIX path of (choose folder with prompt "选择工作目录")
+  return POSIX path of (choose folder with prompt "Chọn thư mục làm việc")
 on error number -128
   return ""
 end try`;

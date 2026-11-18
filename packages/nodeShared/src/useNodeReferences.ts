@@ -26,7 +26,7 @@ export function useNodeReferences(handleId = "in") {
   const { id, node } = useNode<NodeData & { referenceOrder?: Record<string, string[]> }>();
   const flow = useVueFlow();
   const { findNode, removeEdges } = flow;
-  const selectNodeAsset = inject<((targetId: string, targetHandleId: string, assetPath?: string) => Promise<{ source: string; sourceHandle: string } | undefined>) | undefined>("selectNodeAsset", undefined);
+  const selectNodeAsset = inject<((targetId: string, targetHandleId: string) => Promise<{ source: string; sourceHandle: string } | undefined>) | undefined>("selectNodeAsset", undefined);
   let disposed = false;
   onScopeDispose(() => { disposed = true; });
   const inputValues = ref<NodeInputValue[]>([]);
@@ -46,7 +46,9 @@ export function useNodeReferences(handleId = "in") {
           id: referenceKey(item),
           label: findNode<NodeData>(item.source)?.data.label?.trim() || item.source,
           dataType: item.dataType,
-          name: `${findNode<NodeData>(item.source)?.data.label?.trim() || (typeof item.value === "object" && item.value && "url" in item.value ? item.value.url.split(/[\\/]/).pop() : undefined) || item.source}`,
+          name: item.dataType === "AUDIO"
+            ? `Tham chiếu ${index + 1}：${findNode<NodeData>(item.source)?.data.label?.trim() || item.value?.url.split(/[\\/]/).pop() || "Âm thanh"}`
+            : `Tham chiếu ${index + 1}`,
           value: `{{ref ${index + 1}}}`,
           avatar: item.dataType === "AUDIO" ? audioAvatar : previews.value.get(referenceKey(item)) || undefined,
           previewable: item.dataType === "IMAGE" || item.dataType === "VIDEO",
@@ -94,15 +96,8 @@ export function useNodeReferences(handleId = "in") {
 
   async function selectAssetReference() {
     if (disposed || findNode(id) !== node) return;
-    if (!selectNodeAsset) throw new Error("当前画布未提供全局素材库选择能力");
+    if (!selectNodeAsset) throw new Error("Canvas hiện tại không hỗ trợ chọn từ thư viện tài nguyên chung.");
     const source = await selectNodeAsset(id, handleId);
-    await nextTick();
-    if (!disposed && source) return referenceMentions.value.find(item => item.id === referenceKey(source));
-  }
-
-  async function selectAssetPathReference(assetPath: string) {
-    if (disposed || findNode(id) !== node || !assetPath || !selectNodeAsset) return;
-    const source = await selectNodeAsset(id, handleId, assetPath);
     await nextTick();
     if (!disposed && source) return referenceMentions.value.find(item => item.id === referenceKey(source));
   }
@@ -125,7 +120,7 @@ export function useNodeReferences(handleId = "in") {
     ));
   }
 
-  return { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, selectAssetPathReference, setReferencePreview, removeReference };
+  return { refList, referenceMentions, materialMentions, selectMaterialReference, selectAssetReference, setReferencePreview, removeReference };
 }
 
 function referenceKey(item: { source: string; sourceHandle: string }) {

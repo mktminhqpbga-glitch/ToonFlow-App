@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadConfigFromFile } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { i18nPlugin } from "@toonflow/i18n/vite";
 import { z } from "zod";
 import { defineExt, type ExtDefinition } from "./src/runtime.ts";
 
@@ -39,6 +40,7 @@ export function createExtConfig(config: ExtMetadata, configUrl: string) {
   return defineConfig({
     root,
     plugins: [
+      i18nPlugin({ pluginUi: true }),
       vue(),
       {
         name: "extBundle",
@@ -48,22 +50,22 @@ export function createExtConfig(config: ExtMetadata, configUrl: string) {
         },
         async generateBundle(_options, bundle) {
           const chunk = bundle[fileName];
-          if (!chunk || chunk.type !== "chunk") throw new Error(`未生成扩展文件：${fileName}`);
+          if (!chunk || chunk.type !== "chunk") throw new Error(`Chưa tạo được tệp tiện ích: ${fileName}`);
           const packagePath = resolve(root, "package.json");
           const readmePath = resolve(root, "readme.md");
           const metadataPath = resolve(root, "src/metadata.ts");
           this.addWatchFile(metadataPath);
           const loaded = await loadConfigFromFile({ command: "build", mode: "production" }, metadataPath, root);
-          if (!loaded) throw new Error(`扩展缺少声明文件：${metadataPath}`);
+          if (!loaded) throw new Error(`Tiện ích thiếu tệp khai báo: ${metadataPath}`);
           for (const dependency of loaded.dependencies) this.addWatchFile(dependency);
           const { load: _load, ...metadata } = defineExt({ ...loaded.config as unknown as ExtMetadata, load: async () => ({ default: {} }) });
-          if (metadata.id !== config.id) throw new Error("修改扩展 ID 后请重新启动构建命令");
+          if (metadata.id !== config.id) throw new Error("Sau khi đổi ID tiện ích, hãy khởi động lại lệnh build");
           const configRules = z.array(z.record(z.string(), z.json())).max(100).parse(metadata.configRules ?? []);
           this.addWatchFile(packagePath);
           this.addWatchFile(readmePath);
           const packageInfo = JSON.parse(await readFile(packagePath, "utf8"));
           const version = typeof packageInfo.version === "string" ? packageInfo.version.trim() : "";
-          if (!version) throw new Error(`扩展 package.json 缺少有效的 version：${config.id}`);
+          if (!version) throw new Error(`package.json tiện ích thiếu version hợp lệ: ${config.id}`);
           const readme = await readFile(readmePath, "utf8").catch((error: NodeJS.ErrnoException) => {
             if (error.code === "ENOENT") return "";
             throw error;

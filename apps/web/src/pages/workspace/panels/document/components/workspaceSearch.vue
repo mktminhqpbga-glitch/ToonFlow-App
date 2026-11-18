@@ -1,41 +1,41 @@
 <template>
-  <el-dialog v-model="visible" title="工作区全文搜索" width="min(900px, calc(100vw - 32px))" alignCenter appendToBody
+  <el-dialog v-model="visible" title="Tìm kiếm toàn văn trong workspace" width="min(900px, calc(100vw - 32px))" alignCenter appendToBody
     :closeOnClickModal="false" :closeOnPressEscape="!replacing" :showClose="!replacing" @closed="onClosed">
     <div class="workspaceSearch">
       <form class="searchControls" @submit.prevent="search">
-        <el-input ref="queryInput" v-model="query" placeholder="查找文本（字面匹配）" aria-label="查找文本" :disabled="replacing" clearable />
-        <el-checkbox v-model="caseSensitive" :disabled="replacing">区分大小写</el-checkbox>
-        <el-button type="primary" nativeType="submit" :disabled="!query || !active || searching || replacing">搜索</el-button>
-        <el-button v-if="searching" @click="cancelSearch">取消</el-button>
+        <el-input ref="queryInput" v-model="query" placeholder="Nhập văn bản cần tìm (khớp chính xác ký tự)" aria-label="Tìm văn bản" :disabled="replacing" clearable />
+        <el-checkbox v-model="caseSensitive" :disabled="replacing">Phân biệt chữ hoa/thường</el-checkbox>
+        <el-button type="primary" nativeType="submit" :disabled="!query || !active || searching || replacing">Tìm kiếm</el-button>
+        <el-button v-if="searching" @click="cancelSearch">Hủy</el-button>
       </form>
       <div class="replaceControls">
-        <el-input v-model="replacement" placeholder="替换为（留空表示删除）" aria-label="替换文本" :disabled="replacing" />
-        <el-button :disabled="searching || replacing || !selectedFiles.length || !active" @click="previewing = true">预览替换</el-button>
+        <el-input v-model="replacement" placeholder="Thay bằng (để trống để xóa)" aria-label="Văn bản thay thế" :disabled="replacing" />
+        <el-button :disabled="searching || replacing || !selectedFiles.length || !active" @click="previewing = true">Xem trước thay thế</el-button>
       </div>
-      <p class="searchScope">搜索磁盘内容；跳过回收目录、二进制和画布 JSON。单文件最多 2 MiB，本次最多检查 1000 个文件、1000 个目录、20 MiB 文本，展示 500 处匹配。</p>
-      <p class="searchStatus" role="status" aria-live="polite">{{ status ? translate(status) : '输入文本后搜索当前工作区及其子目录。' }}</p>
+      <p class="searchScope">Tìm trong nội dung trên đĩa; bỏ qua thư mục thùng rác, tệp nhị phân và JSON Canvas. Mỗi tệp tối đa 2 MiB; mỗi lượt kiểm tra tối đa 1.000 tệp, 1.000 thư mục và 20 MiB văn bản, hiển thị tối đa 500 vị trí khớp.</p>
+      <p class="searchStatus" role="status" aria-live="polite">{{ status ? translate(status) : 'Nhập văn bản để tìm trong workspace hiện tại và các thư mục con.' }}</p>
       <p v-if="searched" class="searchCounts">
-        已读取 {{ scanned }} 个文本文件，{{ results.length }} 个文件命中 {{ matchCount }} 处。
-        跳过：二进制或不支持的编码 {{ skippedBinary }}，过大文件 {{ skippedLarge }}，画布 {{ skippedCanvas }}，读取失败 {{ readFailures }}。
+        Đã đọc {{ scanned }} tệp văn bản; tìm thấy {{ matchCount }} vị trí khớp trong {{ results.length }} tệp.
+        Đã bỏ qua: {{ skippedBinary }} tệp nhị phân hoặc mã hóa không hỗ trợ, {{ skippedLarge }} tệp quá lớn, {{ skippedCanvas }} tệp Canvas, {{ readFailures }} tệp không đọc được.
       </p>
-      <el-alert v-if="issues.length" type="warning" :closable="false" :title="issues.join('；')" />
+      <el-alert v-if="issues.length" type="warning" :closable="false" :title="issues.join('; ')" />
       <template v-if="previewing">
         <div class="previewHeader">
-          <strong>替换预览：{{ selectedFiles.length }} 个文件，{{ selectedMatchCount }} 处</strong>
-          <el-button size="small" :disabled="replacing" @click="previewing = false">返回结果</el-button>
+          <strong>Xem trước thay thế: {{ selectedFiles.length }} tệp, {{ selectedMatchCount }} vị trí</strong>
+          <el-button size="small" :disabled="replacing" @click="previewing = false">Quay lại kết quả</el-button>
         </div>
-        <p class="replaceNotice">仅替换勾选文件中已完整搜索的匹配。逐文件保存；冲突文件会保留原文，已完成的文件不会因其他文件失败而回滚。</p>
+        <p class="replaceNotice">Chỉ thay những vị trí khớp đã được tìm đầy đủ trong các tệp được chọn. Mỗi tệp được lưu riêng; tệp bị xung đột sẽ giữ nội dung gốc và tệp đã hoàn tất không bị hoàn tác khi tệp khác thất bại.</p>
       </template>
       <div class="searchResults" :aria-busy="searching || replacing">
         <section v-for="file in shownFiles" :key="file.path" class="fileResult">
           <header class="fileHeader">
             <el-checkbox v-if="!previewing" :modelValue="file.selected" :disabled="file.truncated || replacing || !!file.saved"
-              :aria-label="`选择替换 ${file.path}`" @change="value => selectFile(file.path, value === true)" />
+              :aria-label="`Chọn thay thế trong ${file.path}`" @change="value => selectFile(file.path, value === true)" />
             <span class="filePath" :title="file.path">{{ file.path }}</span>
-            <span>{{ file.matches.length }} 处</span>
-            <span v-if="file.saved" class="savedStatus">已替换</span>
+            <span>{{ file.matches.length }} vị trí</span>
+            <span v-if="file.saved" class="savedStatus">Đã thay thế</span>
           </header>
-          <p v-if="file.truncated" class="fileNotice">此文件的匹配超过本次展示限制，暂不参与替换。</p>
+          <p v-if="file.truncated" class="fileNotice">Tệp này có quá nhiều kết quả khớp so với giới hạn hiển thị; tạm thời không đưa vào thao tác thay thế.</p>
           <p v-if="file.error" class="fileError" role="alert">{{ file.error }}</p>
           <div v-for="match in file.matches" :key="match.start" class="matchResult">
             <button v-if="!previewing" type="button" class="matchButton" :disabled="replacing || !!file.saved" @click="openMatch(file.path, match)">
@@ -45,8 +45,8 @@
             <div v-else class="matchPreview">
               <span class="matchPosition">{{ match.line }}:{{ match.column }}</span>
               <div class="previewLines">
-                <div class="beforeLine"><span aria-label="原内容">− </span>{{ match.before }}<mark>{{ match.text }}</mark>{{ match.after }}</div>
-                <div class="afterLine"><span aria-label="替换后">+ </span>{{ match.before }}<mark>{{ replacement }}</mark>{{ match.after }}</div>
+                <div class="beforeLine"><span aria-label="Nội dung gốc">− </span>{{ match.before }}<mark>{{ match.text }}</mark>{{ match.after }}</div>
+                <div class="afterLine"><span aria-label="Sau khi thay thế">+ </span>{{ match.before }}<mark>{{ replacement }}</mark>{{ match.after }}</div>
               </div>
             </div>
           </div>
@@ -54,9 +54,9 @@
       </div>
     </div>
     <template #footer>
-      <el-button v-if="replacing" :disabled="replaceCancelled" @click="replaceCancelled = true">停止后续替换</el-button>
-      <el-button v-else @click="visible = false">关闭</el-button>
-      <el-button v-if="previewing" type="primary" :loading="replacing" :disabled="!selectedFiles.length || !active || replacing" @click="replaceSelected">确认替换勾选文件</el-button>
+      <el-button v-if="replacing" :disabled="replaceCancelled" @click="replaceCancelled = true">Dừng thay thế các tệp tiếp theo</el-button>
+      <el-button v-else @click="visible = false">Đóng</el-button>
+      <el-button v-if="previewing" type="primary" :loading="replacing" :disabled="!selectedFiles.length || !active || replacing" @click="replaceSelected">Xác nhận thay thế trong các tệp đã chọn</el-button>
     </template>
   </el-dialog>
 </template>

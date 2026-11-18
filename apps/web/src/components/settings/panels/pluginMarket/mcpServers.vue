@@ -1,11 +1,11 @@
 <template>
   <div class="mcpServers">
     <div class="mcpToolbar">
-      <el-text size="small" type="info">{{ localSupported ? "连接本地或远程 MCP 服务，供 Agent 调用工具。" : "连接远程 MCP 服务，供 Agent 调用工具。" }}</el-text>
-      <el-button v-if="canManage" size="small" type="primary" :icon="IconPlus" :disabled="loading" @click="openEditor()">添加 MCP</el-button>
+      <el-text size="small" type="info">{{ localSupported ? "Kết nối MCP cục bộ hoặc từ xa để Agent sử dụng công cụ." : "Kết nối MCP từ xa để Agent sử dụng công cụ." }}</el-text>
+      <el-button v-if="canManage" size="small" type="primary" :icon="IconPlus" :disabled="loading" @click="openEditor()">Thêm MCP</el-button>
     </div>
     <el-alert v-if="listError" class="listError" :title="listError" type="error" :closable="false" showIcon>
-      <el-button size="small" @click="refreshKey++">重试</el-button>
+      <el-button size="small" @click="refreshKey++">Thử lại</el-button>
     </el-alert>
     <div v-loading="loading" class="serverList" :aria-busy="loading">
       <el-card v-for="server in servers" :key="server.id" class="serverCard" shadow="never">
@@ -14,32 +14,32 @@
           <el-tag size="small" type="info">{{ transportLabels[server.transport] }}</el-tag>
         </div>
         <p v-if="canManage" class="serverAddress">{{ server.transport === "stdio" ? server.command : server.url }}</p>
-        <el-text v-if="server.transport === 'stdio' && !localSupported" type="warning" size="small">当前平台不支持本地 MCP。</el-text>
+        <el-text v-if="server.transport === 'stdio' && !localSupported" type="warning" size="small">Nền tảng hiện tại không hỗ trợ MCP cục bộ.</el-text>
         <el-text v-else-if="server.loadError" type="danger" size="small">{{ server.loadError }}</el-text>
         <div class="serverFooter">
           <label v-if="canManage" class="serverToggle">
-            <span>{{ server.enabled ? "已启用" : "已禁用" }}</span>
+            <span>{{ server.enabled ? "Đang bật" : "Đã tắt" }}</span>
             <el-switch
               :modelValue="server.enabled"
               size="small"
               :loading="pendingServers.has(server.id)"
               :disabled="loading || pendingServers.has(server.id) || (server.transport === 'stdio' && !localSupported)"
-              :aria-label="`启用 ${server.name}`"
+              :aria-label="`Bật ${server.name}`"
               @change="setEnabled(server, $event === true)" />
           </label>
-          <el-text v-else size="small" type="info">{{ server.enabled ? "已启用" : "已禁用" }}</el-text>
+          <el-text v-else size="small" type="info">{{ server.enabled ? "Đang bật" : "Đã tắt" }}</el-text>
           <div v-if="canManage" class="serverActions">
-            <el-button size="small" :disabled="loading || pendingServers.has(server.id)" @click="openEditor(server)">编辑</el-button>
+          <el-button size="small" :disabled="loading || pendingServers.has(server.id)" @click="openEditor(server)">Sửa</el-button>
             <el-popconfirm
-              :title="`确定删除“${server.name}”吗？`"
+              :title="`Bạn có chắc muốn xóa “${server.name}”?`"
               width="240"
-              confirmButtonText="删除"
-              cancelButtonText="取消"
+              confirmButtonText="Xóa"
+              cancelButtonText="Hủy"
               confirmButtonType="danger"
               hideIcon
               @confirm="removeServer(server)">
               <template #reference>
-                <el-button size="small" :loading="pendingServers.has(server.id)" :disabled="loading || pendingServers.has(server.id)">删除</el-button>
+                    <el-button size="small" :loading="pendingServers.has(server.id)" :disabled="loading || pendingServers.has(server.id)">Xóa</el-button>
               </template>
             </el-popconfirm>
           </div>
@@ -49,7 +49,7 @@
 
     <el-dialog
       v-model="editorVisible"
-      :title="form.id ? '编辑 MCP' : '添加 MCP'"
+      :title="form.id ? 'Sửa MCP' : 'Thêm MCP'"
       width="min(680px, calc(100vw - 32px))"
       alignCenter
       appendToBody
@@ -61,8 +61,8 @@
       <el-scrollbar maxHeight="min(62dvh, calc(100dvh - 240px))">
         <div class="dialogContent">
           <el-form v-if="!form.id" labelPosition="top" :disabled="saving" @submit.prevent>
-            <el-form-item class="methodField" label="添加方式">
-              <el-segmented v-model="creationMode" :options="creationMethods" block ariaLabel="添加 MCP 的方式">
+            <el-form-item class="methodField" label="Cách thêm">
+              <el-segmented v-model="creationMode" :options="creationMethods" block ariaLabel="Cách thêm MCP">
                 <template #default="{ item }">
                   <span class="methodOption">
                     <component :is="item.icon" :size="16" aria-hidden="true" />
@@ -74,53 +74,53 @@
           </el-form>
           <el-form v-if="creationMode === 'quick'" class="serverForm" labelPosition="top" :disabled="saving || testing" @submit.prevent="saveServer">
             <div class="connectionFields">
-              <el-form-item label="名称" required>
+              <el-form-item label="Tên" required>
                 <el-input v-model="form.name" autocomplete="off" :maxlength="100" />
               </el-form-item>
-              <el-form-item label="连接方式">
-                <el-select v-model="form.transport" aria-label="MCP 连接方式">
+              <el-form-item label="Cách kết nối">
+                <el-select v-model="form.transport" aria-label="Phương thức kết nối MCP">
                   <el-option v-for="(label, transport) in transportLabels" :key="transport" :value="transport" :label :disabled="transport === 'stdio' && !localSupported" />
                 </el-select>
               </el-form-item>
             </div>
             <template v-if="form.transport === 'stdio'">
-              <el-form-item label="启动命令" required>
+              <el-form-item label="Lệnh khởi chạy" required>
                 <el-input v-model="form.command" class="codeInput" autocomplete="off" dir="ltr" />
-                <el-text class="fieldHint" size="small" type="info">{{ localSupported ? "命令在运行 Toonflow 的电脑或服务端执行。" : "当前平台不支持本地 MCP，请改用远程连接。" }}</el-text>
+                <el-text class="fieldHint" size="small" type="info">{{ localSupported ? "Lệnh được thực thi trên máy chạy Toonflow hoặc máy chủ." : "Nền tảng hiện tại không hỗ trợ MCP cục bộ, hãy dùng kết nối từ xa." }}</el-text>
               </el-form-item>
-              <el-form-item label="参数（每行一个）">
+              <el-form-item label="Tham số (mỗi dòng một tham số)">
                 <el-input v-model="form.args" class="codeInput" type="textarea" :rows="3" resize="vertical" autocomplete="off" dir="ltr" />
-                <el-text class="fieldHint" size="small" type="info">每行作为一个完整参数，路径含空格时无需加引号。</el-text>
+                <el-text class="fieldHint" size="small" type="info">Mỗi dòng là một tham số hoàn chỉnh; đường dẫn có dấu cách không cần thêm dấu ngoặc kép.</el-text>
               </el-form-item>
             </template>
-            <el-form-item v-else label="服务地址" required>
+            <el-form-item v-else label="Địa chỉ dịch vụ" required>
               <el-input v-model="form.url" class="codeInput" autocomplete="off" dir="ltr" />
             </el-form-item>
             <el-collapse v-model="expandedSettings" class="moreSettings">
               <el-collapse-item name="advanced">
                 <template #title>
-                  <span>更多设置</span>
+                  <span>Cài đặt nâng cao</span>
                   <el-text v-if="settingsSummary" class="settingsSummary" size="small" type="info">{{ settingsSummary }}</el-text>
                 </template>
                 <template v-if="form.transport === 'stdio'">
-                  <el-form-item label="工作目录（可选）">
+                  <el-form-item label="Thư mục làm việc (tùy chọn)">
                     <el-input v-model="form.cwd" class="codeInput" autocomplete="off" dir="ltr" />
                   </el-form-item>
-                  <el-form-item label="环境变量（JSON，可选）">
+                  <el-form-item label="Biến môi trường (JSON, tùy chọn)">
                     <el-input v-model="form.env" class="codeInput" type="textarea" :rows="4" autocomplete="off" spellcheck="false" dir="ltr" />
                   </el-form-item>
                 </template>
-                <el-form-item v-else label="请求头（JSON，可选）">
+                <el-form-item v-else label="Header yêu cầu (JSON, tùy chọn)">
                   <el-input v-model="form.headers" class="codeInput" type="textarea" :rows="4" autocomplete="off" spellcheck="false" dir="ltr" />
                 </el-form-item>
               </el-collapse-item>
             </el-collapse>
             <div class="enabledRow">
               <label class="enabledControl">
-                <el-switch v-model="form.enabled" size="small" aria-label="启用 MCP 服务" />
-                <span>启用此 MCP</span>
+                <el-switch v-model="form.enabled" size="small" aria-label="Bật dịch vụ MCP" />
+                <span>Bật MCP này</span>
               </label>
-              <el-text size="small" type="info">保存后在下一轮 Agent 对话生效</el-text>
+              <el-text size="small" type="info">Có hiệu lực từ lượt hội thoại Agent tiếp theo sau khi lưu</el-text>
             </div>
           </el-form>
           <mcpImportForm
@@ -138,7 +138,7 @@
           <div v-if="feedbackVisible" class="connectionStatus" :class="{ hasError: !!editorError && !testing }" role="status" aria-live="polite" :aria-busy="testing">
             <template v-if="testing">
               <icon-loader-2 class="loadingIcon" :size="16" aria-hidden="true" />
-              <span>正在连接并读取工具…</span>
+              <span>Đang kết nối và đọc công cụ…</span>
             </template>
             <template v-else-if="editorError">
               <icon-alert-circle class="errorIcon" :size="16" aria-hidden="true" />
@@ -146,10 +146,10 @@
             </template>
             <template v-else-if="testResult">
               <icon-circle-check class="successIcon" :size="16" aria-hidden="true" />
-              <span>连接成功</span>
-              <el-text size="small" type="info">{{ testResult.tools.length }} 个工具</el-text>
+              <span>Đã kết nối thành công</span>
+              <el-text size="small" type="info">{{ testResult.tools.length }} công cụ</el-text>
               <el-popover v-if="testResult.tools.length" placement="top-start" width="min(420px, calc(100vw - 48px))" trigger="click" :showArrow="false">
-                <template #reference><el-button size="small" type="primary" link>查看工具</el-button></template>
+                <template #reference><el-button size="small" type="primary" link>Xem công cụ</el-button></template>
                 <el-scrollbar maxHeight="300px">
                   <div class="toolList">
                     <div v-for="tool in testResult.tools" :key="tool.name" class="toolItem">
@@ -162,12 +162,12 @@
             </template>
           </div>
           <div class="editorActions">
-            <el-button :disabled="saving" @click="editorVisible = false">取消</el-button>
+            <el-button :disabled="saving" @click="editorVisible = false">Hủy</el-button>
             <template v-if="creationMode === 'quick'">
-              <el-button :loading="testing" :disabled="saving || (form.transport === 'stdio' && !localSupported)" @click="testConnection">{{ testing ? "连接中…" : "测试连接" }}</el-button>
-              <el-button type="primary" :loading="saving" :disabled="testing || (form.transport === 'stdio' && !localSupported)" @click="saveServer">保存</el-button>
+              <el-button :loading="testing" :disabled="saving || (form.transport === 'stdio' && !localSupported)" @click="testConnection">{{ testing ? "Đang kết nối…" : "Kiểm tra kết nối" }}</el-button>
+              <el-button type="primary" :loading="saving" :disabled="testing || (form.transport === 'stdio' && !localSupported)" @click="saveServer">Lưu</el-button>
             </template>
-            <el-button v-else type="primary" :loading="saving" :disabled="!importForm?.ready" @click="importForm?.importServers()">导入</el-button>
+            <el-button v-else type="primary" :loading="saving" :disabled="!importForm?.ready" @click="importForm?.importServers()">Nhập</el-button>
           </div>
         </div>
       </template>
@@ -198,15 +198,15 @@ type McpServerConfig = {
 };
 type TestResult = { tools: { name: string; description?: string }[]; serverName?: string };
 const { visible = true } = defineProps<{ visible?: boolean }>();
-const transportLabels = { stdio: "本地（stdio）", http: "远程（Streamable HTTP）", sse: "远程（SSE）" };
+const transportLabels = { stdio: "Cục bộ (stdio)", http: "Từ xa (Streamable HTTP)", sse: "Từ xa (SSE)" };
 const requestHeaders = { "x-toonflow-workspace": "1" };
 const servers = ref<(McpServerConfig & { id: string })[]>([]);
 const canManage = ref(false);
 const localSupported = ref(false);
 const creationMethods = computed(() => [
-  { label: "快速创建", value: "quick", icon: IconPlus },
-  { label: "从 JSON 导入", value: "json", icon: IconFileCode },
-  { label: "导入 DXT 包", value: "dxt", icon: IconPackage, disabled: !localSupported.value },
+  { label: "Tạo nhanh", value: "quick", icon: IconPlus },
+  { label: "Nhập từ JSON", value: "json", icon: IconFileCode },
+  { label: "Nhập gói DXT", value: "dxt", icon: IconPackage, disabled: !localSupported.value },
 ]);
 const loading = ref(false);
 const listError = ref("");
@@ -269,11 +269,11 @@ watch(
         "/api/mcp/servers/list", { headers: requestHeaders, signal: listController.signal }
       );
       if (listController.signal.aborted) return;
-      if (data.code !== 200) throw new Error(data.message || "读取 MCP 服务失败");
+      if (data.code !== 200) throw new Error(data.message || "Đọc dịch vụ MCP thất bại");
       if (!Array.isArray(data.data?.servers) || data.data.servers.some(server =>
         !server || typeof server.id !== "string" || typeof server.name !== "string"
         || !Object.hasOwn(transportLabels, server.transport) || typeof server.enabled !== "boolean"
-      )) throw new Error("MCP 服务列表格式错误");
+      )) throw new Error("Định dạng danh sách dịch vụ MCP không hợp lệ");
       servers.value = data.data.servers;
       canManage.value = data.data.canManage === true;
       localSupported.value = data.data.localSupported === true;
@@ -309,16 +309,16 @@ function openEditor(server?: McpServerConfig) {
 function finishImport(count: number) {
   editorVisible.value = false;
   refreshKey.value++;
-  ElMessage.success(`已导入 ${count} 个 MCP 服务`);
+  ElMessage.success(`Đã nhập ${count} dịch vụ MCP`);
 }
 
 function parseRecord(value: string, label: string): Record<string, string> | undefined {
   if (!value.trim()) return undefined;
   let parsed: unknown;
   try { parsed = JSON.parse(value); }
-  catch { throw new Error(`${label}必须是有效的 JSON 对象`); }
+  catch { throw new Error(`${label} phải là đối tượng JSON hợp lệ`); }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || Object.values(parsed).some(item => typeof item !== "string")) {
-    throw new Error(`${label}必须是 JSON 对象，所有值均为字符串`);
+    throw new Error(`${label} phải là đối tượng JSON và mọi giá trị phải là chuỗi`);
   }
   return parsed as Record<string, string>;
 }
@@ -326,19 +326,19 @@ function parseRecord(value: string, label: string): Record<string, string> | und
 function serverFromForm(): McpServerConfig {
   const value = form.value;
   const name = value.name.trim();
-  if (!name) throw new Error("请填写 MCP 名称");
+  if (!name) throw new Error("Hãy nhập tên MCP");
   const server: McpServerConfig = { ...(value.id ? { id: value.id } : {}), name, transport: value.transport, enabled: value.enabled };
   if (value.transport === "stdio") {
-    if (!localSupported.value) throw new Error("当前平台不支持本地 MCP，请改用远程连接");
+    if (!localSupported.value) throw new Error("Nền tảng hiện tại không hỗ trợ MCP cục bộ, hãy dùng kết nối từ xa");
     const command = value.command.trim();
-    if (!command) throw new Error("请填写启动命令");
+    if (!command) throw new Error("Hãy nhập lệnh khởi chạy");
     return {
       ...server, command, args: value.args === originalArgs.join("\n") ? [...originalArgs] : value.args ? value.args.split(/\r?\n/) : [],
       ...(value.cwd.trim() ? { cwd: value.cwd.trim() } : {}), env: parseRecord(value.env, translate("环境变量")),
     };
   }
   const url = value.url.trim();
-  if (!URL.canParse(url) || !["http:", "https:"].includes(new URL(url).protocol)) throw new Error("请输入有效的 HTTP 或 HTTPS 服务地址");
+  if (!URL.canParse(url) || !["http:", "https:"].includes(new URL(url).protocol)) throw new Error("Hãy nhập địa chỉ dịch vụ HTTP hoặc HTTPS hợp lệ");
   return { ...server, url, headers: parseRecord(value.headers, translate("请求头")) };
 }
 
@@ -350,10 +350,10 @@ async function saveServer() {
     saving.value = true;
     const { data } = await axios.put("/api/mcp/servers/save", { server }, { headers: requestHeaders, signal: controller.signal });
     if (controller.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "保存 MCP 服务失败");
+    if (data.code !== 200) throw new Error(data.message || "Lưu dịch vụ MCP thất bại");
     editorVisible.value = false;
     refreshKey.value++;
-    ElMessage.success("MCP 服务已保存");
+    ElMessage.success("Đã lưu dịch vụ MCP");
   } catch (cause) {
     if (!controller.signal.aborted) editorError.value = errorMessage(cause);
   } finally { saving.value = false; }
@@ -372,8 +372,8 @@ async function testConnection() {
       "/api/mcp/servers/test", { server }, { headers: requestHeaders, signal: currentController.signal }
     );
     if (currentController.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "MCP 连接失败");
-    if (!Array.isArray(data.data?.tools)) throw new Error("MCP 工具列表格式错误");
+    if (data.code !== 200) throw new Error(data.message || "Kết nối MCP thất bại");
+    if (!Array.isArray(data.data?.tools)) throw new Error("Danh sách công cụ MCP có định dạng không hợp lệ");
     testResult.value = data.data;
   } catch (cause) {
     if (!currentController.signal.aborted) editorError.value = errorMessage(cause);
@@ -388,7 +388,7 @@ async function setEnabled(server: McpServerConfig, enabled: boolean) {
   try {
     const { data } = await axios.post("/api/mcp/servers/setEnabled", { id: server.id, enabled }, { headers: requestHeaders, signal: controller.signal });
     if (controller.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "更新 MCP 状态失败");
+    if (data.code !== 200) throw new Error(data.message || "Cập nhật trạng thái MCP thất bại");
     server.enabled = enabled;
   } catch (cause) {
     if (!controller.signal.aborted) ElMessage.error(errorMessage(cause));
@@ -401,9 +401,9 @@ async function removeServer(server: McpServerConfig) {
   try {
     const { data } = await axios.delete("/api/mcp/servers/remove", { data: { id: server.id }, headers: requestHeaders, signal: controller.signal });
     if (controller.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "删除 MCP 服务失败");
+    if (data.code !== 200) throw new Error(data.message || "Xóa dịch vụ MCP thất bại");
     servers.value = servers.value.filter(item => item.id !== server.id);
-    ElMessage.success("MCP 服务已删除");
+    ElMessage.success("Đã xóa dịch vụ MCP");
   } catch (cause) {
     if (!controller.signal.aborted) {
       ElMessage.error(errorMessage(cause));

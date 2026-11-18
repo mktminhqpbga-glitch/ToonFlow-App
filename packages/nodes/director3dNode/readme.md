@@ -1,61 +1,61 @@
-# 3D 导演台
+# Đạo diễn 3D
 
-用文字生成场景、模型动画与运镜，再通过三维取景调整镜头，适合动作和镜头预演。人形角色使用内置低多边形关节人偶，布景与道具可使用基础几何体。
+Dùng văn bản để tạo bối cảnh, hoạt ảnh mô hình và chuyển động camera; sau đó điều chỉnh góc nhìn trong không gian 3D. Thích hợp dựng thử hành động và góc máy. Nhân vật hình người sử dụng mẫu khớp nối low-poly tích hợp; bối cảnh/đạo cụ có thể dùng hình học cơ bản.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 输入支持文本、图片和视频参考，用于描述或参考场景、动作与运镜。
-- 关键帧可导出为 PNG 图片节点，选中的动画可导出为 MP4 视频节点。
-- 导出前需要启用相应的图片或视频节点插件。
+- Hỗ trợ văn bản, ảnh và video tham chiếu để mô tả bối cảnh, hành động và camera.
+- Có thể xuất keyframe thành node ảnh PNG và hoạt ảnh được chọn thành node video MP4.
+- Cần bật plugin node ảnh hoặc video tương ứng trước khi xuất.
 
-## 使用方法
+## Cách sử dụng
 
-首次打开导演台会显示操作引导，完成或关闭后不再自动显示。
+Lần đầu mở bảng Đạo diễn 3D sẽ xuất hiện hướng dẫn, sau khi hoàn thành hoặc đóng sẽ không tự hiện lại.
 
-1. 点击节点预览打开导演台，选择生成模型，描述场景、角色动作和镜头要求，点击“生成动画”。
-2. 在动画列表中选择方案，从头预览对应动作和运镜，并查看该方案的输入提示词；通过播放按钮与进度条暂停或定位，可继续输入要求生成新方案。旧方案若未保存提示词，会明确提示缺少记录。
-3. 点击三维画面进入取景，用鼠标调整朝向；WASD 移动，空格上升，Shift 下降，滚轮调焦。
-4. 右键记录取景，或点击“添加关键帧”；关键帧可拖动排序、点击回看或删除，左键或 Esc 退出取景。
-5. 记录关键帧后再次生成动画，可让运镜参考这些取景及其顺序。
-6. 按需调整画面比例、网格、天空与光照，再导出关键帧图片或点击“导出视频节点”。
+1. Bấm bản xem trước của node để mở bảng, chọn mô hình AI, mô tả cảnh/hành động/góc máy rồi bấm **Tạo hoạt ảnh**.
+2. Chọn phương án trong danh sách hoạt ảnh để xem hành động và chuyển động camera từ đầu, cùng prompt đầu vào. Dùng nút Phát và thanh tiến độ để tạm dừng/tua; có thể nhập thêm yêu cầu để tạo phương án mới. Nếu phương án cũ không lưu prompt, giao diện báo rõ là thiếu.
+3. Bấm vào khung 3D để điều khiển camera. Dùng chuột đổi hướng; WASD di chuyển, Space đi lên, Shift hạ xuống, con lăn đổi tiêu cự.
+4. Nhấp chuột phải hoặc bấm **Thêm keyframe** để lưu góc nhìn. Có thể kéo đổi thứ tự, bấm xem lại hoặc xóa; nhấp trái hoặc Esc để thoát điều khiển.
+5. Sau khi lưu keyframe, tạo hoạt ảnh mới để AI tham khảo góc nhìn và thứ tự đó.
+6. Chỉnh tỉ lệ, lưới, bầu trời và ánh sáng rồi xuất ảnh keyframe hoặc bấm **Xuất node video**.
 
-视频导出时保持当前窗口可见，完成后可在画布中新建的视频节点查看结果。
+Khi xuất video cần để cửa sổ hiện tại hiển thị; sau khi hoàn tất, xem kết quả ở node video mới trên Canvas.
 
-## AI 局部编辑
+## AI chỉnh sửa từng phần
 
-生成方案与普通文本节点统一调用 `ai.generate()`，通过 `tools` 传入私有 `readDocument` / `editDocument`，所选文本模型需要支持工具调用。每轮先复制选中方案作为草稿，AI 按需读取并局部修改场景、轨道和镜头，保留未修改内容；首次生成也通过同一组工具补齐草稿。工具循环与草稿均在节点侧，服务端只代理单次模型请求，不维护导演台会话。
+Việc tạo phương án dùng `ai.generate()` giống node Văn bản và cấp riêng các công cụ `readDocument`, `editDocument` qua `tools`. Mô hình văn bản được chọn phải hỗ trợ gọi công cụ. Mỗi lượt sao chép phương án đang chọn làm bản nháp; AI đọc và chỉnh cục bộ cảnh, track và camera, giữ nội dung không sửa. Lần tạo đầu cũng dùng công cụ để hoàn thiện bản nháp. Vòng lặp công cụ và bản nháp ở phía node; server chỉ chuyển tiếp từng yêu cầu mô hình, không lưu phiên Đạo diễn 3D.
 
-工具不注册到 `nodeTools`，不向外部总 Agent 暴露，也不直接操作文件。只有完整校验、预览渲染和保存均成功后才追加新方案；场景仍由所有方案共用。失败、取消或并发场景冲突时不会提交草稿。每次生成最多调用模型 40 次，模型与工具调用超过 10 分钟会取消。
+Hai công cụ trên không được đăng ký vào `nodeTools`, không đưa cho Agent tổng và không trực tiếp sửa tệp. Chỉ thêm phương án khi đã kiểm tra toàn bộ, render xem trước và lưu thành công; mọi phương án dùng chung cảnh. Khi lỗi, hủy hoặc có xung đột chỉnh sửa đồng thời thì không ghi bản nháp. Mỗi lượt tạo cho phép tối đa 40 lần gọi mô hình; quá 10 phút sẽ hủy.
 
-## 低多边形关节人偶
+## Nhân vật khớp nối low-poly
 
-在导演台“设置”中点击“添加人偶”，即可加入低多边形关节人偶并保存。人偶降低网格细分、不显示额外关节球，内部保留 16 个关节。也可直接要求 AI 使用内置人偶，无需重新拼装人体。
+Trong Cài đặt của Đạo diễn 3D, bấm **Thêm nhân vật** để thêm và lưu hình người low-poly. Mô hình ít phân đoạn lưới, không vẽ các quả cầu khớp, nhưng bên trong vẫn có 16 khớp. Có thể trực tiếp yêu cầu AI dùng mẫu nhân vật tích hợp, không cần tự ghép cơ thể.
 
-人偶身高约 1.8，原点在脚底，+Y 向上、+Z 朝前，左右按人偶自身，+X 是左。根物体的 position、rotation、scale 控制整体位置、朝向和大小；material.color 控制整个人偶的统一颜色，不同人物可使用不同整体颜色。
+Nhân vật cao khoảng 1,8 đơn vị, gốc tọa độ dưới bàn chân, +Y lên, +Z ra trước, +X là bên trái theo chính nhân vật. Các thuộc tính `position`, `rotation`, `scale` của object gốc điều khiển vị trí/hướng/kích thước tổng thể. `material.color` điều khiển màu thống nhất toàn nhân vật; mỗi nhân vật có thể dùng màu riêng.
 
-场景中的人偶只占一个 objectList 项：
+Một nhân vật chiếm một phần tử trong `objectList`:
 
-```json
+~~~json
 {
   "threeJsonId": "person1",
-  "name": "人物",
+  "name": "Nhân vật",
   "objType": "mannequin",
   "geometry": {},
   "position": { "x": 0, "y": 0, "z": 0 },
   "material": { "type": "standard", "color": "#c8a878", "roughness": 0.7 },
   "pose": { "rightElbow": { "x": -1.2, "y": 0, "z": 0 } }
 }
-```
+~~~
 
-pose 可省略；默认零旋转为自然垂臂站姿。关节姿态使用相对父关节的 XYZ 欧拉角，单位为弧度。层级为 hips → spine → neck → head；spine 下有左右肩 → 肘 → 腕，hips 下有左右髋 → 膝 → 踝。肩部旋转会带动整条手臂，髋部旋转会带动整条腿。
+`pose` có thể bỏ qua; mặc định mọi góc xoay bằng 0 là đứng, hai tay thả tự nhiên. Tư thế khớp dùng góc Euler XYZ tính bằng radian tương đối với khớp cha. Thứ bậc: hips → spine → neck → head; từ spine nối vai trái/phải → khuỷu → cổ tay; từ hips nối hông trái/phải → đầu gối → mắt cá. Xoay vai kéo cả cánh tay, xoay hông kéo cả chân.
 
-可用关节名：hips、spine、neck、head、leftShoulder、leftElbow、leftWrist、rightShoulder、rightElbow、rightWrist、leftHip、leftKnee、leftAnkle、rightHip、rightKnee、rightAnkle。
+Tên khớp khả dụng: hips, spine, neck, head, leftShoulder, leftElbow, leftWrist, rightShoulder, rightElbow, rightWrist, leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle.
 
-人偶默认完整，可按要求添加 hiddenParts 数组，隐藏指定关节及其下游部位。例如 `"hiddenParts": ["leftShoulder", "rightKnee"]` 表示缺左臂和右小腿（含脚）。Shoulder 是整臂，Elbow 是前臂含手，Wrist 仅手；Hip 是整腿，Knee 是小腿含脚，Ankle 仅脚。使用对应的 left/right 关节名，左右按人偶自身。隐藏部位保留骨架名称，已有动画仍可使用。
+Mặc định nhân vật có đủ các phần. Có thể thêm mảng `hiddenParts` để ẩn khớp được chọn và các phần con. Ví dụ `"hiddenParts": ["leftShoulder", "rightKnee"]` ẩn cả tay trái và cẳng chân phải (kể cả bàn chân). Shoulder là cả tay; Elbow là cẳng tay cùng bàn tay; Wrist chỉ bàn tay. Hip là cả chân; Knee là cẳng chân cùng bàn chân; Ankle chỉ bàn chân. Phân biệt left/right theo chính nhân vật. Khớp ẩn vẫn giữ tên trong bộ xương và hoạt ảnh cũ vẫn dùng được.
 
-动画的 objectId 始终指向人偶根 ID，用 joint 选择关节，帧只填写 rotation，保留固定骨长。例如弯曲右肘的轨道：
+Trong track hoạt ảnh, `objectId` luôn là ID object gốc; `joint` chọn khớp. Các frame chỉ cần `rotation`, giữ chiều dài xương cố định. Ví dụ gập khuỷu tay phải:
 
-```json
+~~~json
 {
   "objectId": "person1",
   "joint": "rightElbow",
@@ -64,6 +64,6 @@ pose 可省略；默认零旋转为自然垂臂站姿。关节姿态使用相对
     { "time": 1, "rotation": { "x": -1.2, "y": 0, "z": 0 } }
   ]
 }
-```
+~~~
 
-省略 joint 的轨道控制整体移动、旋转或缩放，可与关节轨道同时使用；根轨道的 position、scale 可省略，保持基础模型的变换。所有轨道仍需满足方案时长和关键帧格式。
+Track không có `joint` điều khiển chuyển động, xoay hoặc đổi tỉ lệ của object gốc và có thể dùng cùng track khớp. `position` và `scale` trong track gốc có thể bỏ qua để giữ mặc định. Mọi track vẫn phải đúng thời lượng phương án và định dạng keyframe.

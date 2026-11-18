@@ -19,14 +19,14 @@ async function mountNode() {
   const currentRevision = revision;
   mounting = true;
   try {
-    if (!target.value || !props.context.mountNode) throw new Error("节点文档宿主未就绪");
+    if (!target.value || !props.context.mountNode) throw new Error("Host tài liệu node chưa sẵn sàng");
     const unmount = await props.context.mountNode(target.value);
     if (!active || disposed || currentRevision !== revision) unmount();
     else {
       release = unmount;
     }
   } catch (error) {
-    if (active && !disposed && currentRevision === revision) props.context.error = error instanceof Error ? error.message : "节点加载失败";
+    if (active && !disposed && currentRevision === revision) props.context.error = error instanceof Error ? error.message : "Tải node thất bại";
   } finally {
     mounting = false;
     // ACT: 切换期间等待旧挂载先释放，再恢复当前视图，避免较晚返回的旧调用覆盖新投射。

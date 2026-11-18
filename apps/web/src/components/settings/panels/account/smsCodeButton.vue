@@ -13,7 +13,7 @@
         :disabled="disabled || visible === false || !phone.trim() || countdown > 0 || sending"
         :loading="loading || sending"
         @keydown.esc="closeCaptcha">
-        {{ countdown > 0 ? `${countdown}s 后重试` : "获取验证码" }}
+        {{ countdown > 0 ? `${countdown}s  nữa mới thử lại` : "Lấy mã xác minh" }}
       </el-button>
     </template>
   </el-popover>
@@ -46,7 +46,7 @@ function loadCaptcha() {
       else {
         script.remove();
         captchaLoading = undefined;
-        reject(new Error("人机验证码加载失败，请重试"));
+        reject(new Error("Tải mã xác minh người dùng thất bại, vui lòng thử lại"));
       }
     }
     script.src = "https://turing.captcha.qcloud.com/TCaptcha.js";
@@ -116,7 +116,7 @@ async function openCaptcha() {
       if (result.ret !== 0) return closeCaptcha();
       if (!result.ticket || !result.randstr) {
         closeCaptcha();
-        ElMessage.error("人机验证失败，请重试");
+        ElMessage.error("Xác minh người dùng thất bại, vui lòng thử lại");
         return;
       }
       submitted = true;
@@ -130,9 +130,9 @@ async function openCaptcha() {
         retryAt.value = timestamp;
         try { localStorage.setItem(storageKey, JSON.stringify({ phone, retryAt: timestamp })); } catch { /* ACT: 浏览器禁用存储时仅保留当前页面倒计时。 */ }
         updateCountdown();
-        ElMessage.success("验证码已发送，请查收短信");
+        ElMessage.success("Đã gửi mã xác minh, vui lòng kiểm tra SMS");
       } catch (error) {
-        if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "发送短信验证码失败");
+        if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Gửi mã xác minh SMS thất bại");
       } finally {
         if (controller === request) closeCaptcha();
       }
@@ -141,7 +141,7 @@ async function openCaptcha() {
   } catch (error) {
     if (!request.signal.aborted) {
       closeCaptcha();
-      ElMessage.error(error instanceof Error ? error.message : "人机验证码加载失败，请重试");
+      ElMessage.error(error instanceof Error ? error.message : "Tải mã xác minh người dùng thất bại, vui lòng thử lại");
     }
   } finally {
     if (controller === request) loading.value = false;

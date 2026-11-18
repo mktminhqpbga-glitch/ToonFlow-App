@@ -1,5 +1,5 @@
 export function getWaveformPeaks(channels: readonly Float32Array[], barCount = 128): number[] {
-  if (!Number.isInteger(barCount) || barCount <= 0) throw new RangeError("波形条数必须为正整数");
+  if (!Number.isInteger(barCount) || barCount <= 0) throw new RangeError("Số thanh dạng sóng phải là số nguyên dương");
   const peaks = Array<number>(barCount).fill(0);
   const sampleCount = channels.reduce((length, channel) => Math.max(length, channel.length), 0);
   let maximum = 0;

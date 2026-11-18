@@ -1,0 +1,51 @@
+name: Auto Release on PR
+
+# pull_request_target (not pull_request) so the GITHUB_TOKEN can write releases
+# for merged PRs from forks too. This is safe only because the job never checks
+# out any code: it reads the tags through the API and tags the merge commit
+# already on main. (actions/checkout also refuses fork PRs in this event, which
+# failed every release for a PR merged from a fork.)
+on:
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Get latest tag
+        id: get_tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A failing API call stops the step (bash -e) instead of restarting at v0.0.0.
+          refs=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" --paginate --jq '.[].ref')
+          latest_tag=$(printf '%s\n' "$refs" | sed 's#^refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          echo "latest_tag=${latest_tag:-v0.0.0}" >> "$GITHUB_OUTPUT"
+
+      - name: Increment version
+        id: bump_version
+        run: |
+          current_tag=${{ steps.get_tag.outputs.latest_tag }}
+          version=${current_tag#v}
+          IFS='.' read -r a b c <<< "$version"
+          new_c=$((c + 1))
+          new_tag="v$a.$b.$new_c"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+          echo "Creating new version: $new_tag"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump_version.outputs.new_tag }}
+          target_commitish: ${{ github.event.pull_request.merge_commit_sha }}
+          name: Release ${{ steps.bump_version.outputs.new_tag }}
+          body: |
+            Auto release from PR #${{ github.event.pull_request.number }}
+            Title: ${{ github.event.pull_request.title }}
+          draft: false
+          prerelease: false

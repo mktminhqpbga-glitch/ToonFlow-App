@@ -5,18 +5,18 @@
     :topVisible="node.selected"
     topWidth="max-content"
     :downloadUrl="downloadUrl"
-    :downloadName="`${nodeProps.label || nodeText('文本', 'Văn bản')}.md`"
+    :downloadName="`${nodeProps.label || 'Văn bản'}.md`"
     :bottomWidth="660"
     @fullscreen="fullscreen = true; editing = true">
     <div class="textContent" :class="{ empty: !outputs.text.value.trim(), resized }">
       <el-alert v-if="documentState.error" :title="documentState.error" type="error" :closable="false" showIcon>
-        <el-button text size="small" :disabled="generating || textReloading" @click="editing = true">查看并复制当前正文</el-button>
-        <el-button text size="small" :disabled="generating" :loading="textReloading" @click="reloadText">重新读取磁盘</el-button>
+        <el-button text size="small" :disabled="generating || textReloading" @click="editing = true">Xem và sao chép nội dung hiện tại</el-button>
+        <el-button text size="small" :disabled="generating" :loading="textReloading" @click="reloadText">Đọc lại từ đĩa</el-button>
       </el-alert>
-      <div v-if="outputs.text.value.trim() && previewReady" class="textPreview nopan nowheel" aria-label="文本内容">
+      <div v-if="outputs.text.value.trim() && previewReady" class="textPreview nopan nowheel" aria-label="Nội dung văn bản">
         <markdownPreview :modelValue="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="previewReady" />
       </div>
-      <el-button class="editButton nodrag nopan" :icon="IconEdit" :disabled="generating || !textReady" text @dblclick.stop @click.stop="editing = true">编辑</el-button>
+      <el-button class="editButton nodrag nopan" :icon="IconEdit" :disabled="generating || !textReady" text @dblclick.stop @click.stop="editing = true">Chỉnh sửa</el-button>
     </div>
     <template #bottom>
       <el-card class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
@@ -28,37 +28,43 @@
         </div>
         <promptInput v-model="promptModel" v-model:text="prompt" :references="referenceMentions" />
         <div class="promptFooter">
-          <el-select :modelValue="selectedModel ? model : ''" class="modelSelect" filterable :loading="modelsLoading" :disabled="generating" :placeholder="vietnamese ? 'Chọn mô hình' : '选择模型'" aria-label="生成模型" noDataText="请先在设置中添加模型" placement="top-start" @update:modelValue="model = $event" @visible-change="visible => visible && loadModels()">
-            <template v-if="!selectedModel" #prefix><icon-sparkles :size="17" /></template>
-            <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
-            <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
-              <el-option v-for="item in provider.models" :key="item.modelId" :label="item.label" :value="getNodeModelKey(item)">
-                <modelLabel :label="item.label" :providerId="item.providerId" :modelId="item.modelId" />
-              </el-option>
-            </el-option-group>
-          </el-select>
+          <chromeModelSelect
+            :modelValue="model"
+            :chromeTabId="data.chromeTabId"
+            :bridgeTarget="data.bridgeTarget"
+            :models="models"
+            outputKind="text"
+            :loading="modelsLoading"
+            :disabled="generating"
+            placeholder="Chọn mô hình"
+            ariaLabel="Mô hình tạo nội dung"
+            noDataText="Hãy thêm mô hình trong Cài đặt"
+            @update:modelValue="model = $event; data.chromeTabId = undefined; data.bridgeTarget = undefined"
+            @update:chromeTabId="data.chromeTabId = $event"
+            @update:bridgeTarget="data.bridgeTarget = $event"
+            @open="loadModels()" />
           <div class="promptActions">
-            <el-button class="sendButton" :loading="generating && !isBridgeText" :icon="generating && isBridgeText ? IconPlayerStop : IconArrowUp" :disabled="!textReady || generating && !isBridgeText || !generating && (!prompt.trim() || !selectedModel)" :title="generating ? '停止 Chrome 请求' : (vietnamese ? 'Tạo nội dung' : '生成')" :aria-label="generating ? '停止 Chrome 请求' : (vietnamese ? 'Tạo nội dung' : '生成')" @click="generating ? cancelBridgeText() : generateText()" />
+            <el-button class="sendButton" :icon="IconArrowUp" :loading="generating" :disabled="!prompt.trim() || !selectedModel || generating || !textReady" title="Tạo nội dung" aria-label="Tạo nội dung" @click="generateText" />
           </div>
         </div>
       </el-card>
     </template>
   </nodeSkeleton>
-  <el-dialog v-model="editing" :title="vietnamese ? 'Chỉnh sửa văn bản' : '编辑文本'" width="min(860px, calc(100vw - 32px))" :fullscreen="fullscreen" alignCenter appendToBody @closed="fullscreen = false">
+  <el-dialog v-model="editing" title="Chỉnh sửa văn bản" width="min(860px, calc(100vw - 32px))" :fullscreen="fullscreen" alignCenter appendToBody @closed="fullscreen = false">
     <div class="textEditor" :class="{ fullscreen }">
-      <markdownEditor v-model="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="editing" :disabled="generating || textReloading" :readonly="!!documentState.error" ariaLabel="编辑文本内容" />
+      <markdownEditor v-model="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="editing" :disabled="generating || textReloading" :readonly="!!documentState.error" ariaLabel="Chỉnh sửa nội dung văn bản" />
     </div>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, onScopeDispose, ref, watch } from "vue";
-import { ElAlert, ElButton, ElCard, ElSelect, ElDialog, ElOption, ElOptionGroup, ElMessage, ElMessageBox } from "element-plus";
-import { IconEdit, IconFileText, IconSparkles, IconArrowUp, IconPlayerStop } from "@tabler/icons-vue";
+import { computed, inject, onMounted, ref, watch } from "vue";
+import { ElAlert, ElButton, ElCard, ElDialog, ElMessage, ElMessageBox } from "element-plus";
+import { IconEdit, IconFileText, IconArrowUp } from "@tabler/icons-vue";
 import { getNodeModelIdentity, getNodeModelKey, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeAiModel, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
-import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
-import modelLabel from "@toonflow/node-shared/modelLabel";
+import { requireChromeTab } from "@toonflow/node-shared/chromeTabs";
+import chromeModelSelect from "@toonflow/node-shared/chromeModelSelect";
 import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
 import markdownEditor from "./markdownEditor.vue";
 import markdownPreview from "./markdownPreview.vue";
@@ -66,30 +72,21 @@ import referenceItem from "@toonflow/node-shared/referenceItem";
 import promptInput from "@toonflow/node-shared/promptInput";
 import { useNodeDocumentState, type NodeDocumentContext } from "@toonflow/nodes-scaffold/nodeDocument";
 
-const vietnamese = useNodeVietnamese();
-
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
 
 defineOptions({
   inheritAttrs: false,
   icon: IconFileText,
   handles: [
-    { id: "in", type: "target", dataType: ["VIDEO", "IMAGE", "STRING", "FILE"], label: nodeText("视频、图片、文本、文件输入", "Đầu vào video, ảnh, văn bản hoặc tệp") },
-    { id: "text", type: "source", dataType: "STRING", label: nodeText("文本输出", "Văn bản đầu ra") },
+    { id: "in", type: "target", dataType: ["VIDEO", "IMAGE", "STRING", "FILE"], label: "Đầu vào video, ảnh, văn bản, tệp" },
+    { id: "text", type: "source", dataType: "STRING", label: "Đầu ra văn bản" },
   ] satisfies NodeHandle[],
 });
-const { node, nodeProps, handles, outputs, ai, files, nodeEvent, previewReady } = useNode({
-  label: () => { void vietnamese.value; return nodeText("文本", "Văn bản"); },
+const { node, nodeProps, outputs, ai, files, nodeEvent, previewReady } = useNode({
+  label: "Văn bản",
   onModelsChanged: () => void loadModels(),
   outputs: { text: { dataType: "STRING", value: "" } },
 });
-watch(vietnamese, () => {
-  // Đổi nhãn hiển thị theo ngôn ngữ, không thay ID, kiểu dữ liệu hoặc cấu trúc kết nối.
-  const inHandle = handles.value.find(item => item.id === "in");
-  if (inHandle) inHandle.label = nodeText("视频、图片、文本、文件输入", "Đầu vào video, ảnh, văn bản hoặc tệp");
-  const textHandle = handles.value.find(item => item.id === "text");
-  if (textHandle) textHandle.label = nodeText("文本输出", "Văn bản đầu ra");
-}, { flush: "sync" });
 const { refList, referenceMentions, setReferencePreview, removeReference } = useNodeReferences();
 const editing = ref(false);
 const fullscreen = ref(false);
@@ -103,17 +100,13 @@ watch([() => outputs.value.text.value, () => node.selected || !!documentContext?
   downloadUrl.value = url;
   onCleanup(() => URL.revokeObjectURL(url));
 }, { immediate: true });
-const data = computed(() => node.data as typeof node.data & { prompt?: string; promptModel?: PromptModel; model?: string; textPath?: string; textSnapshot?: string });
+const data = computed(() => node.data as typeof node.data & { prompt?: string; promptModel?: PromptModel; model?: string; textPath?: string; textSnapshot?: string; chromeTabId?: number; bridgeTarget?: string });
 const prompt = computed({ get: () => data.value.prompt ?? "", set: (value: string) => { data.value.prompt = value; } });
 const model = computed({ get: () => data.value.model ?? "", set: (value: string) => { data.value.model = value; } });
 const models = ref<NodeAiModel[]>([]);
 const modelsLoading = ref(false);
 const generating = ref(false);
 const selectedModel = useNodeModelSelection(models, model);
-const isBridgeText = computed(() => selectedModel.value?.providerId === "chromeBridge");
-let bridgeTextController: AbortController | undefined;
-function cancelBridgeText() { bridgeTextController?.abort(); }
-onScopeDispose(() => bridgeTextController?.abort());
 const modelGroups = computed(() => groupNodeModels(models.value));
 const textReady = ref(false);
 const textReloading = ref(false);
@@ -128,7 +121,7 @@ function saveText(value: string) {
   const revision = ++textRevision;
   documentState.dirty = true;
   textSaving = textSaving.catch(() => {}).then(async () => {
-    if (!textSnapshot) throw new Error("文本尚未加载，无法保存");
+    if (!textSnapshot) throw new Error("Văn bản chưa được tải, không thể lưu");
     textSnapshot.revision = await textFiles.writeTextSnapshot(textPath, value, textSnapshot);
     textSnapshot.text = value;
     if (revision === textRevision && outputs.value.text.value === value) {
@@ -137,15 +130,15 @@ function saveText(value: string) {
     }
   }).catch(error => {
     documentState.error = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
-      || (error instanceof Error ? error.message : "文本保存失败");
+      || (error instanceof Error ? error.message : "Lưu văn bản thất bại");
     throw error;
   });
   return textSaving;
 }
 nodeEvent.on("save", async (reason) => {
   await textLoading;
-  if (!textReady.value) throw new Error("文本尚未加载，无法保存");
-  if (reason === "reload" && generating.value) throw new Error("文本正在生成，请完成后再刷新节点");
+  if (!textReady.value) throw new Error("Văn bản chưa được tải, không thể lưu");
+  if (reason === "reload" && generating.value) throw new Error("Đang tạo văn bản, hãy hoàn tất trước khi làm mới node");
   // 普通编辑已由 watcher 入队；生成中补存当前片段，不因画布保存重复写未改动的文本。
   if (generating.value) saveText(outputs.value.text.value);
   let pending: Promise<void>;
@@ -154,19 +147,19 @@ nodeEvent.on("save", async (reason) => {
     try { await pending; }
     catch { await saveText(outputs.value.text.value); }
   } while (pending !== textSaving);
-  if (reason === "reload" && generating.value) throw new Error("文本正在生成，请完成后再刷新节点");
+  if (reason === "reload" && generating.value) throw new Error("Đang tạo văn bản, hãy hoàn tất trước khi làm mới node");
 });
 onMounted(() => { textLoading = loadText(); });
 async function loadText(fromDisk = false) {
   textReloading.value = true;
   textReady.value = false;
   try {
-    if (!node.id || /[\\/]/.test(node.id) || node.id === "." || node.id === "..") throw new Error("节点 ID 不能作为文件夹名称");
-    if (data.value.textPath !== undefined && data.value.textPath !== textPath) throw new Error("文本文件路径无效");
+    if (!node.id || /[\\/]/.test(node.id) || node.id === "." || node.id === "..") throw new Error("ID của node không thể dùng làm tên thư mục");
+    if (data.value.textPath !== undefined && data.value.textPath !== textPath) throw new Error("Đường dẫn tệp văn bản không hợp lệ");
     textFiles = files.getWorkspaceFiles();
     if (data.value.textPath || fromDisk) textSnapshot = await textFiles.readTextSnapshot(textPath);
     const value = fromDisk ? textSnapshot!.text : data.value.textSnapshot !== undefined ? data.value.textSnapshot : textSnapshot?.text ?? outputs.value.text.value;
-    if (typeof value !== "string") throw new Error("文本内容无效");
+    if (typeof value !== "string") throw new Error("Nội dung văn bản không hợp lệ");
     if (!data.value.textPath && !fromDisk) {
       for (const directory of ["assets", `assets/${node.id}`]) {
         await textFiles.mkdir(directory).catch((error: { response?: { data?: { data?: { code?: string } } } }) => {
@@ -177,7 +170,7 @@ async function loadText(fromDisk = false) {
         if (error.response?.data?.data?.code !== "EEXIST") throw error;
       });
       textSnapshot = await textFiles.readTextSnapshot(textPath);
-      if (textSnapshot.text !== value) throw new Error("文本文件已被其他编辑器修改，请重新加载节点");
+      if (textSnapshot.text !== value) throw new Error("Tệp văn bản đã bị trình chỉnh sửa khác thay đổi, hãy tải lại node");
     } else if (textSnapshot && textSnapshot.text !== value) {
       textSnapshot.revision = await textFiles.writeTextSnapshot(textPath, value, textSnapshot);
       textSnapshot.text = value;
@@ -193,15 +186,15 @@ async function loadText(fromDisk = false) {
     documentState.error = "";
   } catch (error) {
     documentState.error = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
-      || (error instanceof Error ? error.message : "文本加载失败");
+      || (error instanceof Error ? error.message : "Không tải được văn bản");
     ElMessage.error(documentState.error);
   } finally { textReloading.value = false; }
 }
 
 async function reloadText() {
   if (generating.value || textReloading.value) return;
-  const confirmed = await ElMessageBox.confirm("重新读取将用磁盘内容替换当前正文。未保存的修改会被放弃，请先复制需要保留的内容。", "重新读取文本", {
-    confirmButtonText: "重新读取", cancelButtonText: "取消", type: "warning", closeOnClickModal: false,
+  const confirmed = await ElMessageBox.confirm("Đọc lại từ đĩa sẽ thay nội dung hiện tại. Mọi thay đổi chưa lưu sẽ bị mất; hãy sao chép nội dung cần giữ trước.", "Đọc lại văn bản", {
+    confirmButtonText: "Đọc lại", cancelButtonText: "Hủy", type: "warning", closeOnClickModal: false,
   }).then(() => true, () => false);
   if (!confirmed || generating.value || textReloading.value) return;
   const fromDisk = textReady.value || !!textSnapshot || !!data.value.textPath;
@@ -217,10 +210,10 @@ watch(() => outputs.value.text.value, async (value) => {
   documentState.dirty = true;
   if (generating.value) return;
   try { await saveText(value); }
-  catch (error) { ElMessage.error(error instanceof Error ? error.message : "文本保存失败"); }
+  catch (error) { ElMessage.error(error instanceof Error ? error.message : "Lưu văn bản thất bại"); }
 }, { flush: "sync" });
 nodeEvent.on("copy", () => {
-  if (!textReady.value) throw new Error("文本尚未加载");
+  if (!textReady.value) throw new Error("Văn bản chưa được tải");
   return { textPath: undefined, textSnapshot: outputs.value.text.value };
 });
 
@@ -231,20 +224,6 @@ async function loadModels() {
   modelsLoading.value = true;
   try {
     models.value = await ai.getModels();
-    // ACT: model Chrome chỉ có trên macOS desktop, đã chọn tab và probe thành công.
-    try {
-      const response = await fetch("/api/desktop/chromeBridge/status", { cache: "no-store",
-        headers: { "x-toonflow-workspace": "1" } });
-      if (response.ok) {
-        const result = await response.json() as { data?: { selected?: Record<string, { capabilities: string[] }> } };
-        for (const provider of ["gemini", "chatgpt"]) {
-          if (!result.data?.selected?.[provider]?.capabilities?.includes("text")) continue;
-          models.value.push({ providerId: "chromeBridge", providerLabel: "Chrome Companion",
-            modelId: provider + "_text", label: (provider === "gemini" ? "Gemini" : "ChatGPT") + " · Chrome",
-            protocol: "openai-completions" });
-        }
-      }
-    } catch { /* Không ảnh hưởng các model gốc khi bridge không có sẵn. */ }
     if (!model.value) {
       const first = modelGroups.value[0]?.models[0];
       model.value = first ? getNodeModelKey(first) : "";
@@ -259,51 +238,31 @@ async function loadModels() {
 async function generateText() {
   const choice = selectedModel.value;
   if (!textReady.value || generating.value || !choice || !prompt.value.trim()) return;
+  const chromeTabId = data.value.chromeTabId;
   generating.value = true;
   let text = "";
   try {
-    if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
+    if (refList.value.some(item => item.value === undefined)) throw new Error("Node tham chiếu chưa có nội dung, hãy bổ sung nội dung");
+    await requireChromeTab(choice, chromeTabId, "text");
     const references = refList.value
       .filter(item => item.value !== undefined && (item.dataType === "STRING" || item.dataType === "IMAGE" || item.dataType === "VIDEO" || item.dataType === "FILE"))
       .map(item => item.dataType === "STRING" ? { dataType: item.dataType, value: item.value } : { dataType: item.dataType, value: { ...item.value } });
-    const input = { ...getNodeModelIdentity(choice), prompt: prompt.value.trim(), references };
+    const input = { ...getNodeModelIdentity(choice), prompt: prompt.value.trim(), references, chromeTabId, bridgeTarget: data.value.bridgeTarget };
     const directory = references.some(item => item.dataType !== "STRING") ? (await textFiles.list()).directory : undefined;
-    if (choice.providerId === "chromeBridge") {
-      const controller = bridgeTextController = new AbortController();
-      try {
-        const provider = choice.modelId.replace(/_text$/, "");
-        if (!["gemini", "chatgpt"].includes(provider)) throw new Error("Chrome Bridge không hỗ trợ nguồn văn bản này");
-        if (references.some(item => item.dataType === "VIDEO" || item.dataType === "FILE"))
-          throw new Error("Chrome Bridge Text Node chỉ nhận văn bản và ảnh tham chiếu");
-        const response = await fetch("/api/desktop/chromeBridge/text", {
-          method: "POST", headers: { "Content-Type": "application/json",
-            "x-toonflow-desktop": "1", "x-toonflow-workspace": "1" },
-          body: JSON.stringify({ provider, prompt: input.prompt, directory, nodeId: node.id,
-            references: references.filter(item => item.dataType === "STRING" || item.dataType === "IMAGE") }),
-          signal: controller.signal,
-        });
-        const result = await response.json();
-        if (!response.ok || result.code !== 200 || typeof result.data?.text !== "string")
-          throw new Error(result.message || "Chrome Bridge không trả về văn bản");
-        controller.signal.throwIfAborted();
-        outputs.value.text.value = result.data.text;
-      } finally { if (bridgeTextController === controller) bridgeTextController = undefined; }
-    } else {
-      const result = await ai.generate({
-        ...input,
-        directory,
-        onEvent(event) {
-          if (event.type === "text") outputs.value.text.value = text += event.delta;
-        },
-      });
-      outputs.value.text.value = result.text;
-    }
+    const result = await ai.generate({
+      ...input,
+      directory,
+      onEvent(event) {
+        if (event.type === "text") outputs.value.text.value = text += event.delta;
+      },
+    });
+    outputs.value.text.value = result.text;
   } catch (error) {
     if (error instanceof Error && error.name !== "AbortError") ElMessage.error(error.message);
   } finally {
     // 卸载会取消请求并停止 watcher，生成收尾必须自行保存已收到的正文。
     try { await saveText(outputs.value.text.value); }
-    catch (error) { ElMessage.error(error instanceof Error ? error.message : "文本保存失败"); }
+    catch (error) { ElMessage.error(error instanceof Error ? error.message : "Lưu văn bản thất bại"); }
     generating.value = false;
   }
 }
@@ -311,11 +270,11 @@ const promptModel = computed({ get: () => data.value.promptModel ?? [], set: (va
 
 nodeTools.register({
   name: "setText",
-  description: () => nodeText("修改此节点的文本输出", "Sửa nội dung văn bản đầu ra của node này."),
+  description: "Chỉnh sửa đầu ra văn bản của node này",
   parameters: z.strictObject({ text: z.string() }),
   async execute({ text }) {
-    if (!textReady.value) throw new Error("文本尚未加载");
-    if (generating.value) throw new Error("文本生成中，请稍后修改");
+    if (!textReady.value) throw new Error("Văn bản chưa được tải");
+    if (generating.value) throw new Error("Đang tạo văn bản, hãy chỉnh sửa sau");
     if (outputs.value.text.value === text) await saveText(text);
     else { outputs.value.text.value = text; await textSaving; }
     return { text };

@@ -50,7 +50,7 @@ export const validateConnection: ValidConnectionFunc = (connection, context) => 
     // VueFlow 已统一正向和反向拖线的端点；基础校验通过后，仅执行接收端的附加规则。
     return !targetNode.isValidTargetPos || targetNode.isValidTargetPos(connection, context) === true;
   } catch (error) {
-    console.error("节点连接校验失败", error);
+    console.error("Không thể kiểm tra kết nối node", error);
     return false;
   }
 };

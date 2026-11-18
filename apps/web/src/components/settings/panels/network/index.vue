@@ -1,46 +1,46 @@
 <template>
   <el-form class="network" labelPosition="top" :disabled="busy" @submit.prevent="saveNetwork">
     <div class="networkHeader">
-      <el-radio-group v-model="form.mode" class="proxyModes" aria-label="代理模式">
-        <el-radio value="none">不使用代理</el-radio>
-        <el-radio value="system">使用系统代理设置</el-radio>
-        <el-radio value="custom">自定义代理</el-radio>
+      <el-radio-group v-model="form.mode" class="proxyModes" aria-label="Chế độ proxy">
+        <el-radio value="none">Không dùng proxy</el-radio>
+        <el-radio value="system">Sử dụng cấu hình proxy hệ thống</el-radio>
+        <el-radio value="custom">Proxy tùy chỉnh</el-radio>
       </el-radio-group>
       <div class="networkActions">
-        <el-button :loading="testing" :disabled="busy" @click="testNetwork">测试</el-button>
-        <el-button type="primary" nativeType="submit" :loading="saving" :disabled="busy">确定</el-button>
+      <el-button :loading="testing" :disabled="busy" @click="testNetwork">Kiểm tra</el-button>
+      <el-button type="primary" nativeType="submit" :loading="saving" :disabled="busy">Xác nhận</el-button>
       </div>
     </div>
 
-    <p class="description">控制服务端 AI、媒体等网络请求，保存后生效。</p>
-    <p v-if="form.mode === 'system'" class="description">使用服务端所在设备的系统 HTTP(S) 代理：Windows、macOS 读取静态代理，其他平台读取代理环境变量。暂不支持 PAC 自动配置。</p>
+    <p class="description">Điều khiển các yêu cầu mạng của AI, media và các dịch vụ trên máy chủ; có hiệu lực sau khi lưu.</p>
+    <p v-if="form.mode === 'system'" class="description">Dùng proxy HTTP(S) hệ thống của thiết bị chạy máy chủ. Windows/macOS đọc proxy tĩnh, các nền tảng khác đọc biến môi trường. Chưa hỗ trợ cấu hình PAC tự động.</p>
 
     <div v-if="form.mode === 'custom'" class="customProxy">
-      <el-form-item label="代理协议">
-        <el-select v-model="form.protocol" class="protocolSelect" aria-label="代理协议">
-          <el-option label="HTTP 代理" value="http" />
-          <el-option label="HTTPS 代理" value="https" />
+      <el-form-item label="Giao thức proxy">
+        <el-select v-model="form.protocol" class="protocolSelect" aria-label="Giao thức proxy">
+          <el-option label="Proxy HTTP" value="http" />
+          <el-option label="Proxy HTTPS" value="https" />
         </el-select>
       </el-form-item>
       <div class="proxyFields">
-        <el-form-item label="服务器" required>
-          <el-input v-model="form.host" dir="ltr" placeholder="请输入 IP 或域名" autocomplete="off" />
+        <el-form-item label="Máy chủ" required>
+          <el-input v-model="form.host" dir="ltr" placeholder="Nhập địa chỉ IP hoặc tên miền" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="端口" required>
-          <el-input-number v-model="form.port" :min="1" :max="65535" :precision="0" :controls="false" aria-label="代理端口" />
+        <el-form-item label="Cổng" required>
+          <el-input-number v-model="form.port" :min="1" :max="65535" :precision="0" :controls="false" aria-label="Cổng proxy" />
         </el-form-item>
-        <el-form-item label="用户名">
+        <el-form-item label="Tên người dùng">
           <el-input v-model="form.username" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="密码">
+        <el-form-item label="Mật khẩu">
           <el-input v-model="form.password" type="password" showPassword autocomplete="off" />
         </el-form-item>
       </div>
     </div>
 
-    <p class="description">测试地址：<span dir="ltr">https://www.baidu.com/robots.txt</span></p>
+    <p class="description">Địa chỉ kiểm tra: <span dir="ltr">https://www.baidu.com/robots.txt</span></p>
     <el-alert v-if="requestError" :title="requestError" type="error" :closable="false" showIcon />
-    <el-alert v-else-if="testLatency !== null" :title="`连接成功，耗时 ${testLatency} ms`" type="success" :closable="false" showIcon />
+    <el-alert v-else-if="testLatency !== null" :title="`Kết nối thành công, mất ${testLatency} ms`" type="success" :closable="false" showIcon />
   </el-form>
 </template>
 
@@ -85,8 +85,8 @@ function readForm() {
   const network = { ...form, host: form.host.trim() };
   const validPort = Number.isInteger(network.port) && network.port >= 1 && network.port <= 65535;
   if (network.mode === "custom") {
-    if (!network.host || /[\s/@?#]/.test(network.host)) throw new Error("请输入有效的代理服务器 IP 或域名，不包含协议和路径");
-    if (!validPort) throw new Error("代理端口必须为 1 到 65535 的整数");
+    if (!network.host || /[\s/@?#]/.test(network.host)) throw new Error("Hãy nhập IP hoặc tên miền proxy hợp lệ, không kèm giao thức hoặc đường dẫn");
+    if (!validPort) throw new Error("Cổng proxy phải là số nguyên từ 1 đến 65535");
   } else if (!validPort) network.port = 80;
   return network;
 }
@@ -106,7 +106,7 @@ async function testNetwork() {
     const { data } = await axios.post<{ code: number; data: { latency: number }; message?: string }>(
       "/api/settings/network/test", { network: readForm() }, { headers: { "x-toonflow-workspace": "1" }, signal: controller.signal },
     );
-    if (data.code !== 200) throw new Error(data.message || "代理连接测试失败");
+    if (data.code !== 200) throw new Error(data.message || "Kiểm tra kết nối proxy thất bại");
     testLatency.value = Math.round(data.data.latency);
   } catch (cause) {
     if (!controller.signal.aborted) requestError.value = errorMessage(cause);
@@ -122,7 +122,7 @@ async function saveNetwork() {
   try {
     const network = readForm();
     await saveSettings(() => ({ network }));
-    ElMessage.success("网络设置已保存");
+    ElMessage.success("Đã lưu cấu hình mạng");
   } catch (cause) {
     requestError.value = errorMessage(cause);
     if (controller.signal.aborted) ElMessage.error(requestError.value);

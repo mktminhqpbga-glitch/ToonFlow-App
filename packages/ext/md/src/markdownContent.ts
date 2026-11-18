@@ -9,14 +9,14 @@ export interface MarkdownFiles {
 }
 export function resolveMarkdownPath(source: string, documentPath = "") {
   if (/^(?:https?:|mailto:|#)/i.test(source)) return;
-  if (/^(?:[a-z][a-z\d+.-]*:|[\\/])/i.test(source)) throw new Error("文件路径必须位于工作区内");
+  if (/^(?:[a-z][a-z\d+.-]*:|[\\/])/i.test(source)) throw new Error("Đường dẫn tệp phải nằm trong workspace");
   const path = decodeURIComponent(source.split(/[?#]/)[0]!).replaceAll("\\", "/");
-  if (!path || /^(?:[a-z][a-z\d+.-]*:|\/)/i.test(path) || path.includes("\0")) throw new Error("文件路径无效");
+  if (!path || /^(?:[a-z][a-z\d+.-]*:|\/)/i.test(path) || path.includes("\0")) throw new Error("Đường dẫn tệp không hợp lệ");
   const parts = documentPath.replaceAll("\\", "/").split("/").slice(0, -1);
   for (const part of path.split("/")) {
     if (!part || part === ".") continue;
     if (part === "..") {
-      if (!parts.length) throw new Error("文件路径超出工作区");
+      if (!parts.length) throw new Error("Đường dẫn tệp nằm ngoài workspace");
       parts.pop();
     } else parts.push(part);
   }
@@ -76,7 +76,7 @@ export function loadMarkdownImage(element: HTMLImageElement, source: string, pat
   try {
     if (/^https?:\/\//i.test(source)) { element.src = source; return release; }
     const relative = resolveMarkdownPath(source, path);
-    if (!relative || !files) throw new Error("当前宿主无法读取文档图片");
+    if (!relative || !files) throw new Error("Host hiện không thể đọc hình ảnh trong tài liệu");
     const mimeTypes: Record<string, string> = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif", svg: "image/svg+xml", avif: "image/avif", bmp: "image/bmp", ico: "image/x-icon" };
     const mime = mimeTypes[relative.split(".").at(-1)?.toLowerCase() || ""] || "application/octet-stream";
     const shared = files.acquireUrl?.(relative, mime);
@@ -87,7 +87,7 @@ export function loadMarkdownImage(element: HTMLImageElement, source: string, pat
       else release = () => URL.revokeObjectURL(url);
       return url;
     });
-    void pending.then(url => { if (!cancelled) element.src = url; }, () => { if (!cancelled) element.title = "图片读取失败"; });
-  } catch (error) { element.title = error instanceof Error ? error.message : "图片读取失败"; }
+    void pending.then(url => { if (!cancelled) element.src = url; }, () => { if (!cancelled) element.title = "Không thể đọc ảnh"; });
+  } catch (error) { element.title = error instanceof Error ? error.message : "Không thể đọc ảnh"; }
   return () => { cancelled = true; release(); };
 }

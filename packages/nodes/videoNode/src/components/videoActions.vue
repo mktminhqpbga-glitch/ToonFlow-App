@@ -13,12 +13,12 @@
     :style="{ maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(94vh - 12px)', overflow: 'auto' }">
     <div class="videoActionPanel nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop>
       <template v-if="action === 'trim'">
-        <p v-if="preparingPreview || previewError" class="actionHint" role="status">{{ preparingPreview ? '正在生成兼容预览…' : previewError }}</p>
-        <video ref="preview" class="clipPreview" :src="playbackSrc" controls playsinline preload="auto" aria-label="截取片段预览" @loadeddata="readDuration" @timeupdate="readTime" @play="playSelection" @error="duration = 0; handleError($event)" />
+        <p v-if="preparingPreview || previewError" class="actionHint" role="status">{{ preparingPreview ? 'Đang tạo bản xem trước tương thích…' : previewError }}</p>
+        <video ref="preview" class="clipPreview" :src="playbackSrc" controls playsinline preload="auto" aria-label="Xem trước đoạn video cần cắt" @loadeddata="readDuration" @timeupdate="readTime" @play="playSelection" @error="duration = 0; handleError($event)" />
         <div class="clipTimeline" :class="{ unavailable: processing || !duration }">
           <div class="timelineHeader">
-            <span>拖动左右边界，选择保留的片段</span>
-            <span class="sourceDuration">原视频 {{ formatTime(duration) }}</span>
+            <span>Kéo hai đầu để chọn đoạn cần giữ</span>
+            <span class="sourceDuration">Video gốc {{ formatTime(duration) }}</span>
           </div>
           <div class="timelineBody">
             <div ref="track" class="frameTrack" @pointerdown="seekTrack">
@@ -39,12 +39,12 @@
                 :class="{ startHandle: edge === 'start', endHandle: edge === 'end', dragging: dragging === edge }"
                 :style="{ left: `${edge === 'start' ? startPercent : endPercent}%` }"
                 role="slider"
-                :aria-label="edge === 'start' ? '片段开始边界' : '片段结束边界'"
+                :aria-label="edge === 'start' ? 'Điểm bắt đầu đoạn video' : 'Điểm kết thúc đoạn video'"
                 aria-orientation="horizontal"
                 :aria-valuemin="edge === 'start' ? 0 : start + minimumLength"
                 :aria-valuemax="edge === 'start' ? Math.max(0, end - minimumLength) : clipLimit"
                 :aria-valuenow="edge === 'start' ? start : end"
-                :aria-valuetext="Number.isFinite(edge === 'start' ? start : end) ? `${(edge === 'start' ? start : end).toFixed(2)} 秒` : '未设置'"
+                :aria-valuetext="Number.isFinite(edge === 'start' ? start : end) ? `${(edge === 'start' ? start : end).toFixed(2)} giây` : 'Chưa đặt'"
                 :disabled="processing || disabled || !duration"
                 @pointerdown.stop.prevent="beginDrag($event, edge)"
                 @pointermove.stop.prevent="moveDrag"
@@ -59,19 +59,19 @@
           </div>
         </div>
         <div class="clipTimes">
-          <label><span>开始时间</span><input v-model.number="start" class="timeInput" type="number" min="0" :max="clipLimit" step="0.01" :disabled="processing || !duration" aria-label="片段开始时间" @input="seekPreview(($event.target as HTMLInputElement).valueAsNumber)" /><span>秒</span></label>
-          <label><span>结束时间</span><input v-model.number="end" class="timeInput" type="number" min="0" :max="clipLimit" step="0.01" :disabled="processing || !duration" aria-label="片段结束时间" @input="seekPreview(($event.target as HTMLInputElement).valueAsNumber)" /><span>秒</span></label>
-          <span class="selectionDuration">时长 {{ validRange ? (end - start).toFixed(2) : '—' }} 秒</span>
+          <label><span>Bắt đầu</span><input v-model.number="start" class="timeInput" type="number" min="0" :max="clipLimit" step="0.01" :disabled="processing || !duration" aria-label="Thời điểm bắt đầu" @input="seekPreview(($event.target as HTMLInputElement).valueAsNumber)" /><span>giây</span></label>
+          <label><span>Kết thúc</span><input v-model.number="end" class="timeInput" type="number" min="0" :max="clipLimit" step="0.01" :disabled="processing || !duration" aria-label="Thời điểm kết thúc" @input="seekPreview(($event.target as HTMLInputElement).valueAsNumber)" /><span>giây</span></label>
+          <span class="selectionDuration">Thời lượng {{ validRange ? (end - start).toFixed(2) : '—' }} giây</span>
         </div>
-        <p class="actionHint">{{ validRange ? '截取后生成新视频节点，原视频会保留。' : '请选择有效的起止时间。' }}</p>
+        <p class="actionHint">{{ validRange ? 'Tạo node video mới sau khi cắt; video gốc được giữ lại.' : 'Hãy chọn thời gian bắt đầu và kết thúc hợp lệ.' }}</p>
       </template>
-      <p v-else class="actionHint">{{ action === 'extractAudio' ? '提取音轨并生成音频节点，保留原视频。' : '生成静音视频和音频两个节点，保留原视频。' }}</p>
+      <p v-else class="actionHint">{{ action === 'extractAudio' ? 'Trích âm thanh thành node âm thanh mới, giữ video gốc.' : 'Tạo node video tắt tiếng và node âm thanh riêng, giữ video gốc.' }}</p>
       <div v-if="processing" class="processingStatus" role="status" aria-live="polite">
         <el-progress :percentage="100" :indeterminate="true" :showText="false" />
-        <span>{{ cancelling ? '正在取消并清理文件…' : '正在处理视频…' }}</span>
+        <span>{{ cancelling ? 'Đang hủy và dọn tệp…' : 'Đang xử lý video…' }}</span>
       </div>
       <div class="panelActions">
-        <el-button :disabled="cancelling" @click="processing ? cancel() : visible = false">{{ processing ? '取消处理' : '取消' }}</el-button>
+        <el-button :disabled="cancelling" @click="processing ? cancel() : visible = false">{{ processing ? 'Hủy xử lý' : 'Hủy' }}</el-button>
         <el-button type="primary" :loading="processing" :disabled="disabled || !file || (action === 'trim' && !validRange)" @click="run">{{ actionLabels[action] }}</el-button>
       </div>
     </div>
@@ -95,7 +95,7 @@ const loadFfmpeg = useNodeFfmpeg();
 const nodeEvent = useNodeEvent();
 const getCanvas = inject<(() => { id: string } | undefined) | undefined>("canvas", undefined);
 const batchHistory = inject<(action: () => Promise<void>) => Promise<void>>("batchCanvasHistory", action => action());
-const actionLabels = { extractAudio: "提取音轨", separate: "分离音视频", trim: "截取片段" };
+const actionLabels = { extractAudio: "Trích xuất âm thanh", separate: "Tách hình và tiếng", trim: "Cắt đoạn video" };
 const action = ref<keyof typeof actionLabels>("trim");
 const visible = ref(false);
 const { src: playbackSrc, preparing: preparingPreview, error: previewError, handleError, handleLoaded } = useMediaPreview(() => visible.value && action.value === "trim" ? props.src : "", "video");
@@ -143,7 +143,7 @@ watch(visible, value => { if (!value) clearPreview(); });
 watch(playbackSrc, () => { clearPreview(); duration.value = 0; frames.value = []; });
 onBeforeUnmount(() => { cancel(); clearPreview(); });
 nodeEvent.on("save", reason => {
-  if (reason === "reload" && processing.value) throw new Error("视频处理中，请完成或取消后再刷新节点");
+  if (reason === "reload" && processing.value) throw new Error("Đang xử lý video, hãy hoàn tất hoặc hủy trước khi làm mới node");
 });
 nodeEvent.on("delete", async () => { cancel(); await job; });
 
@@ -165,8 +165,8 @@ async function createFrameAnalysis() {
   const nodeId = crypto.randomUUID();
   creatingAnalysis.value = true;
   try {
-    if (!nodeTypes?.value?.[type]) throw new Error("请先启用逐帧拉片节点插件");
-    if (findNode(node.id) !== node) throw new Error("原视频节点已变化，请重新操作");
+    if (!nodeTypes?.value?.[type]) throw new Error("Hãy bật plugin node phân tích khung hình trước");
+    if (findNode(node.id) !== node) throw new Error("Node video gốc đã thay đổi, hãy thao tác lại");
     const width = Math.max(240, node.dimensions.width || 320);
     const x = node.computedPosition.x + (node.dimensions.width || 320) + 80;
     let y = node.computedPosition.y;
@@ -180,10 +180,10 @@ async function createFrameAnalysis() {
     await batchHistory(async () => {
       try {
         // 组内视频使用绝对坐标，新拉片节点直接放到画布，不继承父组的相对位置。
-        addNodes({ id: nodeId, type, position: { x, y }, data: { label: `${node.data.label || "视频"} · 逐帧拉片` } });
+        addNodes({ id: nodeId, type, position: { x, y }, data: { label: `${node.data.label || "Video"} · Phân tích khung hình` } });
         await nextTick();
         if (getCanvas?.()?.id !== canvasId || findNode(node.id) !== node || props.file?.url !== source
-          || !nodeTypes?.value?.[type] || !findNode(nodeId)) throw new Error("画布或视频已变化，请重新操作");
+          || !nodeTypes?.value?.[type] || !findNode(nodeId)) throw new Error("Canvas hoặc video đã thay đổi, hãy thao tác lại");
         addEdges({ id: crypto.randomUUID(), source: node.id, sourceHandle: "video", target: nodeId, targetHandle: "in" });
       } catch (error) {
         removeNodes(nodeId, true, false);
@@ -201,7 +201,7 @@ async function createFrameAnalysis() {
       await setCenter(x + width / 2, y + 160, { zoom: 1, duration: 200 });
     }
   } catch (error) {
-    showNodeError(error, "创建逐帧拉片节点失败");
+    showNodeError(error, "Không tạo được node phân tích khung hình");
   } finally {
     creatingAnalysis.value = false;
   }
@@ -346,7 +346,7 @@ function run() {
 async function process() {
   const operation = action.value;
   const requiredTypes = operation === "extractAudio" ? ["remote-audioNode"] : operation === "trim" ? ["remote-videoNode"] : ["remote-videoNode", "remote-audioNode"];
-  if (requiredTypes.some(type => !nodeTypes?.value?.[type])) return void ElMessage.error("请先启用所需的视频或音频节点插件");
+  if (requiredTypes.some(type => !nodeTypes?.value?.[type])) return void ElMessage.error("Hãy bật plugin node video hoặc âm thanh cần dùng trước");
   const source = props.file!.url;
   const clipStart = start.value;
   const clipEnd = end.value;
@@ -395,24 +395,24 @@ async function process() {
       type: output.type,
       position: { x, y: y + index * 320 },
       data: {
-        label: `${node.data.label || "视频"} · ${output.audio ? "音轨" : operation === "separate" ? "静音视频" : `${clipStart.toFixed(2)}–${clipEnd.toFixed(2)} 秒`}`,
+        label: `${node.data.label || "Video"} · ${output.audio ? "Âm thanh" : operation === "separate" ? "Video tắt tiếng" : `${clipStart.toFixed(2)}–${clipEnd.toFixed(2)} giây`}`,
         outputs: { [output.audio ? "audio" : "video"]: { dataType: output.audio ? "AUDIO" : "VIDEO", value: { url: output.path, mimeType: output.audio ? "audio/mp4" : "video/mp4" } } },
       },
     }));
     await batchHistory(async () => {
       current.signal.throwIfAborted();
-      if (findNode(node.id) !== node || requiredTypes.some(type => !nodeTypes?.value?.[type])) throw new Error("画布节点已变化，请重新处理");
+      if (findNode(node.id) !== node || requiredTypes.some(type => !nodeTypes?.value?.[type])) throw new Error("Node trên Canvas đã thay đổi, hãy xử lý lại");
       addNodes(nodes);
       committed = true;
     });
     visible.value = false;
-    ElMessage.success(`${actionLabels[operation]}完成，已生成 ${nodes.length} 个节点`);
+    ElMessage.success(`${actionLabels[operation]} hoàn tất, đã tạo ${nodes.length} node`);
   } catch (error) {
-    if (!current.signal.aborted) showNodeError(error, `${actionLabels[operation]}失败`);
+    if (!current.signal.aborted) showNodeError(error, `${actionLabels[operation]} thất bại`);
   } finally {
     if (!committed && workspace) {
       const results = await Promise.allSettled(createdDirectories.map(path => workspace!.remove(path, true)));
-      if (results.some(result => result.status === "rejected" && result.reason?.response?.data?.data?.code !== "ENOENT")) ElMessage.error("部分临时媒体文件清理失败，未能全部删除。");
+      if (results.some(result => result.status === "rejected" && result.reason?.response?.data?.data?.code !== "ENOENT")) ElMessage.error("Không thể xóa hết một số tệp phương tiện tạm.");
     }
     if (current.signal.aborted) visible.value = false;
     processing.value = cancelling.value = false;

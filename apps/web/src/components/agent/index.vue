@@ -186,11 +186,11 @@ function setConversationRun(item: OpenConversation, runId: string) {
 async function newConversation(source?: { file?: string; message: AgentMessage }) {
   if (loading.value || historyLoading.value) return;
   const directory = workspaceStore.project?.directory;
-  if (!directory) return ElMessage.warning("请先打开项目");
-  if (source && (!source.file || !(source.message.entryId || source.message.replyTo))) return ElMessage.warning("消息尚未保存，请稍后创建分支");
+  if (!directory) return ElMessage.warning("Hãy mở dự án trước");
+  if (source && (!source.file || !(source.message.entryId || source.message.replyTo))) return ElMessage.warning("Tin nhắn chưa được lưu, hãy tạo nhánh sau");
   const initialModel = conversationRefs.get(conversationKey.value)?.getSelectedModel();
   const currentRequest = ++requestId;
-  const errorMessage = source ? "创建对话分支失败" : "新建对话失败";
+  const errorMessage = source ? "Tạo nhánh hội thoại thất bại" : "Tạo cuộc trò chuyện thất bại";
   branchingId.value = source?.message.id;
   loading.value = true;
   try {
@@ -220,7 +220,7 @@ async function readConversation(directory: string, file: string) {
   const { data } = await axios.get<{ code: number; data: AgentConversation; message?: string }>("/api/agent/get", {
     params: { directory, sessionFile: file }, headers: { "x-toonflow-workspace": "1" },
   });
-  if (data.code !== 200) throw new Error(data.message || "读取对话失败");
+  if (data.code !== 200) throw new Error(data.message || "Đọc hội thoại thất bại");
   return data.data;
 }
 
@@ -234,7 +234,7 @@ async function loadHistory(openLatest = false) {
     const { data } = await axios.get<{ code: number; data: AgentHistory[]; message?: string }>("/api/agent/list", {
       params: { directory }, headers: { "x-toonflow-workspace": "1" },
     });
-    if (data.code !== 200) throw new Error(data.message || "读取历史对话失败");
+    if (data.code !== 200) throw new Error(data.message || "Đọc lịch sử hội thoại thất bại");
     if (currentRequest !== requestId) return;
     history.value = data.data;
     // 首条回复结束前会话可能尚未落盘，仍允许从历史菜单切回。
@@ -246,7 +246,7 @@ async function loadHistory(openLatest = false) {
       initialized.value = true;
     }
   } catch (error) {
-    if (currentRequest === requestId) ElMessage.error(error instanceof Error ? error.message : "读取历史对话失败");
+    if (currentRequest === requestId) ElMessage.error(error instanceof Error ? error.message : "Đọc lịch sử hội thoại thất bại");
   } finally {
     if (currentRequest === requestId) {
       historyLoading.value = false;
@@ -271,7 +271,7 @@ async function selectConversation(file: string) {
     showConversation(session);
     initialized.value = true;
   } catch (error) {
-    if (currentRequest === requestId) ElMessage.error(error instanceof Error ? error.message : "读取对话失败");
+    if (currentRequest === requestId) ElMessage.error(error instanceof Error ? error.message : "Đọc hội thoại thất bại");
   } finally {
     if (currentRequest === requestId) loading.value = false;
   }
@@ -282,7 +282,7 @@ async function renameConversation(file: string, value: string) {
   const item = history.value.find(item => item.file === file);
   const nextName = value.trim();
   if (!directory || loading.value || historyLoading.value || (!item && file !== sessionFile.value)) return;
-  if (!nextName || nextName.length > 80) return ElMessage.warning("请输入 1–80 个字符的对话名称");
+  if (!nextName || nextName.length > 80) return ElMessage.warning("Hãy nhập tên cuộc trò chuyện dài từ 1 đến 80 ký tự");
   if (nextName === (file === sessionFile.value ? name.value : item?.name)) return;
   const currentRequest = ++requestId;
   loading.value = true;
@@ -290,15 +290,15 @@ async function renameConversation(file: string, value: string) {
     const { data } = await axios.patch<{ code: number; data: { name: string }; message?: string }>("/api/agent/rename", {
       directory, sessionFile: file, name: nextName,
     }, { headers: { "x-toonflow-workspace": "1" } });
-    if (data.code !== 200) throw new Error(data.message || "重命名对话失败");
+    if (data.code !== 200) throw new Error(data.message || "Đổi tên hội thoại thất bại");
     if (currentRequest !== requestId) return;
     if (item) item.name = data.data.name;
     const opened = conversations.value.find(item => item.file === file);
     if (opened) opened.name = data.data.name;
   } catch (error) {
     if (currentRequest === requestId) ElMessage.error(axios.isAxiosError(error)
-      ? error.response?.data?.message || "重命名对话失败"
-      : error instanceof Error ? error.message : "重命名对话失败");
+      ? error.response?.data?.message || "Đổi tên hội thoại thất bại"
+      : error instanceof Error ? error.message : "Đổi tên hội thoại thất bại");
   } finally {
     if (currentRequest === requestId) loading.value = false;
   }
@@ -307,7 +307,7 @@ async function renameConversation(file: string, value: string) {
 async function removeConversation(file: string) {
   const directory = workspaceStore.project?.directory;
   if (!directory || loading.value || historyLoading.value || history.value.length <= 1 || !history.value.some(item => item.file === file)) return;
-  if (!/^[\w-]+\.jsonl$/.test(file)) return ElMessage.error("对话文件名无效");
+  if (!/^[\w-]+\.jsonl$/.test(file)) return ElMessage.error("Tên tệp hội thoại không hợp lệ");
   const currentRequest = ++requestId;
   loading.value = true;
   try {
@@ -321,8 +321,8 @@ async function removeConversation(file: string) {
     conversations.value = conversations.value.filter(item => item.file !== file);
   } catch (error) {
     if (currentRequest === requestId) ElMessage.error(axios.isAxiosError(error)
-      ? error.response?.data?.message || "移除历史对话失败"
-      : error instanceof Error ? error.message : "移除历史对话失败");
+      ? error.response?.data?.message || "Xóa khỏi lịch sử hội thoại thất bại"
+      : error instanceof Error ? error.message : "Xóa khỏi lịch sử hội thoại thất bại");
   } finally {
     if (currentRequest === requestId) loading.value = false;
   }
@@ -335,7 +335,7 @@ function stopProject(directory = projectDirectory) {
     for (const stop of stops) stop.finish(true);
   }).catch(error => {
     for (const stop of stops) stop.finish(false);
-    ElMessage.error(error instanceof Error ? error.message : "停止生成失败，请重试");
+    ElMessage.error(error instanceof Error ? error.message : "Dừng tạo thất bại, vui lòng thử lại");
   });
 }
 
@@ -382,6 +382,6 @@ onBeforeUnmount(() => {
   padding-bottom: 8px;
   overflow: hidden;
   font-size: 13px;
-  font-family: var(--el-font-family);
+  font-family: var(--appFontFamily);
 }
 </style>

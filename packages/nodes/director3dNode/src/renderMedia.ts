@@ -12,18 +12,18 @@ export async function renderImage(scene: SceneDocument, anchor: CameraAnchor, as
     applyCamera(runtime.camera, anchor);
     runtime.renderer.render(runtime.scene, runtime.camera);
     const blob = await new Promise<Blob>((resolve, reject) => runtime.renderer.domElement.toBlob(
-      value => value ? resolve(value) : reject(new Error("关键帧渲染失败")), "image/png",
+      value => value ? resolve(value) : reject(new Error("Không kết xuất được khung hình chính")), "image/png",
     ));
     signal.throwIfAborted();
-    return new File([blob], "关键帧.png", { type: "image/png" });
+    return new File([blob], "khungHinhChinh.png", { type: "image/png" });
   } finally { player?.dispose(); disposeStage(runtime); }
 }
 
 export async function renderVideo(scene: SceneDocument, plan: DirectorPlan, aspect: number, signal: AbortSignal, onProgress: (value: number) => void, lighting?: LightingSettings, settings?: SceneSettings) {
   signal.throwIfAborted();
   const mimeType = typeof MediaRecorder !== "undefined" && ["video/mp4;codecs=avc1.420028", "video/mp4"].find(type => MediaRecorder.isTypeSupported(type));
-  if (!mimeType) throw new Error("当前浏览器不支持导出 MP4 视频，请更新浏览器；桌面版请更新 WebView2 运行时。");
-  if (document.hidden) throw new Error("请在当前窗口保持可见时导出视频");
+  if (!mimeType) throw new Error("Trình duyệt hiện tại không hỗ trợ xuất video MP4; hãy cập nhật trình duyệt hoặc WebView2 của bản desktop.");
+  if (document.hidden) throw new Error("Hãy giữ cửa sổ hiện tại hiển thị khi xuất video");
   const runtime = await createStage(document.createElement("canvas"), scene, undefined, aspect, lighting, settings);
   let player: ReturnType<typeof prepareSceneAnimation> | undefined;
   let stream: MediaStream | undefined;
@@ -54,13 +54,13 @@ export async function renderVideo(scene: SceneDocument, plan: DirectorPlan, aspe
         else if (error) reject(error);
       };
       cancel = () => stop(signal.reason);
-      checkVisibility = () => { if (document.hidden) stop(new Error("窗口已隐藏，视频导出已停止，请保持窗口可见后重试")); };
+      checkVisibility = () => { if (document.hidden) stop(new Error("Cửa sổ bị ẩn nên đã dừng xuất video; hãy giữ cửa sổ hiển thị rồi thử lại")); };
       recorder!.ondataavailable = event => {
         if (event.data.size) chunks.push(event.data);
         size += event.data.size;
-        if (size > 100 * 1024 * 1024) stop(new Error("导出视频超过 100 MB，请缩短动画时长"));
+        if (size > 100 * 1024 * 1024) stop(new Error("Video xuất vượt quá 100 MB, hãy giảm thời lượng hoạt ảnh"));
       };
-      recorder!.onerror = () => stop(new Error("MP4 编码失败，视频未能导出，请重试。"));
+      recorder!.onerror = () => stop(new Error("Mã hóa MP4 thất bại, không thể xuất video; hãy thử lại."));
       recorder!.onstop = () => failure ? reject(failure) : resolve();
       signal.addEventListener("abort", cancel, { once: true });
       document.addEventListener("visibilitychange", checkVisibility);
@@ -82,7 +82,7 @@ export async function renderVideo(scene: SceneDocument, plan: DirectorPlan, aspe
     });
     signal.throwIfAborted();
     const file = new File(chunks, `${plan.name}.mp4`, { type: "video/mp4" });
-    if (!file.size) throw new Error("未能生成视频内容");
+    if (!file.size) throw new Error("Không tạo được nội dung video");
     return file;
   } finally {
     window.clearTimeout(frame);

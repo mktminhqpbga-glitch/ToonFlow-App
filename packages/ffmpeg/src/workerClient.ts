@@ -36,7 +36,7 @@ function getWorker() {
     for (const task of [...pending.values()]) task.finish(error);
   };
   current.on("error", fail);
-  current.on("exit", code => fail(new Error(`FFmpeg 工作线程已退出（${code}）`)));
+  current.on("exit", code => fail(new Error(`Worker FFmpeg đã thoát（${code}）`)));
   current.unref();
   return current;
 }

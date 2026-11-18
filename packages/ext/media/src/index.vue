@@ -1,13 +1,13 @@
 <template>
   <section class="mediaDocument">
     <form v-if="isPcm" class="pcmToolbar" @submit.prevent>
-      <label>采样率（Hz）<el-input-number v-model="sampleRate" :min="1" :max="384000" :step="1000" size="small" /></label>
-      <label>声道<el-select v-model="channels" size="small"><el-option label="单声道" :value="1" /><el-option label="双声道" :value="2" /></el-select></label>
-      <label>采样格式<el-select v-model="format" size="small"><el-option v-for="option in pcmFormats" :key="option.value" :label="option.label" :value="option.value" /></el-select></label>
-      <p>PCM 不包含格式信息，请按文件实际参数设置。多声道数据按交错排列读取。</p>
+      <label>Tần số lấy mẫu (Hz)<el-input-number v-model="sampleRate" :min="1" :max="384000" :step="1000" size="small" /></label>
+      <label>Kênh âm thanh<el-select v-model="channels" size="small"><el-option label="Mono" :value="1" /><el-option label="Stereo" :value="2" /></el-select></label>
+      <label>Định dạng mẫu<el-select v-model="format" size="small"><el-option v-for="option in pcmFormats" :key="option.value" :label="option.label" :value="option.value" /></el-select></label>
+      <p>PCM không chứa thông tin định dạng. Hãy đặt tham số phù hợp với tệp thực tế; dữ liệu nhiều kênh được đọc theo thứ tự đan xen.</p>
     </form>
     <div class="mediaPreview" :aria-busy="loading || preparing">
-      <span v-if="loading || preparing" class="mediaStatus" role="status">{{ preparing ? '正在生成兼容预览…' : '正在读取…' }}</span>
+      <span v-if="loading || preparing" class="mediaStatus" role="status">{{ preparing ? 'Đang tạo bản xem trước tương thích…' : 'Đang đọc…' }}</span>
       <div v-else-if="error" class="mediaError" role="alert">{{ error }}</div>
       <template v-else-if="mediaUrl">
         <p v-if="!isVideo" class="audioLabel">{{ context.resource.label }}</p>
@@ -72,7 +72,7 @@ watch(() => [props.context.resource.directory, props.context.resource.path], asy
       if (!cancelled) fileUrl.value = url;
     }
   } catch (reason) {
-    if (!cancelled) readError.value = reason instanceof Error ? reason.message : "媒体读取失败";
+    if (!cancelled) readError.value = reason instanceof Error ? reason.message : "Không thể đọc media";
   } finally {
     if (!cancelled) loading.value = false;
   }
@@ -89,7 +89,7 @@ watch([pcmData, sampleRate, channels, format], ([data, rate, count, sampleFormat
     pcmUrl.value = url;
     onCleanup(() => { stopPlayback(); URL.revokeObjectURL(url); });
   } catch (reason) {
-    pcmError.value = reason instanceof Error ? reason.message : "PCM 预览失败";
+    pcmError.value = reason instanceof Error ? reason.message : "Xem trước PCM thất bại";
   }
 });
 </script>

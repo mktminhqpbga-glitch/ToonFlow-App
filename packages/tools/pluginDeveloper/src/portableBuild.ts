@@ -26,23 +26,23 @@ async function run() {
   const request = z.strictObject({ root: z.string().min(1), outDir: z.string().min(1), manifest: pluginManifestSchema })
     .parse(JSON.parse(await new Response(Bun.stdin.stream()).text()));
   const root = await realpath(request.root);
-  if (!(await lstat(root)).isDirectory()) throw new Error("插件源码目录无效");
+  if (!(await lstat(root)).isDirectory()) throw new Error("Thư mục mã nguồn plugin không hợp lệ");
   const outDir = resolve(request.outDir);
   const sdkModules = await realpath(join(sdkDirectory, "node_modules"));
   const manifest = request.manifest;
 
   async function allowedPath(path: string) {
     const actual = await realpath(path);
-    if (!isWithin(root, actual) && !isWithin(sdkModules, actual)) throw new Error(`插件只能引用项目源码或内置 SDK：${path}`);
+    if (!isWithin(root, actual) && !isWithin(sdkModules, actual)) throw new Error(`Plugin chỉ được tham chiếu mã nguồn dự án hoặc SDK tích hợp: ${path}`);
     return actual;
   }
 
   async function readText(path: string, limit: number) {
     const actual = await allowedPath(path);
     const info = await lstat(actual);
-    if (!info.isFile() || info.size > limit) throw new Error(`插件文件必须为普通文件且不超过 ${limit} 字节：${path}`);
+    if (!info.isFile() || info.size > limit) throw new Error(`Tệp plugin phải là tệp thường, không vượt ${limit} byte：${path}`);
     const bytes = await readFile(actual);
-    if (bytes.byteLength > limit) throw new Error(`插件文件超过大小限制：${path}`);
+    if (bytes.byteLength > limit) throw new Error(`Tệp plugin vượt giới hạn dung lượng: ${path}`);
     return bytes.toString("utf8");
   }
 
@@ -56,7 +56,7 @@ async function run() {
     const metadata = { displayName: manifest.displayName.trim(), author: manifest.author.trim(), github: manifest.github.trim(), configRules: manifest.configRules, version, readme };
     if (metadata.github) {
       const url = new URL(metadata.github);
-      if (url.origin !== "https://github.com" || url.username || url.password) throw new Error("GitHub 地址必须是 https://github.com 下的地址");
+      if (url.origin !== "https://github.com" || url.username || url.password) throw new Error("URL GitHub phải thuộc https://github.com");
     }
     const { code } = await buildBrowser(root, sdkModules, manifest);
     await mkdir(outDir, { recursive: true });
@@ -109,7 +109,7 @@ async function run() {
           return { contents, loader };
         });
         builder.onResolve({ filter: /.*/ }, async args => {
-          if (args.path.startsWith("macro:")) throw new Error("工具源码不支持 Bun 宏");
+          if (args.path.startsWith("macro:")) throw new Error("Mã công cụ không hỗ trợ Bun macro");
           if (isBuiltin(args.path) || args.path === "toonflow:tool-zod") return { path: args.path, external: true };
           let path: string;
           try { path = Bun.resolveSync(args.path, args.resolveDir || (args.importer ? dirname(args.importer) : root)); }
@@ -134,11 +134,11 @@ async function run() {
   if (!result.success) {
     const errors = result.logs.filter(message => message.level === "error");
     if (dependencyMissing && errors.length && errors.every(message => message.message.includes("SDK_DEPENDENCY_MISSING"))) throw dependencyMissing;
-    throw new AggregateError(result.logs, `工具构建失败：${manifest.name}`);
+    throw new AggregateError(result.logs, `Build công cụ thất bại: ${manifest.name}`);
   }
-  if (result.outputs.length !== 1 || result.outputs[0]!.kind !== "entry-point") throw new Error(`工具必须构建为单个脚本，不能包含未内联的资源：${manifest.name}`);
+  if (result.outputs.length !== 1 || result.outputs[0]!.kind !== "entry-point") throw new Error(`Công cụ phải build thành một script và nội tuyến mọi tài nguyên: ${manifest.name}`);
   const code = await result.outputs[0]!.text();
-  if (!new Bun.Transpiler({ loader: "js" }).scan(code).exports.includes("default")) throw new Error("工具脚本缺少默认导出");
+  if (!new Bun.Transpiler({ loader: "js" }).scan(code).exports.includes("default")) throw new Error("Script công cụ thiếu export mặc định");
   await mkdir(outDir, { recursive: true });
   await writeAtomic(join(outDir, `${manifest.name}.tool.js`), `/*! toonflowTool:${JSON.stringify(metadata).replaceAll("/", "\\u002f")} */\n${clientBanner}${code}`);
 }

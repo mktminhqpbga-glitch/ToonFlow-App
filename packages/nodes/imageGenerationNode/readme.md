@@ -1,18 +1,18 @@
-# 图片生成节点
+# Node tạo ảnh
 
-根据提示词生成图片，也可使用已有图片和文本作为参考，制作角色、场景或分镜图。
+Tạo ảnh từ prompt và có thể dùng ảnh hoặc văn bản có sẵn làm tham chiếu để tạo nhân vật, bối cảnh hoặc phân cảnh.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 输入支持图片和文本；连接的文本会作为生成要求的一部分。
-- 输出一张生成图片，可继续用作图片或视频生成的参考。
+- Hỗ trợ ảnh và văn bản đầu vào; nội dung văn bản được nối sẽ bổ sung vào yêu cầu tạo ảnh.
+- Xuất ảnh đã tạo để tiếp tục dùng làm tham chiếu cho node tạo ảnh hoặc video.
 
-## 使用方法
+## Cách sử dụng
 
-1. 选中节点，在下方选择图片模型；没有模型时先在设置中添加图片模型。
-2. 输入画面要求，按需连接图片或文本参考，并在提示词中引用它们。
-3. 点击比例与分辨率区域，选择当前模型提供的选项。
-4. 点击“生成图片”；生成过程中可点击“停止生成”。
-5. 完成后在节点内查看结果，选中节点可从上方下载或放大预览。
+1. Chọn node, chọn mô hình ảnh ở phía dưới. Nếu chưa có mô hình, thêm trong phần Cài đặt.
+2. Nhập yêu cầu hình ảnh, nối ảnh/văn bản tham chiếu khi cần và dẫn chiếu chúng trong prompt.
+3. Bấm khu vực tỉ lệ và độ phân giải để chọn các tùy chọn mà mô hình hiện tại cung cấp.
+4. Bấm **Tạo ảnh**; trong lúc tạo có thể bấm **Dừng tạo**.
+5. Khi hoàn tất, xem ảnh trong node; chọn node để tải xuống hoặc phóng to xem trước bằng thanh công cụ phía trên.
 
-参考素材可在输入区调整顺序或移除。连接的节点需要已有内容，修改提示词或设置后需再次点击生成才会产生新图片。
+Có thể đổi thứ tự hoặc xóa tham chiếu trong khu vực đầu vào. Node được nối phải có dữ liệu sẵn. Khi thay prompt hoặc thông số, cần bấm tạo lần nữa mới sinh ảnh mới.

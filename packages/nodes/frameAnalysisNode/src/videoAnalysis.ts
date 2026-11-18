@@ -53,7 +53,7 @@ export type AnalysisOptions = {
 
 export function analysisPath(path: string) {
   if (!path || /[\x00-\x1f]/.test(path) || /^(?:[\\/]|[a-z][a-z\d+.-]*:)/i.test(path) || path.split(/[\\/]+/).includes("..")) {
-    throw new Error("拉片素材必须使用工作区内的相对路径");
+    throw new Error("Tư liệu phân tích video phải dùng đường dẫn tương đối trong không gian làm việc");
   }
   return path.split(/[\\/]+/).filter(part => part && part !== ".").join("/");
 }
@@ -124,15 +124,15 @@ async function detectScenes(options: AnalysisOptions, videoIndex: number, estima
       const path = `${temporary}/frame${String(index).padStart(8, "0")}.rgb`;
       const content = new Uint8Array(await workspace.read(path));
       signal.throwIfAborted();
-      if (!frameBytes || !content.byteLength || content.byteLength % frameBytes) throw new Error("解码帧文件不完整，已停止拉片");
+      if (!frameBytes || !content.byteLength || content.byteLength % frameBytes) throw new Error("Tệp khung hình giải mã chưa đầy đủ; đã dừng phân tích");
       for (let offset = 0; offset < content.byteLength; offset += frameBytes) {
         const time = timestamps[frameCount];
-        if (time === undefined) throw new Error("视频帧与时间戳无法对应，已停止拉片");
+        if (time === undefined) throw new Error("Không khớp khung hình video với dấu thời gian; đã dừng phân tích");
         cuts.push(...detector.processFrame(content.subarray(offset, offset + frameBytes), time));
         frameCount++;
         // ACT: 每 12 帧让出主线程，保证长视频处理中仍能响应取消和画布操作。
         if (frameCount % 12 === 0) {
-          onProgress(Math.min(55, 5 + time / estimatedDuration * 50), `检测分镜 · ${frameCount} 帧`);
+          onProgress(Math.min(55, 5 + time / estimatedDuration * 50), `Phát hiện cảnh · ${frameCount} khung hình`);
           await new Promise<void>(resolve => setTimeout(resolve, 0));
           signal.throwIfAborted();
         }
@@ -151,7 +151,7 @@ async function detectScenes(options: AnalysisOptions, videoIndex: number, estima
         const bytes = Number(size?.[1]) * Number(size?.[2]) * 3;
         const duration = Number(line.match(/\bduration_time:\s*([-\d.e+]+)/)?.[1]);
         if (index !== decodedCount || !Number.isFinite(time) || time < 0 || (index && time < lastTime)
-          || !bytes || (frameBytes && bytes !== frameBytes)) throw new Error("视频时间戳或画面尺寸发生异常，无法可靠切分");
+          || !bytes || (frameBytes && bytes !== frameBytes)) throw new Error("Dấu thời gian hoặc kích thước video không hợp lệ; không thể tách cảnh chính xác");
         frameBytes = bytes;
         if (index && time > lastTime) lastDelta = time - lastTime;
         lastTime = time;
@@ -162,7 +162,7 @@ async function detectScenes(options: AnalysisOptions, videoIndex: number, estima
       const opening = line.match(/Opening '.*[\\/]frame(\d+)\.rgb' for writing/);
       if (opening) {
         const index = Number(opening[1]);
-        if (index !== openedChunk + 1) throw new Error("解码分块顺序异常");
+        if (index !== openedChunk + 1) throw new Error("Thứ tự khối giải mã không hợp lệ");
         // segment 在打开下一文件前关闭上一文件；只读取已经写完的分块。
         if (openedChunk >= 0) enqueueChunk(openedChunk);
         openedChunk = index;
@@ -192,14 +192,14 @@ async function detectScenes(options: AnalysisOptions, videoIndex: number, estima
   signal.throwIfAborted();
   if (failure) throw failure;
   if (commandFailure) throw commandFailure;
-  if (!decodedCount || frameCount !== decodedCount) throw new Error("视频帧数与解码结果不一致，已停止拉片");
+  if (!decodedCount || frameCount !== decodedCount) throw new Error("Số khung hình video không khớp kết quả giải mã; đã dừng phân tích");
   cuts.push(...detector.finish());
   await workspace.remove(temporary, true);
   // ACT: VFR 的最后一帧不能沿用前一帧间隔；优先取帧自身时长或有效流时长。
   const duration = lastDuration > 0 ? lastTime + lastDuration
     : Number.isFinite(streamDuration) && streamDuration > lastTime ? streamDuration
       : lastTime + lastDelta;
-  if (!Number.isFinite(duration) || duration <= 0) throw new Error("无法确定视频的结束时间");
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Không xác định được thời điểm kết thúc video");
   return { cuts, duration, timestamps };
 }
 
@@ -208,20 +208,20 @@ export async function analyzeVideo(options: AnalysisOptions): Promise<AnalysisRe
   const { ffmpeg, workspace, signal, onProgress } = options;
   const source = analysisPath(options.source);
   const directory = analysisPath(options.directory);
-  if (source.toLowerCase().startsWith(`${directory.toLowerCase()}/`)) throw new Error("输出目录不能包含输入视频");
-  if (!options.frames && !options.clips && !options.audio) throw new Error("请至少选择一个拆解维度");
+  if (source.toLowerCase().startsWith(`${directory.toLowerCase()}/`)) throw new Error("Thư mục đầu ra không được chứa video đầu vào");
+  if (!options.frames && !options.clips && !options.audio) throw new Error("Hãy chọn ít nhất một loại nội dung cần tách");
   createSceneDetector(options);
   signal.throwIfAborted();
-  onProgress(1, "读取视频信息");
+  onProgress(1, "Đọc thông tin video");
   const media = await probe(ffmpeg, source, signal);
   const video = media.streams.find(stream => stream.codec_type === "video" && !stream.disposition?.attached_pic);
-  if (!video || !video.width || !video.height) throw new Error("素材没有可读取的视频画面");
+  if (!video || !video.width || !video.height) throw new Error("Tư liệu không có khung hình video có thể đọc");
   const formatStart = Number(media.format.start_time) || 0;
   const videoStart = Number(video.start_time);
   const offset = Number.isFinite(videoStart) ? Math.max(0, videoStart - formatStart) : 0;
   const videoDuration = Number(video.duration);
   const estimatedDuration = Number.isFinite(videoDuration) && videoDuration > 0 ? videoDuration : Number(media.format.duration) - offset;
-  if (!Number.isFinite(estimatedDuration) || estimatedDuration <= 0) throw new Error("无法读取有效的视频时长");
+  if (!Number.isFinite(estimatedDuration) || estimatedDuration <= 0) throw new Error("Không đọc được thời lượng video hợp lệ");
   const rate = String(video.avg_frame_rate || video.r_frame_rate || "25/1").split("/").map(Number);
   const fps = rate[0] / (rate[1] || 1);
   const fallbackFrameDuration = Number.isFinite(fps) && fps > 0 ? 1 / fps : 1 / 25;
@@ -256,8 +256,8 @@ export async function analyzeVideo(options: AnalysisOptions): Promise<AnalysisRe
       scene.sampleTimes = [...new Set([0.1, 0.5, 0.9].map(position => frameTimes[first + Math.round((count - 1) * position)]))];
     }
   }
-  if (options.audio && !audioPresent) result.warning = "视频没有音轨，已跳过原音轨提取";
-  if (!options.frames && !options.clips && !audioPresent) throw new Error("该视频没有音轨可提取");
+  if (options.audio && !audioPresent) result.warning = "Video không có âm thanh; đã bỏ qua bước trích xuất âm thanh gốc";
+  if (!options.frames && !options.clips && !audioPresent) throw new Error("Video này không có âm thanh để trích xuất");
   const total = result.scenes.length * (Number(options.frames) + Number(options.clips)) + Number(options.audio && audioPresent);
   let completed = 0;
   function progress(label: string) {
@@ -267,7 +267,7 @@ export async function analyzeVideo(options: AnalysisOptions): Promise<AnalysisRe
     signal.throwIfAborted();
     const name = String(scene.index).padStart(3, "0");
     if (options.frames) {
-      progress(`提取关键帧 · ${scene.index}/${result.scenes.length}`);
+      progress(`Trích khung hình chính · ${scene.index}/${result.scenes.length}`);
       scene.image = `${directory}/shot${name}.jpg`;
       const midpoint = (scene.start + scene.end) / 2;
       let left = 0;
@@ -281,10 +281,10 @@ export async function analyzeVideo(options: AnalysisOptions): Promise<AnalysisRe
       await runFfmpeg(ffmpeg(source).seekInput(Math.max(0, offset + frameTime - 0.000001))
         .noAudio().outputOptions("-map", `0:${video.index}`, "-q:v", "2").frames(1).output(scene.image), signal);
       const imageInfo = await probe(ffmpeg, scene.image, signal);
-      if (!imageInfo.streams.some(stream => stream.codec_type === "video" && stream.width && stream.height)) throw new Error(`第 ${scene.index} 个关键帧生成失败`);
+      if (!imageInfo.streams.some(stream => stream.codec_type === "video" && stream.width && stream.height)) throw new Error(`Không tạo được khung hình chính của cảnh ${scene.index}`);
     }
     if (options.clips) {
-      progress(`切割视频 · ${scene.index}/${result.scenes.length}`);
+      progress(`Cắt video · ${scene.index}/${result.scenes.length}`);
       scene.video = `${directory}/shot${name}.mp4`;
       // ACT: 重编码用于按检测帧边界切割，避免 stream copy 只能在关键帧附近切开的误差。
       await runFfmpeg(ffmpeg(source).seekInput(offset + scene.start).duration(scene.end - scene.start)
@@ -293,22 +293,22 @@ export async function analyzeVideo(options: AnalysisOptions): Promise<AnalysisRe
         .outputOptions("-map", `0:${video.index}`, "-map", "0:a:0?", "-preset", "fast", "-crf", "18",
           "-pix_fmt", "yuv420p", "-fps_mode", "passthrough", "-movflags", "+faststart").output(scene.video), signal);
       const clipInfo = await probe(ffmpeg, scene.video, signal);
-      if (!clipInfo.streams.some(stream => stream.codec_type === "video") || !(Number(clipInfo.format.duration) > 0)) throw new Error(`第 ${scene.index} 个视频片段生成失败`);
+      if (!clipInfo.streams.some(stream => stream.codec_type === "video") || !(Number(clipInfo.format.duration) > 0)) throw new Error(`Không tạo được đoạn video của cảnh ${scene.index}`);
     }
   }
   if (options.audio && audioPresent) {
-    progress("提取原音轨");
+    progress("Trích xuất âm thanh gốc");
     result.audio = `${directory}/originalAudio.m4a`;
     await runFfmpeg(ffmpeg(source).noVideo().audioCodec("aac").audioBitrate(192).format("ipod")
       .outputOptions("-map", "0:a:0", "-movflags", "+faststart").output(result.audio), signal);
     const audioInfo = await probe(ffmpeg, result.audio, signal);
-    if (!audioInfo.streams.some(stream => stream.codec_type === "audio") || !(Number(audioInfo.format.duration) > 0)) throw new Error("原音轨生成失败");
+    if (!audioInfo.streams.some(stream => stream.codec_type === "audio") || !(Number(audioInfo.format.duration) > 0)) throw new Error("Không tạo được âm thanh gốc");
   }
   signal.throwIfAborted();
   await workspace.writeJson(result.manifest, {
     version: 1, source, ...result,
     detection: { algorithm: "rgbHistogramV1", method: options.method, threshold: options.threshold, minSceneSeconds: options.minSceneSeconds, timeOrigin: "firstVideoFrame", sourceVideoOffset: offset },
   }, true);
-  onProgress(98, "生成画布素材");
+  onProgress(98, "Tạo tư liệu cho Canvas");
   return result;
 }

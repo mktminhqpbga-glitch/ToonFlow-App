@@ -1,6 +1,6 @@
-# 节点脚手架
+# Bộ khung node
 
-`@toonflow/nodes-scaffold` 提供共享 Vite 配置、节点骨架与宿主接口。节点插件在 `packages/nodes/*` 中各自维护依赖、Vue 子组件和构建入口；跨插件共享源码位于 `packages/nodeShared`，作为独立包 `@toonflow/node-shared`，不单独构建节点。
+`@toonflow/nodes-scaffold` cung cấp cấu hình Vite dùng chung, bộ khung node và giao diện với ứng dụng chủ. Mỗi plugin node trong `packages/nodes/*` tự quản lý dependency, thành phần Vue con và điểm vào build. Mã dùng chung giữa các plugin nằm tại `packages/nodeShared` dưới dạng gói độc lập `@toonflow/node-shared`, không được build như một node riêng.
 
 ```text
 packages/nodeScaffold/
@@ -24,15 +24,15 @@ data/nodes/
   imageNode.umd.js          开发时同步，供 server 加载
 ```
 
-在节点自身的 `src/components/` 中封装子组件、在其它目录放工具函数，正常 import 即可；它们不会单独生成节点入口。
+Đóng gói thành phần con trong `src/components/` của chính node, đặt các hàm tiện ích ở thư mục khác và import bình thường; chúng không tạo điểm vào node riêng.
 
-`packages/nodeScaffold` 仅提供通用节点基础能力、构建配置与宿主接口，运行时能力从 `@toonflow/nodes-scaffold/runtime` 导入。插件专属组件、交互、提示词、预设与业务逻辑放在所属插件中，通过其公开导出复用；跨插件共享组件与业务逻辑统一放在 `packages/nodeShared`，通过独立包 `@toonflow/node-shared` 的公开子路径导入，不混入脚手架。根入口 `@toonflow/nodes-scaffold` 仅供 Vite 配置导入 `createNodeConfig`，不要在浏览器组件中引用。
+`packages/nodeScaffold` chỉ cung cấp nền tảng node chung, cấu hình build và giao diện với ứng dụng chủ. Các năng lực runtime được import từ `@toonflow/nodes-scaffold/runtime`. Thành phần, tương tác, prompt, preset và logic nghiệp vụ riêng của plugin phải nằm trong chính plugin đó và được tái sử dụng qua các export công khai. Thành phần và logic dùng chung giữa các plugin phải đặt thống nhất tại `packages/nodeShared` và import qua subpath công khai của gói độc lập `@toonflow/node-shared`, không trộn vào bộ khung. Điểm vào gốc `@toonflow/nodes-scaffold` chỉ dành cho cấu hình Vite import `createNodeConfig`; không tham chiếu nó trong thành phần trình duyệt.
 
-## 共享 Markdown 编辑依赖
+## Dependency chỉnh sửa Markdown dùng chung
 
-Tiptap、marked 和 DOMPurify 通过构建配置的 external 复用宿主依赖。编辑器、预览组件、工具栏和生命周期由各扩展或节点在自己的包内实现，不导入宿主组件，也没有组件转发层。子包使用这些依赖时声明与宿主兼容的 peerDependencies：当前 Tiptap 各包为 `3.31.3`，`marked` 为 `18.0.13`，`dompurify` 为 `3.4.16`。
+Tiptap, marked và DOMPurify dùng lại dependency của ứng dụng chủ qua cấu hình external khi build. Trình sửa, thành phần xem trước, thanh công cụ và vòng đời do từng extension hoặc node triển khai trong gói riêng, không import thành phần của ứng dụng chủ và không có lớp chuyển tiếp thành phần. Gói con khi dùng những dependency này phải khai báo peerDependencies tương thích với ứng dụng chủ: các gói Tiptap hiện ở phiên bản `3.31.3`, `marked` ở `18.0.13` và `dompurify` ở `3.4.16`.
 
-直接使用依赖原有 API：
+Dùng trực tiếp API gốc của dependency:
 
 ```ts
 import { Editor } from "@tiptap/core";
@@ -46,15 +46,15 @@ const editor = new Editor({
 });
 ```
 
-共享模块包括 `@tiptap/core`、`@tiptap/vue-3`、`@tiptap/starter-kit`、`@tiptap/markdown`，以及 `extension-find-and-replace`、`extension-highlight`、`extension-image`、`extension-list`、`extension-subscript`、`extension-superscript`、`extension-table`、`extension-text-align`（均为 `@tiptap/` 前缀）；还包括 `@tiptap/pm/model`、`@tiptap/pm/state`、`@tiptap/pm/view`、`marked` 和 `dompurify`。构建产物引用 `window.toonflowTiptapHost` 中对应的依赖，不重复打包这些实现。
+Các module dùng chung gồm `@tiptap/core`, `@tiptap/vue-3`, `@tiptap/starter-kit`, `@tiptap/markdown`, cùng `extension-find-and-replace`, `extension-highlight`, `extension-image`, `extension-list`, `extension-subscript`, `extension-superscript`, `extension-table`, `extension-text-align` (đều có tiền tố `@tiptap/`); còn có `@tiptap/pm/model`, `@tiptap/pm/state`, `@tiptap/pm/view`, `marked` và `dompurify`. Sản phẩm build tham chiếu dependency tương ứng từ `window.toonflowTiptapHost`, không đóng gói trùng các phần triển khai này.
 
-Tiptap 统一使用具名导入，例如 `{ StarterKit }`、`{ Image }`、`{ Highlight }`、`{ Superscript }`、`{ Subscript }`、`{ TextAlign }`、`{ FindAndReplace }`。当前 Vite 8 UMD 的默认导入会取整个外部模块对象，不能用于这些共享模块；DOMPurify 单独共享默认函数，继续使用 `import DOMPurify from "dompurify"`。无需启用影响所有依赖的旧版 CJS 兼容开关。
+Tiptap thống nhất dùng named import như `{ StarterKit }`, `{ Image }`, `{ Highlight }`, `{ Superscript }`, `{ Subscript }`, `{ TextAlign }`, `{ FindAndReplace }`. Với Vite 8 UMD hiện tại, default import sẽ lấy toàn bộ đối tượng module bên ngoài nên không phù hợp với các module chia sẻ này. DOMPurify riêng biệt chia sẻ hàm mặc định, tiếp tục dùng `import DOMPurify from "dompurify"`. Không cần bật cờ tương thích CJS cũ làm ảnh hưởng mọi dependency.
 
-宿主先检查 UMD 是否引用 `toonflowTiptapHost`，仅在需要时动态加载共享依赖，后续复用同一个 ES 模块；普通图片、视频或纯文本插件不会因此预载 Tiptap。组件的挂载、销毁、隐藏状态、正文更新和文件保存仍由各包管理。使用共享依赖的产物需要配套宿主版本。
+Ứng dụng chủ trước tiên kiểm tra UMD có tham chiếu `toonflowTiptapHost` không, chỉ tải động dependency dùng chung khi cần, rồi tiếp tục dùng lại cùng module ES. Plugin ảnh, video hoặc văn bản thuần thông thường không vì thế mà tải trước Tiptap. Việc mount, hủy, ẩn thành phần, cập nhật nội dung và lưu tệp vẫn do từng gói quản lý. Sản phẩm dùng dependency dùng chung cần phiên bản ứng dụng chủ tương ứng.
 
-## 插件侧业务复用
+## Tái sử dụng nghiệp vụ phía plugin
 
-提示词输入、参考列表、生成历史、生成状态和错误解释放在 `packages/nodeShared`。调用节点声明 `@toonflow/node-shared` workspace 依赖并按子路径导入：
+Phần nhập prompt, danh sách tham chiếu, lịch sử tạo, trạng thái tạo và giải thích lỗi nằm ở `packages/nodeShared`. Node sử dụng cần khai báo `@toonflow/node-shared` là dependency workspace rồi import qua subpath:
 
 ```ts
 import promptInput from "@toonflow/node-shared/promptInput";
@@ -64,17 +64,17 @@ import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
 const { refList, referenceMentions, setReferencePreview, removeReference } = useNodeReferences("in");
 ```
 
-图片编辑、宫格切分、局部重绘和打光从 `@toonflow/node-image` 的对应子路径导入；视频播放器从 `@toonflow/node-video/videoPlayer` 导入。共享源码随使用方节点打包，Vue、VueFlow 和 Element Plus 继续复用宿主实例。
+Chỉnh sửa ảnh, cắt ảnh thành ô lưới, vẽ lại một vùng và chiếu sáng được import từ các subpath tương ứng của `@toonflow/node-image`; trình phát video được import từ `@toonflow/node-video/videoPlayer`. Mã chia sẻ được đóng gói cùng node sử dụng; Vue, VueFlow và Element Plus tiếp tục dùng lại instance của ứng dụng chủ.
 
-## 节点骨架
+## Khung node
 
-从 `@toonflow/nodes-scaffold/runtime` 导入 `nodeSkeleton` 和 `useNode`，在节点入口用 `<nodeSkeleton v-bind="nodeProps">` 包裹内容。`label` 默认是“未命名节点”，上方标题栏无边框，下方内容使用 Element Plus Card，默认插槽用于节点内容。节点入口保留 `defineOptions({ inheritAttrs: false })`，避免 VueFlow 传入的顶层属性覆盖骨架的 `label` 等参数。
+Import `nodeSkeleton` và `useNode` từ `@toonflow/nodes-scaffold/runtime`; tại điểm vào node, dùng `<nodeSkeleton v-bind="nodeProps">` bọc nội dung. `label` mặc định là “Node chưa đặt tên”; thanh tiêu đề phía trên không viền, phần nội dung phía dưới dùng Element Plus Card, slot mặc định chứa nội dung node. Giữ `defineOptions({ inheritAttrs: false })` tại điểm vào node để tránh thuộc tính cấp cao nhất do VueFlow truyền ghi đè `label` và các tham số khác của khung.
 
-标题左侧显示 16px 图标，默认使用 `IconBox`；节点入口在 `defineOptions({ icon: IconPhoto })` 声明图标，`useNode()` 和画布节点列表复用同一个组件。单个实例仍可通过 `useNode({ icon })` 或骨架的 `:icon` 覆盖，图标无需写入节点的 `data`。
+Phía trái tiêu đề hiển thị biểu tượng 16px, mặc định `IconBox`. Điểm vào node khai báo biểu tượng qua `defineOptions({ icon: IconPhoto })`; `useNode()` và danh sách node Canvas dùng chung thành phần đó. Từng instance có thể ghi đè qua `useNode({ icon })` hoặc `:icon` của khung; không cần ghi biểu tượng vào `data` của node.
 
-通过 `handles` 数组定义连接点，默认没有连接点。每项包含节点内唯一且稳定的 `id`、`type`（`target` 为左侧输入，`source` 为右侧输出）、数据类型 `dataType`，以及可选提示 `label`。同一侧支持多个连接点，按数组顺序均匀排列；单个连接点居中。Card 会按连接点数量增高。
+Định nghĩa các cổng nối qua mảng `handles`; mặc định không có cổng. Mỗi mục chứa `id` duy nhất và ổn định trong node, `type` (`target` là đầu vào bên trái, `source` là đầu ra bên phải), loại dữ liệu `dataType` và `label` gợi ý tùy chọn. Cùng một phía hỗ trợ nhiều cổng, phân bố đều theo thứ tự mảng; cổng đơn được căn giữa. Card sẽ tăng chiều cao theo số cổng.
 
-每个 node 在 `defineOptions({ handles })` 声明默认端口，UMD 组件直接暴露该数组，供画布在创建节点前过滤可连接的节点列表。`useNode()` 自动复制这份定义到独立的 `handles` ref；需要动态初始化时仍可用 `useNode({ handles })` 覆盖，不从 `data.handles` 读取定义或默认值。节点通过修改 `handles.value` 控制端口数量、类型、提示及顺序；接收规则通过 `nodeEvent.on("canConnect", callback)` 注册。`nodeProps` 自动跟随画布中的标题变化。标题换行、端口位置变化后会重新测量连线锚点；删除端口、修改端口 ID 或输入输出方向时，会清理原端口的失效连线。
+Mỗi node khai báo các cổng mặc định bằng `defineOptions({ handles })`; thành phần UMD công khai trực tiếp mảng này để Canvas lọc danh sách node có thể nối trước khi tạo node. `useNode()` tự sao chép khai báo vào ref `handles` độc lập; nếu cần khởi tạo động, vẫn có thể ghi đè bằng `useNode({ handles })`, không đọc khai báo hoặc giá trị mặc định từ `data.handles`. Node sửa `handles.value` để điều khiển số lượng, loại, nhãn gợi ý và thứ tự cổng; quy tắc nhận kết nối đăng ký qua `nodeEvent.on("canConnect", callback)`. `nodeProps` tự theo dõi thay đổi tiêu đề trên Canvas. Sau khi tiêu đề xuống dòng hoặc vị trí cổng thay đổi, neo kết nối sẽ được đo lại; khi xóa cổng, đổi ID cổng hoặc hướng vào/ra, các kết nối không còn hợp lệ của cổng cũ sẽ được dọn.
 
 ```vue
 <template>
@@ -98,19 +98,19 @@ const { nodeProps, outputs } = useNode({
 </script>
 ```
 
-`useNode(options?)` 接受 `label`、`icon`、`handles`、`outputs`，返回 `id`、`node`、`config`、`nodeProps`、`handles`、`outputs`、`nodeEvent`、`nodeTools`、`files`、`ai`、`ffmpeg`、`asr`、`updateNodeInternals`。`nodeProps` 是供骨架绑定的 computed，包含标题、图标、端口和输出；`outputs` 根据默认值推导类型，并恢复当前节点保存的合法输出，只接受仍存在的 source 端口及匹配类型。文本默认值保持 `STRING`；图片节点无已保存输出时保持为空。
+`useNode(options?)` nhận `label`, `icon`, `handles`, `outputs` và trả về `id`, `node`, `config`, `nodeProps`, `handles`, `outputs`, `nodeEvent`, `nodeTools`, `files`, `ai`, `ffmpeg`, `asr`, `updateNodeInternals`. `nodeProps` là computed để bind vào khung, gồm tiêu đề, biểu tượng, cổng và đầu ra. `outputs` suy ra kiểu từ giá trị mặc định và phục hồi đầu ra hợp lệ đã lưu của node hiện tại; chỉ chấp nhận cổng source vẫn tồn tại và kiểu khớp. Giá trị văn bản mặc định giữ `STRING`; node ảnh không có đầu ra đã lưu thì giữ rỗng.
 
-`files.uploadFile(file)`、`files.removeNodeFiles()` 和 `updateNodeInternals()` 已绑定当前节点，无需再次传 ID；`files` 同时提供 `getWorkspaceFiles()`、`useFileUrl()`。端口定义、具体 UI、上传校验和上传/删除互斥仍由业务节点管理。选中状态可直接使用 `node.selected`，例如绑定 `v-model:bottomVisible="node.selected"`。
+`files.uploadFile(file)`, `files.removeNodeFiles()` và `updateNodeInternals()` đã được gắn với node hiện tại, không phải truyền ID lần nữa; `files` cũng cung cấp `getWorkspaceFiles()`, `useFileUrl()`. Khai báo cổng, UI cụ thể, kiểm tra tải lên và cơ chế loại trừ đồng thời giữa tải/xóa vẫn do node nghiệp vụ quản lý. Có thể đọc trực tiếp trạng thái chọn qua `node.selected`, ví dụ bind `v-model:bottomVisible="node.selected"`.
 
-`useNode()` 还返回 `previewReady`，并通过 `nodeProps` 传给骨架：节点首次靠近视口时才挂载默认槽位，之后保留预览和 UI 状态。工具注册、输出及生成任务应放在节点自身的 `setup` 中，不依赖预览子组件挂载；需要立即挂载内容时，可在骨架上显式设置 `:previewReady="true"`。框选或拖动时上下槽位不挂载，单击单个节点后恢复。
+`useNode()` còn trả về `previewReady` và truyền qua `nodeProps` đến khung: slot mặc định chỉ được mount khi node lần đầu tiến gần vùng nhìn, sau đó giữ trạng thái xem trước và UI. Việc đăng ký công cụ, đầu ra và tác vụ tạo phải nằm trong `setup` của chính node, không phụ thuộc thành phần xem trước được mount. Nếu cần mount nội dung ngay, đặt rõ `:previewReady="true"` trên khung. Khi chọn vùng hoặc kéo, slot trên/dưới không được mount, sẽ phục hồi khi nhấp chọn một node.
 
-连接点未连接时使用 `IconCircleDashed`，连接后使用 `IconCircleDot`，最后一条连线移除后恢复虚线圆。图标为 18px，透明鼠标交互区域向外扩大 8px（总计 34px），不会显示原来的实心圆背景。
+Cổng chưa nối dùng `IconCircleDashed`, sau khi nối dùng `IconCircleDot`; khi kết nối cuối cùng bị gỡ, trở về vòng tròn nét đứt. Biểu tượng 18px, vùng tương tác chuột trong suốt mở rộng ra ngoài 8px (tổng 34px), không còn hiển thị nền hình tròn đặc cũ.
 
 
 
-### FFmpeg 媒体处理
+### Xử lý phương tiện bằng FFmpeg
 
-`await useNode().ffmpeg(signal?)` 获取绑定当前工作区的工厂；在组件 setup 中获取 `ffmpeg`，事件处理函数中再调用。也可以单独使用 `useNodeFfmpeg()`（从 runtime 或 `@toonflow/nodes-scaffold/nodeFfmpeg` 导入）。调用方式与 tools 的 fluent 链一致，支持多输入、多输出、复杂滤镜、截图、拼接、`clone()`、`ffprobe` 和编码器等能力查询。
+`await useNode().ffmpeg(signal?)` lấy factory được gắn với workspace hiện tại; lấy `ffmpeg` trong setup của thành phần rồi gọi trong hàm xử lý sự kiện. Cũng có thể dùng riêng `useNodeFfmpeg()` (import từ runtime hoặc `@toonflow/nodes-scaffold/nodeFfmpeg`). Cách gọi giống chuỗi fluent ở tools, hỗ trợ nhiều đầu vào/đầu ra, bộ lọc phức tạp, chụp khung hình, ghép, `clone()`, `ffprobe` và truy vấn khả năng như encoder.
 
 ```ts
 const { ffmpeg: loadFfmpeg, id } = useNode();
@@ -134,23 +134,23 @@ async function compose(signal?: AbortSignal) {
 }
 ```
 
-链式调用通过 `/api/ffmpeg/execute` 交给宿主的 `@toonflow/ffmpeg` 执行，节点 UMD 不包含 Node.js 执行库。支持 `start`、`progress`、`stderr`、`codecData`、`filenames`、`end`、`error` 事件及 `on/once/off`；配置在执行前完成，并行使用独立命令或 `clone()`。目录在获取工厂时固定，切换工作区后不会写入新项目。
+Chuỗi lời gọi được chuyển qua `/api/ffmpeg/execute` cho `@toonflow/ffmpeg` của ứng dụng chủ thực thi; UMD của node không chứa thư viện thực thi Node.js. Hỗ trợ các sự kiện `start`, `progress`, `stderr`, `codecData`, `filenames`, `end`, `error` và `on/once/off`; cấu hình phải hoàn tất trước khi chạy, muốn song song dùng lệnh độc lập hoặc `clone()`. Thư mục được cố định lúc lấy factory nên sau khi đổi workspace, thao tác sẽ không ghi vào dự án mới.
 
-输入输出使用工作区文件路径，上传和读取二进制复用 `files`。浏览器不能传递 Node.js Stream、logger 或子进程，不提供 `.pipe()`、执行程序路径 setter 和服务器预设文件加载；`preset(command => ...)` 可在节点内复用配置。类型使用 `BrowserFfmpegFactory` / `BrowserFfmpegCommand`，不冒充原生 Node.js 对象。
+Đầu vào/đầu ra dùng đường dẫn tệp workspace; tải lên và đọc nhị phân dùng lại `files`. Trình duyệt không thể truyền Node.js Stream, logger hoặc tiến trình con; không cung cấp `.pipe()`, setter đường dẫn chương trình thực thi hoặc tải tệp preset trên server. Có thể dùng `preset(command => ...)` để tái sử dụng cấu hình trong node. Dùng các kiểu `BrowserFfmpegFactory` / `BrowserFfmpegCommand`, không giả làm đối tượng Node.js nguyên sinh.
 
-节点卸载、传入 signal 取消或 `command.kill()` 会取消请求并终止转换；开始前取消也会阻止随后启动的 FFmpeg 继续执行。FFprobe/能力查询的原生库未暴露子进程，取消仅停止等待查询结果。缺少 FFmpeg 时复用设置中的下载提示，不自动安装或重试。
+Unmount node, hủy signal được truyền vào hoặc `command.kill()` sẽ hủy yêu cầu và dừng chuyển đổi; nếu hủy trước lúc bắt đầu thì FFmpeg chạy sau cũng bị ngăn tiếp tục. Thư viện nguyên sinh phục vụ FFprobe/truy vấn năng lực không cung cấp tiến trình con; việc hủy chỉ ngừng chờ kết quả truy vấn. Nếu thiếu FFmpeg, tái sử dụng thông báo tải xuống trong cài đặt, không tự cài hoặc thử lại.
 
-显式输入输出与截图路径沿用宿主的工作区、符号链接检查；原始参数、滤镜和媒体清单中的间接 I/O 仍仅供可信节点使用，**不是文件系统沙箱**。服务端原生 API 参见 `packages/toolScaffold/readme.md`。
+Đường dẫn đầu vào, đầu ra và ảnh chụp được truyền rõ phải tuân thủ kiểm tra workspace và symlink của ứng dụng chủ. I/O gián tiếp trong tham số gốc, bộ lọc và danh sách phương tiện vẫn chỉ dành cho node đáng tin, **không phải sandbox hệ thống tệp**. Xem API nguyên sinh phía server tại `packages/toolScaffold/readme.md`.
 
-### 音频转文本
+### Chuyển âm thanh thành văn bản
 
-在组件 setup 中取得 `const { asr } = useNode()`，再调用 `await asr.transcribe("assets/audio.wav", { lang: "zh-CN", signal })`，返回识别全文。也可以单独从 runtime 或 `@toonflow/nodes-scaffold/nodeAsr` 导入 `useNodeAsr()`；麦克风 API `createBrowserAsr` 及支持检测同时公开导出。
+Trong setup của thành phần, lấy `const { asr } = useNode()` rồi gọi `await asr.transcribe("assets/audio.wav", { lang: "zh-CN", signal })` để trả về toàn văn nhận dạng. Cũng có thể import riêng `useNodeAsr()` từ runtime hoặc `@toonflow/nodes-scaffold/nodeAsr`; API micro `createBrowserAsr` và các hàm kiểm tra hỗ trợ cũng được export công khai.
 
-输入为当前工作区内的音频路径，非空且不超过 100 MB；读取时固定本次工作区，节点卸载或传入的 signal 取消会终止识别并释放音频资源。底层复用 `@toonflow/asr` 的浏览器音轨识别，按音频原速处理；不支持的宿主或识别服务错误直接抛出，不回退到麦克风。API 存在不代表实际 WebView 的识别服务可用，需要目标安装包验证。
+Đầu vào là đường dẫn âm thanh trong workspace hiện tại, không rỗng và tối đa 100 MB. Workspace của lượt đọc được cố định; unmount node hoặc hủy signal đầu vào sẽ dừng nhận dạng và giải phóng tài nguyên âm thanh. Phần dưới dùng lại nhận dạng âm thanh của trình duyệt từ `@toonflow/asr` theo tốc độ phát gốc; nếu ứng dụng chủ không hỗ trợ hoặc dịch vụ nhận dạng báo lỗi thì ném lỗi trực tiếp, không chuyển sang micro. API tồn tại không đồng nghĩa dịch vụ nhận dạng trong WebView thực tế hoạt động; phải kiểm chứng trên gói cài đặt đích.
 
-### AI 模型调用
+### Gọi mô hình AI
 
-`useNode()` 返回的 `ai` 提供文本与媒体模型列表、文本生成和媒体生成，也可以在组件 setup 中单独调用 `useNodeAi()`。文本生成统一使用 `ai.generate()`，流式通知与私有工具都是可选参数，不需要切换调用方法。
+`ai` do `useNode()` trả về cung cấp danh sách mô hình văn bản và phương tiện, tạo văn bản và tạo phương tiện. Cũng có thể gọi riêng `useNodeAi()` trong setup thành phần. Tạo văn bản thống nhất dùng `ai.generate()`; thông báo dạng luồng và công cụ riêng là tham số tùy chọn, không cần đổi phương thức gọi.
 
 ```ts
 const { ai } = useNode();
@@ -173,33 +173,33 @@ await ai.generate({
 });
 ```
 
-- `ai.getModels(signal?)`：读取设置中已配置的模型，返回 `providerId`、`providerLabel`、`modelId`、`label`、`protocol` 和可选的上下文、输出长度；`protocol` 为 `openai-completions`、`openai-responses` 或 `anthropic-messages`，不返回密钥或接口地址。
-- `ai.generate(input)`：始终返回 `{ text, reasoning? }`。`input` 包含 `providerId`、`modelId`、`prompt`，可选 `systemPrompt`、`references`、`directory`、`tools`、`onEvent` 和 `signal`。
-- `onEvent` 接收正文或思考增量 `{ type: "text" | "reasoning", delta }`，以及工具开始 `{ type: "toolStart", id, name, args }`、工具完成 `{ type: "toolEnd", id, name, result, isError }`。不传回调也使用相同执行流程，等待最终结果即可。
-- `references` 按列表顺序传入 `STRING`、`IMAGE`、`VIDEO` 的 `{ dataType, value }`，对应 `{{ref 1}}` 等编号；文本携带原文，媒体携带工作区相对路径与 MIME 类型，后端校验目录并读取为附件。媒体参考必须传入工作区绝对路径 `directory`。节点不预判模型附件能力，接口错误原样回传；视频使用 Chat Completions 的 `video_url`，Responses/Anthropic 按文件提交，是否接受取决于供应商。
-- 组件卸载会中止浏览器请求；Bun 1.3.14 在部分静默 SSE 场景下不能及时感知断连，上游生成可能继续到结束。需要提前中止时传入 `signal: controller.signal`。HTTP 错误、流内错误和缺少完成事件的断流都会抛错，调用方负责显示错误；客户端不自动重试。
-- 文本节点保留上次输出，直到收到新文本；流中断时保留已生成部分。
+- `ai.getModels(signal?)`: đọc mô hình đã cấu hình trong cài đặt, trả `providerId`, `providerLabel`, `modelId`, `label`, `protocol` và ngữ cảnh/độ dài đầu ra tùy chọn; `protocol` là `openai-completions`, `openai-responses` hoặc `anthropic-messages`, không trả khóa hay địa chỉ API.
+- `ai.generate(input)`: luôn trả `{ text, reasoning? }`. `input` gồm `providerId`, `modelId`, `prompt`; tùy chọn `systemPrompt`, `references`, `directory`, `tools`, `onEvent` và `signal`.
+- `onEvent` nhận phần tăng thêm của văn bản hoặc suy nghĩ `{ type: "text" | "reasoning", delta }`, cùng sự kiện bắt đầu công cụ `{ type: "toolStart", id, name, args }` và hoàn tất công cụ `{ type: "toolEnd", id, name, result, isError }`. Không truyền callback vẫn dùng cùng quy trình thực thi và chỉ cần chờ kết quả cuối.
+- `references` truyền các `{ dataType, value }` loại `STRING`, `IMAGE`, `VIDEO` theo thứ tự danh sách, ứng với số `{{ref 1}}`, v.v. Văn bản giữ nội dung gốc, phương tiện mang đường dẫn tương đối trong workspace và kiểu MIME; backend kiểm tra thư mục và đọc thành tệp đính kèm. Tham chiếu phương tiện phải truyền `directory` là đường dẫn tuyệt đối của workspace. Node không tự phán đoán khả năng nhận tệp đính kèm của mô hình; lỗi API được trả nguyên dạng. Video dùng `video_url` của Chat Completions, Responses/Anthropic gửi dưới dạng tệp; nhà cung cấp quyết định có chấp nhận không.
+- Unmount thành phần sẽ dừng yêu cầu trình duyệt. Trong một số trường hợp SSE im lặng, Bun 1.3.14 không phát hiện ngắt kết nối kịp, quá trình tạo phía thượng nguồn có thể tiếp tục đến hết. Khi cần dừng sớm, truyền `signal: controller.signal`. Lỗi HTTP, lỗi trong stream và ngắt luồng không có sự kiện hoàn tất đều ném ngoại lệ; bên gọi chịu trách nhiệm hiển thị lỗi, client không tự thử lại.
+- Node văn bản giữ đầu ra lần trước cho đến khi nhận văn bản mới; nếu stream bị ngắt, phần đã tạo được giữ lại.
 
-需要工具调用时向同一个入口传入 `tools: localTools`，类型为 `NodeAiTool[]`，从运行时入口导出。每个工具包含 `{ name, description, parameters, execute }`；`parameters` 是 JSON Schema，`execute(args, signal)` 在节点侧执行并校验参数。工具循环复用 SDK，本次上下文由浏览器维护，每次请求携带模型所需的上下文；服务端仅代理单次模型请求、读取密钥和处理附件，不创建会话、不执行工具。私有工具不注册到 `nodeTools`，后者仅用于外部总 Agent 操作节点。
+Khi cần gọi công cụ, truyền `tools: localTools` có kiểu `NodeAiTool[]` vào cùng điểm vào; kiểu được export từ runtime. Mỗi công cụ có `{ name, description, parameters, execute }`; `parameters` là JSON Schema, `execute(args, signal)` thực thi phía node và kiểm tra tham số. Vòng lặp công cụ tái sử dụng SDK; ngữ cảnh lượt hiện tại do trình duyệt duy trì, mỗi yêu cầu mang ngữ cảnh mô hình cần. Server chỉ proxy một lần yêu cầu mô hình, đọc khóa và xử lý tệp đính kèm; không tạo phiên và không thực thi công cụ. Công cụ riêng không đăng ký vào `nodeTools` vì điểm này chỉ dành cho Agent tổng từ bên ngoài thao tác node.
 
-带工具的调用最多请求模型 40 次，超过 10 分钟会发出取消信号；异步工具应响应传入的 `signal`，脚手架无法强制中断忽略信号的任意代码。需要原子提交的工具应只修改私有草稿；调用成功后由节点校验并保存，错误或取消时丢弃草稿。脚手架不能自动回滚工具已经产生的外部副作用。
+Một lượt có công cụ được yêu cầu mô hình tối đa 40 lần, quá 10 phút sẽ phát tín hiệu hủy. Công cụ bất đồng bộ phải phản hồi `signal` được truyền; bộ khung không thể ép dừng mã tự ý bỏ qua tín hiệu. Công cụ cần commit nguyên tử chỉ nên sửa bản nháp riêng; khi gọi thành công, node kiểm tra và lưu, còn nếu lỗi/hủy thì bỏ bản nháp. Bộ khung không thể tự hoàn tác tác động bên ngoài mà công cụ đã tạo.
 
-文本 AI 只提供 `generate({ ...input, onEvent, signal })`；服务端只接收 `Context` 请求并返回 SSE，不保留旧调用格式。
+AI văn bản chỉ cung cấp `generate({ ...input, onEvent, signal })`; server chỉ nhận yêu cầu `Context` và trả SSE, không giữ định dạng gọi cũ.
 
 
-- `ai.getMediaModels(signal?)`：读取已安装供应商声明的图片、视频模型，返回供应商与模型 ID、名称、类型及模式参数。图片模型可通过 `imageSizes`、`imageRatios` 声明支持的分辨率与比例选项，节点生成时使用 `size`、`ratio` 传入选择值。
-- `ai.generateImage(input, signal?)`：非流式生成并落盘，返回 `{ path, mimeType, mediaType: "image" }[]`。`input` 包含工作区绝对路径 `directory`、`providerId`、`modelId`、`prompt`、工作区相对目录 `outputDirectory`；可传 `images: { path, mimeType }[]`、`ratio`、`size`。图片参考只传工作区相对路径，由后端读取。
-- `ai.generateVideo(input, signal?)`：视频生成并落盘，返回 `{ path, mimeType, mediaType: "video" }[]`。基础字段同图片生成；使用 `duration`、`resolution`、`ratio`、`generateAudio`、`mode` 配置视频，可传 `images`、`videos`、`audios` 和 `firstFrame`、`lastFrame`，素材均为工作区内 `{ path, mimeType }` 引用。
+- `ai.getMediaModels(signal?)`: đọc các mô hình ảnh/video do nhà cung cấp đã cài khai báo, trả ID và tên nhà cung cấp/mô hình, loại và tham số chế độ. Mô hình ảnh có thể khai báo các tùy chọn độ phân giải và tỷ lệ hỗ trợ qua `imageSizes`, `imageRatios`; khi tạo, node truyền lựa chọn bằng `size`, `ratio`.
+- `ai.generateImage(input, signal?)`: tạo không streaming và ghi tệp, trả `{ path, mimeType, mediaType: "image" }[]`. `input` gồm `directory` là đường dẫn tuyệt đối của workspace, `providerId`, `modelId`, `prompt`, `outputDirectory` là thư mục tương đối trong workspace; có thể truyền `images: { path, mimeType }[]`, `ratio`, `size`. Tham chiếu ảnh chỉ truyền đường dẫn tương đối trong workspace để backend đọc.
+- `ai.generateVideo(input, signal?)`: tạo video và ghi tệp, trả `{ path, mimeType, mediaType: "video" }[]`. Các trường cơ bản giống tạo ảnh; cấu hình video qua `duration`, `resolution`, `ratio`, `generateAudio`, `mode`, có thể truyền `images`, `videos`, `audios`, `firstFrame`, `lastFrame`. Mọi tư liệu đều là tham chiếu `{ path, mimeType }` trong workspace.
 
-三个媒体 `generate*` 方法保留原返回值，并接受可选第三参数 `{ taskId, nodeId, canvasPath, onStatus }`。`ai.resumeMedia(directory, taskId, signal?, options?)` 只复查已有任务；`ai.cancelMedia(directory, taskId)` 显式取消服务端任务。传入已持久化 `taskId` 时，节点卸载和查询断线仅停止本地等待；旧的两参调用保留卸载或显式 abort 时取消任务的行为。
+Ba phương thức `generate*` cho phương tiện giữ nguyên kiểu trả về và chấp nhận tham số thứ ba tùy chọn `{ taskId, nodeId, canvasPath, onStatus }`. `ai.resumeMedia(directory, taskId, signal?, options?)` chỉ kiểm tra lại tác vụ đã có; `ai.cancelMedia(directory, taskId)` hủy tường minh tác vụ phía server. Khi truyền `taskId` đã lưu bền vững, unmount node hoặc mất kết nối lúc truy vấn chỉ dừng chờ cục bộ; cách gọi cũ hai tham số vẫn hủy tác vụ khi unmount hoặc abort tường minh.
 
-生成节点复用 `@toonflow/node-shared/useNodeGeneration`，在 `node.data.mediaTask` 保存任务身份和非敏感恢复数据，先通过宿主保存画布再提交；重开画布只查询已有 ID，完成后保存输出。宿主的 `useNodePersistence()` 位于 `@toonflow/nodes-scaffold/nodeDocument`，返回的上下文绑定当前目录和画布，`save()` 可等待保存完成。供应商未提供可恢复任务凭据时，服务进程中断后的同步生成不能自动重做；恢复失败保留原输出。
+Node tạo dùng lại `@toonflow/node-shared/useNodeGeneration`, lưu định danh tác vụ và dữ liệu khôi phục không nhạy cảm tại `node.data.mediaTask`, lưu Canvas qua ứng dụng chủ trước khi gửi. Khi mở lại Canvas chỉ truy vấn ID đã có và lưu đầu ra sau khi hoàn tất. `useNodePersistence()` của ứng dụng chủ nằm ở `@toonflow/nodes-scaffold/nodeDocument`, trả ngữ cảnh gắn với thư mục và Canvas hiện tại; `save()` có thể chờ lưu xong. Nếu nhà cung cấp không cung cấp thông tin tác vụ có thể khôi phục, quá trình tạo đồng bộ sau khi tiến trình dịch vụ bị gián đoạn không được tự thực hiện lại; khôi phục thất bại vẫn giữ đầu ra cũ.
 
-`directory` 在生成前通过 `files.getWorkspaceFiles().list()` 取得快照，`outputDirectory` 使用 `assets/${id}`。结果可直接赋给 `outputs.value.image = { dataType: "IMAGE", value: { url: result.path, mimeType: result.mimeType } }`；使用 `files.useFileUrl` 预览。图片生成节点会合并文本参考、传入图片参考，成功后替换输出，失败或停止时保留上次图片；删除节点前取消请求。当前画布为支持撤销而保留节点素材，不随节点删除物理文件。
+Trước khi tạo, lấy bản chụp `directory` qua `files.getWorkspaceFiles().list()`, dùng `assets/${id}` cho `outputDirectory`. Có thể gán trực tiếp kết quả vào `outputs.value.image = { dataType: "IMAGE", value: { url: result.path, mimeType: result.mimeType } }` và xem trước bằng `files.useFileUrl`. Node tạo ảnh ghép tham chiếu văn bản và truyền tham chiếu ảnh; thành công thì thay đầu ra, thất bại hoặc dừng thì giữ ảnh trước. Hủy yêu cầu trước khi xóa node. Canvas hiện tại giữ tư liệu node để hỗ trợ hoàn tác, không xóa tệp vật lý theo việc xóa node.
 
-### Agent 节点函数
+### Hàm node dành cho Agent
 
-在节点的同步 `setup` 中调用 `nodeTools.register`。可以直接从运行时入口导入 `nodeTools`，也可以从 `useNode()` 返回值取得。方法自动绑定当前节点 ID，返回注销函数，并在组件卸载时自动注销。
+Gọi `nodeTools.register` trong `setup` đồng bộ của node. Có thể import `nodeTools` trực tiếp từ runtime hoặc lấy từ `useNode()` trả về. Phương thức tự gắn ID node hiện tại, trả hàm hủy đăng ký và tự hủy khi thành phần unmount.
 
 ```ts
 import { useNode, z } from "@toonflow/nodes-scaffold/runtime";
@@ -220,33 +220,33 @@ nodeTools.register({
 });
 ```
 
-函数名使用小驼峰，上例显示为 `node:setText`；同名函数通过 `nodeId` 区分。启用 `packages/tools/canvas` 的“画布操作”插件后，Agent 用 `findCanvasNodes` 查找节点，用 `getCanvasNodes` 按需查询节点字段与端口，用 `getNodeTools({ nodeIds: [...] })` 查询目标函数的完整 schema，并通过统一的 `nodeTools` 调用：
+Tên hàm dùng camelCase; ví dụ trên được hiển thị thành `node:setText`. Các hàm trùng tên được phân biệt bằng `nodeId`. Sau khi bật plugin “Thao tác Canvas” tại `packages/tools/canvas`, Agent dùng `findCanvasNodes` để tìm node, `getCanvasNodes` để truy vấn trường và cổng khi cần, `getNodeTools({ nodeIds: [...] })` để xem schema đầy đủ của hàm đích và gọi thông qua `nodeTools` thống nhất:
 
 ```json
 { "nodeId": "具体节点 ID", "name": "node:setText", "args": { "text": "新内容" } }
 ```
 
-`parameters` 使用 Zod 对象 schema，`z` 由脚手架统一导出，节点无需单独安装 Zod。`execute` 的参数类型自动推导，注册时转为输入类型的 Draft 7 JSON Schema 供 Agent 和服务端使用。前端执行前调用原始 schema 的 `safeParseAsync`，保留默认值、转换和异步 `refine`；参数不合法时不会执行回调，错误会附带当前函数描述、参数 schema 和修正指引。不能转换为 JSON Schema 的输入类型会在注册时直接报错。
+`parameters` sử dụng Zod object schema, còn `z` được bộ khung export chung, node không cần cài Zod riêng. Kiểu tham số của `execute` được suy ra tự động và chuyển thành Draft 7 JSON Schema của đầu vào lúc đăng ký để Agent và server sử dụng. Trước khi thực thi, frontend gọi `safeParseAsync` từ schema gốc để giữ giá trị mặc định, chuyển đổi và `refine` bất đồng bộ. Nếu tham số không hợp lệ, callback không chạy; lỗi kèm mô tả hàm hiện tại, schema tham số và hướng dẫn sửa. Kiểu đầu vào không chuyển được thành JSON Schema sẽ báo lỗi ngay khi đăng ký.
 
-回调支持同步或异步，返回值须可 JSON 序列化；没有返回值时传回 `null`，抛错会作为工具执行错误返回 Agent。
+Callback hỗ trợ đồng bộ hoặc bất đồng bộ, giá trị trả về phải tuần tự hóa được thành JSON. Nếu không có giá trị thì trả `null`; ngoại lệ được gửi về Agent dưới dạng lỗi thực thi công cụ.
 
-注册表共用宿主 Vue Flow 实例，不写入画布 JSON。每次函数查询读取当前注册表；`addNode` 返回新增节点信息，可在同一轮 Agent 对话中通过 `getNodeTools` 查询并调用。节点卸载后的函数不可调用；手动切换画布会终止当前对话绑定的旧画布操作；Agent 通过 `addCanvas` 新建或 `switchCanvas` 切换后，仅发起操作的对话重新绑定新画布并可在同轮继续调用。修改通过 Vue Flow 实例完成，前端执行后等待现有画布保存流程完成再返回结果；读取不触发保存。
+Registry dùng chung instance Vue Flow của ứng dụng chủ, không ghi vào JSON Canvas. Mỗi truy vấn hàm đọc registry hiện tại; `addNode` trả thông tin node vừa thêm nên có thể dùng `getNodeTools` tra và gọi ngay trong cùng lượt Agent. Hàm của node đã unmount không thể gọi. Chuyển Canvas thủ công sẽ chấm dứt thao tác của cuộc trò chuyện hiện tại đang gắn với Canvas cũ. Khi Agent tạo bằng `addCanvas` hoặc chuyển bằng `switchCanvas`, chỉ cuộc trò chuyện phát động thao tác được gắn lại Canvas mới và có thể tiếp tục gọi trong cùng lượt. Chỉnh sửa thực hiện qua instance Vue Flow; frontend chờ quy trình lưu Canvas sẵn có hoàn tất rồi mới trả kết quả. Đọc không kích hoạt lưu.
 
-`getCanvas` 默认只返回画布概览，`include: ["canvases"]` 才分页返回工作区画布列表（`id`、`name`），`include: ["nodeTypes"]` 分页返回可用节点类型。`addCanvas({ name? })` 新建空画布并选中，省略名称时使用未占用的 `画布N`；`switchCanvas({ canvasId })` 在保存后切换画布；`renameCanvas({ canvasId?, name })` 重命名对应 JSON 文件，省略 `canvasId` 则修改激活画布，`name` 不含 `.json` 后缀。三者返回更新后的激活画布概览，新建和重命名不会覆盖已有文件。
+`getCanvas` mặc định chỉ trả tổng quan Canvas. Chỉ `include: ["canvases"]` mới trả danh sách Canvas trong workspace theo trang (`id`, `name`); `include: ["nodeTypes"]` trả loại node khả dụng theo trang. `addCanvas({ name? })` tạo Canvas trống và chọn nó; nếu không truyền tên thì dùng `画布N` chưa bị chiếm. `switchCanvas({ canvasId })` chuyển Canvas sau khi lưu. `renameCanvas({ canvasId?, name })` đổi tên tệp JSON tương ứng; nếu bỏ `canvasId` thì đổi Canvas đang hoạt động, `name` không chứa đuôi `.json`. Cả ba trả tổng quan Canvas đang hoạt động đã cập nhật; tạo và đổi tên không ghi đè tệp đã tồn tại.
 
-画布读取包括 `getCanvas`、`findCanvasNodes`、`getCanvasNodes`、`getCanvasEdges` 和 `getNodeTools`，均有分页和 64 KiB 响应上限。检查 `hasMore/nextCursor`，保持原参数继续分页；空结果也可能尚未扫描完。`getCanvasNodes` 每批最多 20 个 ID，支持字段投影和 `dataKeys`，大值可沿 `path` 读取，以 `textOffset/textLimit` 分段读字符串、`valueOffset/valueLimit` 分页读数组或对象；返回的 `truncated` 提供续读路径及偏移。全图任务分批处理并保留摘要，不累积全部详情；函数 schema 始终完整。
+Các công cụ đọc Canvas gồm `getCanvas`, `findCanvasNodes`, `getCanvasNodes`, `getCanvasEdges` và `getNodeTools`, đều có phân trang và giới hạn phản hồi 64 KiB. Kiểm tra `hasMore/nextCursor` và giữ tham số gốc để đọc tiếp; trang kết quả rỗng cũng có thể chưa quét hết. `getCanvasNodes` hỗ trợ tối đa 20 ID mỗi lô, chiếu các trường và `dataKeys`. Dữ liệu lớn được đọc theo `path`, chuỗi chia đoạn bằng `textOffset/textLimit` và mảng/đối tượng phân trang bằng `valueOffset/valueLimit`; `truncated` trả đường dẫn và offset để đọc tiếp. Tác vụ toàn Canvas xử lý theo lô và giữ tóm tắt, không tích lũy mọi chi tiết; schema hàm luôn đầy đủ.
 
-节点与连线每页最多扫描 2000 项，`totalNodes/totalEdges` 是画布总量而非筛选命中数，`selectedOnly` 读取现场选择状态；名称匹配全文，但列表中的名称预览最多 512 字符。详情和函数查询的 `nodeIds` 必须去重，正数 `textOffset/valueOffset` 必须配合 `path`。路径最多 64 层、JSON UTF-8 编码最多 2048 字节；`pathDepthLimit` 表示达到深度边界。结构操作的 ID 回执最多 100 项，整理、适配视口、删除分别带 `arrangedCount`、`nodeCount`、`removedEdgeCount`；`truncated` 仅表示回执缩略，不应重执行。`nodeTools` 业务返回值维持节点定义，不适用五个读取工具的 64 KiB 限制。
+Mỗi trang node hoặc kết nối quét tối đa 2.000 mục; `totalNodes/totalEdges` là tổng trên Canvas, không phải số khớp bộ lọc; `selectedOnly` đọc trạng thái chọn hiện tại. Tên được so khớp toàn văn nhưng phần xem trước tên trong danh sách dài tối đa 512 ký tự. `nodeIds` trong truy vấn chi tiết hoặc hàm phải loại trùng, `textOffset/valueOffset` dương bắt buộc đi với `path`. Đường dẫn tối đa 64 cấp, JSON UTF-8 tối đa 2048 byte; `pathDepthLimit` cho biết chạm giới hạn độ sâu. Biên nhận ID cho thao tác cấu trúc tối đa 100 mục; sắp xếp, chỉnh khung nhìn và xóa lần lượt có `arrangedCount`, `nodeCount`, `removedEdgeCount`. `truncated` chỉ có nghĩa biên nhận rút gọn, không nên chạy thao tác lại. Kết quả nghiệp vụ của `nodeTools` theo định nghĩa node và không chịu giới hạn 64 KiB của năm công cụ đọc.
 
-画布基础变更包括 `addCanvas`、`switchCanvas`、`renameCanvas`、`addNode`、`deleteNodes`、`moveNodes`、`renameNodes`、`connectNodes`、`deleteEdges`、`selectNodes` 和 `fitCanvas`。节点内容仍通过已注册函数修改，不向 Agent 开放任意写入节点 `data`。删除会先触发节点的 `delete` 回调并清理连接边；连接复用端口方向、数据类型和节点的 `canConnect` 校验。
+Các thao tác thay đổi Canvas cơ bản gồm `addCanvas`, `switchCanvas`, `renameCanvas`, `addNode`, `deleteNodes`, `moveNodes`, `renameNodes`, `connectNodes`, `deleteEdges`, `selectNodes` và `fitCanvas`. Nội dung node vẫn sửa bằng hàm đã đăng ký, không cho Agent tùy ý ghi `data` của node. Xóa kích hoạt callback `delete` của node trước rồi dọn kết nối; nối dùng lại kiểm tra hướng cổng, loại dữ liệu và `canConnect` của node.
 
-异步回调可从第二个参数取得 `{ signal }`，传给 `fetch` 等操作并在修改状态前检查 `signal.throwIfAborted()`。单次调用最多等待 120 秒；取消或切换画布会停止等待，但回调内部的异步工作需要配合 signal 才能停止。浏览器直接断开且运行时未触发关闭事件时，服务端由超时清理等待。
+Callback bất đồng bộ lấy `{ signal }` từ tham số thứ hai, truyền cho `fetch` và các thao tác tương tự, đồng thời kiểm tra `signal.throwIfAborted()` trước khi đổi trạng thái. Một lần gọi chờ tối đa 120 giây; hủy hoặc chuyển Canvas sẽ ngừng chờ, nhưng công việc bất đồng bộ trong callback phải phối hợp với signal mới dừng được. Nếu trình duyệt ngắt đột ngột và runtime không phát sự kiện đóng, server dùng timeout để dọn lượt chờ.
 
-### 上下悬浮插槽
+### Slot nổi phía trên và dưới
 
-骨架提供 `top`、`bottom` 两个具名插槽，分别通过 `v-model:topVisible`、`v-model:bottomVisible` 控制显隐，默认隐藏。未提供 `top` 插槽时，上方默认显示“添加到素材库、下载、全屏”工具栏；未提供 `bottom` 插槽时不渲染下方浮层。浮层水平居中，与节点相距 12px，上方浮层位于标题栏之上，避免遮挡标题。两者不占据节点布局空间，不影响卡片和连接点位置。
+Khung cung cấp hai named slot `top` và `bottom`, lần lượt điều khiển ẩn/hiện qua `v-model:topVisible` và `v-model:bottomVisible`, mặc định ẩn. Nếu không cung cấp slot `top` thì phía trên mặc định hiển thị thanh “Thêm vào thư viện tư liệu, Tải xuống, Toàn màn hình”. Nếu không cung cấp slot `bottom` thì không render lớp nổi dưới. Lớp nổi căn giữa theo chiều ngang, cách node 12px; lớp trên nằm phía trên thanh tiêu đề để không che chữ. Cả hai không chiếm không gian bố cục node, không ảnh hưởng vị trí Card hoặc cổng nối.
 
-`topWidth`、`bottomWidth` 默认均为 `"20vw"`。数字按 px 处理，字符串支持百分比等 CSS 宽度。默认工具栏建议设置 `topWidth="max-content"`；传入 `downloadUrl`、`downloadName` 控制下载，通过 `@fullscreen` 打开节点自己的全屏视图。素材库按钮复用节点的输出与宿主保存弹窗，没有输出时禁用。额外按钮放在 `topActions` 插槽，位置在下载按钮前；图片、视频、音频节点在此提供替换按钮。自定义 `top` 则替换整个工具栏。编辑浮层内容不会拖动画布或弹出节点右键菜单。
+`topWidth` và `bottomWidth` mặc định đều là `"20vw"`. Giá trị số được hiểu là px, chuỗi hỗ trợ phần trăm và các đơn vị chiều rộng CSS khác. Với thanh công cụ mặc định, nên đặt `topWidth="max-content"`. Truyền `downloadUrl`, `downloadName` để điều khiển tải xuống; dùng `@fullscreen` mở chế độ toàn màn hình của node. Nút thư viện tư liệu dùng lại đầu ra node và hộp thoại lưu của ứng dụng chủ, bị vô hiệu hóa nếu không có đầu ra. Nút bổ sung đặt trong slot `topActions`, trước nút tải xuống; node ảnh/video/âm thanh cung cấp nút thay thế ở đây. Tùy biến `top` sẽ thay toàn bộ thanh công cụ. Chỉnh nội dung lớp nổi không kéo Canvas hoặc bật menu chuột phải của node.
 
 ```vue
 <template>
@@ -266,13 +266,13 @@ const bottomVisible = ref(false);
 </script>
 ```
 
-### 数据类型与连接校验
+### Loại dữ liệu và kiểm tra kết nối
 
-`dataType` 仿照 [ComfyUI 类型](https://docs.comfy.org/custom-nodes/backend/datatypes)，使用区分大小写的大写字符串：`STRING`、`INT`、`FLOAT`、`BOOLEAN`、`IMAGE`、`MASK`、`LATENT`、`AUDIO`、`VIDEO`、`MODEL`、`CLIP`、`VAE`、`CONDITIONING`，也支持自定义类型。`*` 为通配类型，`["INT", "FLOAT"]` 表示接受多种类型，单类型仍可写 `"IMAGE"`；兼容旧的逗号字符串写法；默认两端类型有交集即可连接。图片输出类型为 `IMAGE`，通用节点使用 `*`。这只是端口兼容性声明，不负责生成或转换数据。
+`dataType` mô phỏng [các loại dữ liệu ComfyUI](https://docs.comfy.org/custom-nodes/backend/datatypes), dùng chuỗi chữ hoa phân biệt hoa/thường: `STRING`, `INT`, `FLOAT`, `BOOLEAN`, `IMAGE`, `MASK`, `LATENT`, `AUDIO`, `VIDEO`, `MODEL`, `CLIP`, `VAE`, `CONDITIONING`; cũng hỗ trợ loại tùy biến. `*` là loại đại diện mọi giá trị; `["INT", "FLOAT"]` nghĩa là chấp nhận nhiều loại, loại đơn vẫn ghi được `"IMAGE"`. Tương thích cú pháp chuỗi phân cách bằng dấu phẩy cũ. Mặc định có thể nối khi tập loại ở hai đầu giao nhau. Đầu ra ảnh dùng `IMAGE`, node tổng quát dùng `*`. Đây chỉ là khai báo tương thích cổng, không tạo hay chuyển đổi dữ liệu.
 
-只允许 `source` 连接 `target`，同类端口和缺失的端口或类型始终拒绝连接。节点通过 `nodeEvent.on("canConnect", callback)` 注册连接校验回调，使用 VueFlow 的 `ValidConnectionFunc` 签名：`(connection, context) => boolean`。`connection` 包含 `source`、`target`、`sourceHandle`、`targetHandle`；`context` 包含两端节点以及当前画布的节点、连线。无论从哪端开始拖线，字段始终按实际输入输出方向提供，且**只调用 target 节点的回调，source 不参与校验**。
+Chỉ cho `source` nối với `target`; cổng cùng loại hoặc thiếu cổng/loại luôn bị từ chối. Node đăng ký callback kiểm tra qua `nodeEvent.on("canConnect", callback)` theo chữ ký `ValidConnectionFunc` của VueFlow: `(connection, context) => boolean`. `connection` gồm `source`, `target`, `sourceHandle`, `targetHandle`; `context` chứa hai node đầu cuối cùng node và kết nối của Canvas hiện tại. Dù bắt đầu kéo từ đầu nào, các trường luôn theo đúng hướng đầu vào/đầu ra thực tế và **chỉ gọi callback của node target, source không tham gia kiểm tra**.
 
-附加接收规则在具体节点组件的 `setup` 中注册。下例限制每个输入端口最多接收两条连线；在回调内也可读取 `sourceNode.id`、`sourceNode.type`、`sourceNode.data` 和来源端口来限制来源。图片节点只有输出，不需要接收回调。
+Quy tắc nhận bổ sung được đăng ký trong `setup` của thành phần node cụ thể. Ví dụ dưới giới hạn mỗi cổng đầu vào nhận tối đa hai kết nối; trong callback cũng có thể đọc `sourceNode.id`, `sourceNode.type`, `sourceNode.data` và cổng nguồn để hạn chế nguồn vào. Node ảnh chỉ có đầu ra nên không cần callback nhận.
 
 ```vue
 <template>
@@ -297,13 +297,13 @@ nodeEvent.on("canConnect", (connection, { edges }) => {
 </script>
 ```
 
-公共校验先检查端口方向、存在性和类型兼容，通过后才调用 target 的附加回调。未注册回调时允许连接；已注册的回调必须全部同步、严格返回 `true`，返回其它值或抛出异常会拒绝连接，不支持异步校验。node 内无需重复调用 `isTypeCompatible`，也不能通过返回 `true` 绕过类型限制。回调会在拖动过程中重复执行，应保持无副作用。
+Kiểm tra chung trước tiên xác nhận hướng cổng, sự tồn tại và tương thích loại, sau đó mới gọi callback bổ sung của target. Nếu không đăng ký callback thì cho nối; callback đã đăng ký phải chạy đồng bộ và trả đúng `true`, trả giá trị khác hoặc ném lỗi sẽ từ chối kết nối. Không hỗ trợ kiểm tra bất đồng bộ. Node không cần gọi lại `isTypeCompatible` và không thể vượt giới hạn loại bằng cách trả `true`. Callback được gọi lặp trong lúc kéo, nên không được tạo tác dụng phụ.
 
-骨架将端口定义放在 `node.data.handles`，事件按当前 VueFlow 实例和节点 ID 共享，支持独立 UMD 节点互相连接。所有端口使用共享校验入口，以保证从 source 起拖也能调用 target 的回调。`NodeData`、`NodeHandle`、`NodeDataType` 类型以及 `isTypeCompatible`、`validateConnection` 均从 `@toonflow/nodes-scaffold/runtime` 导出；手动调用 `addEdges` 时需要自行调用校验函数，不能绕过拖线流程后仍假定已完成校验。
+Bộ khung đặt khai báo cổng trong `node.data.handles`. Sự kiện được dùng chung theo instance VueFlow hiện tại và ID node, hỗ trợ kết nối giữa các node UMD độc lập. Tất cả cổng dùng cùng điểm vào kiểm tra để bảo đảm kéo từ source vẫn gọi callback target. Các kiểu `NodeData`, `NodeHandle`, `NodeDataType` và hàm `isTypeCompatible`, `validateConnection` được export từ `@toonflow/nodes-scaffold/runtime`. Khi gọi `addEdges` thủ công, phải tự gọi hàm kiểm tra; không được bỏ qua quy trình kéo dây mà vẫn cho là đã kiểm tra.
 
-## 节点删除
+## Xóa node
 
-节点通过 `nodeEvent.on("delete", callback)` 注册删除处理，可以使用异步回调。骨架按注册顺序逐个等待，全部成功后才移除节点及连线；没有处理函数则直接移除，任一处理抛错则停止、提示并保留节点。删除按钮和右键菜单共用此入口，不要在组件卸载时清理文件，否则切换画布或刷新节点也会误删资源。
+Node đăng ký xử lý xóa qua `nodeEvent.on("delete", callback)`, có thể dùng callback bất đồng bộ. Bộ khung chờ lần lượt theo thứ tự đăng ký, chỉ xóa node và các kết nối khi mọi xử lý đều thành công; nếu không có hàm xử lý thì xóa trực tiếp, nếu bất kỳ xử lý nào ném lỗi thì dừng, thông báo và giữ node. Nút xóa và menu chuột phải dùng chung điểm vào này. Không dọn tệp khi unmount thành phần vì chuyển Canvas hoặc tải lại node cũng có thể xóa nhầm tài nguyên.
 
 ```ts
 import { useNode } from "@toonflow/nodes-scaffold/runtime";
@@ -314,11 +314,11 @@ nodeEvent.on("delete", async () => {
 });
 ```
 
-图片节点在删除回调中调用 `files.removeNodeFiles()`。当前画布通过 `retainNodeFiles` 保留素材以支持撤销，该方法不会物理删除文件；未启用保留策略的宿主会清理工作区 `assets/<nodeId>/`，目录不存在视为已清理。上传期间拒绝删除，清理期间禁用上传。清理仅作用于该节点自己的目录，不根据输出 URL 删除其它节点的文件；复制节点仍可能共享原图片路径，宿主启用物理清理前须考虑这些引用。
+Node ảnh gọi `files.removeNodeFiles()` trong callback xóa. Canvas hiện tại dùng `retainNodeFiles` giữ tư liệu để hỗ trợ hoàn tác, nên phương thức này không xóa tệp vật lý. Ứng dụng chủ không bật chính sách giữ tệp sẽ dọn `assets/<nodeId>/` trong workspace; nếu thư mục không tồn tại thì coi như đã dọn. Từ chối xóa khi đang tải lên và khóa tải lên khi đang dọn. Chỉ dọn thư mục riêng của node đó, không dựa vào URL đầu ra để xóa tệp node khác. Node được sao chép vẫn có thể chia sẻ đường dẫn ảnh gốc; ứng dụng chủ phải tính đến những tham chiếu này trước khi cho phép dọn vật lý.
 
-## 输出值与读取工具
+## Giá trị đầu ra và công cụ đọc
 
-输出由 `useNode` 返回的 `outputs` ref 维护，随 `nodeProps` 传给骨架。对象的 key 是 source handle ID，每个值固定为 `{ dataType, value }`，例如图片节点准备好资源后：
+Đầu ra do ref `outputs` của `useNode` quản lý và được truyền cho khung qua `nodeProps`. Khóa của đối tượng là ID cổng source, mỗi giá trị cố định theo dạng `{ dataType, value }`. Ví dụ sau khi node ảnh đã chuẩn bị xong tài nguyên:
 
 ```ts
 import { useNode } from "@toonflow/nodes-scaffold/runtime";
@@ -330,25 +330,25 @@ const { outputs } = useNode({
 outputs.value.image = { dataType: "IMAGE", value: { url: "assets/example.png", mimeType: "image/png" } };
 ```
 
-首批输出协议如下。媒体使用文件引用，不是 ComfyUI 后端的 Python 张量；不进行数据转换。
+Giao thức đầu ra ban đầu như bên dưới. Phương tiện được biểu diễn bằng tham chiếu tệp, không phải tensor Python của backend ComfyUI; không thực hiện chuyển đổi dữ liệu.
 
 | dataType | value |
 | --- | --- |
 | STRING | string |
-| INT | 安全整数 number |
-| FLOAT | 有限 number |
+| INT | number nguyên an toàn |
+| FLOAT | number hữu hạn |
 | BOOLEAN | boolean |
 | IMAGE / MASK | `{ url: string, mimeType: "image/…" }` |
 | VIDEO | `{ url: string, mimeType: "video/…" }` |
 | AUDIO | `{ url: string, mimeType: "audio/…" }` |
 
-输出值必须使用具体类型，不能写 `*` 或类型数组；它们仅用于端口的兼容声明。`LATENT`、`MODEL` 等其它端口类型暂未定义传值协议，新增协议时同步扩展 `NodeValueMap` 与 `isNodeOutput`。图片节点未上传时输出为空，刷新时从画布保存的 `data.outputs` 恢复。
+Giá trị đầu ra phải dùng loại cụ thể, không dùng `*` hoặc mảng loại vì chúng chỉ dành cho khai báo tương thích cổng. Các loại cổng khác như `LATENT`, `MODEL` chưa có giao thức truyền giá trị; khi thêm giao thức phải mở rộng đồng thời `NodeValueMap` và `isNodeOutput`. Node ảnh chưa tải tệp lên có đầu ra rỗng; khi làm mới, phục hồi từ `data.outputs` đã lưu trên Canvas.
 
-### 图片上传与工作区文件
+### Tải ảnh lên và tệp workspace
 
-图片节点通过上传按钮选择图片，文件保存到当前工作区的 `assets/<nodeId>/<随机文件名>.<扩展名>`（目录名为 `assets`）。替换图片使用新文件名，保留旧文件，避免影响复制节点的已有引用。图片输出为 `{ dataType: "IMAGE", value: { url: "assets/...", mimeType: "image/..." } }`；`url` 是工作区相对路径，不是可直接放入 `<img src>` 的地址。
+Node ảnh chọn tệp bằng nút tải lên, lưu vào `assets/<nodeId>/<随机文件名>.<扩展名>` trong workspace hiện tại (thư mục tên `assets`). Khi thay ảnh, dùng tên tệp mới và giữ tệp cũ để không ảnh hưởng các tham chiếu của node đã sao chép. Đầu ra ảnh là `{ dataType: "IMAGE", value: { url: "assets/...", mimeType: "image/..." } }`; `url` là đường dẫn tương đối trong workspace, không phải URL có thể trực tiếp đưa vào `<img src>`.
 
-在节点 `setup` 中取得 `useNode()` 返回的 `files`，无需自行注入或请求接口：
+Trong `setup` của node, lấy `files` do `useNode()` trả về, không phải tự chèn dependency hoặc gọi API:
 
 ```ts
 import { useNode } from "@toonflow/nodes-scaffold/runtime";
@@ -359,13 +359,13 @@ const workspaceFiles = files.getWorkspaceFiles();
 const bytes = await workspaceFiles.read(path);
 ```
 
-`getWorkspaceFiles()` 返回宿主的完整文件方法：`list`、`read`、`readText`、`readJson`、`write`、`writeJson`、`rename`、`remove`、`mkdir`。每次调用绑定当时的工作目录，多步操作复用同一个返回值；`uploadFile` 内部也只取得一次，避免上传中切换项目导致文件写到另一目录。文件类型和大小校验由具体节点负责。
+`getWorkspaceFiles()` trả về bộ phương thức tệp đầy đủ của ứng dụng chủ: `list`, `read`, `readText`, `readJson`, `write`, `writeJson`, `rename`, `remove`, `mkdir`. Mỗi lần gọi gắn với thư mục làm việc ở thời điểm đó; thao tác nhiều bước nên dùng lại một giá trị trả về. Bên trong `uploadFile` cũng chỉ lấy một lần để tránh ghi nhầm sang thư mục dự án khác khi đổi dự án giữa lúc tải lên. Node cụ thể chịu trách nhiệm kiểm tra loại và kích thước tệp.
 
-画布通过 Vue `provide("workspaceFiles", factory)` 提供宿主文件能力，脚手架负责注入，不打包 Axios 或 Pinia。宿主通过可选的 `acquireUrl(path, mimeType)` 共享相同工作区文件的读取与 Blob URL，返回 `{ url: Promise<string>, release() }`；最后一个使用者释放后撤销 URL，文件写入、改名或删除后使缓存失效。画布 JSON 只持久化相对路径与 MIME 类型。
+Canvas cung cấp năng lực tệp ứng dụng chủ qua Vue `provide("workspaceFiles", factory)`; bộ khung phụ trách inject, không đóng gói Axios hay Pinia. Ứng dụng chủ chia sẻ việc đọc tệp cùng workspace và Blob URL qua `acquireUrl(path, mimeType)` tùy chọn, trả `{ url: Promise<string>, release() }`. URL được thu hồi khi người dùng cuối cùng giải phóng, cache mất hiệu lực sau khi tệp được ghi, đổi tên hoặc xóa. JSON Canvas chỉ lưu bền vững đường dẫn tương đối và kiểu MIME.
 
-`files.useFileUrl(media, onError)` 在 `setup` 中接收 `{ url, mimeType }` 的 ref、computed 或 getter，返回可绑定到图片、音视频 `src` 的 URL ref。它在节点首次靠近视口后读取文件，忽略过期请求，并在替换或卸载时释放资源引用；旧宿主未提供 `acquireUrl` 时仍使用普通读取。错误交给 `onError` 处理。图片节点只需 `const previewUrl = files.useFileUrl(image, error => showError(error, "图片读取失败"))`。
+`files.useFileUrl(media, onError)` trong `setup` nhận ref, computed hoặc getter của `{ url, mimeType }`, trả URL ref có thể bind vào `src` của ảnh, âm thanh hoặc video. Nó đọc tệp khi node lần đầu tiến gần vùng nhìn, bỏ qua yêu cầu đã lỗi thời và giải phóng tham chiếu tài nguyên khi thay thế hoặc unmount; nếu ứng dụng chủ cũ chưa cung cấp `acquireUrl` thì dùng cách đọc thông thường. Lỗi giao cho `onError` xử lý. Node ảnh chỉ cần `const previewUrl = files.useFileUrl(image, error => showError(error, "图片读取失败"))`.
 
-在节点 `setup` 中使用工具集读取指定 target：
+Trong `setup` của node, dùng bộ công cụ đọc target được chỉ định:
 
 ```ts
 import { computed } from "vue";
@@ -380,17 +380,17 @@ const inputValues = computed(() => getTargetValues(id, "in"));
 // 每项为 { source, sourceHandle, dataType, value }。
 ```
 
-一个输入可连接多个 source，因此返回数组，按画布连线顺序排列。断开的、端口不存在的、类型不兼容的连接不返回结果；尚未输出的连接仍保留来源和端口声明的 `dataType`，`value` 为 `undefined`，参考列表显示类型图标。合法的 `0`、`false`、空字符串会保留。读取内容或发起生成前须检查 `value`，不能把空引用作为附件发送。输出结构或输出类型不符合 source 声明时抛出错误。放入 `computed` 后，连线、端口及输出值变化会自动更新读取结果。工具只读取当前值，不执行上游节点或请求媒体文件。
+Một đầu vào có thể nối nhiều source nên kết quả là mảng theo thứ tự kết nối trên Canvas. Kết nối bị ngắt, thiếu cổng hoặc không tương thích loại sẽ không trả kết quả; kết nối chưa có đầu ra vẫn giữ nguồn và `dataType` khai báo tại cổng, với `value` là `undefined` và danh sách tham chiếu hiển thị biểu tượng loại. Các giá trị hợp lệ `0`, `false`, chuỗi rỗng được giữ. Trước khi đọc nội dung hoặc tạo phải kiểm tra `value`, không gửi tham chiếu rỗng làm tệp đính kèm. Nếu cấu trúc hoặc loại đầu ra không khớp khai báo source thì ném lỗi. Khi đặt trong `computed`, thay đổi kết nối, cổng hoặc giá trị đầu ra tự cập nhật kết quả đọc. Công cụ chỉ đọc giá trị hiện tại, không chạy node thượng nguồn hoặc yêu cầu tệp phương tiện.
 
-`getTargetSources` 按连线顺序返回该 target handle 的来源，不要求上游已有输出。缺失节点、端口、方向错误或端口类型不兼容的连接不会返回；同一上游不同端口分别保留。只查询连接时使用它，需要实际输出值时使用 `getTargetValues`。
+`getTargetSources` trả các nguồn của cổng target theo thứ tự kết nối, không yêu cầu thượng nguồn đã có đầu ra. Kết nối thiếu node/cổng, sai hướng hoặc không tương thích loại cổng không được trả; các cổng khác nhau của cùng node thượng nguồn vẫn được giữ riêng. Dùng nó khi chỉ cần xem kết nối; khi cần giá trị đầu ra thực hãy dùng `getTargetValues`.
 
-纯函数 `getTargetSources(targetId, targetHandleId, nodes, edges)` 和 `getTargetValues(targetId, targetHandleId, nodes, edges)` 也从 `@toonflow/nodes-scaffold/runtime` 导出，可在已有画布数据的逻辑中直接使用。
+Các hàm thuần `getTargetSources(targetId, targetHandleId, nodes, edges)` và `getTargetValues(targetId, targetHandleId, nodes, edges)` cũng được export từ `@toonflow/nodes-scaffold/runtime` và có thể dùng trực tiếp trong logic đã có dữ liệu Canvas.
 
-### 节点事件
+### Sự kiện node
 
-在节点组件的 `setup` 中取得 `useNode()` 返回的 `nodeEvent`，也可单独调用 `useNodeEvent()`；不传参数默认使用当前节点，`useNodeEvent(nodeId)` 则使用指定节点。统一通过 `nodeEvent.on(name, callback)` 注册，只有事件名和回调两个参数。`input:<handleId>` 监听 target handle 的上游输入，`output:<handleId>` 监听 source handle 的输出，同名的输入、输出端口分别监听；删除处理和连接校验使用前文的 `delete`、`canConnect` 事件。`useNodeInputs()` 保留即时读取工具，不负责事件注册。
+Trong `setup` của thành phần node, lấy `nodeEvent` từ `useNode()`; cũng có thể gọi riêng `useNodeEvent()`. Không truyền tham số thì mặc định dùng node hiện tại, còn `useNodeEvent(nodeId)` dùng node được chỉ định. Đăng ký thống nhất bằng `nodeEvent.on(name, callback)` với đúng hai tham số: tên sự kiện và callback. `input:<handleId>` theo dõi đầu vào thượng nguồn của target handle; `output:<handleId>` theo dõi đầu ra source handle; cổng đầu vào và đầu ra cùng tên được theo dõi riêng. Xử lý xóa và kiểm tra kết nối dùng các sự kiện `delete` và `canConnect` đã mô tả. `useNodeInputs()` vẫn là công cụ đọc tức thời, không phụ trách đăng ký sự kiện.
 
-`save` 回调应等待节点文件写入完成；抛错会阻止当前切换或刷新。普通保存不传参数，强制刷新时传入 `"reload"`，生成或导出尚未结束的节点可据此拒绝卸载，避免新实例读到未完成的内容。
+Callback `save` phải chờ ghi tệp node hoàn tất; nếu ném lỗi sẽ ngăn việc chuyển hoặc làm mới hiện tại. Lưu thông thường không truyền tham số; khi buộc làm mới thì truyền `"reload"`, để node đang tạo hoặc xuất chưa xong có thể từ chối unmount, tránh instance mới đọc nội dung chưa hoàn tất.
 
 ```ts
 import { useNode, useNodeEvent } from "@toonflow/nodes-scaffold/runtime";
@@ -409,13 +409,13 @@ useNodeEvent("otherNodeId").on("output:text", output => {
 // 需要提前停止时调用 stopInput() / stopOutput()。
 ```
 
-输入、输出监听注册后立即回调当前值；此后输入随连线、端口和上游输出变化而通知，输出随端口及输出值变化而通知，包含媒体对象内的 URL 等嵌套字段。输入无有效值时为 `[]`，输出不存在时为 `undefined`；删除节点、移除端口或清空输出也会通知，合法的 `0`、`false`、空字符串会保留。类型校验沿用读取工具，非法输出会抛错。
+Sau khi đăng ký listener đầu vào/đầu ra, callback nhận ngay giá trị hiện tại. Sau đó, đầu vào phát thông báo khi kết nối, cổng hoặc đầu ra thượng nguồn thay đổi; đầu ra phát thông báo khi cổng hoặc giá trị đầu ra thay đổi, kể cả trường lồng nhau như URL trong đối tượng phương tiện. Đầu vào không có giá trị hợp lệ là `[]`, đầu ra không tồn tại là `undefined`. Việc xóa node, gỡ cổng hoặc xóa đầu ra cũng phát thông báo; các giá trị hợp lệ `0`, `false` và chuỗi rỗng được giữ. Kiểm tra loại giống công cụ đọc; đầu ra không hợp lệ sẽ ném lỗi.
 
-输入、输出监听使用共享 Vue 的深度 `watch`，同一轮同步修改按 Vue 调度合并，不执行上游节点；不要在回调里无条件修改正在监听的输出，以免循环触发。所有 `on` 注册均返回取消函数，在 `setup` 中同步注册会随组件作用域销毁自动清理，也可提前调用返回的函数取消。
+Listener đầu vào/đầu ra dùng `watch` sâu của Vue được chia sẻ, các thay đổi đồng bộ trong cùng lượt được gộp theo lịch Vue, không chạy node thượng nguồn. Không sửa vô điều kiện đầu ra đang theo dõi ngay trong callback để tránh vòng kích hoạt. Mọi lệnh đăng ký `on` đều trả hàm hủy; nếu đăng ký đồng bộ trong `setup` thì tự dọn khi phạm vi thành phần bị hủy, hoặc có thể gọi hàm trả về để hủy sớm.
 
-## 构建和加载
+## Build và tải node
 
-在仓库根目录运行：
+Chạy tại thư mục gốc repository:
 
 ```powershell
 bun install
@@ -423,28 +423,28 @@ bun run dev:plugins
 bun run dev
 ```
 
-只构建或监听一个节点：
+Chỉ build hoặc theo dõi một node:
 
 ```powershell
 bun run --filter '@toonflow/node-image' build
 bun run --filter '@toonflow/node-image' dev
 ```
 
-节点监听命令与根目录 `bun run dev` 分别在两个终端运行；修改源码后刷新宿主页面。默认构建只输出到根目录 `build/nodes`；`dev:plugins` 设置 `NODE_ENV=dev`，节点监听或 Vite `--mode development` 也会同步当前节点到 `data/nodes`。同步先写临时文件，再替换正式文件，避免服务读取到未写完的脚本；同步失败会报告构建错误。
+Chạy lệnh theo dõi node và `bun run dev` ở thư mục gốc trong hai terminal riêng; sau khi sửa mã nguồn, làm mới trang ứng dụng chủ. Build mặc định chỉ xuất ra `build/nodes` tại thư mục gốc. `dev:plugins` đặt `NODE_ENV=dev`; lệnh theo dõi node hoặc Vite `--mode development` cũng đồng bộ node hiện tại vào `data/nodes`. Khi đồng bộ, ghi tệp tạm trước rồi thay tệp chính để tránh dịch vụ đọc script chưa ghi xong; nếu đồng bộ thất bại sẽ báo lỗi build.
 
-单包构建不清空这两个目录，避免删掉其它节点的产物。根目录 `bun run build:nodes` 先清空 `build/nodes` 再构建全部节点，不改动 `data/nodes`。已安装但不再需要的节点通过设置页卸载。
+Build một gói không dọn hai thư mục trên để tránh xóa sản phẩm node khác. `bun run build:nodes` ở thư mục gốc trước tiên xóa sạch `build/nodes` rồi build tất cả node, không sửa `data/nodes`. Node đã cài mà không còn cần thì gỡ qua trang cài đặt.
 
-server 从 `data/nodes` 提供节点列表 `/api/nodes/get`，并通过 `/api/nodes/files?name=<节点名>` 提供脚本。首页自动读取列表，加载对应 `window.toonflowNodes[节点名]` 并注册到 VueFlow，右键菜单中可添加已加载的节点；无需配置 `VITE_NODES_URL` 或单独启动产物服务。
+Server cung cấp danh sách node `/api/nodes/get` từ `data/nodes` và script qua `/api/nodes/files?name=<节点名>`. Trang chủ tự đọc danh sách, tải `window.toonflowNodes[节点名]` tương ứng và đăng ký vào VueFlow; menu chuột phải cho phép thêm node đã tải. Không cần cấu hình `VITE_NODES_URL` hoặc khởi động dịch vụ riêng phục vụ sản phẩm build.
 
-已安装列表支持启用、禁用和卸载。禁用状态存为 `data/nodes/<节点名>.disabled` 标记，开发同步不会重置；禁用包仍显示在已安装列表，后端停止提供它的脚本。卸载只删除 `data/nodes` 中对应的 UMD 和状态标记，保留源码及 `build/nodes` 产物；重新安装或开发同步会再次添加该节点。操作后画布添加菜单立即同步，当前画布已有实例和连线保留，刷新页面后仅加载已启用包。
+Danh sách đã cài hỗ trợ bật, tắt và gỡ. Trạng thái tắt được lưu thành dấu `data/nodes/<节点名>.disabled`, đồng bộ phát triển không đặt lại; gói bị tắt vẫn hiển thị trong danh sách đã cài nhưng backend ngừng cung cấp script của nó. Gỡ cài đặt chỉ xóa UMD và dấu trạng thái tương ứng trong `data/nodes`, giữ mã nguồn và sản phẩm tại `build/nodes`. Cài lại hoặc đồng bộ phát triển sẽ thêm lại node. Sau thao tác, menu thêm node trên Canvas đồng bộ ngay; các instance và kết nối hiện có của Canvas vẫn giữ, nhưng sau khi làm mới trang chỉ tải các gói đang bật.
 
-## 新增节点
+## Thêm node mới
 
-1. 参考 `packages/nodes/imageNode`，在尚不存在的目录（例如 `packages/nodes/exampleNode`）创建源码与配置，按新节点需求编写内容，修改 `package.json` 的包名，例如 `@toonflow/node-example`，并把 `vite.config.ts` 的节点名改为 `exampleNode`。
-2. 修改 `src/index.vue`，在这个子包的 `dependencies` 中声明自己使用的 UI 框架和第三方库。需要 Sass 或其它构建插件时，加入该子包的 `devDependencies`。
-3. 根目录运行 `bun install` 和 `bun run dev:plugins`，得到 `build/nodes/exampleNode.umd.js` 并同步到 `data/nodes/exampleNode.umd.js`；启动 `bun run dev` 或刷新已打开的首页即可加载，浏览器导出为 `window.toonflowNodes.exampleNode`。仅生成发布产物使用 `bun run build:nodes`。
+1. Tham khảo `packages/nodes/imageNode`, tạo mã nguồn và cấu hình trong thư mục chưa tồn tại (ví dụ `packages/nodes/exampleNode`). Viết nội dung theo nhu cầu node mới, đổi tên gói trong `package.json`, chẳng hạn `@toonflow/node-example`, và đổi tên node trong `vite.config.ts` thành `exampleNode`.
+2. Sửa `src/index.vue`, khai báo framework UI và thư viện bên thứ ba sử dụng trong `dependencies` của gói con. Nếu cần Sass hoặc plugin build khác, thêm vào `devDependencies` của gói đó.
+3. Tại thư mục gốc chạy `bun install` và `bun run dev:plugins` để tạo `build/nodes/exampleNode.umd.js` và đồng bộ vào `data/nodes/exampleNode.umd.js`. Chạy `bun run dev` hoặc làm mới trang chủ đang mở để tải node; trong trình duyệt, export là `window.toonflowNodes.exampleNode`. Chỉ dùng `bun run build:nodes` khi cần tạo sản phẩm phát hành.
 
-节点名必须唯一且使用小驼峰；显式指定名字可避免 Windows 工具链路径大小写变化影响导出名。各包的 Vite 配置只需：
+Tên node phải duy nhất và theo camelCase; chỉ định tên tường minh giúp tránh khác biệt chữ hoa/thường trong đường dẫn của công cụ Windows làm sai tên export. Cấu hình Vite của từng gói chỉ cần:
 
 ```ts
 import { createNodeConfig } from "@toonflow/nodes-scaffold";
@@ -457,19 +457,19 @@ export default createNodeConfig({
 }, import.meta.url);
 ```
 
-`name` 是节点的唯一标识，决定文件名和 VueFlow 注册名；`displayName` 是插件市场显示的名称。`author` 和 `github` 可以留空，市场只显示已填写的信息。
+`name` là định danh duy nhất của node, quyết định tên tệp và tên đăng ký VueFlow; `displayName` là tên hiển thị trên chợ plugin. `author` và `github` có thể để trống, chợ chỉ hiển thị thông tin đã điền.
 
-版本由每个节点子包的 `package.json.version` 维护，例如 `"version": "2.0.0"`，发布新版本时修改该字段，无需在 Vite 配置重复填写。构建要求版本为非空字符串，并监听 `package.json` 的变化。
+Phiên bản được quản lý trong `package.json.version` của từng gói con node, ví dụ `"version": "2.0.0"`. Khi phát hành bản mới, sửa trường này, không phải điền lại trong cấu hình Vite. Build yêu cầu phiên bản là chuỗi không rỗng và theo dõi thay đổi của `package.json`.
 
-构建会把三个展示字段、`version`、`readme` 和 `configRules` 写入 UMD 第一行的 `/*! toonflowNode:{JSON} */` 注释，无需额外清单文件。server 只解析这段 JSON，不执行节点代码，并通过 `/api/nodes/get` 返回元数据。设置中的已安装列表显示插件名称、版本和作者，名称末尾的小图标用于打开 GitHub；没有元数据的旧 UMD 继续显示节点标识，缺少版本时接口返回空字符串。修改配置或版本并开发同步后，重新打开市场即可刷新。
+Quá trình build ghi ba trường hiển thị, `version`, `readme` và `configRules` vào chú thích `/*! toonflowNode:{JSON} */` ở dòng đầu UMD, không cần manifest riêng. Server chỉ phân tích JSON đó, không thực thi mã node, và trả metadata qua `/api/nodes/get`. Danh sách đã cài trong cài đặt hiển thị tên, phiên bản và tác giả plugin; biểu tượng nhỏ cuối tên mở GitHub. UMD cũ không có metadata vẫn hiện định danh node; nếu thiếu phiên bản, API trả chuỗi rỗng. Sau khi sửa cấu hình hoặc phiên bản và đồng bộ phát triển, mở lại chợ để làm mới.
 
-需要额外 alias、插件等配置时，在该节点的 `vite.config.ts` 中用 Vite 的 `mergeConfig` 合并。保持共享配置中的 UMD 格式、输出目录和所有共享依赖的 external/globals 设置。
+Khi cần alias, plugin hoặc cấu hình bổ sung, dùng `mergeConfig` của Vite trong `vite.config.ts` của node để ghép. Giữ định dạng UMD, thư mục đầu ra và cấu hình external/globals của mọi dependency chia sẻ trong cấu hình chung.
 
-宿主也可调用 `createNodeConfig(metadata, configUrl, { outDir, syncToData: false })`，将产物写入指定目录后交给现有安装流程。`outDir` 为绝对路径或相对节点项目的路径；不传选项时保持原构建目录与开发同步行为。显式关闭同步后，即使使用开发模式或监听构建，也不会写入 `data/nodes`。构建只允许一个 UMD 脚本，资源内联，不能依赖额外安装文件。
+Ứng dụng chủ cũng có thể gọi `createNodeConfig(metadata, configUrl, { outDir, syncToData: false })`, ghi sản phẩm vào thư mục chỉ định rồi chuyển cho quy trình cài đặt hiện có. `outDir` là đường dẫn tuyệt đối hoặc tương đối so với dự án node; nếu không truyền tùy chọn thì giữ thư mục build và hành vi đồng bộ phát triển gốc. Nếu tắt đồng bộ tường minh, sẽ không ghi vào `data/nodes` ngay cả khi build ở chế độ phát triển hoặc theo dõi liên tục. Build chỉ cho phép một script UMD, tài nguyên phải nhúng bên trong, không phụ thuộc tệp cài đặt bổ sung.
 
-### 节点插件配置
+### Cấu hình plugin node
 
-节点可在 `createNodeConfig` 中声明 `configRules`，类型直接使用 `@form-create/element-ui` 的 `Rule[]`，与工具共用同一套格式和前端 `<form-create>` 渲染。`type`、`field`、`title`、`value`、`props`、`options`、`validate` 等均遵循库的原生规则，不另定义表单格式。规则随插件元数据以 JSON 传输，最多 100 项，不能包含函数或其它非 JSON 值。未声明或为空时隐藏配置按钮；必填字段使用 `validate` 声明：
+Node có thể khai báo `configRules` trong `createNodeConfig`, dùng trực tiếp `Rule[]` từ `@form-create/element-ui`, chung định dạng với công cụ và cùng cách render frontend `<form-create>`. Các trường `type`, `field`, `title`, `value`, `props`, `options`, `validate`, v.v. tuân theo quy tắc nguyên sinh của thư viện, không tạo định dạng form riêng. Quy tắc được truyền cùng metadata plugin ở dạng JSON, tối đa 100 mục, không chứa hàm hoặc giá trị ngoài JSON. Nếu không khai báo hoặc mảng rỗng, nút cấu hình bị ẩn; trường bắt buộc được khai báo bằng `validate`:
 
 ```ts
 export default createNodeConfig({
@@ -487,7 +487,7 @@ export default createNodeConfig({
 }, import.meta.url);
 ```
 
-用户在设置的插件市场中打开节点的“配置”表单并保存；缺少必填配置时，配置按钮显示小红点。配置按节点类型保存，同类型的所有节点实例共用，不写入 `node.data` 或画布 JSON。
+Người dùng mở biểu mẫu “Cấu hình” của node trong chợ plugin ở phần cài đặt rồi lưu. Khi thiếu cài đặt bắt buộc, nút cấu hình hiển thị chấm đỏ nhỏ. Cấu hình được lưu theo loại node và dùng chung cho mọi instance cùng loại, không ghi vào `node.data` hoặc JSON Canvas.
 
 ```ts
 const { config } = useNode();
@@ -495,15 +495,15 @@ const { config } = useNode();
 const apiKey = computed(() => String(config.value.apiKey ?? ""));
 ```
 
-`config` 是只读 computed，仅包含当前节点类型自己的配置，不提供全局 settings。宿主通过 Vue `provide("nodeConfig", (nodeType: string) => config)` 提供响应式读取能力；脚手架传入当前节点的完整类型（例如 `remote-exampleNode`）。用户保存后，已有节点会取得新配置；未保存的字段使用 `configRules` 中声明的 `value` 默认值，未提供宿主能力时返回 `{}`。
+`config` là computed chỉ đọc, chỉ chứa cấu hình riêng của loại node hiện tại, không cung cấp settings toàn cục. Ứng dụng chủ cấp quyền đọc phản ứng qua Vue `provide("nodeConfig", (nodeType: string) => config)`; bộ khung truyền loại đầy đủ của node hiện tại (ví dụ `remote-exampleNode`). Sau khi người dùng lưu, node đã tồn tại nhận cấu hình mới; trường chưa lưu dùng `value` mặc định trong `configRules`; nếu ứng dụng chủ không cung cấp năng lực này thì trả `{}`.
 
-## 依赖和样式边界
+## Ranh giới dependency và style
 
-- `vue` 和 `@vue-flow/core` 是节点的 peer dependency，UMD 直接使用宿主提供的 `window.toonflowNodeHost.vue`、`.vueFlow`；节点内不创建 Vue app，`useVueFlow()` 继承所在画布。
-- `element-plus` 同样声明为 peer dependency，复用 `window.toonflowNodeHost.elementPlus`。组件从根入口按需导入，例如 `import { ElButton } from "element-plus"`，模板使用 `<el-button>`；不要导入 `element-plus/es/...` 或其 CSS。宿主统一加载 Element Plus 组件与样式，节点产物不重复打包。
-- `three` 核心通过 external 复用 `window.toonflowNodeHost.three`，宿主提供完整 API。节点继续声明与宿主一致的 `three` 版本（当前 `0.184.0`），正常使用 `import { WebGLRenderer, Vector3 } from "three"`，无需直接访问全局对象。`three/addons/*`、`three/examples/jsm/*` 扩展仍按需打入节点，扩展内部的 `three` 引用同样复用宿主核心；不要从 `three/src/*` 深层导入核心。节点 UMD 与宿主需要使用配套版本。
-- 文本 AI 使用的 Pi SDK 同样通过现有 external 机制复用 `window.toonflowNodeHost.ai`，包含 `runAgentLoop` 和 `createAssistantMessageEventStream`；不在各节点 UMD 中重复打包，不新增运行时或服务。节点 UMD、宿主与后端需要使用配套版本。
-- 第三方库直接引用 `@vue/runtime-core` 或 `@vue/runtime-dom` 时，也使用宿主的 Vue 导出。各节点的 Vue/VueFlow 版本必须与宿主兼容；不要引入自行内嵌 Vue 的库或直接导入 Vue 的 `dist` 产物。
-- 其它依赖随各节点独立打包；不同节点可以使用不同 UI 框架和第三方库版本，同一个库也可能重复出现在不同 UMD 中。
-- 其它 UI 库的组件优先局部 import，所需 CSS 也在节点源码中 import。Vite 的 UMD 模式配合 `cssCodeSplit: true` 将 CSS 注入同一个 JS。需要 provider 的组件库，在节点根组件内包裹它自己的 provider。
-- 独立子包提供依赖管理边界，不提供页面样式隔离；全局 CSS、reset 或依赖 `app.use()` 全局安装的库需要单独适配。节点自有样式优先使用 `<style scoped>`。
+- `vue` và `@vue-flow/core` là peer dependency của node. UMD dùng trực tiếp `window.toonflowNodeHost.vue`, `.vueFlow` do ứng dụng chủ cung cấp; không tạo Vue app trong node, `useVueFlow()` kế thừa Canvas hiện tại.
+- `element-plus` cũng là peer dependency, dùng lại `window.toonflowNodeHost.elementPlus`. Import thành phần từ điểm vào gốc khi cần, ví dụ `import { ElButton } from "element-plus"` và dùng `<el-button>` trong template. Không import `element-plus/es/...` hoặc CSS của nó. Ứng dụng chủ tải thống nhất thành phần và style Element Plus; sản phẩm node không đóng gói trùng.
+- Phần lõi `three` dùng lại `window.toonflowNodeHost.three` qua external, ứng dụng chủ cung cấp đầy đủ API. Node tiếp tục khai báo cùng phiên bản `three` với ứng dụng chủ (hiện `0.184.0`), dùng `import { WebGLRenderer, Vector3 } from "three"` bình thường, không cần truy cập biến toàn cục trực tiếp. Phần mở rộng `three/addons/*` và `three/examples/jsm/*` vẫn được đóng gói vào node khi cần; các tham chiếu `three` bên trong phần mở rộng cũng dùng lõi chủ. Không import sâu lõi từ `three/src/*`. UMD node và ứng dụng chủ phải dùng các phiên bản tương thích.
+- Pi SDK dùng cho AI văn bản cũng được chia sẻ qua cơ chế external hiện có từ `window.toonflowNodeHost.ai`, gồm `runAgentLoop` và `createAssistantMessageEventStream`. Không đóng gói lại trong từng UMD node, không thêm runtime hoặc dịch vụ. UMD node, ứng dụng chủ và backend phải dùng các phiên bản tương thích.
+- Khi thư viện bên thứ ba tham chiếu trực tiếp `@vue/runtime-core` hoặc `@vue/runtime-dom`, vẫn dùng export Vue của ứng dụng chủ. Phiên bản Vue/VueFlow của các node phải tương thích với chủ; không dùng thư viện tự nhúng Vue hoặc import trực tiếp bản build `dist` của Vue.
+- Dependency khác được đóng gói riêng theo từng node; các node khác nhau có thể dùng framework UI và phiên bản thư viện bên thứ ba khác nhau, thậm chí cùng thư viện có thể lặp lại trong nhiều UMD.
+- Với thư viện UI khác, ưu tiên import thành phần cục bộ và import CSS cần thiết trong mã nguồn node. Chế độ UMD của Vite kết hợp `cssCodeSplit: true` để nhúng CSS vào cùng JS. Thư viện thành phần cần provider phải được bọc trong provider của chính nó ở thành phần gốc node.
+- Gói con độc lập tạo ranh giới quản lý dependency, không cung cấp cách ly style trang. CSS toàn cục, reset hoặc thư viện cần cài toàn cục qua `app.use()` phải có cách thích nghi riêng. Style của node ưu tiên dùng `<style scoped>`.

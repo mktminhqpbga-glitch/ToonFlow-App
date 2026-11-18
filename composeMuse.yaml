@@ -1,0 +1,66 @@
+services:
+  muse2api:
+    image: macflow-muse2api:vip0014-0a2cfffb1fa6
+    build:
+      context: https://github.com/vip0014/muse2api.git#0a2cfffb1fa6dc706398781fb3a75621f8494750
+      # Giữ nguồn upstream nguyên vẹn; chỉ build phần cần chạy, không gọi bộ test.
+      dockerfile_inline: |
+        FROM node:24.21.0-bookworm-slim AS webBuild
+        WORKDIR /src/web
+        COPY web/package.json web/package-lock.json ./
+        RUN npm ci --no-audit --no-fund
+        COPY web/ ./
+        RUN npm run build
+        FROM golang:1.24.0-alpine AS goBuild
+        WORKDIR /src
+        ENV CGO_ENABLED=0 GOOS=linux
+        COPY go.mod go.sum ./
+        RUN go mod download
+        COPY cmd/ ./cmd/
+        COPY internal/ ./internal/
+        COPY --from=webBuild /src/internal/server/static ./internal/server/static
+        RUN go build -trimpath -ldflags="-s -w" -o /out/muse2api ./cmd/muse2api
+        FROM alpine:3.22.2
+        RUN apk add --no-cache ca-certificates tzdata && addgroup -g 10001 muse && adduser -D -H -u 10001 -G muse muse
+        WORKDIR /app
+        COPY --from=goBuild /out/muse2api /usr/local/bin/muse2api
+        COPY LICENSE /app/LICENSE
+        RUN mkdir -p /app/data/media /app/data/backups && chown -R muse:muse /app && chmod -R go-rwx /app/data
+        ENV HOME=/app/data MUSE2API_HOME=/app MUSE2API_HOST=0.0.0.0 MUSE2API_PORT=18610
+        USER 10001:10001
+        EXPOSE 18610
+        ENTRYPOINT ["/usr/local/bin/muse2api"]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 70s
+    ports:
+      - "127.0.0.1:18610:18610"
+    environment:
+      MUSE2API_KEY: ${MUSE2API_KEY:?Set MUSE2API_KEY in .env}
+      MUSE2API_ADMIN_USERNAME: ${MUSE2API_ADMIN_USERNAME:-admin}
+      MUSE2API_ADMIN_PASSWORD: ${MUSE2API_ADMIN_PASSWORD:?Set MUSE2API_ADMIN_PASSWORD in .env}
+      MUSE2API_CREDENTIAL_KEY: ${MUSE2API_CREDENTIAL_KEY:?Set MUSE2API_CREDENTIAL_KEY in .env}
+      MUSE2API_PROXY: ${MUSE2API_PROXY:-}
+      MUSE2API_CONCURRENCY: "2"
+      MUSE2API_VIDEO_CONCURRENCY: "1"
+      MUSE2API_PUBLIC_MEDIA: "0"
+      MUSE2API_REF_IMAGE_LOCAL_FILES: "0"
+      MUSE2API_REF_IMAGE_PRIVATE_FETCH: "0"
+    volumes:
+      - muse2ApiData:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:18610/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  muse2ApiData:

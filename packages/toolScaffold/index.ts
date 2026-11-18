@@ -6,6 +6,7 @@ import { build, type PluginOption } from "vite";
 import type { BunPlugin } from "bun";
 import vue from "@vitejs/plugin-vue";
 import postcssConfig from "../../postcss.config.ts";
+import { i18nPlugin } from "@toonflow/i18n/vite";
 import { toolMetadataSchema, type ToolMetadata } from "./src/runtime";
 
 export type { ToolMetadata } from "./src/runtime";
@@ -18,12 +19,12 @@ export async function createToolConfig(
   const { components, ...toolConfig } = config;
   if (components !== undefined && (!components || Array.isArray(components) || typeof components !== "object" ||
     Object.entries(components).some(([name, entry]) => !name.trim() || typeof entry !== "string" || !entry.trim()))) {
-    throw new Error("工具组件必须是工具名称到组件入口路径的映射");
+    throw new Error("Component công cụ phải là ánh xạ từ tên công cụ tới đường dẫn component");
   }
   const root = fileURLToPath(new URL(".", configUrl));
   const { version } = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
   if (typeof version !== "string" || !version.trim() || version.trim().length > 100) {
-    throw new Error("工具 package.json 的 version 必须是长度不超过 100 的非空字符串");
+    throw new Error("version trong package.json công cụ phải là chuỗi không rỗng, tối đa 100 ký tự");
   }
   const readme = await readFile(resolve(root, "readme.md"), "utf8").catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return "";
@@ -52,7 +53,7 @@ export async function createToolConfig(
       configFile: false,
       root,
       css: { postcss: postcssConfig },
-      plugins: [...(options.clientPlugins ?? []), vue(), {
+      plugins: [...(options.clientPlugins ?? []), i18nPlugin({ pluginUi: true }), vue(), {
         name: "toolClientEntry",
         resolveId(id) { return id === "virtual:toonflowToolClient" ? entryId : undefined; },
         load(id) {
@@ -76,7 +77,7 @@ export async function createToolConfig(
         },
         rolldownOptions: {
           input: "virtual:toonflowToolClient",
-          external: ["vue", "@vue/runtime-core", "@vue/runtime-dom", "element-plus", "axios", "@form-create/element-ui"],
+          external: ["vue", "@vue/runtime-core", "@vue/runtime-dom", "element-plus", "axios", "@form-create/element-ui", "@toonflow/i18n/vue"],
           output: {
             exports: "default",
             globals: {
@@ -86,6 +87,7 @@ export async function createToolConfig(
               "element-plus": "toonflowToolHost.elementPlus",
               axios: "toonflowToolHost.axios",
               "@form-create/element-ui": "toonflowToolHost.formCreate",
+              "@toonflow/i18n/vue": "toonflowToolHost.i18n",
             },
           },
         },
@@ -94,7 +96,7 @@ export async function createToolConfig(
     const output = Array.isArray(clientResult) ? clientResult.flatMap(result => result.output) : "output" in clientResult ? clientResult.output : [];
     const chunks = output.filter(item => item.type === "chunk");
     if (chunks.length !== 1 || output.some(item => item.type === "asset" && !item.fileName.endsWith(".css"))) {
-      throw new Error(`工具组件必须构建为单个脚本，且不能包含未内联的资源：${metadata.name}`);
+      throw new Error(`Component công cụ phải build thành một script, không chứa tài nguyên chưa nội tuyến: ${metadata.name}`);
     }
     const css = output.filter(item => item.type === "asset").map(item =>
       typeof item.source === "string" ? item.source : new TextDecoder().decode(item.source)).join("\n");
@@ -133,8 +135,8 @@ export async function createToolConfig(
     minify: true,
     tsconfig: options.tsconfig,
   });
-  if (!result.success) throw new AggregateError(result.logs, `工具构建失败：${metadata.name}`);
-  if (result.outputs.length !== 1) throw new Error(`工具必须构建为单个脚本，不能包含未内联的资源：${metadata.name}`);
+  if (!result.success) throw new AggregateError(result.logs, `Build công cụ thất bại: ${metadata.name}`);
+  if (result.outputs.length !== 1) throw new Error(`Công cụ phải build thành một script, không chứa tài nguyên chưa nội tuyến: ${metadata.name}`);
   // Bun 会把 @bun 标记放在 banner 前，构建完成后再写入首行元数据。
   const builtPath = resolve(outDir, fileName);
   await write(builtPath, `/*! toonflowTool:${metadataJson} */\n${clientBanner}${await result.outputs[0].text()}`);

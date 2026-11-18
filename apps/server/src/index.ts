@@ -4,11 +4,6 @@ import { appVersion } from "../../../appVersion";
 
 const startTime = Date.now();
 const realPort = Number(process.env.TOONFLOW_SERVER_PORT || 3000);
-const localWebBridgeRequested = process.env.TOONFLOW_LOCAL_WEB_BRIDGE === "1";
-const serverHost = process.env.TOONFLOW_SERVER_HOST || (localWebBridgeRequested ? "127.0.0.1" : undefined);
-if (localWebBridgeRequested && (serverHost !== "127.0.0.1" || process.platform !== "darwin"))
-  throw new Error("Local Web Chrome Bridge requires macOS and TOONFLOW_SERVER_HOST=127.0.0.1");
-if (serverHost) process.env.TOONFLOW_SERVER_HOST = serverHost;
 if (!Number.isInteger(realPort) || realPort < 1 || realPort > 65535) throw new Error("TOONFLOW_SERVER_PORT 必须是 1–65535 之间的整数");
 // 源码位于 apps/server/src，生产构建位于 build/server，均从文件位置定位根目录。
 const fromSource = import.meta.path.endsWith(".ts");
@@ -16,7 +11,7 @@ const appDirectory = resolve(import.meta.dirname, fromSource ? "../../.." : "../
 const dataDirectory = process.env.TOONFLOW_DATA_DIR ?? resolve(appDirectory, "data");
 const app = await createApp({
   webRoot: resolve(appDirectory, "build/web"),
-  appVersion,
+  appVersion: appVersion,
   dataDirectory,
   toolsRoot: resolve(appDirectory, "build/tools"),
   nodesRoot: resolve(appDirectory, "build/nodes"),
@@ -26,16 +21,18 @@ const app = await createApp({
   providersRoot: resolve(appDirectory, fromSource ? "packages/providers/src" : "build/providers"),
   skillsRoot: resolve(appDirectory, fromSource ? "packages/skills" : "build/skills"),
 });
+app.locals.aiChromeExtensionRoot = resolve(appDirectory, fromSource ? "packages/chromeExtension" : "build/chromeExtension");
 const { initializeMcpRuntime } = await import("./utils/mcp/runtime");
 const { startMobileLinkRuntime } = await import("./utils/mobileLink");
 const { startMultiTenantRuntime } = await import("./utils/multiTenant");
 await startMultiTenantRuntime(app);
-const onListening = async (error?: Error) => {
+const server = app.listen(realPort, async (error?: Error) => {
   if (error) throw error;
   await initializeMcpRuntime(app, `http://127.0.0.1:${realPort}`, resolve(appDirectory, fromSource ? "packages/mcp/src/stdio.ts" : "build/mcp/stdio.js"));
   await startMobileLinkRuntime(app).catch(error => console.error("设备互联启动失败：", error));
   console.log(`[服务启动成功]: http://localhost:${realPort}`);
   console.log(`[启动耗时]: ${(Date.now() - startTime).toFixed(2)}ms`);
-};
-if (serverHost) app.listen(realPort, serverHost, onListening);
-else app.listen(realPort, onListening);
+});
+
+const { attach } = await import("./utils/aiChrome");
+attach(server);

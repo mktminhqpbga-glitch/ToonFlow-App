@@ -3,6 +3,7 @@ import { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.l
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
 import type { AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
 import { z } from "zod";
+import { chromeTextModels } from "@/utils/aiChrome";
 import { readReference } from "@/utils/media/generation";
 import { createFileTransport, getUnsupportedFileText, type FileProvider } from "@/utils/ai/files";
 import { getRequestFiles } from "@/utils/ai/requestFiles";
@@ -42,7 +43,7 @@ export type ConfiguredModel = Awaited<ReturnType<typeof getConfiguredModel>>;
 
 export async function listAiModels() {
   if (modelGateway.enabled()) return modelGateway.catalog(["text"]);
-  return getConfiguredProviders().flatMap(item => {
+  const installedModels = getConfiguredProviders().flatMap(item => {
     const parsed = providerSchema.extend({ id: z.string().min(1), label: z.string() }).safeParse(item);
     if (!parsed.success) return [];
     const provider = parsed.data;
@@ -50,11 +51,13 @@ export async function listAiModels() {
       const limits = getModelLimits(provider.id, model);
       return {
         providerId: provider.id, providerLabel: provider.label, protocol: provider.protocol, modelId: model.id, label: model.label,
+        ...(provider.id === "muse2Api" ? { supportsAgent: false } : {}),
         contextWindow: limits.contextWindow, maxOutputTokens: limits.maxTokens,
         reasoningLevels: getModelReasoning(provider.id, model, provider.protocol).reasoningLevels,
       };
     });
   });
+  return [...installedModels, ...chromeTextModels()];
 }
 
 export function publicAiMessage(configured: ConfiguredModel, message: AssistantMessage, usageKnown = true) {
@@ -150,6 +153,9 @@ export function streamAi(
   references: Awaited<ReturnType<typeof readAiReferences>> = [],
 ) {
   const { provider, model: configuredModel, baseUrl } = configured;
+  const isMuse2Api = (configured.route?.providerId ?? configured.publicProviderId) === "muse2Api";
+  const isGeminiApi = (configured.route?.providerId ?? configured.publicProviderId) === "gemini";
+  const isGeminiWebToApi = (configured.route?.providerId ?? configured.publicProviderId) === "geminiWebToApi";
   const model: Model<typeof provider.protocol> = {
     id: configuredModel.id, name: configuredModel.label, provider: "toonflow", api: provider.protocol, baseUrl,
     reasoning: false, input: ["text", "image"],
@@ -175,7 +181,7 @@ export function streamAi(
     signal,
     ...(configured.route ? { maxTokens: configuredModel.maxOutputTokens } : {}),
     // 此入口没有 AgentSession，仅重试尚未交付响应的请求，已输出的流不能直接拼接重放。
-    maxRetries: configured.route ? 0 : 3,
+    maxRetries: configured.route || isMuse2Api || isGeminiApi || isGeminiWebToApi ? 0 : 3,
     fetch: Object.assign((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
       if (!configured.execution) requireDirectModelAccess();
       return files.fetch(input, init);
@@ -194,6 +200,9 @@ export function streamAi(
             ...attachmentContent,
           ] }
           : message) };
+      }
+      if (isMuse2Api && (getRequestFiles(body).length || context.tools?.length)) {
+        throw new Error("Muse2API vip0014 hiện chỉ hỗ trợ chat văn bản, không hỗ trợ ảnh đính kèm hoặc gọi công cụ. Tạo ảnh/video qua model media Muse2API.");
       }
       await files.prepare(body);
       const imageBytes = getRequestFiles(body).filter(file => file.mimeType.toLowerCase().startsWith("image/")).reduce((sum, file) => sum + file.inlineBytes, 0);

@@ -10,54 +10,47 @@
     :fullscreenVisible="false"
     style="width: 360px">
     <template #topActions>
-      <el-button :icon="IconTextRecognition" :loading="transcribing" :disabled="busy || !outputFile" text :title="localized('音频转文本', 'Chuyển âm thanh thành văn bản')" :aria-label="localized('音频转文本', 'Chuyển âm thanh thành văn bản')" @click.stop="transcribe">{{ localized('转文本', 'Chuyển thành văn bản') }}</el-button>
-      <el-button v-if="transcribing" :icon="IconPlayerStop" text :title="localized('取消转文本', 'Hủy chuyển thành văn bản')" :aria-label="localized('取消转文本', 'Hủy chuyển thành văn bản')" @click.stop="cancelTranscription">{{ localized('取消', 'Hủy') }}</el-button>
-      <el-button :icon="IconScissors" :disabled="busy || !previewUrl" text :title="localized('截取音频', 'Cắt âm thanh')" :aria-label="localized('截取音频', 'Cắt âm thanh')" @click.stop="actions?.open('clip')">{{ localized('截取', 'Cắt đoạn') }}</el-button>
-      <el-button :icon="IconGauge" :disabled="busy || !previewUrl" text :title="localized('音频变速', 'Thay đổi tốc độ âm thanh')" :aria-label="localized('音频变速', 'Thay đổi tốc độ âm thanh')" @click.stop="actions?.open('speed')">{{ localized('变速', 'Điều chỉnh tốc độ') }}</el-button>
-      <el-button :icon="IconTransfer" :loading="uploading" :disabled="busy" text :title="localized('替换音频', 'Thay âm thanh')" :aria-label="localized('替换音频', 'Thay âm thanh')" @click.stop="fileInput?.click()">{{ localized('替换音频', 'Thay âm thanh') }}</el-button>
-      <input ref="fileInput" type="file" accept="audio/*" hidden :aria-label="localized('选择替换音频', 'Chọn âm thanh thay thế')" :disabled="busy" @change="replaceOutput" />
+      <el-button :icon="IconTextRecognition" :loading="transcribing" :disabled="busy || !outputFile" text title="Chuyển âm thanh thành văn bản" aria-label="Chuyển âm thanh thành văn bản" @click.stop="transcribe" />
+      <el-button v-if="transcribing" :icon="IconPlayerStop" text title="Hủy chuyển thành văn bản" aria-label="Hủy chuyển thành văn bản" @click.stop="cancelTranscription" />
+      <el-button :icon="IconScissors" :disabled="busy || !previewUrl" text title="Cắt âm thanh" aria-label="Cắt âm thanh" @click.stop="actions?.open('clip')" />
+      <el-button :icon="IconGauge" :disabled="busy || !previewUrl" text title="Đổi tốc độ âm thanh" aria-label="Đổi tốc độ âm thanh" @click.stop="actions?.open('speed')" />
+      <el-button :icon="IconTransfer" :loading="uploading" :disabled="busy" text title="Thay âm thanh" aria-label="Thay âm thanh" @click.stop="fileInput?.click()" />
+      <input ref="fileInput" type="file" accept="audio/*" hidden aria-label="Chọn âm thanh thay thế" :disabled="busy" @change="replaceOutput" />
     </template>
     <div v-loading="generating || uploading" class="audioContent nopan" :aria-busy="generating || uploading">
       <audioPlayer v-if="previewUrl" ref="player" v-model:pcmOptions="pcmOptions" class="audioPreview" :src="previewUrl" :mimeType="outputFile?.mimeType" @loadedmetadata="updateNodeInternals" />
-      <div v-else class="audioEmpty" role="img"  :aria-label="localized('暂无生成音频', 'Chưa có âm thanh được tạo')"><icon-music-bolt :size="48" stroke="1.25" aria-hidden="true" /></div>
+      <div v-else class="audioEmpty" role="img" aria-label="Chưa có âm thanh được tạo"><icon-music-bolt :size="48" stroke="1.25" aria-hidden="true" /></div>
     </div>
     <template #bottom>
       <div v-if="actions?.mode === 'speed'" ref="speedTarget" />
       <el-card v-else class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
         <referenceItem v-if="refList.length" v-model="refList" @preview="setReferencePreview" @remove="removeReference" />
-        <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference"  :placeholder="localized('描述您想要的音频效果或输入待朗读文本', 'Mô tả âm thanh mong muốn hoặc nhập văn bản cần đọc')" expandable />
+        <promptInput v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" placeholder="Mô tả âm thanh mong muốn hoặc nhập văn bản cần đọc" expandable />
         <div class="promptFooter">
-          <el-select
-            :modelValue="selectedModel ? data.model : ''"
-            class="modelSelect"
-            filterable
+          <chromeModelSelect
+            :modelValue="data.model"
+            :chromeTabId="data.chromeTabId"
+            :models="models"
+            outputKind="audio"
             :loading="modelsLoading"
             :disabled="busy"
-            :placeholder="localized('选择模型', 'Chọn model')"
-            :aria-label="localized('音频生成模型', 'Model tạo âm thanh')"
-            :noDataText="localized('请先在设置中添加音频模型', 'Hãy thêm model âm thanh trong Cài đặt')"
-            placement="top-start"
-            @update:modelValue="data.model = $event"
-            @visible-change="visible => visible && loadModels().catch(error => showNodeError(error, nodeText('模型读取失败', 'Không tải được danh sách model')))">
-            <template v-if="!selectedModel" #prefix><icon-music-bolt :size="17" /></template>
-            <template #label="{ label }"><modelLabel :label="label" :providerId="selectedModel?.providerId" :modelId="selectedModel?.modelId" /></template>
-            <el-option-group v-for="provider in modelGroups" :key="provider.id" :label="provider.label">
-              <el-option v-for="item in provider.models" :key="item.modelId" :label="item.label" :value="getNodeModelKey(item)">
-                <modelLabel :label="item.label" :providerId="item.providerId" :modelId="item.modelId" />
-              </el-option>
-            </el-option-group>
-          </el-select>
+            placeholder="Chọn mô hình"
+            ariaLabel="Mô hình tạo âm thanh"
+            noDataText="Hãy thêm mô hình tạo âm thanh trong Cài đặt"
+            @update:modelValue="data.model = $event; data.chromeTabId = undefined"
+            @update:chromeTabId="data.chromeTabId = $event"
+            @open="loadModels().catch(error => showNodeError(error, 'Lỗi tải mô hình'))" />
           <generationSettings v-model:language="data.language" v-model:sampleRate="data.sampleRate" v-model:format="data.format" v-model:other="data.other" :model="selectedModel" :disabled="busy || !selectedModel" />
           <div class="generationActions">
             <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'audio' }" :supported="selectedModel?.supportsPrice === true" />
-            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" :title="localized('放弃任务', 'Bỏ tác vụ')" :aria-label="localized('放弃任务', 'Bỏ tác vụ')" @click="generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo')))" />
+            <el-button v-if="pendingRecovery" class="sendButton" :icon="IconPlayerStop" :loading="cancelling" :disabled="deleting || uploading || transcribing || actions?.processing" title="Hủy tác vụ" aria-label="Hủy tác vụ" @click="generationState.cancel().catch(error => showNodeError(error, 'Không dừng được quá trình tạo'))" />
             <el-button
               class="sendButton"
               :icon="generating ? IconPlayerStop : IconArrowUp"
               :disabled="cancelling || deleting || uploading || transcribing || actions?.processing || (!generating && !pendingRecovery && (!generationPrompt || !selectedModel))"
-               :title="generating ? localized('停止生成', 'Dừng tạo') : pendingRecovery ? localized('复查任务', 'Kiểm tra lại tác vụ') : localized('生成音频', 'Tạo âm thanh')"
-               :aria-label="generating ? localized('停止生成', 'Dừng tạo') : pendingRecovery ? localized('复查任务', 'Kiểm tra lại tác vụ') : localized('生成音频', 'Tạo âm thanh')"
-              @click="generating ? generationState.cancel().catch(error => showNodeError(error, nodeText('停止生成失败', 'Không dừng được tác vụ tạo'))) : startGeneration().catch(error => showNodeError(error, nodeText('音频生成失败', 'Tạo âm thanh thất bại')))" />
+              :title="generating ? 'Dừng tạo' : pendingRecovery ? 'Kiểm tra lại tác vụ' : 'Tạo âm thanh'"
+              :aria-label="generating ? 'Dừng tạo' : pendingRecovery ? 'Kiểm tra lại tác vụ' : 'Tạo âm thanh'"
+              @click="generating ? generationState.cancel().catch(error => showNodeError(error, 'Không dừng được quá trình tạo')) : startGeneration().catch(error => showNodeError(error, 'Tạo âm thanh thất bại'))" />
           </div>
         </div>
       </el-card>
@@ -67,13 +60,13 @@
 </template>
 
 <script setup lang="ts">
-import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from "vue";
-import { ElButton, ElCard, ElLoading, ElOption, ElOptionGroup, ElSelect } from "element-plus";
+import { ElButton, ElCard, ElLoading } from "element-plus";
 import { IconArrowUp, IconGauge, IconMusicBolt, IconPlayerStop, IconScissors, IconTransfer, IconTextRecognition } from "@tabler/icons-vue";
 import { findNodeModel, getNodeModelIdentity, getNodeModelKey, getTargetValues, isTypeCompatible, nodeSkeleton, nodeTools, useNode, useNodeModelSelection, z, type NodeAudioRequest, type NodeHandle, type NodeInputValue, type NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
-import modelLabel from "@toonflow/node-shared/modelLabel";
+import { chromeServiceId, requireChromeTab } from "@toonflow/node-shared/chromeTabs";
+import chromeModelSelect from "@toonflow/node-shared/chromeModelSelect";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { useNodeGeneration } from "@toonflow/node-shared/useNodeGeneration";
 import { useAudioTranscription } from "@toonflow/node-shared/useAudioTranscription";
@@ -93,16 +86,14 @@ defineOptions({
   inheritAttrs: false,
   icon: IconMusicBolt,
   handles: [
-    { id: "in", type: "target", dataType: ["IMAGE", "AUDIO", "STRING"], label: nodeText("图片或音频限1个，文本不限", "Tối đa 1 ảnh hoặc âm thanh; không giới hạn văn bản") },
-    { id: "audio", type: "source", dataType: "AUDIO", label: nodeText("音频输出", "Đầu ra âm thanh") },
+    { id: "in", type: "target", dataType: ["IMAGE", "AUDIO", "STRING"], label: "Tối đa 1 ảnh hoặc âm thanh; không giới hạn văn bản" },
+    { id: "audio", type: "source", dataType: "AUDIO", label: "Đầu ra âm thanh" },
   ] satisfies NodeHandle[],
 });
 const vLoading = ElLoading.directive;
-const vietnamese = useNodeVietnamese();
-const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
-const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({ label: () => { void vietnamese.value; return nodeText("音频生成", "Tạo âm thanh"); }, onModelsChanged: () => void refreshProviderModels() });
+const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals } = useNode({ label: "Tạo âm thanh", onModelsChanged: () => void refreshProviderModels() });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; language: string; sampleRate: number; format: string; other: Record<string, unknown> });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; language: string; sampleRate: number; format: string; other: Record<string, unknown>; chromeTabId?: number });
 data.value.prompt ??= "";
 data.value.promptModel ??= [];
 data.value.model ??= "";
@@ -135,8 +126,8 @@ watch(busy, value => { if (!value && modelsRefreshPending) void refreshProviderM
 const selectedModel = useNodeModelSelection(models, computed({ get: () => data.value.model, set: value => { data.value.model = value; } }));
 useModelForm(data, selectedModel);
 const modelGroups = computed(() => groupNodeModels(models.value));
-const generationPrompt = computed(() => { void vietnamese.value; return [data.value.prompt.trim(), ...refList.value.flatMap((item, index) =>
-  item.dataType === "STRING" && item.value?.trim() ? [`${nodeText("参考", "Tham chiếu")} ${index + 1}:\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n"); });
+const generationPrompt = computed(() => [data.value.prompt.trim(), ...refList.value.flatMap((item, index) =>
+  item.dataType === "STRING" && item.value?.trim() ? [`Tham chiếu ${index + 1}:\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n"));
 const generationInput = computed<Omit<NodeAudioRequest, "directory"> | undefined>(() => {
   const choice = selectedModel.value;
   if (!choice) return;
@@ -146,13 +137,13 @@ const generationInput = computed<Omit<NodeAudioRequest, "directory"> | undefined
     language: data.value.language,
     sampleRate: data.value.sampleRate,
     format: data.value.format,
-    other: Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
+    other: chromeServiceId(choice) ? { ...data.value.other, chromeTabId: data.value.chromeTabId } : Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
     outputDirectory: `assets/${id}`,
     images: refList.value.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
     audios: refList.value.flatMap(item => item.dataType === "AUDIO" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
   };
 });
-const previewUrl = files.useFileUrl(outputFile, error => showNodeError(error, nodeText("音频读取失败", "Không đọc được âm thanh")));
+const previewUrl = files.useFileUrl(outputFile, error => showNodeError(error, "Lỗi đọc âm thanh"));
 
 function referencesAllowed(values: NodeInputValue[]) {
   return values.filter(item => isTypeCompatible(item.dataType, ["IMAGE", "AUDIO"])).length <= 1;
@@ -187,7 +178,7 @@ async function refreshProviderModels(event?: Event) {
     modelsRefreshPending = false;
     await loadModels();
   } catch (error) {
-    if (!disposed) showNodeError(error, nodeText("模型读取失败", "Không tải được danh sách model"));
+    if (!disposed) showNodeError(error, "Lỗi tải mô hình");
   }
 }
 
@@ -214,18 +205,19 @@ function loadModels() {
 }
 
 async function startGeneration() {
-  if (cancelling.value) throw new Error(nodeText("任务正在取消，请稍后重试", "Đang hủy tác vụ, hãy thử lại sau"));
-  if (busy.value || disposed) throw new Error(nodeText("音频正在处理或节点已关闭，请稍后重试", "Âm thanh đang được xử lý hoặc node đã đóng, hãy thử lại sau"));
+  if (cancelling.value) throw new Error("Đang hủy tác vụ, vui lòng thử lại sau");
+  if (busy.value || disposed) throw new Error("Đang xử lý âm thanh hoặc node đã đóng, hãy thử lại sau");
   if (pendingRecovery.value) {
-    generation = generationState.resume().catch(error => showNodeError(error, nodeText("音频任务复查失败", "Không kiểm tra lại được tác vụ âm thanh")));
+    generation = generationState.resume().catch(error => showNodeError(error, "Không kiểm tra lại được tác vụ âm thanh"));
     return { status: "generating" };
   }
   const input = generationInput.value;
-  if (!input) throw new Error(nodeText("请先选择音频模型", "Hãy chọn model âm thanh trước"));
-  if (!generationPrompt.value) throw new Error(nodeText("请输入生成提示词或待朗读文本", "Hãy nhập prompt tạo âm thanh hoặc văn bản cần đọc"));
-  if (!referencesAllowed(refList.value)) throw new Error(nodeText("图片和音频不能同时引用，且合计最多引用一个；文本数量不限", "Không thể tham chiếu ảnh và âm thanh đồng thời; tổng tối đa một tệp, không giới hạn số tham chiếu văn bản"));
-  if (refList.value.some(item => item.value === undefined)) throw new Error(nodeText("引用节点暂无内容，请先补充引用内容", "Node tham chiếu chưa có nội dung; hãy bổ sung trước"));
-  if (!languageOptions.some(item => item.value === data.value.language) || !sampleRateOptions.includes(data.value.sampleRate) || !formatOptions.includes(data.value.format)) throw new Error(nodeText("请重新选择有效的语种、采样率和输出格式", "Hãy chọn lại ngôn ngữ, tần số lấy mẫu và định dạng đầu ra hợp lệ"));
+  if (!input) throw new Error("Hãy chọn mô hình tạo âm thanh");
+  await requireChromeTab(selectedModel.value!, data.value.chromeTabId, "audio");
+  if (!generationPrompt.value) throw new Error("Hãy nhập mô tả tạo âm thanh hoặc văn bản cần đọc");
+  if (!referencesAllowed(refList.value)) throw new Error("Không thể tham chiếu cả ảnh và âm thanh cùng lúc, tổng cộng chỉ được một mục; không giới hạn văn bản");
+  if (refList.value.some(item => item.value === undefined)) throw new Error("Node tham chiếu chưa có nội dung, hãy bổ sung nội dung");
+  if (!languageOptions.some(item => item.value === data.value.language) || !sampleRateOptions.includes(data.value.sampleRate) || !formatOptions.includes(data.value.format)) throw new Error("Hãy chọn lại ngôn ngữ, tần số lấy mẫu và định dạng đầu ra hợp lệ");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   generationController = controller;
@@ -234,9 +226,9 @@ async function startGeneration() {
     controller.signal.throwIfAborted();
     const [result] = await generationState.generate("audio", { ...input, directory }, controller.signal);
     controller.signal.throwIfAborted();
-    if (!result) throw new Error(nodeText("供应商未返回音频", "Nhà cung cấp không trả về âm thanh"));
+    if (!result) throw new Error("Nhà cung cấp không trả về âm thanh");
     outputs.value.audio = { dataType: "AUDIO", value: { url: result.path, mimeType: result.mimeType } };
-  }).catch(error => showNodeError(error, nodeText("音频生成失败", "Tạo âm thanh thất bại"))).finally(() => {
+  }).catch(error => showNodeError(error, "Tạo âm thanh thất bại")).finally(() => {
     generationController = undefined;
   });
   return { status: "generating" };
@@ -248,8 +240,8 @@ async function replaceOutput(event: Event) {
   input.value = "";
   if (!file || busy.value || disposed) return;
   const mimeType = getMediaMimeType(file);
-  if (!mimeType.startsWith("audio/")) return void showNodeError(nodeText("请选择音频文件", "Hãy chọn tệp âm thanh"), nodeText("音频替换失败", "Không thay được âm thanh"));
-  if (!file.size || file.size > 100 * 1024 * 1024) return void showNodeError(nodeText("音频不能为空且不能超过 100 MB", "Âm thanh không được trống và không được vượt quá 100 MB"), nodeText("音频替换失败", "Không thay được âm thanh"));
+  if (!mimeType.startsWith("audio/")) return void showNodeError("Hãy chọn tệp âm thanh", "Thay âm thanh thất bại");
+  if (!file.size || file.size > 100 * 1024 * 1024) return void showNodeError("Âm thanh không được rỗng hoặc vượt quá 100 MB", "Thay âm thanh thất bại");
   uploading.value = true;
   try {
     const workspace = files.getWorkspaceFiles();
@@ -261,17 +253,17 @@ async function replaceOutput(event: Event) {
     // ACT: 替换不删除旧音频，保留复制节点与撤销记录的文件引用。
     outputs.value.audio = { dataType: "AUDIO", value: { url, mimeType } };
   } catch (error) {
-    showNodeError(error, nodeText("音频替换失败", "Không thay được âm thanh"));
+    showNodeError(error, "Thay âm thanh thất bại");
   } finally {
     uploading.value = false;
   }
 }
 
 nodeEvent.on("save", reason => {
-  if (uploading.value || (reason === "reload" && busy.value)) throw new Error(nodeText("音频处理中，请完成或取消后再刷新节点", "Đang xử lý âm thanh; hãy hoàn tất hoặc hủy trước khi làm mới node"));
+  if (uploading.value || (reason === "reload" && busy.value)) throw new Error("Đang xử lý âm thanh, hãy hoàn tất hoặc hủy trước khi làm mới node");
 });
 nodeEvent.on("delete", async () => {
-  if (uploading.value) throw new Error(nodeText("音频正在替换，请稍后删除节点", "Đang thay âm thanh; hãy xóa node sau khi hoàn tất"));
+  if (uploading.value) throw new Error("Đang thay âm thanh, hãy xóa node sau");
   deleting.value = true;
   try {
     await generationState.cancel(false);
@@ -295,7 +287,7 @@ function getConfig() {
 
 nodeTools.register({
   name: "getConfig",
-  description: () => nodeText("读取此音频生成节点的配置、自定义配置 other、可选音频模型、语种、采样率、输出格式与输入数量限制，models 中的 rules 声明自定义字段，不含密钥；文本不限，图片与音频互斥且合计最多一个，具体模型能力由供应商校验", "Đọc cấu hình node tạo âm thanh, trường tùy chỉnh other, model âm thanh có thể dùng, ngôn ngữ, tần số lấy mẫu, định dạng đầu ra và giới hạn tham chiếu. Trường rules trong models mô tả cấu hình, không chứa khóa bí mật. Văn bản không giới hạn; ảnh và âm thanh loại trừ nhau, tổng cộng tối đa một; nhà cung cấp sẽ kiểm tra khả năng cụ thể."),
+  description: "Đọc cấu hình node tạo âm thanh, cấu hình tùy chỉnh other, các mô hình âm thanh, ngôn ngữ, tần số lấy mẫu, định dạng đầu ra và giới hạn số lượng đầu vào. rules trong models khai báo trường tùy chỉnh và không chứa khóa bí mật. Không giới hạn văn bản; ảnh và âm thanh loại trừ nhau và tổng cộng tối đa một mục. Nhà cung cấp kiểm tra khả năng cụ thể của mô hình.",
   parameters: z.strictObject({}),
   async execute(_args, { signal }) {
     signal?.throwIfAborted();
@@ -306,7 +298,7 @@ nodeTools.register({
 });
 nodeTools.register({
   name: "setConfig",
-  description: () => nodeText("修改音频生成模型、语种、采样率、格式或自定义配置 other；先用 getConfig 查询选项，providerId 与 modelId 必须同时提供；other 按目标模型 rules 的 field 和值要求填写，仅更新传入字段，其余保留，切换模型时使用新模型默认值；不修改提示词、不启动生成", "Chỉnh model tạo âm thanh, ngôn ngữ, tần số lấy mẫu, định dạng hoặc trường tùy chỉnh other. Hãy dùng getConfig để tra lựa chọn; phải cung cấp providerId và modelId cùng nhau. other cần theo field và rules của model đích. Chỉ sửa trường được truyền; giữ trường còn lại, dùng giá trị mặc định của model mới khi đổi model. Không sửa prompt hoặc tự bắt đầu tạo."),
+  description: "Sửa mô hình tạo âm thanh, ngôn ngữ, tần số lấy mẫu, định dạng hoặc cấu hình other. Trước tiên dùng getConfig xem các lựa chọn; providerId và modelId phải cung cấp cùng nhau. Điền other theo field và giá trị trong rules của mô hình đích. Chỉ cập nhật các trường được truyền; khi đổi mô hình dùng mặc định của mô hình mới. Không sửa prompt hoặc bắt đầu tạo.",
   parameters: z.strictObject({
     providerId: z.string().min(1).optional(),
     modelId: z.string().min(1).optional(),
@@ -314,20 +306,22 @@ nodeTools.register({
     sampleRate: z.number().int().positive().optional(),
     format: z.string().optional(),
     other: z.record(z.string(), z.json()).optional(),
-  }).refine(args => (args.providerId === undefined) === (args.modelId === undefined), nodeText("providerId 与 modelId 必须同时提供", "Phải cung cấp đồng thời providerId và modelId")),
+  }).refine(args => (args.providerId === undefined) === (args.modelId === undefined), "Phải cung cấp providerId và modelId cùng nhau"),
   async execute(args, { signal }) {
     signal?.throwIfAborted();
-    if (busy.value || disposed) throw new Error(nodeText("音频正在处理或节点已关闭，请稍后修改配置", "Đang xử lý âm thanh hoặc node đã đóng; hãy chỉnh cấu hình sau"));
+    if (busy.value || disposed) throw new Error("Đang xử lý âm thanh hoặc node đã đóng, hãy sửa cấu hình sau");
     await loadModels();
     signal?.throwIfAborted();
-    if (busy.value || disposed) throw new Error(nodeText("音频正在处理或节点已关闭，请稍后修改配置", "Đang xử lý âm thanh hoặc node đã đóng; hãy chỉnh cấu hình sau"));
+    if (busy.value || disposed) throw new Error("Đang xử lý âm thanh hoặc node đã đóng, hãy sửa cấu hình sau");
     const choice = args.modelId === undefined ? selectedModel.value : findNodeModel(models.value, { providerId: args.providerId ?? "", modelId: args.modelId });
-    if (!choice) throw new Error(nodeText("请选择 getConfig 返回的有效音频模型", "Hãy chọn model âm thanh hợp lệ từ getConfig"));
-    if (args.language !== undefined && !languageOptions.some(item => item.value === args.language)) throw new Error(nodeText("请选择 getConfig 返回的有效语种", "Hãy chọn ngôn ngữ hợp lệ từ getConfig"));
-    if (args.sampleRate !== undefined && !sampleRateOptions.includes(args.sampleRate)) throw new Error(nodeText("请选择 getConfig 返回的有效采样率", "Hãy chọn tần số lấy mẫu hợp lệ từ getConfig"));
-    if (args.format !== undefined && !formatOptions.includes(args.format)) throw new Error(nodeText("请选择 getConfig 返回的有效输出格式", "Hãy chọn định dạng đầu ra hợp lệ từ getConfig"));
+    if (!choice) throw new Error("Hãy chọn mô hình âm thanh hợp lệ do getConfig trả về");
+    if (args.language !== undefined && !languageOptions.some(item => item.value === args.language)) throw new Error("Hãy chọn ngôn ngữ hợp lệ do getConfig trả về");
+    if (args.sampleRate !== undefined && !sampleRateOptions.includes(args.sampleRate)) throw new Error("Hãy chọn tần số lấy mẫu hợp lệ do getConfig trả về");
+    if (args.format !== undefined && !formatOptions.includes(args.format)) throw new Error("Hãy chọn định dạng đầu ra hợp lệ do getConfig trả về");
     const other = getModelFormValues(choice, choice === selectedModel.value ? data.value.other : {}, args.other);
-    data.value.model = getNodeModelKey(choice);
+    const modelKey = getNodeModelKey(choice);
+    if (data.value.model !== modelKey) data.value.chromeTabId = undefined;
+    data.value.model = modelKey;
     if (args.language !== undefined) data.value.language = args.language;
     if (args.sampleRate !== undefined) data.value.sampleRate = args.sampleRate;
     if (args.format !== undefined) data.value.format = args.format;
@@ -337,10 +331,10 @@ nodeTools.register({
 });
 nodeTools.register({
   name: "setPrompt",
-  description: () => nodeText("修改此节点的音频生成提示词或待朗读文本，仅接收 prompt，支持 {{ref 1}} 等参考标记；语种 language、采样率 sampleRate、格式 format 等配置须先用 node:getConfig 查询能力，再单独调用 node:setConfig；不启动生成", "Chỉnh sửa prompt tạo âm thanh hoặc văn bản cần đọc của node này. Chỉ nhận trường prompt và dấu tham chiếu {{ref 1}}. Với language, sampleRate, format, hãy tra khả năng bằng node:getConfig trước khi gọi node:setConfig riêng. Không tự chạy tạo âm thanh."),
+  description: "Sửa prompt tạo âm thanh hoặc văn bản cần đọc của node, chỉ nhận prompt và hỗ trợ tham chiếu như {{ref 1}}. Với cấu hình language, sampleRate, format..., trước tiên dùng node:getConfig kiểm tra khả năng rồi gọi riêng node:setConfig. Không bắt đầu tạo.",
   parameters: z.strictObject({ prompt: z.string() }),
   execute({ prompt }) {
-    if (deleting.value || disposed) throw new Error(nodeText("节点正在删除或已关闭，请稍后修改", "Node đang xóa hoặc đã đóng; hãy chỉnh sau"));
+    if (deleting.value || disposed) throw new Error("Node đang bị xóa hoặc đã đóng, hãy sửa sau");
     data.value.prompt = prompt;
     data.value.promptModel = prompt.split("\n").map(text => [{ type: "Write", text }]);
     return { prompt };
@@ -348,7 +342,7 @@ nodeTools.register({
 });
 nodeTools.register({
   name: "generateAudio",
-  description: () => nodeText("使用当前提示词、模型、语种、采样率、格式和可选参考图片或音频启动后台生成；图片与音频互斥且合计最多一个，文本不限；立即返回已开始，用 getGenerationStatus 查询结果、cancelGeneration 停止", "Bắt đầu tạo âm thanh nền bằng prompt, model, ngôn ngữ, tần số lấy mẫu và định dạng hiện tại, có thể kèm ảnh hoặc âm thanh tham chiếu. Ảnh và âm thanh loại trừ nhau, tối đa một tệp; số tham chiếu văn bản không giới hạn. Trả về trạng thái đã bắt đầu; kiểm tra bằng getGenerationStatus và dừng bằng cancelGeneration."),
+  description: "Bắt đầu tạo âm thanh ở chế độ nền bằng prompt, mô hình, ngôn ngữ, tần số lấy mẫu, định dạng và ảnh hoặc âm thanh tham chiếu tùy chọn. Ảnh và âm thanh loại trừ nhau, tổng cộng tối đa một mục; không giới hạn văn bản. Trả về ngay trạng thái đã bắt đầu, dùng getGenerationStatus để kiểm tra kết quả và cancelGeneration để dừng.",
   parameters: z.strictObject({}),
   execute(_args, { signal }) {
     signal?.throwIfAborted();

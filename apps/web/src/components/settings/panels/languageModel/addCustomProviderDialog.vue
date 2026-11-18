@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="provider ? '编辑供应商' : '添加自定义供应商'"
+    :title="provider ? 'Sửa nhà cung cấp' : 'Thêm nhà cung cấp tùy chỉnh'"
     width="min(760px, 94vw)"
     alignCenter
     appendToBody
@@ -13,82 +13,82 @@
     <el-scrollbar maxHeight="65vh">
       <el-form ref="providerForm" :model="form" :rules="rules" labelPosition="top" :disabled="saving" class="customProviderForm">
         <div class="formGrid">
-          <el-form-item label="Provider ID" prop="id"><el-input v-model="form.id" placeholder="例如 myProvider" /></el-form-item>
-          <el-form-item label="显示名称" prop="label"><el-input v-model="form.label" placeholder="供应商的显示名称" /></el-form-item>
-          <el-form-item label="API 地址" prop="apiUrl"><el-input v-model="form.apiUrl" dir="ltr" placeholder="https://api.example.com/v1" /></el-form-item>
-          <el-form-item label="API 协议" prop="protocol">
-            <el-select v-model="form.protocol" aria-label="API 协议">
+          <el-form-item label="Provider ID" prop="id"><el-input v-model="form.id" placeholder="Ví dụ myProvider" /></el-form-item>
+          <el-form-item label="Tên hiển thị" prop="label"><el-input v-model="form.label" placeholder="Tên hiển thị của nhà cung cấp" /></el-form-item>
+          <el-form-item label="Địa chỉ API" prop="apiUrl"><el-input v-model="form.apiUrl" dir="ltr" placeholder="https://api.example.com/v1" /></el-form-item>
+          <el-form-item label="Giao thức API" prop="protocol">
+            <el-select v-model="form.protocol" aria-label="Giao thức API">
               <el-option v-for="protocol in protocols" :key="protocol" :label="protocol" :value="protocol" />
             </el-select>
           </el-form-item>
         </div>
-        <el-form-item label="API 密钥" prop="apiKey">
-          <el-input v-model="form.apiKey" type="password" dir="ltr" showPassword autocomplete="off" placeholder="本地无鉴权服务可留空" />
+        <el-form-item label="Khóa API" prop="apiKey">
+          <el-input v-model="form.apiKey" type="password" dir="ltr" showPassword autocomplete="off" placeholder="Có thể để trống nếu dịch vụ nội bộ không yêu cầu xác thực" />
         </el-form-item>
-        <el-form-item label="自定义请求头" prop="headers" class="requestHeaders">
+        <el-form-item label="Header yêu cầu tùy chỉnh" prop="headers" class="requestHeaders">
           <div class="headersEditor">
             <div v-for="item in form.headers" :key="item.key" class="headerRow">
-              <el-input v-model="item.name" class="headerName" dir="ltr" autocomplete="off" placeholder="请求头名称" aria-label="请求头名称" />
-              <el-input v-model="item.value" type="password" dir="ltr" showPassword autocomplete="off" placeholder="请求头值（可留空）" aria-label="请求头值" />
-              <el-button text type="danger" :icon="IconTrash" aria-label="删除请求头" @click="form.headers = form.headers.filter(header => header.key !== item.key)" />
+              <el-input v-model="item.name" class="headerName" dir="ltr" autocomplete="off" placeholder="Tên header" aria-label="Tên header" />
+              <el-input v-model="item.value" type="password" dir="ltr" showPassword autocomplete="off" placeholder="Giá trị header (có thể để trống)" aria-label="Giá trị header" />
+              <el-button text type="danger" :icon="IconTrash" aria-label="Xóa header" @click="form.headers = form.headers.filter(header => header.key !== item.key)" />
             </div>
-            <el-button text :icon="IconPlus" @click="addRequestHeader">添加请求头</el-button>
+            <el-button text :icon="IconPlus" @click="addRequestHeader">Thêm header</el-button>
           </div>
         </el-form-item>
         <div class="modelHeader">
-          <el-text tag="strong">模型列表</el-text>
-          <el-button :icon="IconDownload" :loading="fetching" @click="fetchModels()">获取模型列表</el-button>
+          <el-text tag="strong">Danh sách mô hình</el-text>
+          <el-button :icon="IconDownload" :loading="fetching" @click="fetchModels()">Lấy danh sách mô hình</el-button>
         </div>
         <div class="modelList">
           <div v-for="item in models" :key="item.key" class="modelItem">
             <div class="modelRow">
-              <el-input v-model="item.id" placeholder="模型 ID" aria-label="模型 ID" />
-              <el-input v-model="item.label" placeholder="显示名称" aria-label="模型显示名称" />
+              <el-input v-model="item.id" placeholder="ID mô hình" aria-label="ID mô hình" />
+              <el-input v-model="item.label" placeholder="Tên hiển thị" aria-label="Tên hiển thị của mô hình" />
               <el-button
                 text
                 :icon="expandedModels.has(item.key) ? IconChevronUp : IconChevronDown"
                 :aria-expanded="expandedModels.has(item.key)"
-                aria-label="展开模型设置"
+                aria-label="Mở rộng cấu hình mô hình"
                 @click="expandedModels.has(item.key) ? expandedModels.delete(item.key) : expandedModels.add(item.key)" />
               <el-button
                 text
                 type="danger"
                 :icon="IconTrash"
-                aria-label="删除模型"
+                aria-label="Xóa mô hình"
                 @click="models = models.filter((model) => model.key !== item.key)" />
             </div>
             <div v-if="expandedModels.has(item.key)" class="modelSettings">
               <div class="formGrid tokenSettings">
-                <el-form-item label="上下文窗口">
+                <el-form-item label="Cửa sổ ngữ cảnh">
                   <el-input-number
                     v-model="item.contextWindow"
                     :min="1"
                     :max="Number.MAX_SAFE_INTEGER"
                     :precision="0"
                     controlsPosition="right"
-                    placeholder="未设置"
-                    aria-label="上下文窗口" />
+                    placeholder="Chưa đặt"
+                    aria-label="Cửa sổ ngữ cảnh" />
                 </el-form-item>
-                <el-form-item label="最大输出 token">
+                <el-form-item label="Số token đầu ra tối đa">
                   <el-input-number
                     v-model="item.maxOutputTokens"
                     :min="1"
                     :max="Number.MAX_SAFE_INTEGER"
                     :precision="0"
                     controlsPosition="right"
-                    placeholder="未设置"
-                    aria-label="最大输出 token" />
+                    placeholder="Chưa đặt"
+                    aria-label="Số token đầu ra tối đa" />
                 </el-form-item>
               </div>
-              <el-form-item class="reasoningMode" label="思考强度档位">
-                <el-select :modelValue="getReasoningMode(item)" aria-label="思考强度配置方式" @update:modelValue="setReasoningMode(item, $event)">
-                  <el-option label="继承模型目录" value="inherit" />
-                  <el-option label="禁用思考强度" value="disabled" />
-                  <el-option label="自定义档位" value="custom" />
+              <el-form-item class="reasoningMode" label="Mức độ suy luận">
+                <el-select :modelValue="getReasoningMode(item)" aria-label="Cách cấu hình mức độ suy luận" @update:modelValue="setReasoningMode(item, $event)">
+                  <el-option label="Theo danh mục mô hình" value="inherit" />
+                  <el-option label="Tắt mức độ suy luận" value="disabled" />
+                  <el-option label="Mức tùy chỉnh" value="custom" />
                 </el-select>
               </el-form-item>
               <div v-if="getReasoningMode(item) === 'custom'" class="reasoningSettings">
-                <div class="reasoningChoices" aria-label="支持的思考档位">
+                <div class="reasoningChoices" aria-label="Các mức suy luận được hỗ trợ">
                   <el-checkbox
                     v-for="level in thinkingLevels"
                     :key="level"
@@ -99,7 +99,7 @@
                     {{ thinkingLevelLabels[level] }}
                   </el-checkbox>
                 </div>
-                <el-text type="info" size="small">勾选支持的档位并填写接口值；off 可留空，不指定强度值。</el-text>
+                <el-text type="info" size="small">Chọn các mức được hỗ trợ và nhập giá trị cho API; có thể để trống off để không chỉ định mức.</el-text>
                 <div class="reasoningMappings">
                   <div v-for="level in thinkingLevels.filter(level => hasReasoningLevel(item, level))" :key="level" class="reasoningRow">
                     <div class="reasoningLevel">
@@ -108,8 +108,8 @@
                     </div>
                     <el-input
                       :modelValue="getReasoningValue(item, level)"
-                      :placeholder="level === 'off' ? '留空使用协议默认值' : '接口值，例如 ' + level"
-                      :aria-label="level + ' 接口值'"
+                      :placeholder="level === 'off' ? 'Để trống để dùng mặc định của giao thức' : 'Giá trị API, ví dụ ' + level"
+                      :aria-label="level + ' - giá trị API'"
                       @update:modelValue="setReasoningValue(item, level, $event)" />
                   </div>
                 </div>
@@ -117,19 +117,19 @@
             </div>
           </div>
         </div>
-        <el-button class="manualAdd" :icon="IconPlus" @click="addManualModel">手动添加模型</el-button>
+        <el-button class="manualAdd" :icon="IconPlus" @click="addManualModel">Thêm mô hình thủ công</el-button>
         <el-alert v-if="formError" :title="formError" type="error" :closable="false" showIcon />
       </el-form>
     </el-scrollbar>
     <template #footer>
-      <el-button :disabled="saving" @click="visible = false">取消</el-button>
+      <el-button :disabled="saving" @click="visible = false">Hủy</el-button>
       <el-button type="primary" :loading="saving" :disabled="fetching" @click="addProvider">
-        {{ provider ? "保存修改" : "确定添加供应商" }}
+        {{ provider ? "Lưu thay đổi" : "Xác nhận thêm nhà cung cấp" }}
       </el-button>
     </template>
   </el-dialog>
-  <el-dialog v-model="resultsVisible" title="选择要添加的模型" width="min(680px, 92vw)" alignCenter appendToBody destroyOnClose>
-    <el-input v-model="modelSearch" clearable :prefixIcon="IconSearch" placeholder="搜索模型 ID 或显示名称" aria-label="搜索模型" />
+  <el-dialog v-model="resultsVisible" title="Chọn mô hình cần thêm" width="min(680px, 92vw)" alignCenter appendToBody destroyOnClose>
+    <el-input v-model="modelSearch" clearable :prefixIcon="IconSearch" placeholder="Tìm ID hoặc tên hiển thị của mô hình" aria-label="Tìm mô hình" />
     <div class="modelResults">
       <el-auto-resizer>
         <template #default="{ height, width }">
@@ -145,10 +145,10 @@
         </template>
       </el-auto-resizer>
     </div>
-    <el-text type="info">{{ filteredModels.length }} 个结果，已勾选 {{ selectedIds.size }} 个</el-text>
+    <el-text type="info">{{ filteredModels.length }} kết quả, đã chọn {{ selectedIds.size }} mô hình</el-text>
     <template #footer>
-      <el-button @click="resultsVisible = false">取消</el-button>
-      <el-button type="primary" :disabled="!selectedIds.size" @click="addSelectedModels">添加勾选的模型（{{ selectedIds.size }}）</el-button>
+      <el-button @click="resultsVisible = false">Hủy</el-button>
+        <el-button type="primary" :disabled="!selectedIds.size" @click="addSelectedModels">Thêm mô hình đã chọn ({{ selectedIds.size }})</el-button>
     </template>
   </el-dialog>
 </template>
@@ -180,7 +180,7 @@ const fetchedModels = shallowRef<CustomProviderModel[]>([]);
 const selectedIds = ref(new Set<string>());
 const modelSearch = ref("");
 const saving = ref(false);
-const thinkingLevelLabels: Record<ThinkingLevel, string> = { off: "关闭", minimal: "最小", low: "低", medium: "中", high: "高", xhigh: "极高", max: "最高" };
+const thinkingLevelLabels: Record<ThinkingLevel, string> = { off: "Tắt", minimal: "Tối thiểu", low: "Thấp", medium: "Trung bình", high: "Cao", xhigh: "Rất cao", max: "Cao nhất" };
 const protocols = ["openai-completions", "openai-responses", "anthropic-messages"];
 const addedIds = computed(() => new Set(models.value.map((item) => item.id.trim())));
 const filteredModels = computed(() => {
@@ -202,8 +202,8 @@ const resultColumns = computed<Column[]>(() => [
         },
       }),
   },
-  { key: "id", dataKey: "id", title: "模型 ID", width: 240, flexGrow: 1 },
-  { key: "label", dataKey: "label", title: "显示名称", width: 200, flexGrow: 1 },
+  { key: "id", dataKey: "id", title: "ID mô hình", width: 240, flexGrow: 1 },
+  { key: "label", dataKey: "label", title: "Tên hiển thị", width: 200, flexGrow: 1 },
 ]);
 const resultsVisible = ref(false);
 const fetching = ref(false);
@@ -211,10 +211,10 @@ const formError = ref("");
 let request: AbortController | undefined;
 const rules: FormRules = {
   id: [
-    { required: true, message: "请输入 Provider ID", trigger: "blur" },
-    { pattern: /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/, message: "仅支持字母、数字、点、下划线和短横线", trigger: "blur" },
+    { required: true, message: "Hãy nhập Provider ID", trigger: "blur" },
+    { pattern: /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/, message: "Chỉ hỗ trợ chữ cái, chữ số, dấu chấm, gạch dưới và gạch ngang", trigger: "blur" },
   ],
-  label: [{ required: true, whitespace: true, message: "请输入显示名称", trigger: "blur" }],
+  label: [{ required: true, whitespace: true, message: "Hãy nhập tên hiển thị", trigger: "blur" }],
   apiUrl: [
     {
       validator: (_rule, value, callback) => {
@@ -223,7 +223,7 @@ const rules: FormRules = {
           if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error();
           callback();
         } catch {
-          callback(new Error("请输入有效的 HTTP API 基础地址，不包含查询参数"));
+          callback(new Error("Hãy nhập địa chỉ gốc HTTP API hợp lệ, không chứa tham số truy vấn"));
         }
       },
       trigger: "blur",
@@ -277,10 +277,10 @@ function getProviderHeaders() {
   for (const item of form.headers) {
     const name = item.name.trim();
     if (!name && /^[\t ]*$/.test(item.value)) continue;
-    if (!name) throw new Error("请输入请求头名称");
-    if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name)) throw new Error("请求头名称只能包含字母、数字和 HTTP 标记字符");
-    if (names.has(name.toLowerCase())) throw new Error("请求头名称不能重复（不区分大小写）");
-    if (!/^[\t\x20-\x7e\x80-\xff]*$/.test(item.value)) throw new Error("请求头值不能包含控制字符、换行或非 Latin1 字符");
+    if (!name) throw new Error("Hãy nhập tên header");
+    if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name)) throw new Error("Tên header chỉ được chứa chữ cái, chữ số và ký tự token HTTP");
+    if (names.has(name.toLowerCase())) throw new Error("Tên header không được trùng (không phân biệt chữ hoa và chữ thường)");
+    if (!/^[\t\x20-\x7e\x80-\xff]*$/.test(item.value)) throw new Error("Giá trị header không được chứa ký tự điều khiển, xuống dòng hoặc ký tự ngoài Latin1");
     names.add(name.toLowerCase());
     entries.push([name, item.value]);
   }
@@ -300,7 +300,7 @@ async function fetchModels() {
       { signal: controller.signal, timeout: 35000 }
     );
     if (controller.signal.aborted) return;
-    if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "获取模型列表失败");
+    if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "Không lấy được danh sách mô hình");
     fetchedModels.value = data.data;
     selectedIds.value = new Set();
     modelSearch.value = "";
@@ -308,10 +308,10 @@ async function fetchModels() {
   } catch (error) {
     if (!controller.signal.aborted) {
       formError.value = axios.isAxiosError(error)
-        ? error.response?.data?.message || "获取模型列表失败，请检查连接配置"
+        ? error.response?.data?.message || "Không lấy được danh sách mô hình, hãy kiểm tra cấu hình kết nối"
         : error instanceof Error
         ? error.message
-        : "获取模型列表失败";
+        : "Không lấy được danh sách mô hình";
     }
   } finally {
     fetching.value = false;
@@ -366,13 +366,13 @@ async function addProvider() {
   formError.value = "";
   if (saving.value || !(await providerForm.value?.validate().catch(() => false))) return;
   if (form.id.toLowerCase() === "toonflow") {
-    formError.value = "toonflow 为账号供应商保留 ID，请使用其他 ID";
+    formError.value = "ID toonflow được dành riêng cho nhà cung cấp tài khoản, hãy chọn ID khác";
     return;
   }
   const providerId = props.provider?.id;
   const ids = models.value.map((item) => item.id.trim());
   if (ids.some((id) => !id) || new Set(ids).size !== ids.length) {
-    formError.value = "模型 ID 不能为空或重复";
+    formError.value = "ID mô hình không được trống hoặc trùng lặp";
     return;
   }
   if (
@@ -380,18 +380,18 @@ async function addProvider() {
       [item.contextWindow, item.maxOutputTokens].some((value) => value != null && (!Number.isSafeInteger(value) || value < 1))
     )
   ) {
-    formError.value = "token 限制必须为正整数或留空";
+    formError.value = "Giới hạn token phải là số nguyên dương hoặc để trống";
     return;
   }
   for (const item of models.value) {
     const efforts = item.reasoningEfforts;
     if (!efforts) continue;
     if (!Object.keys(efforts).some(level => level !== "off")) {
-      formError.value = `${item.id} 请至少启用一个思考档位，或选择继承目录 / 禁用`;
+      formError.value = `${item.id} cần bật ít nhất một mức suy luận hoặc chọn Theo danh mục / Tắt`;
       return;
     }
     if (Object.entries(efforts).some(([level, value]) => !(level === "off" && value === null) && (typeof value !== "string" || !value.trim()))) {
-      formError.value = `${item.id} 的思考档位接口值不能为空，只有 off 可以留空`;
+      formError.value = `${item.id} phải có giá trị API cho mức suy luận, chỉ off được để trống`;
       return;
     }
   }
@@ -416,19 +416,19 @@ async function addProvider() {
     };
     await saveSettings(settings => {
       const existing = settings.customProviders;
-      if (existing !== undefined && !Array.isArray(existing)) throw new Error("已保存的供应商配置格式不正确");
+      if (existing !== undefined && !Array.isArray(existing)) throw new Error("Định dạng cấu hình nhà cung cấp đã lưu không hợp lệ");
       if (languageProviders.some(item => item.id !== providerId && item.id.toLowerCase() === updatedProvider.id.toLowerCase())
         || existing?.some(item => typeof item?.id === "string" && item.id !== providerId && item.id.toLowerCase() === updatedProvider.id.toLowerCase())) {
-        throw new Error("Provider ID 已存在");
+        throw new Error("Provider ID đã tồn tại");
       }
-      if (providerId && !existing?.some(item => item.id === providerId)) throw new Error("供应商已不存在");
+      if (providerId && !existing?.some(item => item.id === providerId)) throw new Error("Nhà cung cấp không còn tồn tại");
       return { customProviders: providerId
         ? existing!.map(item => item.id === providerId ? { ...item, ...updatedProvider } : item)
         : [...(existing ?? []), updatedProvider] };
     });
     visible.value = false;
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : "保存失败，请重试；当前填写的内容已保留";
+    formError.value = error instanceof Error ? error.message : "Lưu thất bại, vui lòng thử lại; nội dung đã nhập vẫn được giữ";
   } finally {
     saving.value = false;
   }

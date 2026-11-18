@@ -1,84 +1,84 @@
 <template>
-  <el-dialog v-model="visible" title="设备互联" modalClass="deviceConnectOverlay" width="min(560px, calc(100vw - 32px))" :alignCenter="viewportHeight > 600" :top="viewportHeight <= 600 ? '16px' : undefined" appendToBody :closeOnClickModal="!submitting" :closeOnPressEscape="!submitting" :showClose="!submitting">
+  <el-dialog v-model="visible" title="Liên kết thiết bị" modalClass="deviceConnectOverlay" width="min(560px, calc(100vw - 32px))" :alignCenter="viewportHeight > 600" :top="viewportHeight <= 600 ? '16px' : undefined" appendToBody :closeOnClickModal="!submitting" :closeOnPressEscape="!submitting" :showClose="!submitting">
     <div v-loading="loading" class="mobileConnect" :class="{ compact: viewportHeight < 320 }" :style="{ maxHeight: `${Math.max(80, viewportHeight - (viewportHeight < 320 ? 104 : 128))}px`, height: choosingConnection ? '428px' : undefined }">
-      <el-segmented v-if="choosingConnection" class="inputModes" :modelValue="view" :options="connectionModes" :disabled="loading || submitting" block ariaLabel="连接方式" @change="value => value === 'manual' ? showManual() : scanAgain()">
+      <el-segmented v-if="choosingConnection" class="inputModes" :modelValue="view" :options="connectionModes" :disabled="loading || submitting" block ariaLabel="Cách kết nối" @change="value => value === 'manual' ? showManual() : scanAgain()">
         <template #default="{ item }">
           <span class="modeOption"><component :is="item.icon" :size="18" aria-hidden="true" />{{ item.label }}</span>
         </template>
       </el-segmented>
       <div class="connectionBody">
-      <section v-if="deviceHubEnabled" class="connectionInfo" aria-label="本机共享状态">
+      <section v-if="deviceHubEnabled" class="connectionInfo" aria-label="Trạng thái chia sẻ trên thiết bị này">
         <icon-device-desktop :size="40" aria-hidden="true" />
-        <el-tag type="success">共享中</el-tag>
-        <h3>本机已开启共享</h3>
-        <p class="description">其他设备可使用本机的项目与配置。<br />如需连接其他设备，请先在“设置 → 设备互联”中关闭共享。</p>
+        <el-tag type="success">Đang chia sẻ</el-tag>
+        <h3>Thiết bị này đã bật chia sẻ</h3>
+        <p class="description">Thiết bị khác có thể sử dụng dự án và cấu hình trên máy này. Nếu muốn kết nối thiết bị khác, hãy tắt chia sẻ trong Cài đặt → Liên kết thiết bị.</p>
       </section>
-      <section v-else-if="!deviceConnectionSupported" class="connectionInfo" aria-label="设备互联说明">
+      <section v-else-if="!deviceConnectionSupported" class="connectionInfo" aria-label="Thông tin liên kết thiết bị">
         <icon-device-desktop :size="40" aria-hidden="true" />
-        <p class="description">请使用 Toonflow 桌面端或 Android 客户端连接其他设备。<br />本机共享可在“设置 → 设备互联”中管理。</p>
+        <p class="description">Hãy sử dụng ứng dụng Toonflow desktop hoặc Android để kết nối thiết bị khác. Bạn có thể quản lý chia sẻ trên máy này trong Cài đặt → Liên kết thiết bị.</p>
       </section>
-      <section v-else-if="view === 'current'" class="connectionInfo" aria-label="当前连接">
+      <section v-else-if="view === 'current'" class="connectionInfo" aria-label="Kết nối hiện tại">
         <icon-device-desktop :size="40" aria-hidden="true" />
         <el-tag :type="mobileConnection.online === true ? mobileConnectionVersionWarning ? 'warning' : 'success' : mobileConnection.online === false ? 'danger' : 'info'">{{ mobileConnectionLabel }}</el-tag>
         <h3>{{ mobileConnection.name || 'Toonflow' }}</h3>
         <code>{{ mobileConnection.url }}</code>
-        <p class="description">{{ mobileConnection.online === true ? '正在使用这个设备的项目与配置。' : mobileConnection.online === false ? '暂时无法连接这个设备，请检查对方是否运行以及网络连接。' : '正在确认这个设备是否可以连接…' }}</p>
+        <p class="description">{{ mobileConnection.online === true ? 'Đang sử dụng dự án và cấu hình của thiết bị này.' : mobileConnection.online === false ? 'Tạm thời không kết nối được thiết bị này, hãy kiểm tra thiết bị kia đang chạy và kết nối mạng.' : 'Đang kiểm tra thiết bị này có thể kết nối hay không…' }}</p>
         <el-alert v-if="mobileConnectionVersionWarning" :title="mobileConnectionVersionWarning" type="warning" :closable="false" showIcon />
         <div class="connectionActions">
-          <el-button type="primary" :disabled="submitting" @click="scanAgain">连接其他设备</el-button>
-          <el-button :loading="submitting" @click="disconnect">断开并独立运行</el-button>
+          <el-button type="primary" :disabled="submitting" @click="scanAgain">Kết nối thiết bị khác</el-button>
+          <el-button :loading="submitting" @click="disconnect">Ngắt kết nối và chạy độc lập</el-button>
         </div>
       </section>
-      <section v-else-if="view === 'confirm' && candidate" class="connectionInfo" aria-label="连接目标">
+      <section v-else-if="view === 'confirm' && candidate" class="connectionInfo" aria-label="Thiết bị đích">
         <icon-device-desktop :size="40" aria-hidden="true" />
-        <el-tag>已识别设备</el-tag>
+        <el-tag>Đã nhận diện thiết bị</el-tag>
         <h3>{{ candidate.name }}</h3>
         <code>{{ candidate.url }}</code>
-        <p class="description">连接后将使用对方的项目与配置。请确认这是你要连接的设备。</p>
+        <p class="description">Sau khi kết nối sẽ sử dụng dự án và cấu hình của thiết bị kia. Hãy xác nhận đúng thiết bị bạn muốn kết nối.</p>
         <el-alert v-if="candidateVersionWarning" :title="candidateVersionWarning" type="warning" :closable="false" showIcon />
         <div class="connectionActions">
-          <el-button type="primary" :loading="submitting" @click="connect">连接这个设备</el-button>
-          <el-button :disabled="submitting" @click="scanAgain">重新扫描</el-button>
+          <el-button type="primary" :loading="submitting" @click="connect">Kết nối thiết bị này</el-button>
+          <el-button :disabled="submitting" @click="scanAgain">Quét lại</el-button>
         </div>
       </section>
-      <section v-else-if="view === 'manual'" class="manualPanel" aria-label="手动连接">
-        <p class="description">在对方“设备互联”中展开“手动连接信息”，查看地址和配对码。</p>
+      <section v-else-if="view === 'manual'" class="manualPanel" aria-label="Kết nối thủ công">
+        <p class="description">Trong mục Liên kết thiết bị của máy kia, mở Thông tin kết nối thủ công để xem địa chỉ và mã ghép nối.</p>
         <el-form labelPosition="top" size="large" :disabled="submitting" @submit.prevent="connectManually">
-          <el-form-item label="服务器地址">
-            <el-input v-model="manualUrl" placeholder="192.168.1.10:43123 或 https://example.com" inputmode="url" autocomplete="off" autocapitalize="none" :spellcheck="false" aria-label="服务器地址" />
+          <el-form-item label="Địa chỉ máy chủ">
+            <el-input v-model="manualUrl" placeholder="192.168.1.10:43123 hoặc https://example.com" inputmode="url" autocomplete="off" autocapitalize="none" :spellcheck="false" aria-label="Địa chỉ máy chủ" />
           </el-form-item>
-          <el-form-item label="12 位配对码">
-            <el-input v-model="manualCode" placeholder="1234 5678 9012" inputmode="numeric" autocomplete="off" :maxlength="14" aria-label="12 位配对码" />
+          <el-form-item label="Mã ghép nối 12 chữ số">
+            <el-input v-model="manualCode" placeholder="1234 5678 9012" inputmode="numeric" autocomplete="off" :maxlength="14" aria-label="Mã ghép nối 12 chữ số" />
           </el-form-item>
-          <p class="description">连接后使用对方的项目与配置。</p>
+          <p class="description">Sau khi kết nối, sẽ sử dụng dự án và cấu hình của thiết bị kia.</p>
           <div class="manualActions">
-            <el-button type="primary" nativeType="submit" :loading="submitting" :disabled="loading">连接</el-button>
-            <el-button v-if="mobileConnection.mode === 'remote'" link :disabled="submitting" @click="showCurrent">返回当前连接</el-button>
+            <el-button type="primary" nativeType="submit" :loading="submitting" :disabled="loading">Kết nối</el-button>
+            <el-button v-if="mobileConnection.mode === 'remote'" link :disabled="submitting" @click="showCurrent">Quay lại kết nối hiện tại</el-button>
           </div>
         </el-form>
       </section>
-      <section v-else class="scanPanel" aria-label="扫描二维码">
+      <section v-else class="scanPanel" aria-label="Quét mã QR">
         <div class="scanInfo">
-          <h3>扫描另一台设备上的二维码</h3>
-          <p class="description">在对方“设置 → 设备互联”中开启共享。<br />局域网连接时，请使用同一 Wi-Fi。</p>
+          <h3>Quét mã QR trên thiết bị khác</h3>
+          <p class="description">Trên thiết bị kia, bật chia sẻ trong Cài đặt → Liên kết thiết bị. Khi kết nối qua mạng nội bộ, hãy dùng cùng mạng Wi-Fi.</p>
         </div>
         <div class="scannerView">
-          <video v-show="scanning" ref="video" autoplay muted playsinline aria-label="扫码摄像头预览" />
+          <video v-show="scanning" ref="video" autoplay muted playsinline aria-label="Xem trước camera quét mã" />
           <svg class="scannerFrame" viewBox="0 0 200 200" fill="none" aria-hidden="true"><path d="M1 25V1H25M175 1H199V25M199 175V199H175M25 199H1V175" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
           <div v-if="!scanning" class="scannerHint">
             <icon-qrcode :size="40" aria-hidden="true" />
-            <span role="status">{{ starting ? '正在开启摄像头…' : cameraError || '将二维码放入框内' }}</span>
-            <el-button type="primary" :icon="IconCamera" :loading="starting" :disabled="loading || submitting" @click="startCamera">开启摄像头</el-button>
+            <span role="status">{{ starting ? 'Đang mở camera…' : cameraError || 'Đưa mã QR vào khung hình' }}</span>
+            <el-button type="primary" :icon="IconCamera" :loading="starting" :disabled="loading || submitting" @click="startCamera">Bật camera</el-button>
           </div>
         </div>
         <div class="scanActions">
-          <el-button :icon="IconPhoto" :loading="readingImage" :disabled="loading || submitting" @click="imageInput?.click()">{{ isDesktop ? '选择二维码图片' : '从相册选择' }}</el-button>
+          <el-button :icon="IconPhoto" :loading="readingImage" :disabled="loading || submitting" @click="imageInput?.click()">{{ isDesktop ? 'Chọn ảnh mã QR' : 'Chọn từ thư viện ảnh' }}</el-button>
           <input ref="imageInput" class="imageInput" type="file" accept="image/*" @change="readImage" />
-          <el-button v-if="mobileConnection.mode === 'remote'" link :disabled="submitting" @click="showCurrent">返回当前连接</el-button>
+          <el-button v-if="mobileConnection.mode === 'remote'" link :disabled="submitting" @click="showCurrent">Quay lại kết nối hiện tại</el-button>
         </div>
       </section>
       <el-alert v-if="error" :title="error" type="error" :closable="false" showIcon />
-      <p v-if="restarting" class="description" role="status">正在切换连接…</p>
+      <p v-if="restarting" class="description" role="status">Đang chuyển kết nối…</p>
       </div>
     </div>
   </el-dialog>
@@ -98,8 +98,8 @@ type Candidate = { name: string; url: string; qrCode: string; appVersion?: strin
 const visible = defineModel<boolean>({ default: false });
 const view = ref<"scan" | "manual" | "confirm" | "current">("scan");
 const connectionModes = [
-  { label: "扫码连接", value: "scan", icon: IconQrcode },
-  { label: "手动输入", value: "manual", icon: IconKeyboard },
+  { label: "Kết nối bằng mã QR", value: "scan", icon: IconQrcode },
+  { label: "Nhập thủ công", value: "manual", icon: IconKeyboard },
 ];
 const choosingConnection = computed(() => !deviceHubEnabled.value && deviceConnectionSupported.value && (view.value === "scan" || view.value === "manual"));
 const manualUrl = ref("");
@@ -149,11 +149,11 @@ function decodeImage(source: CanvasImageSource, width: number, height: number) {
 
 function recognize(qrCode: string) {
   try {
-    if (qrCode.length > 4096) throw new Error("请扫描 Toonflow 的设备互联二维码");
+    if (qrCode.length > 4096) throw new Error("Hãy quét mã QR liên kết thiết bị Toonflow");
     const value = JSON.parse(qrCode);
     if (!value || value.type !== "toonflowMobile" || value.version !== 1 || typeof value.name !== "string" || !value.name.trim()
       || typeof value.url !== "string" || typeof value.code !== "string" || !/^[\w-]{32,256}$/.test(value.code)) {
-      throw new Error("请扫描 Toonflow 的设备互联二维码");
+      throw new Error("Hãy quét mã QR liên kết thiết bị Toonflow");
     }
     const url = normalizeConnectionUrl(value.url);
     stopCamera();
@@ -162,7 +162,7 @@ function recognize(qrCode: string) {
     view.value = "confirm";
     return true;
   } catch (cause) {
-    error.value = cause instanceof SyntaxError ? "请扫描 Toonflow 的设备互联二维码" : errorMessage(cause);
+    error.value = cause instanceof SyntaxError ? "Hãy quét mã QR liên kết thiết bị Toonflow" : errorMessage(cause);
     return false;
   }
 }
@@ -178,7 +178,7 @@ function normalizeConnectionUrl(value: string) {
     if ((url.protocol !== "https:" && !(url.protocol === "http:" && privateHost)) || url.username || url.password || url.pathname !== "/" || url.search || url.hash) throw new Error();
     return url.origin;
   } catch {
-    throw new Error("请输入局域网地址或公网 HTTPS 地址，不能包含路径、账号或参数");
+    throw new Error("Hãy nhập địa chỉ mạng nội bộ hoặc địa chỉ HTTPS công khai, không chứa đường dẫn, tài khoản hay tham số");
   }
 }
 
@@ -190,7 +190,7 @@ async function startCamera() {
   error.value = "";
   cameraError.value = "";
   try {
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error("当前环境无法使用摄像头，请选择二维码图片或手动输入");
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("Môi trường hiện tại không hỗ trợ camera; hãy chọn ảnh mã QR hoặc nhập thủ công");
     const media = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" } } });
     if (run !== cameraRun || !visible.value || document.hidden) {
       media.getTracks().forEach(track => track.stop());
@@ -200,7 +200,7 @@ async function startCamera() {
     scanning.value = true;
     await nextTick();
     if (run !== cameraRun) return;
-    if (!video.value) throw new Error("无法开启扫码预览，请重试");
+    if (!video.value) throw new Error("Không mở được bản xem trước camera, vui lòng thử lại");
     video.value.srcObject = media;
     await video.value.play();
     if (run !== cameraRun) return;
@@ -221,8 +221,8 @@ async function startCamera() {
     if (run !== cameraRun) return;
     stopCamera();
     cameraError.value = cause instanceof DOMException && ["NotAllowedError", "PermissionDeniedError"].includes(cause.name)
-      ? "请允许摄像头访问，或选择二维码图片"
-      : "暂时无法开启摄像头，可选择二维码图片";
+      ? "Hãy cho phép truy cập camera hoặc chọn ảnh mã QR"
+      : "Tạm thời không mở được camera; bạn có thể chọn ảnh mã QR";
   } finally {
     if (run === cameraRun) starting.value = false;
   }
@@ -269,13 +269,13 @@ async function readImage(event: Event) {
     const image = new Image();
     await new Promise<void>((resolve, reject) => {
       image.onload = () => resolve();
-      image.onerror = () => reject(new Error("无法读取图片，请选择包含二维码的图片"));
+      image.onerror = () => reject(new Error("Không đọc được ảnh; hãy chọn ảnh có mã QR"));
       image.src = url;
     });
     if (!visible.value || run !== cameraRun) return;
     const result = decodeImage(image, image.naturalWidth, image.naturalHeight);
     if (result) recognize(result);
-    else error.value = "图片中未识别到二维码，请选择更清晰的图片";
+    else error.value = "Không nhận diện được mã QR trong ảnh; hãy chọn ảnh rõ nét hơn";
   } catch (cause) {
     if (visible.value && run === cameraRun) error.value = errorMessage(cause);
   } finally {
@@ -299,7 +299,7 @@ async function connectManually() {
   try {
     const url = normalizeConnectionUrl(manualUrl.value);
     const code = manualCode.value.replace(/[\s-]/g, "");
-    if (!/^\d{12}$/.test(code)) throw new Error("请输入对方显示的 12 位数字配对码");
+    if (!/^\d{12}$/.test(code)) throw new Error("Hãy nhập mã ghép nối gồm 12 chữ số hiển thị trên thiết bị kia");
     await changeConnection("connect", { url, code });
   } catch (cause) {
     error.value = errorMessage(cause);

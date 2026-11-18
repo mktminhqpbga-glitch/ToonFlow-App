@@ -64,7 +64,7 @@
       </template>
       <background v-if="canvasId" :gap="16" patternColor="var(--el-border-color)" />
       <div v-if="!canvasId" class="canvasOverlay" role="status" @contextmenu.prevent @dragover.prevent @drop.prevent>
-        从左上角打开一个画布，就可以开始创作啦
+        Mở một Canvas ở góc trên bên trái để bắt đầu sáng tạo
       </div>
       <canvasEmpty
         v-if="active && !settingsVisible && project?.directory && canvasReady && !flow.getNodes.value.length"
@@ -77,9 +77,6 @@
       <canvasControls
         v-if="canvasId"
         ref="canvasControlsRef"
-        :availableNodes="availableNodes"
-        :createPresetNode="createPresetNode"
-        :addCharacterToCanvas="addCharacterToCanvas"
         v-model:assetsVisible="assetsVisible"
         v-model:snapEnabled="snapEnabled"
         v-model:showEdges="showEdges"
@@ -110,7 +107,7 @@
         :disabled="!canvasId || !project?.directory" />
       <nodeSearch ref="nodeSearchRef" :disabled="!active || settingsVisible || !canvasId || !project?.directory" />
     </vue-flow>
-    <el-dialog v-if="currentUser?.role !== 'user'" :modelValue="!!assetSelection" class="referenceAssetDialog" title="全局素材库" width="min(1200px, 88vw)" alignCenter appendToBody destroyOnClose @update:modelValue="finishAssetSelection()">
+    <el-dialog v-if="currentUser?.role !== 'user'" :modelValue="!!assetSelection" class="referenceAssetDialog" title="Thư viện tài nguyên toàn cục" width="min(1200px, 88vw)" alignCenter appendToBody destroyOnClose @update:modelValue="finishAssetSelection()">
       <assetLibrary :modelValue="!!assetSelection" expanded :canSelect="canSelectAsset" :selecting="assetSelecting" @select="selectAsset" />
     </el-dialog>
     <teleport to="body">
@@ -119,8 +116,8 @@
         class="edgeDisconnect"
         type="danger"
         circle
-        aria-label="断开连接"
-        title="断开连接"
+        aria-label="Ngắt kết nối"
+        title="Ngắt kết nối"
         :style="{ left: `${edgeDisconnect.x}px`, top: `${edgeDisconnect.y}px` }"
         @click.stop="
           removeEdges(edgeDisconnect.id);
@@ -135,10 +132,11 @@
 
 <script setup lang="ts">
 import { t, translate } from "@toonflow/i18n/vue";
+import * as i18nRuntime from "@toonflow/i18n/vue";
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, onScopeDispose, provide, ref, shallowReactive, shallowRef, watch } from "vue";
 import axios from "axios";
 import { debounce } from "lodash-es";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { actualPlatform, isMobile } from "@/lib/platform";
 import { storeToRefs } from "pinia";
 import { IconUnlink } from "@tabler/icons-vue";
@@ -180,7 +178,6 @@ import canvasControls from "./components/canvasControls.vue";
 import canvasEmpty from "./components/canvasEmpty.vue";
 import canvasViewportHint from "./components/canvasViewportHint.vue";
 import assetLibrary from "./components/assetLibrary.vue";
-import type { CharacterRecord } from "./components/characterStudio.vue";
 import groupNode from "./components/groupNode.vue";
 import selectionToolbar from "./components/selectionToolbar.vue";
 import nodeSearch from "./components/nodeSearch.vue";
@@ -196,6 +193,7 @@ import { generalSettings } from "@/stores/settings";
 import { getShortcutBindings, shortcutLabel, shortcutMatches, shortcutPressed } from "@/lib/canvasShortcuts";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import anonymousData from "@/lib/anonymousData";
+import type { PromptItem } from "@/lib/promptLibrary";
 import { createClipboardMediaFile, dropCanvasFiles, getCanvasFileType, getClipboardMediaFiles, importCanvasFiles, isCanvasFileDrag } from "./canvasDrop";
 import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
@@ -285,7 +283,7 @@ const getNodeTools = useNodeToolsContext();
 const { addNodes, addEdges, removeEdges, findEdge, findNode, toObject, viewport, screenToFlowCoordinate } = flow;
 provide("copyNodeToClipboard", async (node: Parameters<typeof copyNodeToClipboard>[0]) => {
   const directory = project.value?.directory;
-  if (!directory) throw new Error("请先选择工作目录");
+  if (!directory) throw new Error("Hãy chọn thư mục làm việc trước");
   if (await copyImageNodeToClipboard(directory, node)) return;
   await copyNodeToClipboard(node, directory);
 });
@@ -298,7 +296,7 @@ type AssetReference = { source: string; sourceHandle: string };
 type AssetSelection = { target: GraphNode; targetHandleId: string; directory: string; sourceId: string; controller: AbortController; signal: AbortSignal; resolve: (reference?: AssetReference) => void };
 const assetSelection = shallowRef<AssetSelection>();
 const assetSelecting = ref(false);
-provide("selectNodeAsset", (targetId: string, targetHandleId: string, assetPath?: string) => {
+provide("selectNodeAsset", (targetId: string, targetHandleId: string) => {
   finishAssetSelection();
   const target = findNode(targetId);
   const directory = project.value?.directory;
@@ -307,15 +305,6 @@ provide("selectNodeAsset", (targetId: string, targetHandleId: string, assetPath?
     const controller = new AbortController();
     const signal = AbortSignal.any([controller.signal, canvasController.signal, workspaceController.signal]);
     assetSelection.value = { target, targetHandleId, directory, sourceId: crypto.randomUUID(), controller, signal, resolve };
-    if (assetPath !== undefined) {
-      const name = assetPath.split("/").pop() ?? "";
-      const entry = { name, path: assetPath, type: "file" };
-      if (canSelectAsset(entry)) {
-        void selectAsset(entry).finally(() => {
-          if (assetSelection.value?.signal === signal) finishAssetSelection();
-        });
-      } else finishAssetSelection();
-    }
     signal.addEventListener("abort", () => {
       if (assetSelection.value?.signal === signal) finishAssetSelection();
     }, { once: true });
@@ -370,11 +359,11 @@ async function selectAsset(entry: { name: string; path: string; type: string }) 
         if (!importedId) return;
         created = findNode(importedId);
         await nextTick();
-        if (!created || findNode(importedId) !== created) throw new Error("素材节点已移除，请重新选择");
+        if (!created || findNode(importedId) !== created) throw new Error("Node tài nguyên đã bị xóa, vui lòng chọn lại");
         await useNodeEvent(importedId, flow).emit("save");
         selection.signal.throwIfAborted();
         const connection = assetConnection(created.type ?? "", selection, created);
-        if (!connection) throw new Error("当前节点无法引用该素材");
+        if (!connection) throw new Error("Node hiện tại không thể tham chiếu tài nguyên này");
         const width = created.dimensions.width || 360;
         created.position.x = target.computedPosition.x - width - 80;
         addEdges(connection);
@@ -406,7 +395,7 @@ const { createCanvasContext, getNodeRevision } = useCanvasTools({
     if (type === "node") await loadRemoteNodes(name, true);
   },
   menu() {
-    if (!canvasMenuRef.value) throw new Error("画布菜单尚未就绪");
+    if (!canvasMenuRef.value) throw new Error("Menu Canvas chưa sẵn sàng");
     return canvasMenuRef.value;
   },
   getCanvasBinding: () => ({ id: canvasId.value, signal: canvasController.signal }),
@@ -426,7 +415,7 @@ provide("nodePersistence", () => {
     canvasPath,
     async save(signal?: AbortSignal) {
       signal?.throwIfAborted();
-      if (project.value?.directory !== directory || canvasId.value !== canvasPath) throw new Error("画布已切换，无法保存节点任务");
+      if (project.value?.directory !== directory || canvasId.value !== canvasPath) throw new Error("Đã chuyển Canvas, không thể lưu tác vụ của node");
       let abort = () => {};
       try {
         const saving = flushCanvasSave();
@@ -436,16 +425,15 @@ provide("nodePersistence", () => {
         })]) : saving);
       } finally { signal?.removeEventListener("abort", abort); }
       signal?.throwIfAborted();
-      if (project.value?.directory !== directory || canvasId.value !== canvasPath) throw new Error("画布已切换，无法确认节点任务保存结果");
+      if (project.value?.directory !== directory || canvasId.value !== canvasPath) throw new Error("Đã chuyển Canvas, không thể xác nhận kết quả lưu tác vụ node");
     },
   };
 });
-defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, importWorkspaceMedia,
-  openMaterialPresets: () => { if (props.active && !props.settingsVisible && canvasReady.value) canvasControlsRef.value?.openMaterialPresets(); },
-  openCharacterStudio: () => { if (props.active && !props.settingsVisible && canvasReady.value) canvasControlsRef.value?.openCharacterStudio(); }, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+  applyPromptTemplate,
   openNodeSearch: () => nodeSearchRef.value?.open(),
   getCanvases: (signal?: AbortSignal) => {
-    if (!canvasMenuRef.value) throw new Error("画布菜单尚未就绪");
+    if (!canvasMenuRef.value) throw new Error("Menu Canvas chưa sẵn sàng");
     return canvasMenuRef.value.getCanvases(signal);
   },
   syncCanvasPath: (previous: string, target: string) => canvasMenuRef.value?.syncCanvasPath(previous, target),
@@ -464,7 +452,7 @@ async function prepareCanvasDelete() {
   function checkCanvas() {
     signal.throwIfAborted();
     if (!directory || directory !== project.value?.directory || !fileName || fileName !== canvasId.value) {
-      throw new Error("工作区或画布已切换，请重新删除");
+      throw new Error("Không gian làm việc hoặc Canvas đã thay đổi, vui lòng xóa lại");
     }
   }
   checkCanvas();
@@ -472,25 +460,25 @@ async function prepareCanvasDelete() {
   checkCanvas();
   // 宿主已暂停画布保存；这里只执行节点生命周期，文件删除成功后由宿主取消保存并卸载。
   for (const node of nodes) {
-    if (flow.findNode(node.id) !== node) throw new Error("画布节点已变化，请重新删除");
+    if (flow.findNode(node.id) !== node) throw new Error("Node Canvas đã thay đổi, vui lòng xóa lại");
     await useNodeEvent(node.id, flow).emit("delete");
     checkCanvas();
-    if (flow.findNode(node.id) !== node) throw new Error("画布节点已变化，请重新删除");
+    if (flow.findNode(node.id) !== node) throw new Error("Node Canvas đã thay đổi, vui lòng xóa lại");
   }
   if (flow.getNodes.value.length !== nodes.length || nodes.some(node => flow.findNode(node.id) !== node)) {
-    throw new Error("画布节点已变化，请重新删除");
+    throw new Error("Node Canvas đã thay đổi, vui lòng xóa lại");
   }
 }
 
 type DocumentNodeData = { label?: string; handles?: NodeHandle[]; outputs?: Record<string, NodeOutput | undefined>; textPath?: string };
 
 function checkDocumentDirectory(directory: string) {
-  if (!directory || directory !== project.value?.directory) throw new Error("工作目录已切换，请重新打开节点");
+  if (!directory || directory !== project.value?.directory) throw new Error("Thư mục làm việc đã thay đổi, hãy mở lại node");
 }
 
 function observeDocumentNode(directory: string, canvasPath: string, nodeId: string, onState: (state: NodeDocumentState) => void) {
   checkDocumentDirectory(directory);
-  if (canvasId.value !== canvasPath || !findNode(nodeId)) throw new Error("节点不存在，请刷新文件树");
+  if (canvasId.value !== canvasPath || !findNode(nodeId)) throw new Error("Node không tồn tại, hãy làm mới cây tệp");
   const stop = watch((): NodeDocumentState => {
     const node = findNode(nodeId);
     const state = nodeDocument.states.get(nodeId);
@@ -504,7 +492,7 @@ function observeDocumentNode(directory: string, canvasPath: string, nodeId: stri
     release,
     async flushSave() {
       checkDocumentDirectory(directory);
-      if (!findNode(nodeId)) throw new Error("节点已删除，请刷新文件树");
+      if (!findNode(nodeId)) throw new Error("Node đã bị xóa, hãy làm mới cây tệp");
       await flushCanvasSave();
     },
   };
@@ -512,19 +500,19 @@ function observeDocumentNode(directory: string, canvasPath: string, nodeId: stri
 
 async function mountDocumentNode(directory: string, canvasPath: string, nodeId: string, target: HTMLElement) {
   checkDocumentDirectory(directory);
-  if (canvasId.value !== canvasPath) throw new Error("画布已切换，请重新打开节点");
+  if (canvasId.value !== canvasPath) throw new Error("Canvas đã thay đổi, hãy mở lại node");
   await nextTick();
   checkDocumentDirectory(directory);
   const node = findNode(nodeId);
-  if (!node) throw new Error("节点已删除，请刷新文件树");
+  if (!node) throw new Error("Node đã bị xóa, hãy làm mới cây tệp");
   if (nodeErrors.value[node.type]) throw new Error(nodeErrors.value[node.type]);
   const mount = nodeDocument.mounts.get(nodeId);
-  if (!mount) throw new Error("当前节点未提供文档视图，请确认节点正常加载并更新节点插件");
+  if (!mount) throw new Error("Node hiện tại không cung cấp chế độ xem tài liệu, hãy kiểm tra node đã tải và cập nhật plugin node");
   const release = mount(target);
   try {
     await nextTick();
     checkDocumentDirectory(directory);
-    if (!target.isConnected || !target.querySelector(".documentNode")) throw new Error("节点文档视图加载失败，请重新打开节点");
+    if (!target.isConnected || !target.querySelector(".documentNode")) throw new Error("Không tải được chế độ xem tài liệu của node, hãy mở lại node");
     return release;
   } catch (error) {
     release();
@@ -551,12 +539,12 @@ async function readDocumentCanvas(directory: string, canvasPath: string, nodeId:
   const files = useWorkspaceFiles(directory);
   const canvas = await files.readJson<{ toonflowCanvas?: boolean; nodes?: Node<DocumentNodeData>[] }>(canvasPath);
   checkDocumentDirectory(directory);
-  if (canvas?.toonflowCanvas !== true || !Array.isArray(canvas.nodes)) throw new Error("文件不是有效画布");
+  if (canvas?.toonflowCanvas !== true || !Array.isArray(canvas.nodes)) throw new Error("Tệp không phải Canvas hợp lệ");
   const node = canvas.nodes.find((item) => item && item.id === nodeId);
-  if (!node) throw new Error("节点已删除，请刷新文件树");
-  if (node.data !== undefined && (!node.data || typeof node.data !== "object" || Array.isArray(node.data))) throw new Error("节点数据无效");
+  if (!node) throw new Error("Node đã bị xóa, hãy làm mới cây tệp");
+  if (node.data !== undefined && (!node.data || typeof node.data !== "object" || Array.isArray(node.data))) throw new Error("Dữ liệu node không hợp lệ");
   const liveNode = canvasId.value === canvasPath ? findNode(nodeId) : undefined;
-  if (canvasId.value === canvasPath && !liveNode) throw new Error("节点已删除，请刷新文件树");
+  if (canvasId.value === canvasPath && !liveNode) throw new Error("Node đã bị xóa, hãy làm mới cây tệp");
   const textPath = node.data?.textPath;
   if (
     textPath !== undefined &&
@@ -566,7 +554,7 @@ async function readDocumentCanvas(directory: string, canvasPath: string, nodeId:
       textPath.includes("\0") ||
       textPath.split(/[\\/]/).includes(".."))
   )
-    throw new Error("文本文件路径必须位于工作区内");
+    throw new Error("Đường dẫn tệp văn bản phải nằm trong không gian làm việc");
   return { files, canvas, node, liveNode, textPath };
 }
 
@@ -595,11 +583,11 @@ async function saveDocumentNode(directory: string, canvasPath: string, nodeId: s
   checkDocumentDirectory(directory);
   await flushCanvasSave(async () => {
     const { files, canvas, node, liveNode, textPath } = await readDocumentCanvas(directory, canvasPath, nodeId);
-    if (!documentHandles(liveNode ?? node).some((handle) => handle.id === handleId)) throw new Error("文本输出已删除，请重新打开节点");
+    if (!documentHandles(liveNode ?? node).some((handle) => handle.id === handleId)) throw new Error("Đầu ra văn bản đã bị xóa, hãy mở lại node");
     if (expectedText !== undefined) {
       const output = (liveNode ?? node).data?.outputs?.[handleId];
       const currentText = output?.dataType === "STRING" && typeof output.value === "string" ? output.value : textPath === undefined ? "" : await files.readText(textPath);
-      if (currentText !== expectedText) throw new Error("文档内容已变化，请重新读取后编辑");
+      if (currentText !== expectedText) throw new Error("Nội dung tài liệu đã thay đổi, hãy đọc lại trước khi sửa");
     }
     if (liveNode?.type === "remote-textNode") {
       await getNodeTools().call({ nodeId, name: "node:setText", args: { text } }, canvasController.signal);
@@ -646,7 +634,7 @@ async function dropFiles(event: DragEvent) {
   try {
     await canvasHistory.batch(() => dropCanvasFiles(event, { directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow }));
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "文件导入失败");
+    ElMessage.error(error instanceof Error ? error.message : "Nhập tệp thất bại");
   }
 }
 
@@ -663,7 +651,7 @@ function selectFiles(position: { x: number; y: number }) {
     try {
       await canvasHistory.batch(async () => { await importCanvasFiles(files, position, context); });
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "文件导入失败");
+      ElMessage.error(error instanceof Error ? error.message : "Nhập tệp thất bại");
     }
   };
   input.click();
@@ -671,61 +659,6 @@ function selectFiles(position: { x: number; y: number }) {
 
 function openNodeMenu(event: MouseEvent) {
   if (event.target instanceof Element && event.target.classList.contains("vue-flow__pane")) nodeMenuRef.value?.openMenu(event, true);
-}
-
-async function addCharacterToCanvas(character: CharacterRecord): Promise<boolean> {
-  const directory = project.value?.directory;
-  if (!props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !directory || !character.images.length) return false;
-  const rect = canvasElement.value?.getBoundingClientRect();
-  if (!rect) return false;
-  const origin = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-  const files = useWorkspaceFiles(directory);
-  const imported: string[] = [];
-  await canvasHistory.batch(async () => {
-    for (const [index, image] of character.images.entries()) {
-      canvasController.signal.throwIfAborted();
-      const data = await files.read(image.path);
-      const createdIds = await importCanvasFiles([new File([data], image.name, { type: image.mimeType })],
-        { x: origin.x - 200 + index * 40, y: origin.y - 160 + index * 50 },
-        { directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow });
-      for (const id of createdIds) {
-        const created = findNode(id);
-        if (created) Object.assign(created.data, { characterId: character.id, characterReferencePath: image.path });
-        imported.push(id);
-      }
-    }
-  });
-  if (!imported.length) return false;
-  flow.removeSelectedElements();
-  const nodes = imported.map(id => findNode(id)).filter((node): node is NonNullable<typeof node> => !!node);
-  if (nodes.length) flow.addSelectedNodes(nodes);
-  return true;
-}
-
-async function createPresetNode(preset: { nodeType: string; title: string; prompt: string }): Promise<boolean> {
-  const directory = project.value?.directory;
-  if (!props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !directory
-    || !availableNodes.value.some(node => node.type === preset.nodeType) || !preset.prompt.trim()) return false;
-  const rect = canvasElement.value?.getBoundingClientRect();
-  if (!rect) return false;
-  const center = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-  const id = crypto.randomUUID();
-  const prompt = preset.prompt.trim();
-  await canvasHistory.batch(async () => {
-    addNodes({
-      id,
-      type: preset.nodeType,
-      position: { x: center.x - 200, y: center.y - 140 },
-      data: { label: preset.title, prompt, promptModel: [[{ type: "Write", text: prompt }]] },
-    });
-    await nextTick();
-    if (!findNode(id)) throw new Error("Không thể tạo node từ thư viện vật liệu");
-  });
-  const created = findNode(id);
-  if (!created) return false;
-  flow.removeSelectedElements();
-  flow.addSelectedNodes([created]);
-  return true;
 }
 
 function createEmptyNode(type: string) {
@@ -744,6 +677,77 @@ function addNodeAtPointer() {
   void nodeMenuRef.value?.openMenu(new MouseEvent("contextmenu", { clientX: position.x, clientY: position.y }), true);
 }
 
+/** Prepare a prompt without invoking generation. Uses native Canvas history,
+ * existing workspace image import and node-data autosave contracts. */
+async function applyPromptTemplate(item: PromptItem, options: { nodeId?: string; includeReferences?: boolean } = {}): Promise<boolean> {
+  const directory = project.value?.directory;
+  if (!directory || !props.active || props.settingsVisible || !canvasId.value || !canvasReady.value || !item.prompt?.trim()) return false;
+  const type = "remote-imageGenerationNode";
+  if (!availableNodes.value.some(node => node.type === type)) throw new Error("Hãy cài hoặc bật node Tạo ảnh để sử dụng thư viện prompt.");
+  const target = flow.getNodes.value.find(n => n.type === type && n.id === options.nodeId)
+    || flow.getNodes.value.find(n => n.type === type && n.selected);
+  const activeTask = target?.data?.mediaTask as { state?: string; applied?: boolean } | undefined;
+  if (activeTask && activeTask.state !== "failed" && activeTask.state !== "cancelled"
+    && (activeTask.state !== "succeeded" || !activeTask.applied))
+    throw new Error("Node đang có tác vụ tạo ảnh chưa hoàn tất hoặc chưa xác nhận. Hãy xử lý tác vụ trước khi thay prompt.");
+  let prompt = item.prompt.trim();
+  const current = typeof target?.data?.prompt === "string" ? target.data.prompt.trim() : "";
+  if (current && current !== prompt) {
+    const action = await ElMessageBox.confirm("Node đang có prompt. Bạn muốn thay thế hay chèn thêm mẫu mới?", "Dùng mẫu prompt", {
+      confirmButtonText: "Thay thế", cancelButtonText: "Chèn thêm", distinguishCancelAndClose: true, type: "warning",
+    }).then(() => "replace" as const, reason => reason === "cancel" ? "append" as const : "close" as const);
+    if (action === "close") return false;
+    if (action === "append") prompt = `${current}\n\n${prompt}`;
+  }
+  const references = options.includeReferences ? item.referenceImageUrls.filter(url => /^https:\/\//i.test(url)).slice(0, 8) : [];
+  if (references.length && !availableNodes.value.some(node => node.type === "remote-imageNode"))
+    throw new Error("Node ảnh tham chiếu chưa được cài đặt. Hãy bỏ chọn ảnh tham chiếu hoặc bật node Ảnh.");
+  const imported: { path: string; mimeType: string; url: string }[] = [];
+  if (references.length) {
+    const workspaceFiles = useWorkspaceFiles(directory);
+    for (const url of references) {
+      const result = await workspaceFiles.importImage(url);
+      imported.push({ ...result, url });
+    }
+  }
+  const rect = canvasElement.value?.getBoundingClientRect();
+  if (!rect) return false;
+  const center = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  await canvasHistory.batch(async () => {
+    const targetId = target?.id || crypto.randomUUID();
+    const position = target?.position || { x: center.x - 200, y: center.y - 170 };
+    const promptModel = prompt.split("\n").map(text => [{ type: "Write", text }]);
+    if (target) {
+      target.data.prompt = prompt;
+      target.data.promptModel = promptModel;
+    } else {
+      addNodes({ id: targetId, type, position, data: { label: "Tạo ảnh", prompt, promptModel } });
+    }
+    if (imported.length) {
+      await nextTick();
+      const targetNode = findNode(targetId);
+      if (!targetNode) throw new Error("Không thể xác định node tạo ảnh.");
+      const edges = [];
+      for (const [index, reference] of imported.entries()) {
+        const sourceId = crypto.randomUUID();
+        addNodes({ id: sourceId, type: "remote-imageNode",
+          position: { x: position.x - 440, y: position.y + index * 220 },
+          data: { label: `Tham chiếu ${index + 1} · ${item.title}`,
+            outputs: { image: { dataType: "IMAGE", value: { url: reference.path, mimeType: reference.mimeType } } } },
+        });
+        edges.push({ id: crypto.randomUUID(), source: sourceId, sourceHandle: "image", target: targetId, targetHandle: "in" });
+      }
+      await nextTick();
+      addEdges(edges);
+    }
+    flow.removeSelectedElements();
+    const selectedNode = findNode(targetId);
+    if (selectedNode) flow.addSelectedNodes([selectedNode]);
+  });
+  ElMessage.success(`Đã chuẩn bị prompt “${item.title}” trên Canvas. Nhấn Tạo ảnh khi bạn sẵn sàng.`);
+  return true;
+}
+
 async function changeHistory(direction: "undo" | "redo") {
   try {
     await canvasHistory[direction]();
@@ -751,10 +755,10 @@ async function changeHistory(direction: "undo" | "redo") {
   } catch (error) {
     ElMessage.error(
       axios.isAxiosError<{ message?: string }>(error)
-        ? error.response?.data.message || "恢复画布失败"
+        ? error.response?.data.message || "Khôi phục Canvas thất bại"
         : error instanceof Error
         ? error.message
-        : "恢复画布失败"
+        : "Khôi phục Canvas thất bại"
     );
   }
 }
@@ -778,13 +782,13 @@ const saveCanvas = debounce((directory: string, fileName: string) => {
       if (revision === saveRevision) canvasDirty.value = false;
     } catch (err) {
       saveError = err;
-      canvasSaveError.value = axios.isAxiosError<{ message?: string }>(err) ? err.response?.data.message || err.message : err instanceof Error ? err.message : "画布保存失败";
+      canvasSaveError.value = axios.isAxiosError<{ message?: string }>(err) ? err.response?.data.message || err.message : err instanceof Error ? err.message : "Lưu Canvas thất bại";
       ElMessage.error(
         axios.isAxiosError<{ message?: string }>(err)
-          ? err.response?.data.message || "画布保存失败"
+          ? err.response?.data.message || "Lưu Canvas thất bại"
           : err instanceof Error
           ? err.message
-          : "画布保存失败"
+          : "Lưu Canvas thất bại"
       );
     }
   });
@@ -900,7 +904,7 @@ watch(
   [() => project.value?.directory, canvasId],
   ([directory, fileName], [previousDirectory, previousFileName]) => {
     if (directory !== previousDirectory) {
-      workspaceController.abort(new Error("工作区已切换，本轮画布操作已停止"));
+      workspaceController.abort(new Error("Đã chuyển không gian làm việc, thao tác Canvas hiện tại đã dừng"));
       workspaceController = new AbortController();
     }
     edgeDisconnect.value = undefined;
@@ -909,7 +913,7 @@ watch(
     resetCanvasKeys();
     // 同一实例只在重新装载画布时失效；重命名仅更新保存路径。
     if (directory !== previousDirectory || !fileName || !previousFileName) {
-      canvasController.abort(new Error("画布已重新加载，本次画布调用已停止"));
+      canvasController.abort(new Error("Canvas đã tải lại, lần gọi Canvas này đã dừng"));
       canvasController = new AbortController();
     }
     if (!savePaused) saveCanvas.flush();
@@ -929,7 +933,7 @@ watch(() => props.active, (active) => {
 function flushCanvasSave(action?: () => Promise<void>): Promise<void> {
   // ACT: 完整保存及其文件操作串行执行，重命名暂停期间的显式保存也必须等待。
   const next = flushing.then(() => saveCanvasState(action)).then(() => { canvasSaveError.value = ""; }, error => {
-    canvasSaveError.value = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data.message || error.message : error instanceof Error ? error.message : "画布保存失败";
+    canvasSaveError.value = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data.message || error.message : error instanceof Error ? error.message : "Lưu Canvas thất bại";
     throw error;
   });
   flushing = next.catch(() => {});
@@ -937,16 +941,16 @@ function flushCanvasSave(action?: () => Promise<void>): Promise<void> {
 }
 
 async function saveCanvasState(action?: () => Promise<void>) {
-  if (saveCancelled) throw new Error("画布保存已取消");
+  if (saveCancelled) throw new Error("Đã hủy lưu Canvas");
   await Promise.all(flow.getNodes.value.map((node) => useNodeEvent(node.id, flow).emit("save")));
   await nextTick();
-  if (saveCancelled) throw new Error("画布保存已取消");
+  if (saveCancelled) throw new Error("Đã hủy lưu Canvas");
   if (saveError && project.value?.directory && canvasId.value) saveCanvas(project.value.directory, canvasId.value);
   if (action) savePaused = true;
   try {
     let revision: number;
     do {
-      if (saveCancelled) throw new Error("画布保存已取消");
+      if (saveCancelled) throw new Error("Đã hủy lưu Canvas");
       revision = saveRevision;
       if (changedWhilePaused && project.value?.directory && canvasId.value) {
         saveCanvas(project.value.directory, canvasId.value);
@@ -959,7 +963,7 @@ async function saveCanvasState(action?: () => Promise<void>) {
       await Promise.all(flow.getNodes.value.map((node) => useNodeEvent(node.id, flow).emit("save")));
       await nextTick();
     } while (revision !== saveRevision);
-    if (saveCancelled) throw new Error("画布保存已取消");
+    if (saveCancelled) throw new Error("Đã hủy lưu Canvas");
     await action?.();
   } finally {
     if (action && !saveCancelled) {
@@ -1021,7 +1025,7 @@ async function copySelectedNodes() {
   copyingNodes = true;
   try {
     if (nodes.length === 1 && await copyImageNodeToClipboard(directory, { data: nodes[0]!.data ?? {} })) {
-      ElMessage.success("已复制图片");
+      ElMessage.success("Đã sao chép ảnh");
       return;
     }
     const ids = new Set(nodes.map(node => node.id));
@@ -1036,11 +1040,11 @@ async function copySelectedNodes() {
         position: parentNode ? { ...saved.position } : { x: node.computedPosition.x, y: node.computedPosition.y } };
     }));
     signal.throwIfAborted();
-    if (nodes.some(node => findNode(node.id) !== node)) throw new Error("节点已变化，请重新复制");
+    if (nodes.some(node => findNode(node.id) !== node)) throw new Error("Node đã thay đổi, hãy sao chép lại");
     const edges = snapshot.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target));
     await copyNodesToClipboard(copies, edges, directory);
   } catch (error) {
-    if (!signal.aborted) ElMessage.error(error instanceof Error ? error.message : "节点复制失败");
+    if (!signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Sao chép node thất bại");
   } finally {
     copyingNodes = false;
   }
@@ -1060,7 +1064,7 @@ async function pasteNode(event: ClipboardEvent) {
   // ACT: 部分 WebView 不向 paste 事件暴露剪贴板文件，桌面端回退到原生剪贴板读取。
   if (!files.length && actualPlatform.isDesktop) files = await readClipboardFiles().catch(() => []);
   if (canvasSignal.aborted) return;
-  if (!files.length && text.trim()) files = [new File([text], "粘贴文本.txt", { type: "text/plain" })];
+  if (!files.length && text.trim()) files = [new File([text], "Văn bản đã dán.txt", { type: "text/plain" })];
   if (!files.length) return;
   event.preventDefault();
   const position = pastePosition();
@@ -1081,31 +1085,6 @@ async function pasteNodeAtCenter(command?: string) {
   if (position) await pasteClipboardNode(position, command);
 }
 
-// Import a real persisted batch result, not a preview URL or a temporary fake node.
-async function importWorkspaceMedia(path: string, mimeType: string): Promise<boolean> {
-  const directory = project.value?.directory;
-  const position = pastePosition();
-  if (!props.active || props.settingsVisible || !canvasReady.value || !directory || !position) return false;
-  if (!new RegExp("^batchResults/[0-9a-f-]{36}/(?:scene-[0-9]+/|joined-)[^/]+$", "i").test(path)
-    || !new RegExp("^(image/(png|jpeg|webp)|video/(mp4|webm|quicktime))$", "i").test(mimeType)) {
-    throw new Error("Đường dẫn hoặc định dạng kết quả batch không hợp lệ");
-  }
-  const signal = canvasController.signal;
-  const content = await useWorkspaceFiles(directory).read(path);
-  signal.throwIfAborted();
-  if (directory !== project.value?.directory) throw new Error("Workspace đã thay đổi trong khi tải kết quả");
-  const name = path.split("/").pop()!;
-  const file = new File([content], name, { type: mimeType });
-  let importedIds: string[] = [];
-  await canvasHistory.batch(async () => {
-    importedIds = await importCanvasFiles([file], position,
-      { directory, availableNodes: availableNodes.value, signal, flow });
-    if (!importedIds.length) throw new Error("Không thể tạo node media từ kết quả batch");
-  });
-  await flushCanvasSave();
-  return importedIds.length > 0;
-}
-
 async function importCanvasContent(files: File[], position: { x: number; y: number }) {
   const directory = project.value?.directory;
   if (!directory) return false;
@@ -1114,7 +1093,7 @@ async function importCanvasContent(files: File[], position: { x: number; y: numb
     await canvasHistory.batch(async () => { await importCanvasFiles(files, position, { directory, availableNodes: availableNodes.value, signal: canvasSignal, flow }); });
     return true;
   } catch (error) {
-    if (!canvasSignal.aborted) ElMessage.error(error instanceof Error ? error.message : "剪贴板内容导入失败");
+    if (!canvasSignal.aborted) ElMessage.error(error instanceof Error ? error.message : "Nhập nội dung bảng nhớ tạm thất bại");
     return false;
   }
 }
@@ -1129,7 +1108,7 @@ async function pasteClipboardNode(position: { x: number; y: number }, command?: 
     if (canvasSignal.aborted) return false;
     if (snapshot) {
       if (snapshot.nodes.some(node => node.type !== "canvasGroup" && !availableNodes.value.some(item => item.type === node.type))) {
-        throw new Error("请先安装并启用对应的节点插件");
+        throw new Error("Hãy cài đặt và bật plugin node tương ứng trước");
       }
       const ids = new Map(snapshot.nodes.map(node => [node.id, crypto.randomUUID()]));
       for (const node of snapshot.nodes) remapNodeReferences(node, ids);
@@ -1151,8 +1130,8 @@ async function pasteClipboardNode(position: { x: number; y: number }, command?: 
       throw error;
     });
     if (canvasSignal.aborted) return false;
-    if (!files.length && text.trim()) files.push(new File([text], "粘贴文本.txt", { type: "text/plain" }));
-    if (!files.length) throw new Error("剪贴板中没有可粘贴的节点、文本、图片、视频或音频");
+    if (!files.length && text.trim()) files.push(new File([text], "Văn bản đã dán.txt", { type: "text/plain" }));
+    if (!files.length) throw new Error("Bảng nhớ tạm không có node, văn bản, ảnh, video hoặc âm thanh để dán");
     return await importCanvasContent(files, position);
   } catch (error) {
     const pasteShortcut = generalSettings.value.canvasShortcuts.paste;
@@ -1161,7 +1140,7 @@ async function pasteClipboardNode(position: { x: number; y: number }, command?: 
       : translate("无法读取剪贴板，请允许浏览器访问剪贴板");
     if (!canvasSignal.aborted)
       ElMessage.error(
-        error instanceof DOMException && error.name === "NotAllowedError" ? clipboardMessage : error instanceof Error ? error.message : "剪贴板内容粘贴失败"
+        error instanceof DOMException && error.name === "NotAllowedError" ? clipboardMessage : error instanceof Error ? error.message : "Dán nội dung bảng nhớ tạm thất bại"
       );
     return false;
   }
@@ -1267,7 +1246,7 @@ function updateCanvasKeys(event: KeyboardEvent) {
     void canvasHistory
       .batch(() => menu.deleteSelection(nodes))
       .catch((error) => {
-        ElMessage.error(error instanceof Error ? error.message : "节点删除失败");
+        ElMessage.error(error instanceof Error ? error.message : "Xóa node thất bại");
       });
     return;
   }
@@ -1324,31 +1303,31 @@ onBeforeUnmount(() => {
   document.removeEventListener("copy", copyNode);
   document.removeEventListener("beforecopy", beforeClipboard);
   document.removeEventListener("beforepaste", beforeClipboard);
-  workspaceController.abort(new Error("工作区已关闭"));
-  canvasController.abort(new Error("画布已关闭"));
+  workspaceController.abort(new Error("Không gian làm việc đã đóng"));
+  canvasController.abort(new Error("Canvas đã đóng"));
   saveCanvas.flush();
   loadRequest++;
 });
 
 const nodeWindow = window as typeof window & {
-  toonflowNodeHost?: { vue: typeof vueRuntime; vueFlow: typeof vueFlowRuntime; elementPlus: typeof elementPlusRuntime; three: typeof threeRuntime; modelIcons: typeof modelIcons; ai: { runAgentLoop: typeof runAgentLoop; createAssistantMessageEventStream: typeof createAssistantMessageEventStream } };
+  toonflowNodeHost?: { vue: typeof vueRuntime; vueFlow: typeof vueFlowRuntime; elementPlus: typeof elementPlusRuntime; three: typeof threeRuntime; modelIcons: typeof modelIcons; i18n: typeof i18nRuntime; ai: { runAgentLoop: typeof runAgentLoop; createAssistantMessageEventStream: typeof createAssistantMessageEventStream } };
   toonflowNodes?: NodeTypesObject;
 };
-nodeWindow.toonflowNodeHost = { vue: vueRuntime, vueFlow: vueFlowRuntime, elementPlus: elementPlusRuntime, three: threeRuntime, modelIcons, ai: { runAgentLoop, createAssistantMessageEventStream } };
+nodeWindow.toonflowNodeHost = { vue: vueRuntime, vueFlow: vueFlowRuntime, elementPlus: elementPlusRuntime, three: threeRuntime, modelIcons, i18n: i18nRuntime, ai: { runAgentLoop, createAssistantMessageEventStream } };
 provide("nodeConfig", (nodeType: string) => nodeConfigs.value[nodeType] ?? {});
 provide("workspaceFiles", () => {
   const directory = project.value?.directory;
-  if (!directory) throw new Error("请先选择工作目录");
+  if (!directory) throw new Error("Hãy chọn thư mục làm việc trước");
   return useWorkspaceFiles(directory);
 });
 provide("workspaceDirectory", () => {
   const directory = project.value?.directory;
-  if (!directory) throw new Error("请先选择工作目录");
+  if (!directory) throw new Error("Hãy chọn thư mục làm việc trước");
   return directory;
 });
 provide("reloadRemoteNode", (type: string) => {
   const name = type.replace(/^remote-/, "");
-  if (!type.startsWith("remote-") || !/^[a-z][a-zA-Z0-9]*$/.test(name)) throw new Error("节点类型无效");
+  if (!type.startsWith("remote-") || !/^[a-z][a-zA-Z0-9]*$/.test(name)) throw new Error("Loại node không hợp lệ");
   return loadNode(name, `/api/nodes/files?name=${name}`, true);
 });
 
@@ -1400,13 +1379,13 @@ async function loadRemoteNodes(reloadName?: string, requireReload = false) {
       { headers: { "Cache-Control": "no-cache", "x-toonflow-workspace": "1" } }
     );
     if (requestId !== loadRequest) {
-      if (requireReload) throw new Error("画布正在加载或编辑，请稍后重试");
+      if (requireReload) throw new Error("Canvas đang tải hoặc chỉnh sửa, vui lòng thử lại sau");
       return;
     }
-    if (data.code !== 200 || !Array.isArray(data.data)) throw new Error("节点列表格式错误");
+    if (data.code !== 200 || !Array.isArray(data.data)) throw new Error("Định dạng danh sách node không hợp lệ");
     const nodes = data.data.filter(node => {
       if (!node || typeof node.name !== "string" || !/^[a-z][a-zA-Z0-9]*$/.test(node.name) || node.url !== `/api/nodes/files?name=${node.name}`) {
-        console.error("节点地址无效", node);
+        console.error("Địa chỉ node không hợp lệ", node);
         return false;
       }
       return true;
@@ -1414,9 +1393,9 @@ async function loadRemoteNodes(reloadName?: string, requireReload = false) {
     nodeConfigs.value = Object.fromEntries(nodes.map(node => [`remote-${node.name}`, node.config ?? {}]));
     const enabledNodes = nodes.filter(node => node.enabled !== false);
     // 节点各自加载完成后即可出现在菜单中，不等待其他节点的脚本。
-    nodeOptions.value = enabledNodes.map(node => ({ type: `remote-${node.name}`, label: node.displayName }))
+    nodeOptions.value = enabledNodes.map(node => ({ type: `remote-${node.name}`, get label() { return translate(node.displayName); } }))
       .sort((left, right) => left.type.localeCompare(right.type));
-    if (requireReload && !enabledNodes.some(node => node.name === reloadName)) throw new Error("节点类型未启用或尚未加载，请先查询 getCanvas");
+    if (requireReload && !enabledNodes.some(node => node.name === reloadName)) throw new Error("Loại node chưa được bật hoặc tải, hãy gọi getCanvas trước");
     // ACT: 安装事件合并到最新列表请求，避免连续更新不同节点时丢失较早的刷新名称。
     const reloadNames = new Set(nodeReloads);
     nodeReloads.clear();
@@ -1428,21 +1407,21 @@ async function loadRemoteNodes(reloadName?: string, requireReload = false) {
           await loadNode(node.name, node.url, reloadNames.has(node.name));
         } catch (error) {
           if (requireReload && node.name === reloadName) throw error;
-          console.error("加载远端节点失败", node, error);
+          console.error("Tải node từ xa thất bại", node, error);
           // 保存拒绝时旧组件仍可用，不从节点菜单中移除；脚本加载错误仍排除。
           if (nodeTypes.value[nodeType] && !nodeErrors.value[nodeType]) {
             if (reloadNames.has(node.name) && !signal.aborted) ElMessage.warning({
-              message: `${node.displayName}已安装，但当前节点无法刷新。请等待任务结束后，点击节点右上角的刷新按钮。`,
+              message: `${node.displayName}đã được cài đặt nhưng không thể làm mới node hiện tại. Hãy đợi tác vụ hoàn tất rồi nhấn nút làm mới ở góc trên bên phải node.`,
               grouping: true,
             });
           }
         }
       })
     );
-    if (requireReload && !availableNodes.value.some(node => node.type === `remote-${reloadName}`)) throw new Error("远程节点未加载，请确认插件已安装并启用");
+    if (requireReload && !availableNodes.value.some(node => node.type === `remote-${reloadName}`)) throw new Error("Node từ xa chưa được tải, hãy kiểm tra plugin đã cài đặt và bật");
   } catch (error) {
     if (requireReload) throw error;
-    if (requestId === loadRequest) console.error("获取远端节点列表失败", error);
+    if (requestId === loadRequest) console.error("Không lấy được danh sách node từ xa", error);
   } finally {
     if (requestId === loadRequest) nodeListLoading.value = false;
   }

@@ -2,7 +2,7 @@
   <el-dialog
     v-model="visible"
     class="singleAgentDialog"
-    :title="title ?? 'Agent 对话'"
+    :title="title ?? 'Hội thoại Agent'"
     :width="slots.aside ? 'min(1240px, calc(100vw - 32px))' : 'min(800px, calc(100vw - 32px))'"
     alignCenter
     appendToBody
@@ -10,13 +10,13 @@
     :closeOnClickModal="false">
     <div class="singleAgentBody" :class="{ withAside: !!slots.aside }">
       <div class="conversationColumn">
-        <div ref="messageList" class="messageList" role="region" aria-label="对话消息" tabindex="0" @scroll="updateFollowing">
-          <article v-for="message in msgList" :key="message.id" class="messageItem" :class="{ userMessage: message.role === 'user' }" :aria-label="message.role === 'user' ? '我的消息' : '助手回复'">
+        <div ref="messageList" class="messageList" role="region" aria-label="Tin nhắn hội thoại" tabindex="0" @scroll="updateFollowing">
+          <article v-for="message in msgList" :key="message.id" class="messageItem" :class="{ userMessage: message.role === 'user' }" :aria-label="message.role === 'user' ? 'Tin nhắn của tôi' : 'Trả lời của trợ lý'">
             <div v-if="message.role === 'user'" class="userContent">{{ message.content }}</div>
             <messageMarkdown v-else-if="!message.parts?.length && message.content" :content="message.content" :streaming="!!message.streaming" :directory="sessionDirectory" />
             <template v-for="part in message.parts" :key="part.id">
               <details v-if="part.type === 'thinking' && part.content" class="thinkingContent">
-                <summary><icon-chevron-right class="thinkingChevron" :size="14" aria-hidden="true" />思考<span v-if="part.duration !== undefined"> · {{ part.duration.toFixed(1) }} 秒</span></summary>
+                <summary><icon-chevron-right class="thinkingChevron" :size="14" aria-hidden="true" />Suy nghĩ<span v-if="part.duration !== undefined"> · {{ part.duration.toFixed(1) }} giây</span></summary>
                 <messageMarkdown :content="part.content" :streaming="!!message.streaming" :directory="sessionDirectory" />
               </details>
               <slot v-else-if="part.type === 'tool'" name="tool" :tool="part.tool" :sessionId="sessionId" :status="status" :pause="pause" :resume="resume">
@@ -24,22 +24,22 @@
               </slot>
               <messageMarkdown v-else-if="part.type === 'text' && part.content" :content="part.content" :streaming="!!message.streaming" :directory="sessionDirectory" />
             </template>
-            <span v-if="message.streaming && !message.parts?.length && !message.content" class="replyPending" role="status">正在处理…</span>
+            <span v-if="message.streaming && !message.parts?.length && !message.content" class="replyPending" role="status">Đang xử lý…</span>
             <div v-if="message.error" class="messageError" role="alert">{{ message.error }}</div>
           </article>
         </div>
         <div class="composerArea">
           <div v-if="formError" class="formError" role="alert">{{ formError }}</div>
           <div class="messageComposer">
-            <el-input v-model="draft" type="textarea" :rows="3" resize="none" :placeholder="placeholder" :disabled="busy" aria-label="对话消息输入" @keydown="handleInputKeydown" />
+            <el-input v-model="draft" type="textarea" :rows="3" resize="none" :placeholder="placeholder" :disabled="busy" aria-label="Ô nhập tin nhắn" @keydown="handleInputKeydown" />
             <div class="composerActions">
               <modelPopover v-model="selectedModel" v-model:reasoningEffort="reasoningEffort" :active="visible" :disabled="busy" />
               <span v-if="status !== 'idle'" class="executionStatus" :class="{ pausedStatus: status === 'paused' }" role="status" aria-live="polite">{{ statusLabels[status] }}</span>
               <div class="executionActions">
-                <el-button v-if="status === 'running'" text :icon="IconPlayerPause" @click="pause">暂停</el-button>
-                <el-button v-if="status === 'pausing' || status === 'paused'" text :icon="IconPlayerPlay" @click="resume">继续</el-button>
-                <el-button v-if="busy" class="sendButton" type="primary" circle aria-label="停止生成" title="停止生成" @click="stop"><icon-player-stop-filled :size="14" /></el-button>
-                <el-button v-else class="sendButton" type="primary" circle :disabled="!draft.trim() || !selectedModel" aria-label="发送消息" title="发送消息" @click="send()"><icon-arrow-up :size="16" /></el-button>
+                <el-button v-if="status === 'running'" text :icon="IconPlayerPause" @click="pause">Tạm dừng</el-button>
+                <el-button v-if="status === 'pausing' || status === 'paused'" text :icon="IconPlayerPlay" @click="resume">Tiếp tục</el-button>
+                <el-button v-if="busy" class="sendButton" type="primary" circle aria-label="Dừng tạo" title="Dừng tạo" @click="stop"><icon-player-stop-filled :size="14" /></el-button>
+                <el-button v-else class="sendButton" type="primary" circle :disabled="!draft.trim() || !selectedModel" aria-label="Gửi tin nhắn" title="Gửi tin nhắn" @click="send()"><icon-arrow-up :size="16" /></el-button>
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@ const props = withDefaults(defineProps<{
   directory?: string;
   title?: string;
   placeholder?: string;
-}>(), { tools: () => [], systemPrompt: "", initialMessage: "", placeholder: "输入消息" });
+}>(), { tools: () => [], systemPrompt: "", initialMessage: "", placeholder: "Nhập tin nhắn" });
 const visible = defineModel<boolean>({ default: false });
 const msgList = defineModel<AgentMessage[]>("msgList", { default: () => [] });
 const selectedModel = defineModel<string>("model", { default: "" });
@@ -110,7 +110,7 @@ const busy = ref(false);
 const messageList = ref<HTMLElement>();
 const tools = computed<ToolCall[]>(() => msgList.value.flatMap(message => message.parts?.flatMap(part => part.type === "tool" ? [part.tool] : []) ?? []));
 const reasoningEffort = computed({ get: () => thinkingLevel.value ?? "", set: (value: string) => { thinkingLevel.value = value ? value as ThinkingLevel : undefined; } });
-const statusLabels = { idle: "", running: "执行中", pausing: "等待当前操作结束…", paused: "已暂停，可人工操作" };
+const statusLabels = { idle: "", running: "Đang thực hiện", pausing: "Đang chờ thao tác hiện tại hoàn tất…", paused: "Đã tạm dừng, có thể thao tác thủ công" };
 const requestHeaders = { "x-toonflow-workspace": "1" };
 let lifecycle = new AbortController();
 let turnController: AbortController | undefined;
@@ -140,7 +140,7 @@ async function closeSession(id: string) {
     method: "POST", headers: { ...requestHeaders, "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId: id, action: "close" }), keepalive: true,
   });
-  if (!response.ok && response.status !== 404) throw new Error("临时会话清理失败");
+  if (!response.ok && response.status !== 404) throw new Error("Dọn phiên tạm thời thất bại");
 }
 
 async function ensureSession(owner: AbortController, signal: AbortSignal) {
@@ -157,7 +157,7 @@ async function ensureSession(owner: AbortController, signal: AbortSignal) {
     const id = data.data.sessionId;
     if (owner.signal.aborted || lifecycle !== owner) {
       await closeSession(id);
-      throw new DOMException("对话已关闭", "AbortError");
+      throw new DOMException("Hội thoại đã đóng", "AbortError");
     }
     sessionId.value = id;
     return id;
@@ -176,7 +176,7 @@ async function executeClientTool(event: Extract<SingleAgentEvent, { type: "clien
   let updates = Promise.resolve();
   let acceptingUpdates = true;
   try {
-    if (!tool) throw new Error(`未找到工具：${event.name}`);
+    if (!tool) throw new Error(`Không tìm thấy công cụ: ${event.name}`);
     const result = await tool.execute(event.toolCallId, event.args, signal, partial => {
       if (!acceptingUpdates || signal.aborted) return;
       updates = updates.then(() => sendResult({ result: partial, partial: true }));
@@ -203,7 +203,7 @@ async function send(content = draft.value) {
   const prompt = content.trim();
   if (busy.value || !visible.value || !prompt) return;
   const model = selectedModelChoice.value;
-  if (!model) { reportError(new Error("请选择已配置的文本模型")); return; }
+  if (!model) { reportError(new Error("Hãy chọn mô hình văn bản đã cấu hình")); return; }
   busy.value = true;
   formError.value = "";
   const owner = lifecycle;
@@ -220,7 +220,7 @@ async function send(content = draft.value) {
     const id = await ensureSession(owner, signal);
     await refreshModelChoices(true, signal);
     const currentModel = selectedModelChoice.value;
-    if (!currentModel) throw new Error("请选择已配置的文本模型");
+    if (!currentModel) throw new Error("Hãy chọn mô hình văn bản đã cấu hình");
     signal.throwIfAborted();
     changeStatus("running");
     following = true;
@@ -297,7 +297,7 @@ function stop() {
 
 async function copyMessage(content: string) {
   try { await writeClipboardText(content); }
-  catch { ElMessage.error("复制失败"); }
+  catch { ElMessage.error("Sao chép thất bại"); }
 }
 
 function updateFollowing() {
@@ -315,7 +315,7 @@ function reset() {
   lifecycle.abort();
   turnController?.abort();
   const id = sessionId.value;
-  if (id) void closeSession(id).catch(error => { emit("error", error instanceof Error ? error : new Error("临时会话清理失败")); });
+  if (id) void closeSession(id).catch(error => { emit("error", error instanceof Error ? error : new Error("Dọn phiên tạm thời thất bại")); });
   lifecycle = new AbortController();
   preparing = undefined;
   turnController = undefined;

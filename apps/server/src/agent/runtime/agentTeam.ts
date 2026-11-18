@@ -7,7 +7,7 @@ import type { AgentSubAgent } from "@/agent/runtime/types";
 import { thinkingLevels, type ThinkingLevel } from "@/lib/modelReasoning";
 import { resolveWorkspacePath } from "@/utils/workspace/files";
 
-const fileSchema = z.string().regex(/^[\w-]+\.jsonl$/, "Agent 会话标识无效");
+const fileSchema = z.string().regex(/^[\w-]+\.jsonl$/, "Định danh phiên Agent không hợp lệ");
 const memberSchema = z.object({
   file: fileSchema,
   parentFile: fileSchema,
@@ -47,14 +47,14 @@ export async function getAgentTeam(cwd: string, file: string): Promise<{ selfFil
       const content = await readFile(path, "utf8");
       entries = parseSessionEntries(content);
       // ACT: SDK 会跳过坏行；成员授权不能根据缺损的会话关系继续判断。
-      if (entries.length !== content.split("\n").filter(line => line.trim()).length) throw new Error("Agent 会话记录损坏");
+      if (entries.length !== content.split("\n").filter(line => line.trim()).length) throw new Error("Lịch sử phiên Agent bị hỏng");
     }
     const header = headerSchema.parse(entries[0]);
     const ids = new Set<string>();
     for (const entry of entries.slice(1)) {
       const parsed = entrySchema.parse(entry);
       if (parsed.type === "session" || ids.has(parsed.id) || (parsed.parentId !== null && !ids.has(parsed.parentId))) {
-        throw new Error("Agent 会话记录结构无效");
+        throw new Error("Cấu trúc lịch sử phiên Agent không hợp lệ");
       }
       ids.add(parsed.id);
     }
@@ -62,13 +62,13 @@ export async function getAgentTeam(cwd: string, file: string): Promise<{ selfFil
     const infoEntry = getSubAgentInfo(history);
     const info = infoEntry ? memberSchema.parse(infoEntry.data) : undefined;
     if (Boolean(header.parentSession) !== Boolean(info) || (info && (info.file !== currentFile || info.parentFile !== header.parentSession))) {
-      throw new Error("子 Agent 的会话归属不一致");
+      throw new Error("Phiên Agent con có thông tin sở hữu không nhất quán");
     }
     const children = new Map<string, z.infer<typeof memberSchema>>();
     for (const entry of history.getEntries()) {
       if (entry.type !== "custom" || entry.customType !== "toonflowSubAgent") continue;
       const child = memberSchema.parse(entry.data);
-      if (child.parentFile !== currentFile) throw new Error("子 Agent 的父会话记录不一致");
+      if (child.parentFile !== currentFile) throw new Error("Bản ghi phiên cha của Agent con không nhất quán");
       children.set(child.file, child);
     }
     return { file: currentFile, path, history, info, parentFile: header.parentSession, children };
@@ -86,10 +86,10 @@ export async function getAgentTeam(cwd: string, file: string): Promise<{ selfFil
   let root = await getSession(file);
   const ancestors = new Set<string>();
   while (root.parentFile) {
-    if (ancestors.has(root.file)) throw new Error("Agent 父会话关系存在循环");
+    if (ancestors.has(root.file)) throw new Error("Quan hệ phiên cha của Agent tạo thành vòng lặp");
     ancestors.add(root.file);
     const parent = await getSession(root.parentFile);
-    if (!parent.children.has(root.file)) throw new Error("子 Agent 未登记在所属父会话中");
+    if (!parent.children.has(root.file)) throw new Error("Agent con chưa được đăng ký trong phiên cha");
     root = parent;
   }
 
@@ -98,14 +98,14 @@ export async function getAgentTeam(cwd: string, file: string): Promise<{ selfFil
   const visited = new Set<string>();
   for (let index = 0; index < pending.length; index++) {
     const item = pending[index]!;
-    if (visited.has(item.file)) throw new Error("Agent 子会话关系存在循环或重复登记");
+    if (visited.has(item.file)) throw new Error("Quan hệ phiên Agent con tạo thành vòng lặp hoặc bị đăng ký trùng");
     visited.add(item.file);
     const session = await getSession(item.file).catch((error: NodeJS.ErrnoException) => {
       if (item.parentFile && error.code === "ENOENT") return undefined;
       throw error;
     });
     if (!session) continue;
-    if (session.parentFile !== item.parentFile) throw new Error("子 Agent 不属于当前会话树");
+    if (session.parentFile !== item.parentFile) throw new Error("Agent con không thuộc cây phiên hiện tại");
     const context = session.history.buildSessionContext();
     const reasoning = session.history.getBranch().findLast(entry => entry.type === "custom" && entry.customType === "toonflowReasoning");
     const selection = z.object({ thinkingLevel: z.enum(thinkingLevels).nullable() }).safeParse(reasoning?.type === "custom" ? reasoning.data : undefined);
@@ -114,7 +114,7 @@ export async function getAgentTeam(cwd: string, file: string): Promise<{ selfFil
     members.push({
       file: session.file,
       parentFile: session.parentFile,
-      name: session.history.getSessionName() || record?.name || "主 Agent",
+      name: session.history.getSessionName() || record?.name || "Agent chính",
       task: record?.task,
       status,
       providerId: context.model?.provider ?? record?.providerId,
@@ -123,6 +123,6 @@ export async function getAgentTeam(cwd: string, file: string): Promise<{ selfFil
     });
     for (const child of session.children.values()) pending.push({ file: child.file, parentFile: session.file, record: child });
   }
-  if (!members.some(member => member.file === file)) throw new Error("当前 Agent 不属于此会话树");
+  if (!members.some(member => member.file === file)) throw new Error("Agent hiện tại không thuộc cây phiên này");
   return { selfFile: file, rootFile: root.file, members };
 }

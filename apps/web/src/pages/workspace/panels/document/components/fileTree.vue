@@ -1,34 +1,34 @@
 <template>
-  <aside class="fileTree" aria-label="工作区文件">
+  <aside class="fileTree" aria-label="Tệp trong không gian làm việc">
     <header class="treeHeader" :class="{ dropTarget: dropTargetKey === 'root' }" @dragover.stop="dragOver($event, rootItem)" @dragleave="dragLeave" @drop.stop="dropFiles($event, rootItem)">
-      <span class="treeTitle"><icon-folder :size="16" aria-hidden="true" />工作区文件</span>
+      <span class="treeTitle"><icon-folder :size="16" aria-hidden="true" />Tệp trong không gian làm việc</span>
       <span class="treeActions">
-        <el-button text circle size="small" :disabled="!directory || creating || busy" aria-label="新建文件" title="在当前目录新建文件" @click="createEntry(false)">
+        <el-button text circle size="small" :disabled="!directory || creating || busy" aria-label="Tạo tệp mới" title="Tạo tệp trong thư mục hiện tại" @click="createEntry(false)">
           <icon-file-plus :size="15" aria-hidden="true" />
         </el-button>
-        <el-button text circle size="small" :disabled="!directory || creating || busy" aria-label="新建文件夹" title="在当前目录新建文件夹" @click="createEntry(true)"><icon-folder-plus :size="15" /></el-button>
-        <el-button text circle size="small" :disabled="!directory" aria-label="刷新文件树" title="刷新文件树" @click="refreshTree">
+        <el-button text circle size="small" :disabled="!directory || creating || busy" aria-label="Tạo thư mục mới" title="Tạo thư mục trong thư mục hiện tại" @click="createEntry(true)"><icon-folder-plus :size="15" /></el-button>
+        <el-button text circle size="small" :disabled="!directory" aria-label="Làm mới cây tệp" title="Làm mới cây tệp" @click="refreshTree">
           <icon-refresh :size="15" aria-hidden="true" />
         </el-button>
       </span>
     </header>
     <div class="treeTools">
-      <el-input v-model="searchTerm" size="small" clearable placeholder="搜索文件与节点" aria-label="搜索工作区文件与节点" :prefixIcon="IconSearch" />
-      <el-button text circle size="small" :disabled="!directory" aria-label="快速打开" title="快速打开" @click="emit('quickOpen'); props.params?.params.quickOpen?.()"><icon-file-search :size="15" /></el-button>
-      <el-button text circle size="small" :disabled="!directory" aria-label="全文搜索" title="全文搜索" @click="emit('search'); props.params?.params.search?.()"><icon-search :size="15" /></el-button>
-      <el-button text circle size="small" :disabled="!activeSelection" aria-label="定位当前标签" title="定位当前标签" @click="locateCurrent"><icon-focus-2 :size="15" /></el-button>
-      <el-button text circle size="small" :aria-pressed="multiple" aria-label="勾选多个文件" title="多选" @click="toggleMultiple"><icon-list-check :size="15" /></el-button>
+      <el-input v-model="searchTerm" size="small" clearable placeholder="Tìm tệp và node" aria-label="Tìm tệp và node trong không gian làm việc" :prefixIcon="IconSearch" />
+      <el-button text circle size="small" :disabled="!directory" aria-label="Mở nhanh" title="Mở nhanh" @click="emit('quickOpen'); props.params?.params.quickOpen?.()"><icon-file-search :size="15" /></el-button>
+      <el-button text circle size="small" :disabled="!directory" aria-label="Tìm kiếm toàn văn" title="Tìm kiếm toàn văn" @click="emit('search'); props.params?.params.search?.()"><icon-search :size="15" /></el-button>
+      <el-button text circle size="small" :disabled="!activeSelection" aria-label="Định vị thẻ hiện tại" title="Định vị thẻ hiện tại" @click="locateCurrent"><icon-focus-2 :size="15" /></el-button>
+      <el-button text circle size="small" :aria-pressed="multiple" aria-label="Chọn nhiều tệp" title="Chọn nhiều" @click="toggleMultiple"><icon-list-check :size="15" /></el-button>
     </div>
     <div v-if="multiple && checkedItems.length" class="batchActions">
-      <span>已选 {{ checkedItems.length }} 项</span>
-      <el-button text size="small" :disabled="busy" @click="runChecked('copy')">复制</el-button>
-      <el-button text size="small" :disabled="busy" @click="runChecked('cut')">剪切</el-button>
-      <el-button text size="small" :disabled="busy" @click="runChecked('delete')">删除</el-button>
+      <span>Đã chọn {{ checkedItems.length }} mục</span>
+      <el-button text size="small" :disabled="busy" @click="runChecked('copy')">Sao chép</el-button>
+      <el-button text size="small" :disabled="busy" @click="runChecked('cut')">Cắt</el-button>
+      <el-button text size="small" :disabled="busy" @click="runChecked('delete')">Xóa</el-button>
     </div>
     <el-alert v-if="loadError" class="loadError" :title="loadError" type="error" :closable="false" showIcon />
-    <div ref="treeContent" v-loading="searching" class="treeContent" :class="{ dropTarget: dropTargetKey === 'root' }" role="tree" aria-label="工作区文件树" :aria-multiselectable="multiple" :aria-busy="searching || loadingKeys.size > 0" :aria-activedescendant="activeRowId" tabindex="0" @contextmenu.prevent="openBackgroundMenu" @keydown="onTreeKeydown" @pointerdown="locatingKey = undefined" @wheel.passive="locatingKey = undefined" @touchstart.passive="locatingKey = undefined"
+    <div ref="treeContent" v-loading="searching" class="treeContent" :class="{ dropTarget: dropTargetKey === 'root' }" role="tree" aria-label="Cây tệp không gian làm việc" :aria-multiselectable="multiple" :aria-busy="searching || loadingKeys.size > 0" :aria-activedescendant="activeRowId" tabindex="0" @contextmenu.prevent="openBackgroundMenu" @keydown="onTreeKeydown" @pointerdown="locatingKey = undefined" @wheel.passive="locatingKey = undefined" @touchstart.passive="locatingKey = undefined"
       @dragover.stop="dragOver($event, rootItem)" @dragleave="dragLeave" @drop.stop="dropFiles($event, rootItem)">
-      <div v-if="directory && !treeRows.length && !loadingKeys.size && !searching" class="emptyTree">{{ searchTerm.trim() ? '没有匹配的文件或节点' : '暂无文件' }}</div>
+      <div v-if="directory && !treeRows.length && !loadingKeys.size && !searching" class="emptyTree">{{ searchTerm.trim() ? 'Không có tệp hoặc node phù hợp' : 'Chưa có tệp' }}</div>
       <div class="treeRows" :style="{ height: `${treeVirtualizer.getTotalSize()}px` }">
         <div v-for="{ row, data, index, start } in visibleRows" :id="`${treeId}-${index}`" :key="row.item.key" class="treeRow" :class="{ current: currentKey === row.item.key, focused: focusedItem?.key === row.item.key, dropTarget: dropTargetKey === row.item.key }" :data-key="row.item.key"
           :style="{ transform: `translateY(${start}px)`, paddingLeft: `${(row.level - 1) * 16}px` }" role="treeitem" :aria-label="row.item.displayLabel || row.item.name" :aria-level="row.level" :aria-posinset="row.position" :aria-setsize="row.size"
@@ -40,7 +40,7 @@
             <icon-loader-2 v-if="loadingKeys.has(row.item.key)" :size="13" />
             <icon-chevron-right v-else-if="!row.item.isLeaf" :size="13" />
           </span>
-          <el-checkbox v-if="multiple" :modelValue="checkedKeys.has(row.item.key)" :disabled="row.item.type === 'node'" :aria-label="`选择 ${row.item.displayLabel || row.item.name}`" :tabindex="-1" @click.stop @change="toggleChecked(row.item)" />
+          <el-checkbox v-if="multiple" :modelValue="checkedKeys.has(row.item.key)" :disabled="row.item.type === 'node'" :aria-label="`Chọn ${row.item.displayLabel || row.item.name}`" :tabindex="-1" @click.stop @change="toggleChecked(row.item)" />
           <span class="fileItem" :class="{ cutItem: isCut(data) }" :title="itemTitle(data)" @dblclick.stop="selectNode(data, false)">
             <icon-folder-open v-if="data.nodeType === 'canvasGroup' && expandedSet.has(data.key)" :size="16" aria-hidden="true" />
             <icon-folder v-else-if="data.nodeType === 'canvasGroup'" :size="16" aria-hidden="true" />
@@ -59,20 +59,20 @@
     <el-dropdown ref="menu" trigger="contextmenu" virtualTriggering :virtualRef="menuAnchor" placement="bottom-start" :showArrow="false" @command="command => handleCommand(command)">
       <template #dropdown>
         <el-dropdown-menu v-if="menuItem" class="fileActionMenu" :aria-label="menuItem.name">
-          <el-dropdown-item v-if="menuItem.type === 'node'" command="focusNode" :disabled="busy">在画布上聚焦</el-dropdown-item>
-          <el-dropdown-item v-if="menuItem.type === 'file'" command="openWith" :disabled="busy">打开方式…</el-dropdown-item>
+          <el-dropdown-item v-if="menuItem.type === 'node'" command="focusNode" :disabled="busy">Tập trung trên Canvas</el-dropdown-item>
+          <el-dropdown-item v-if="menuItem.type === 'file'" command="openWith" :disabled="busy">Mở bằng…</el-dropdown-item>
           <template v-if="menuItem.type !== 'node'">
-            <el-dropdown-item command="newFile" :disabled="busy">新建文件…</el-dropdown-item>
-            <el-dropdown-item command="newFolder" :disabled="busy">新建文件夹…</el-dropdown-item>
-            <el-dropdown-item v-if="!isMobile && !isRemoteConnection" command="reveal" :disabled="busy">以资源管理器打开</el-dropdown-item>
-            <el-dropdown-item command="copy" :disabled="busy || !menuItem.path" divided>复制</el-dropdown-item>
-            <el-dropdown-item command="cut" :disabled="busy || !menuItem.path">剪切</el-dropdown-item>
-            <el-dropdown-item command="paste" :disabled="busy || !clipboard?.items.length">粘贴</el-dropdown-item>
+            <el-dropdown-item command="newFile" :disabled="busy">Tạo tệp mới…</el-dropdown-item>
+            <el-dropdown-item command="newFolder" :disabled="busy">Tạo thư mục mới…</el-dropdown-item>
+            <el-dropdown-item v-if="!isMobile && !isRemoteConnection" command="reveal" :disabled="busy">Mở trong trình quản lý tệp</el-dropdown-item>
+            <el-dropdown-item command="copy" :disabled="busy || !menuItem.path" divided>Sao chép</el-dropdown-item>
+            <el-dropdown-item command="cut" :disabled="busy || !menuItem.path">Cắt</el-dropdown-item>
+            <el-dropdown-item command="paste" :disabled="busy || !clipboard?.items.length">Dán</el-dropdown-item>
           </template>
-          <el-dropdown-item command="copyPath" :divided="menuItem.type !== 'node'">{{ menuItem.type === 'node' ? "复制画布相对路径" : "复制路径（相对）" }}</el-dropdown-item>
-          <el-dropdown-item command="copyAbsolutePath">{{ menuItem.type === 'node' ? "复制画布绝对路径" : "复制绝对路径" }}</el-dropdown-item>
-          <el-dropdown-item v-if="menuItem.type !== 'node' && menuItem.path" command="rename" :disabled="busy" divided>重命名</el-dropdown-item>
-          <el-dropdown-item v-if="menuItem.path && menuItem.nodeType !== 'canvasGroup'" command="delete" :disabled="busy" :divided="menuItem.type === 'node'" class="deleteAction">删除</el-dropdown-item>
+          <el-dropdown-item command="copyPath" :divided="menuItem.type !== 'node'">{{ menuItem.type === 'node' ? "Sao chép đường dẫn tương đối của Canvas" : "Sao chép đường dẫn (tương đối)" }}</el-dropdown-item>
+          <el-dropdown-item command="copyAbsolutePath">{{ menuItem.type === 'node' ? "Sao chép đường dẫn tuyệt đối của Canvas" : "Sao chép đường dẫn tuyệt đối" }}</el-dropdown-item>
+          <el-dropdown-item v-if="menuItem.type !== 'node' && menuItem.path" command="rename" :disabled="busy" divided>Đổi tên</el-dropdown-item>
+          <el-dropdown-item v-if="menuItem.path && menuItem.nodeType !== 'canvasGroup'" command="delete" :disabled="busy" :divided="menuItem.type === 'node'" class="deleteAction">Xóa</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -213,7 +213,7 @@ function storageKey(workspaceDirectory = directory.value ?? "") {
 function persistTreeState(workspaceDirectory = directory.value) {
   if (!workspaceDirectory) return;
   try { settingsStorage.setItem(storageKey(workspaceDirectory), JSON.stringify({ expandedKeys: expandedKeys.value })); }
-  catch { ElMessage.warning("无法保存文件树展开状态"); }
+  catch { ElMessage.warning("Không thể lưu trạng thái mở rộng cây tệp"); }
 }
 function loadTreeState() {
   expandedKeys.value = [];
@@ -411,14 +411,14 @@ function childPath(parent: string, name: string) { return parent ? `${parent}/${
 
 async function executeFileAction(action: FileAction, item: FileTreeItem, target?: string) {
   const execute = props.params?.params.executeFileAction;
-  if (!execute) throw new Error("文件操作宿主尚未就绪，暂时无法操作文件，请稍后重试。");
+  if (!execute) throw new Error("Bộ điều khiển thao tác tệp chưa sẵn sàng, vui lòng thử lại sau.");
   await execute(action, item, target);
 }
 
 function showActionError(error: unknown) {
   if (error === "cancel" || error === "close") return;
   const message = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-  ElMessage.error(message || (error instanceof Error ? error.message : "文件操作失败"));
+  ElMessage.error(message || (error instanceof Error ? error.message : "Thao tác tệp thất bại"));
 }
 
 async function handleCommand(command: string, item = menuItem.value, source = clipboard.value) {
@@ -433,7 +433,7 @@ async function handleCommand(command: string, item = menuItem.value, source = cl
   try {
     if (command === "focusNode" && item.type === "node" && item.nodeId) {
       const focusNode = props.params?.params.focusNode;
-      if (!focusNode) throw new Error("画布尚未就绪");
+      if (!focusNode) throw new Error("Canvas chưa sẵn sàng");
       await focusNode(currentDirectory, item.path, item.nodeId);
       return;
     }
@@ -458,21 +458,21 @@ async function handleCommand(command: string, item = menuItem.value, source = cl
       total = source.items.length;
       // ACT: 批量文件操作逐项协调，已完成项保留；错误明确报告进度，剩余剪切项可继续粘贴。
       for (const entry of [...source.items]) {
-        if (currentDirectory !== directory.value) throw new Error("工作目录已切换");
+        if (currentDirectory !== directory.value) throw new Error("Thư mục làm việc đã thay đổi");
         const from = pathIdentity(entry.path);
         const to = pathIdentity(destination);
-        if (entry.type === "directory" && (to === from || to.startsWith(`${from}/`))) throw new Error("不能将文件夹粘贴到自身或其子目录");
+        if (entry.type === "directory" && (to === from || to.startsWith(`${from}/`))) throw new Error("Không thể dán thư mục vào chính nó hoặc thư mục con");
         let name = entry.name;
         if (!source.cut) {
           const dot = entry.type === "directory" ? -1 : name.lastIndexOf(".");
           const stem = dot > 0 ? name.slice(0, dot) : name;
           const suffix = dot > 0 ? name.slice(dot) : "";
-          for (let index = 1; names.has(pathIdentity(name)); index++) name = `${stem} 副本${index === 1 ? "" : ` ${index}`}${suffix}`;
+          for (let index = 1; names.has(pathIdentity(name)); index++) name = `${stem} bản sao${index === 1 ? "" : ` ${index}`}${suffix}`;
         }
         const target = childPath(destination, name);
         if (!source.cut || pathIdentity(target) !== from) {
           await executeFileAction(source.cut ? "move" : "copy", entry, target);
-          if (currentDirectory !== directory.value) throw new Error("工作目录已切换");
+          if (currentDirectory !== directory.value) throw new Error("Thư mục làm việc đã thay đổi");
           if (source.cut) relocateExpansion(entry.path, target);
           changed = true;
         }
@@ -483,10 +483,10 @@ async function handleCommand(command: string, item = menuItem.value, source = cl
       }
       if (source.cut && usingClipboard) clipboard.value = undefined;
     } else if (command === "rename" && item.path) {
-      const { value } = await ElMessageBox.prompt("名称", "重命名", {
+      const { value } = await ElMessageBox.prompt("Tên", "Đổi tên", {
         inputValue: item.name,
-        inputValidator: value => !!value?.trim() && !/[\\/\0]/.test(value) && ![".", ".."].includes(value.trim()) || "请输入有效名称，不能包含斜杠",
-        confirmButtonText: "保存", cancelButtonText: "取消",
+        inputValidator: value => !!value?.trim() && !/[\\/\0]/.test(value) && ![".", ".."].includes(value.trim()) || "Vui lòng nhập tên hợp lệ, không chứa dấu gạch chéo",
+        confirmButtonText: "Lưu", cancelButtonText: "Hủy",
       });
       if (value.trim() === item.name || currentDirectory !== directory.value) return;
       const target = childPath(parentPath(item.path), value.trim());
@@ -500,10 +500,10 @@ async function handleCommand(command: string, item = menuItem.value, source = cl
       if (!items.length) return;
       total = items.length;
       const detail = item.type === "node" ? t`该节点会从画布中删除。` : items.some(item => item.type === "directory" || item.type === "canvas") ? t`所选文件夹的全部内容、画布的全部节点会一并删除。` : "";
-      await ElMessageBox.confirm(`删除${items.length === 1 ? `“${items[0]!.name}”` : `这 ${items.length} 项`}？${detail}此操作不可恢复。`, item.type === "node" ? "删除节点" : "删除文件", { type: "warning", confirmButtonText: "删除", cancelButtonText: "取消", closeOnClickModal: false });
+      await ElMessageBox.confirm(`Xóa ${items.length === 1 ? `“${items[0]!.name}”` : `${items.length} mục`}? ${detail} Thao tác này không thể hoàn tác.`, item.type === "node" ? "Xóa node" : "Xóa tệp", { type: "warning", confirmButtonText: "Xóa", cancelButtonText: "Hủy", closeOnClickModal: false });
       if (currentDirectory !== directory.value) return;
       for (const entry of items) {
-        if (currentDirectory !== directory.value) throw new Error("工作目录已切换");
+        if (currentDirectory !== directory.value) throw new Error("Thư mục làm việc đã thay đổi");
         await executeFileAction("delete", entry);
         if (entry.type !== "node" && directory.value === currentDirectory) relocateExpansion(entry.path);
         completed++;
@@ -514,11 +514,11 @@ async function handleCommand(command: string, item = menuItem.value, source = cl
       await executeFileAction(command, item);
       return;
     } else return;
-    if (total > 1) ElMessage.success(`已完成 ${completed} / ${total} 项`);
+    if (total > 1) ElMessage.success(`Đã hoàn thành ${completed} / ${total} mục`);
   } catch (error) {
     if (total > 1 && error !== "cancel" && error !== "close") {
       const message = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : error instanceof Error ? error.message : translate("文件操作失败");
-      ElMessage.error(`已完成 ${completed} / ${total} 项，剩余未执行：${message}`);
+      ElMessage.error(`Đã hoàn thành ${completed} / ${total} mục, phần chưa thực hiện: ${message}`);
     } else showActionError(error);
   } finally { busy.value = false; if (changed && currentDirectory === directory.value) refreshTree(); }
 }
@@ -636,11 +636,11 @@ async function createEntry(folder: boolean, item = currentItem()) {
   const destination = item.type === "directory" ? item.path : parentPath(item.path);
   let value: string;
   try {
-    ({ value } = await ElMessageBox.prompt(`在“${destination || "工作区根目录"}”中新建${folder ? "文件夹" : "文件"}`, folder ? "新建文件夹" : "新建文件", {
-      inputValue: folder ? "新建文件夹" : "文档.md",
-      inputValidator: name => !!name?.trim() && !/[\\/\0]/.test(name) && ![".", ".."].includes(name.trim()) || "请输入有效名称，不能包含斜杠",
-      confirmButtonText: "创建",
-      cancelButtonText: "取消",
+    ({ value } = await ElMessageBox.prompt(`Trong “${destination || "Thư mục gốc không gian làm việc"}”, tạo mới ${folder ? "thư mục" : "tệp"}`, folder ? "Tạo thư mục mới" : "Tạo tệp mới", {
+      inputValue: folder ? "Tạo thư mục mới" : "Tài liệu.md",
+      inputValidator: name => !!name?.trim() && !/[\\/\0]/.test(name) && ![".", ".."].includes(name.trim()) || "Vui lòng nhập tên hợp lệ, không chứa dấu gạch chéo",
+      confirmButtonText: "Tạo",
+      cancelButtonText: "Hủy",
     }));
   } catch {
     return;
@@ -658,7 +658,7 @@ async function createEntry(folder: boolean, item = currentItem()) {
     }
   } catch (error) {
     const message = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-    ElMessage.error(message || (error instanceof Error ? error.message : "创建文件失败"));
+    ElMessage.error(message || (error instanceof Error ? error.message : "Tạo tệp thất bại"));
   } finally {
     creating.value = false;
   }
@@ -675,7 +675,7 @@ async function readCanvasItems(currentDirectory: string, path: string, signal: A
     return canvasItems({ nodes: nodes.map(node => ({ id: node.nodeId, type: node.nodeType, parentNode: node.parentNode, data: { label: node.label } })) }, path);
   }
   const canvas = await useWorkspaceFiles(currentDirectory).readJson(path, signal);
-  if (!isRecord(canvas) || canvas.toonflowCanvas !== true || !Array.isArray(canvas.nodes)) throw new Error("不是有效的画布文件");
+  if (!isRecord(canvas) || canvas.toonflowCanvas !== true || !Array.isArray(canvas.nodes)) throw new Error("Tệp Canvas không hợp lệ");
   return canvasItems(canvas, path);
 }
 
@@ -685,7 +685,7 @@ function readNodeIndex(currentDirectory: string, signal: AbortSignal) {
   if (cached) return cached;
   // ACT: 素材归属才扫描全部画布；搜索与树各自持有可取消的缓存，失败不缓存。
   const pending = (props.params?.params.readNodes(currentDirectory, { signal, onError: (path, error) => {
-    if (!signal.aborted && currentDirectory === directory.value) loadError.value = `无法读取“${path}”的节点，其余文件仍可使用：${error instanceof Error ? error.message : "请检查文件"}`;
+    if (!signal.aborted && currentDirectory === directory.value) loadError.value = `Không thể đọc “${path}” để lấy node; các tệp còn lại vẫn dùng được: ${error instanceof Error ? error.message : "Hãy kiểm tra tệp"}`;
   } }) ?? Promise.resolve([])).then(nodes => {
     const index = new Map<string, DocumentNode[]>();
     for (const node of nodes) {
@@ -715,7 +715,7 @@ async function readDirectory(currentDirectory: string, path: string, signal: Abo
     try { nodeIndex = await readNodeIndex(currentDirectory, signal); }
     catch (error) {
       signal.throwIfAborted();
-      if (currentDirectory === directory.value && version === treeVersion.value) loadError.value = `节点名称读取失败，暂时显示原目录名：${error instanceof Error ? error.message : "请刷新重试"}`;
+      if (currentDirectory === directory.value && version === treeVersion.value) loadError.value = `Không đọc được tên node, tạm hiển thị tên thư mục ban đầu: ${error instanceof Error ? error.message : "Hãy làm mới và thử lại"}`;
     }
   }
   const items: FileTreeItem[] = [];
@@ -741,7 +741,7 @@ async function readDirectory(currentDirectory: string, path: string, signal: Abo
       } catch (error) {
         signal.throwIfAborted();
         items.push(item);
-        if (version === treeVersion.value && currentDirectory === directory.value) loadError.value = `无法识别“${entry.path}”，其余文件仍可使用：${error instanceof Error ? error.message : "请检查文件"}`;
+        if (version === treeVersion.value && currentDirectory === directory.value) loadError.value = `Không nhận diện được “${entry.path}”, các tệp còn lại vẫn dùng được: ${error instanceof Error ? error.message : "Hãy kiểm tra tệp"}`;
       }
     }
   }));
@@ -770,7 +770,7 @@ watch([searchTerm, directory, treeVersion], ([term, currentDirectory], _previous
         try { items = await readDirectory(currentDirectory, pending[index]!, controller.signal); }
         catch (error) {
           controller.signal.throwIfAborted();
-          if (revision === searchRevision) loadError.value = `跳过无法读取的目录“${pending[index] || "工作区"}”：${error instanceof Error ? error.message : "请检查权限"}`;
+          if (revision === searchRevision) loadError.value = `Bỏ qua thư mục không đọc được “${pending[index] || "không gian làm việc"}”：${error instanceof Error ? error.message : "Hãy kiểm tra quyền truy cập"}`;
           continue;
         }
         if (revision !== searchRevision) return;
@@ -784,14 +784,14 @@ watch([searchTerm, directory, treeVersion], ([term, currentDirectory], _previous
               results.push(...nodes.filter(node => `${node.name}\n${node.nodeId}\n${node.path}`.toLocaleLowerCase().includes(query)).map(node => ({ ...node, isLeaf: true })));
             } catch (error) {
               controller.signal.throwIfAborted();
-              if (revision === searchRevision) loadError.value = `跳过无法读取的画布“${item.path}”：${error instanceof Error ? error.message : "请检查文件"}`;
+              if (revision === searchRevision) loadError.value = `Bỏ qua Canvas không đọc được “${item.path}”：${error instanceof Error ? error.message : "Hãy kiểm tra tệp"}`;
             }
           }
         }
         searchResults.value = [...results];
       }
       void nextTick(syncCurrentSelection);
-    } catch (error) { if (revision === searchRevision) loadError.value = error instanceof Error ? error.message : "搜索文件失败"; }
+    } catch (error) { if (revision === searchRevision) loadError.value = error instanceof Error ? error.message : "Tìm tệp thất bại"; }
     finally { if (revision === searchRevision) searching.value = false; }
   }, 200);
   onCleanup(() => { clearTimeout(timer); controller.abort(); assetNodes.delete(controller.signal); });
@@ -828,7 +828,7 @@ function loadChildren(item: FileTreeItem): Promise<void> {
     } catch (error) {
       if (version === treeVersion.value && currentDirectory === directory.value) {
         const message = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-        loadError.value = `读取${path || "工作区"}失败：${message || (error instanceof Error ? error.message : "请重试")}。可重新展开目录或刷新重试。`;
+    loadError.value = `Đọc ${path || "không gian làm việc"} thất bại: ${message || (error instanceof Error ? error.message : "Vui lòng thử lại")}. Bạn có thể mở lại thư mục hoặc làm mới rồi thử tiếp.`;
       }
     } finally {
       if (version === treeVersion.value) { pendingLoads.delete(item.key); loadingKeys.delete(item.key); }

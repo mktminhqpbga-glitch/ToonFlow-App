@@ -2,10 +2,10 @@
   <div class="audioPlayer" :aria-busy="preparing || pcmLoading" @keydown.stop>
     <audio ref="audio" :src="playbackSrc || undefined" preload="auto" :aria-label="label" @loadedmetadata="readMetadata" @loadeddata="readPreview" @durationchange="readDuration" @timeupdate="readTime" @play="startProgress(); emit('play')" @pause="stopProgress" @ended="stopProgress" @volumechange="readVolume" @error="mediaError" />
     <div v-if="isPcm" class="pcmSettings nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop>
-      <label>采样率（Hz）<el-input-number :modelValue="pcmOptions.sampleRate" :min="1" :max="384000" :controls="false" size="small" placeholder="填写采样率" @update:modelValue="pcmOptions = { ...pcmOptions, sampleRate: $event ?? undefined }" /></label>
-      <label>声道<el-input-number :modelValue="pcmOptions.channels" :min="1" :max="32" :controls="false" size="small" placeholder="填写声道数" @update:modelValue="pcmOptions = { ...pcmOptions, channels: $event ?? undefined }" /></label>
-      <label class="pcmFormat">采样格式<el-select :modelValue="pcmOptions.format" size="small" placeholder="选择采样格式" @update:modelValue="pcmOptions = { ...pcmOptions, format: $event }"><el-option v-for="option in pcmFormats" :key="option.value" :label="option.label" :value="option.value" /></el-select></label>
-      <p>裸 PCM 不含格式信息，请按来源填写以上参数后预览。原文件保持不变。</p>
+      <label>Tần số lấy mẫu (Hz)<el-input-number :modelValue="pcmOptions.sampleRate" :min="1" :max="384000" :controls="false" size="small" placeholder="Nhập tần số lấy mẫu" @update:modelValue="pcmOptions = { ...pcmOptions, sampleRate: $event ?? undefined }" /></label>
+      <label>Kênh âm thanh<el-input-number :modelValue="pcmOptions.channels" :min="1" :max="32" :controls="false" size="small" placeholder="Nhập số kênh" @update:modelValue="pcmOptions = { ...pcmOptions, channels: $event ?? undefined }" /></label>
+      <label class="pcmFormat">Định dạng mẫu<el-select :modelValue="pcmOptions.format" size="small" placeholder="Chọn định dạng mẫu" @update:modelValue="pcmOptions = { ...pcmOptions, format: $event }"><el-option v-for="option in pcmFormats" :key="option.value" :label="option.label" :value="option.value" /></el-select></label>
+      <p>PCM thô không có thông tin định dạng. Hãy nhập thông số theo tệp nguồn để xem trước. Tệp gốc được giữ nguyên.</p>
     </div>
     <p v-if="statusMessage" class="audioStatus" :role="failed ? 'alert' : 'status'">{{ statusMessage }}</p>
     <div class="waveformPanel" :class="{ unavailable: !duration || failed }">
@@ -16,7 +16,7 @@
               <rect v-for="(peak, index) in peaks" :key="index" :x="index * 4 + 1" :y="50 - Math.max(2, peak * 78) / 2" width="2" :height="Math.max(2, peak * 78)" rx="1" />
             </svg>
           </template>
-          <span v-else-if="!statusMessage" class="waveformStatus">{{ waveformLoading ? '正在读取波形…' : '当前音频无法显示波形' }}</span>
+          <span v-else-if="!statusMessage" class="waveformStatus">{{ waveformLoading ? 'Đang đọc dạng sóng…' : 'Không thể hiển thị dạng sóng của âm thanh này' }}</span>
           <span v-if="duration && !failed" class="playhead" :style="{ left: `${progress}%` }" aria-hidden="true" />
           <input
             class="seekInput nodrag nopan nowheel"
@@ -26,7 +26,7 @@
             step="0.01"
             :value="currentTime"
             :disabled="!duration || failed"
-            aria-label="音频播放进度"
+            aria-label="Tiến độ phát âm thanh"
             :aria-valuetext="`${formatTime(currentTime)} / ${formatTime(duration)}`"
             @pointerdown.stop
             @mousedown.stop
@@ -37,11 +37,11 @@
       </div>
     </div>
     <div class="playerControls">
-      <el-button class="playButton nodrag nopan nowheel" :icon="playing ? IconPlayerPause : IconPlayerPlay" :disabled="!duration || failed" circle :aria-label="playing ? '暂停音频' : '播放音频'" :title="playing ? '暂停' : '播放'" @pointerdown.stop @mousedown.stop @dblclick.stop @click="togglePlayback" />
+      <el-button class="playButton nodrag nopan nowheel" :icon="playing ? IconPlayerPause : IconPlayerPlay" :disabled="!duration || failed" circle :aria-label="playing ? 'Tạm dừng âm thanh' : 'Phát âm thanh'" :title="playing ? 'Tạm dừng' : 'Phát'" @pointerdown.stop @mousedown.stop @dblclick.stop @click="togglePlayback" />
       <span class="timeLabel"><slot name="time"><span>{{ formatTime(currentTime) }}</span><span class="timeSeparator">/</span>{{ formatTime(duration) }}</slot></span>
       <div class="volumeControl nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop>
-        <el-button class="volumeButton" :icon="muted || !volume ? IconVolumeOff : IconVolume" text circle :disabled="failed" :aria-label="muted || !volume ? '取消静音' : '静音音频'" :title="muted || !volume ? '取消静音' : '静音'" :aria-pressed="muted || !volume" @click="toggleMute" />
-        <input class="volumeInput" type="range" min="0" max="100" :value="muted ? 0 : volume" :disabled="failed" aria-label="音频音量" @input="setVolume" />
+        <el-button class="volumeButton" :icon="muted || !volume ? IconVolumeOff : IconVolume" text circle :disabled="failed" :aria-label="muted || !volume ? 'Bật tiếng' : 'Tắt tiếng âm thanh'" :title="muted || !volume ? 'Bật tiếng' : 'Tắt tiếng'" :aria-pressed="muted || !volume" @click="toggleMute" />
+        <input class="volumeInput" type="range" min="0" max="100" :value="muted ? 0 : volume" :disabled="failed" aria-label="Âm lượng" @input="setVolume" />
       </div>
     </div>
   </div>
@@ -55,7 +55,7 @@ import { useMediaPreview } from "@toonflow/node-shared/mediaPreview";
 import { getPcmOptions, isPcmMimeType, pcmFormats, pcmToWav, type PcmOptions } from "@toonflow/node-shared/pcmPreview";
 import { getWaveformPeaks } from "../audioWaveform";
 
-const { src, mimeType, label = "节点音频" } = defineProps<{ src: string; mimeType?: string; label?: string }>();
+const { src, mimeType, label = "Âm thanh của node" } = defineProps<{ src: string; mimeType?: string; label?: string }>();
 const pcmOptions = defineModel<Partial<PcmOptions>>("pcmOptions", { default: () => ({}) });
 const emit = defineEmits<{ loadedmetadata: [event: Event]; play: [] }>();
 const isPcm = computed(() => isPcmMimeType(mimeType));
@@ -73,7 +73,7 @@ const playing = ref(false);
 const failed = ref(false);
 const volume = ref(100);
 const muted = ref(false);
-const statusMessage = computed(() => pcmError.value || previewError.value || (preparing.value || pcmLoading.value ? "正在生成兼容预览…" : ""));
+const statusMessage = computed(() => pcmError.value || previewError.value || (preparing.value || pcmLoading.value ? "Đang tạo bản xem trước tương thích…" : ""));
 const progress = computed(() => duration.value ? Math.min(100, Math.max(0, currentTime.value / duration.value * 100)) : 0);
 let animationFrame = 0;
 let disposed = false;
@@ -88,17 +88,17 @@ watch([() => src, isPcm, () => pcmOptions.value.sampleRate, () => pcmOptions.val
   pcmLoading.value = false;
   if (!rawPcm || !value) return;
   const options = getPcmOptions(pcmOptions.value);
-  if (!options) { pcmError.value = "请填写有效的采样率、声道数和采样格式，才能预览裸 PCM"; return; }
+  if (!options) { pcmError.value = "Hãy nhập tần số lấy mẫu, số kênh và định dạng mẫu hợp lệ để xem trước PCM thô"; return; }
   pcmLoading.value = true;
   try {
     const response = await fetch(value, { signal: controller.signal });
-    if (!response.ok) throw new Error("无法读取 PCM 音频");
+    if (!response.ok) throw new Error("Không đọc được âm thanh PCM");
     const content = await response.arrayBuffer();
     controller.signal.throwIfAborted();
     url = URL.createObjectURL(pcmToWav(content, options));
     pcmUrl.value = url;
   } catch (error) {
-    if (!controller.signal.aborted) pcmError.value = error instanceof Error ? error.message : "PCM 预览失败";
+    if (!controller.signal.aborted) pcmError.value = error instanceof Error ? error.message : "Không xem trước được PCM";
   } finally {
     if (!controller.signal.aborted) pcmLoading.value = false;
   }
@@ -116,7 +116,7 @@ watch(playbackSrc, async (value, _previous, onCleanup) => {
   if (!value) return;
   try {
     const response = await fetch(value, { signal: controller.signal });
-    if (!response.ok) throw new Error("无法读取音频");
+    if (!response.ok) throw new Error("Không đọc được âm thanh");
     const content = await response.arrayBuffer();
     controller.signal.throwIfAborted();
     // ACT: 使用浏览器完整解码后仅保留 128 个峰值；超长素材的解码内存开销可通过服务端分段提取优化。
@@ -189,7 +189,7 @@ async function togglePlayback() {
   if (!element.paused) return element.pause();
   try { await element.play(); }
   catch (error) {
-    if (!disposed && !(error instanceof DOMException && error.name === "AbortError")) ElMessage.error("音频播放失败");
+    if (!disposed && !(error instanceof DOMException && error.name === "AbortError")) ElMessage.error("Phát âm thanh thất bại");
   }
 }
 

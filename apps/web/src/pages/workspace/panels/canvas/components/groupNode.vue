@@ -5,7 +5,7 @@
       ref="labelInput"
       v-model="labelDraft"
       class="groupLabelInput nodrag nopan"
-      aria-label="分组名称"
+      aria-label="Tên nhóm"
       @pointerdown.stop
       @mousedown.stop
       @click.stop
@@ -14,8 +14,8 @@
       @keydown.enter="confirmLabel"
       @keydown.esc.prevent="editingLabel = false"
       @blur="saveLabel" />
-    <span v-else class="groupLabel" :tabindex="readOnly ? undefined : 0" :title="readOnly ? data.label || '分组' : `${data.label || '分组'}（双击编辑名称）`" @dblclick.stop="editLabel" @keydown.enter.stop.prevent="editLabel">
-      {{ data.label || "分组" }}
+    <span v-else class="groupLabel" :tabindex="readOnly ? undefined : 0" :title="readOnly ? data.label || 'Nhóm' : `${data.label || 'Nhóm'} (nhấp đúp để sửa tên)`" @dblclick.stop="editLabel" @keydown.enter.stop.prevent="editLabel">
+      {{ data.label || "Nhóm" }}
     </span>
     <button
       v-for="corner in readOnly ? [] : resizeCorners"
@@ -23,7 +23,7 @@
       class="resizeCorner nodrag nopan"
       :class="corner.name"
       type="button"
-      :aria-label="`调整分组${corner.label}`"
+      :aria-label="`Điều chỉnh nhóm${corner.label}`"
       @pointerdown.stop.prevent="startResize($event, corner)"
       @pointermove.stop="moveResize"
       @pointerup.stop="finishResize"
@@ -47,10 +47,10 @@ const editingLabel = ref(false);
 const labelDraft = ref("");
 const labelInput = ref<HTMLInputElement>();
 const resizeCorners = [
-  { name: "topLeft", label: "左上角", x: -1, y: -1 },
-  { name: "topRight", label: "右上角", x: 1, y: -1 },
-  { name: "bottomLeft", label: "左下角", x: -1, y: 1 },
-  { name: "bottomRight", label: "右下角", x: 1, y: 1 },
+  { name: "topLeft", label: "Góc trên trái", x: -1, y: -1 },
+  { name: "topRight", label: "Góc trên phải", x: 1, y: -1 },
+  { name: "bottomLeft", label: "Góc dưới trái", x: -1, y: 1 },
+  { name: "bottomRight", label: "Góc dưới phải", x: 1, y: 1 },
 ] as const;
 type ResizeCorner = typeof resizeCorners[number];
 const resize = shallowRef<{
@@ -67,7 +67,7 @@ const resize = shallowRef<{
 
 async function editLabel() {
   if (props.readOnly) return;
-  labelDraft.value = props.data.label || "分组";
+  labelDraft.value = props.data.label || "Nhóm";
   editingLabel.value = true;
   await nextTick();
   labelInput.value?.select();
@@ -103,7 +103,7 @@ function startResize(event: PointerEvent, corner: ResizeCorner) {
   });
   void (batchHistory ? batchHistory(action) : action()).catch(error => {
     finishResize();
-    ElMessage.error(error instanceof Error ? error.message : "分组缩放失败");
+    ElMessage.error(error instanceof Error ? error.message : "Thay đổi kích thước nhóm thất bại");
   });
 }
 

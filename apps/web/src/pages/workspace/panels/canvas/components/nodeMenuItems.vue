@@ -7,11 +7,11 @@
           type="button"
           class="menuButton"
           role="menuitem"
-          :title="nodeDisplayLabel(item)"
+          :title="item.label"
           @mouseenter="focusItem($event, item)"
           @click="emit('select', item.type)">
           <component :is="nodeByType.get(item.type)?.icon ?? IconBox" class="menuIcon" :size="14" />
-          <span class="menuLabel">{{ nodeDisplayLabel(item) }}</span>
+          <span class="menuLabel">{{ item.label }}</span>
         </button>
         <el-popover
           v-else
@@ -39,11 +39,11 @@
               role="menuitem"
               aria-haspopup="menu"
               :aria-expanded="openGroupId === item.id"
-              :title="nodeDisplayLabel(item)"
+              :title="item.label"
               @mouseenter="focusItem($event, item)"
               @click="openGroup(item.id)">
               <component :is="openGroupId === item.id ? IconFolderOpen : IconFolder" class="menuIcon" :size="14" aria-hidden="true" />
-              <span class="menuLabel">{{ nodeDisplayLabel(item) }}</span>
+              <span class="menuLabel">{{ item.label }}</span>
               <icon-chevron-right class="nextIcon" :size="14" />
             </button>
           </template>
@@ -62,7 +62,7 @@
         <el-divider />
         <button type="button" class="menuButton" role="menuitem" :disabled="uploadDisabled" @mouseenter="focusItem($event)" @click="emit('upload')">
           <icon-upload class="menuIcon" :size="14" />
-          <span class="menuLabel">上传</span>
+      <span class="menuLabel">Tải lên</span>
         </button>
       </template>
     </div>
@@ -70,7 +70,6 @@
 </template>
 
 <script setup lang="ts">
-import { nodeDisplayLabel } from "@/lib/nodeDisplayLabel";
 import { computed, nextTick, onMounted, ref, shallowRef, type Component, type ComponentPublicInstance } from "vue";
 import { IconBox, IconChevronRight, IconFolder, IconFolderOpen, IconUpload } from "@tabler/icons-vue";
 import type { NodeMenuItem } from "@toonflow/server/nodeMenu";

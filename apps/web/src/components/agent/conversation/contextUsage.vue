@@ -8,12 +8,12 @@
     :showArrow="false"
     popperClass="agentContextPopover">
     <template #reference>
-      <el-button class="contextButton" text circle :disabled="disabled" :aria-label="usage?.tokens == null ? '查看上下文用量，暂无数据' : `查看上下文用量，已使用 ${contextPercent.toFixed(1)}%`" title="查看上下文用量">
+      <el-button class="contextButton" text circle :disabled="disabled" :aria-label="usage?.tokens == null ? 'Xem mức sử dụng ngữ cảnh, chưa có dữ liệu' : `Xem mức sử dụng ngữ cảnh, đã dùng ${contextPercent.toFixed(1)}%`" title="Xem mức sử dụng ngữ cảnh">
         <el-progress type="circle" :width="14" :strokeWidth="2" :percentage="Math.min(100, contextPercent)" :color="contextColor" :showText="false" />
       </el-button>
     </template>
     <div class="contextUsage">
-      <div class="contextHeader"><span>上下文用量</span><span class="contextHint">估算</span></div>
+      <div class="contextHeader"><span>Mức sử dụng ngữ cảnh</span><span class="contextHint">Ước tính</span></div>
       <template v-if="usage?.tokens != null">
         <div class="contextTokens">
           <span>{{ usage.tokens.toLocaleString() }} / {{ contextWindow.toLocaleString() }} tok</span>
@@ -21,13 +21,13 @@
         </div>
         <el-progress :percentage="Math.min(100, contextPercent)" :color="contextColor" :showText="false" />
       </template>
-      <span v-else class="contextHint">{{ usage ? "等待下一次回复更新用量" : "尚无用量数据" }}</span>
+      <span v-else class="contextHint">{{ usage ? "Chờ phản hồi tiếp theo để cập nhật mức sử dụng" : "Chưa có dữ liệu sử dụng" }}</span>
       <div v-if="stats" class="contextStats">
-        <div class="contextHeader">对话累计用量</div>
-        <div class="contextTokens"><span>输入</span><span>{{ inputTokens.toLocaleString() }} tok</span></div>
-        <div class="contextTokens"><span>输出</span><span>{{ stats.tokens.output.toLocaleString() }} tok</span></div>
-        <div v-if="inputTokens > 0" class="contextTokens"><span>缓存命中</span><span>{{ (stats.tokens.cacheRead / inputTokens * 100).toFixed(1) }}%</span></div>
-        <div v-if="stats.tokensPerSecond !== undefined" class="contextTokens"><span>生成速度</span><span>{{ stats.tokensPerSecond.toFixed(1) }} tok/s</span></div>
+        <div class="contextHeader">Tổng mức sử dụng trong hội thoại</div>
+        <div class="contextTokens"><span>Đầu vào</span><span>{{ inputTokens.toLocaleString() }} tok</span></div>
+        <div class="contextTokens"><span>Đầu ra</span><span>{{ stats.tokens.output.toLocaleString() }} tok</span></div>
+        <div v-if="inputTokens > 0" class="contextTokens"><span>Lượt đọc bộ nhớ đệm</span><span>{{ (stats.tokens.cacheRead / inputTokens * 100).toFixed(1) }}%</span></div>
+        <div v-if="stats.tokensPerSecond !== undefined" class="contextTokens"><span>Tốc độ tạo</span><span>{{ stats.tokensPerSecond.toFixed(1) }} tok/s</span></div>
       </div>
     </div>
   </el-popover>

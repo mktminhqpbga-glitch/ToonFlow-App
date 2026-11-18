@@ -13,7 +13,7 @@ type Listener = (...args: any[]) => void;
 function snapshot<T>(value: T): T {
   return JSON.parse(JSON.stringify(value, (_key, item) => {
     if (["function", "symbol", "bigint"].includes(typeof item) || (typeof item === "number" && !Number.isFinite(item))) {
-      throw new Error("浏览器 FFmpeg 参数必须可序列化；请传入工作区文件路径");
+      throw new Error("Tham số FFmpeg trong trình duyệt phải tuần tự hóa được; hãy truyền đường dẫn tệp trong workspace");
     }
     return item;
   }));
@@ -26,7 +26,7 @@ function createCall(method: string, args: unknown[]): FfmpegCall {
 
 function remoteError(value: unknown) {
   const details = value as { message?: string; name?: string; code?: string };
-  return Object.assign(new Error(details.message || "FFmpeg 执行失败"), details);
+  return Object.assign(new Error(details.message || "FFmpeg thực thi thất bại"), details);
 }
 
 async function request(input: BrowserFfmpegRequest, signal?: AbortSignal) {
@@ -60,7 +60,7 @@ export async function createBrowserFfmpeg(directory: string, signal?: AbortSigna
     }
 
     function start(operation: FfmpegCall, callback?: Listener) {
-      if (active) throw new Error("当前 FFmpeg 命令正在执行；并行处理请使用 clone()");
+      if (active) throw new Error("Lệnh FFmpeg hiện đang chạy; hãy dùng clone() để xử lý song song");
       const input = snapshot({ directory, requestId: crypto.randomUUID(), options, calls, operation });
       const controller = active = new AbortController();
       const requestSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
@@ -73,7 +73,7 @@ export async function createBrowserFfmpeg(directory: string, signal?: AbortSigna
         // Bun 不总是把 fetch.abort 传递给 Express；显式取消，并等响应头保证任务已注册。
         cancellation = request({ ...input, options: {}, calls: [], operation: { method: "cancel", args: [] } })
           .then(() => {})
-          .catch(error => console.error("FFmpeg 取消请求失败", error))
+          .catch(error => console.error("Không thể gửi yêu cầu hủy FFmpeg", error))
           .finally(() => transport.abort(requestSignal.reason));
       };
       requestSignal.addEventListener("abort", cancel, { once: true });
@@ -82,7 +82,7 @@ export async function createBrowserFfmpeg(directory: string, signal?: AbortSigna
         const response = await request(input, transport.signal);
         ready = true;
         if (requestSignal.aborted) cancel();
-        if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream")) throw new Error("FFmpeg 响应不是事件流");
+        if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream")) throw new Error("Phản hồi FFmpeg không phải luồng sự kiện");
         const reader = response.body.pipeThrough(new TextDecoderStream()).pipeThrough(new EventSourceParserStream()).getReader();
         try {
           while (true) {
@@ -103,7 +103,7 @@ export async function createBrowserFfmpeg(directory: string, signal?: AbortSigna
             else emit(event, args);
             if (finished) break;
           }
-          if (!finished) throw new Error("FFmpeg 连接已断开，未收到完成结果");
+          if (!finished) throw new Error("Kết nối FFmpeg đã ngắt mà chưa nhận được kết quả hoàn tất");
         } finally {
           await reader.cancel().catch(() => {});
           reader.releaseLock();
@@ -121,7 +121,7 @@ export async function createBrowserFfmpeg(directory: string, signal?: AbortSigna
     const command = new Proxy({} as BrowserFfmpegCommand, {
       get(_target, name: string) {
         if (["on", "once", "addListener"].includes(name)) return (event: string, callback: Listener) => {
-          if (typeof callback !== "function") throw new Error("FFmpeg 事件监听器必须是函数");
+          if (typeof callback !== "function") throw new Error("Bộ lắng nghe sự kiện FFmpeg phải là hàm");
           listeners.set(event, [...(listeners.get(event) ?? []), { callback, once: name === "once" }]);
           return command;
         };
@@ -137,26 +137,26 @@ export async function createBrowserFfmpeg(directory: string, signal?: AbortSigna
           return command;
         };
         if (name === "kill") return (mode = "SIGKILL") => {
-          if (!["SIGKILL", "SIGTERM"].includes(mode)) throw new Error("浏览器 FFmpeg 仅支持取消任务");
-          active?.abort(new DOMException("FFmpeg 任务已取消", "AbortError"));
+          if (!["SIGKILL", "SIGTERM"].includes(mode)) throw new Error("FFmpeg trong trình duyệt chỉ hỗ trợ hủy tác vụ");
+          active?.abort(new DOMException("Đã hủy tác vụ FFmpeg", "AbortError"));
           return command;
         };
         if (["preset", "usingPreset"].includes(name)) return (preset: (command: BrowserFfmpegCommand) => void) => {
-          if (typeof preset !== "function") throw new Error("浏览器 FFmpeg 预设请使用本地函数");
+          if (typeof preset !== "function") throw new Error("Preset FFmpeg trong trình duyệt phải dùng hàm cục bộ");
           preset(command);
           return command;
         };
         if (name === "clone") return () => createCommand(snapshot(options), [...snapshot(calls), { method: "clone", args: [] }]);
         if (queryNames.has(name)) return (...args: unknown[]) => {
           const callback = args.pop();
-          if (typeof callback !== "function") throw new Error("FFmpeg 查询需要回调函数");
+          if (typeof callback !== "function") throw new Error("Truy vấn FFmpeg cần hàm callback");
           start(createCall(name, args), callback as Listener);
         };
         if (runNames.has(name) || chainNames.has(name)) return (...args: unknown[]) => {
           const call = createCall(name, args);
           if (runNames.has(name)) start(call);
           else {
-            if (active) throw new Error("FFmpeg 执行期间不能修改配置");
+            if (active) throw new Error("Không thể thay đổi cấu hình khi FFmpeg đang chạy");
             calls.push(call);
           }
           return name === "run" ? undefined : command;

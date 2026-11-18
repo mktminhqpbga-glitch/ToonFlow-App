@@ -1,25 +1,25 @@
 <template>
-  <section class="walletBonus" aria-label="赠送金额" :aria-busy="loading">
+  <section class="walletBonus" aria-label="Tiền ưu đãi" :aria-busy="loading">
     <div class="bonusSummary">
       <dl class="bonusMetrics">
-        <div><dt>可用赠送金额</dt><dd>{{ formatMoney(summary?.availableAmount) }}</dd></div>
-        <div><dt>即将到期</dt><dd>{{ formatMoney(summary?.expiringSoonAmount) }}</dd></div>
+        <div><dt>Tiền ưu đãi khả dụng</dt><dd>{{ formatMoney(summary?.availableAmount) }}</dd></div>
+        <div><dt>Sắp hết hạn</dt><dd>{{ formatMoney(summary?.expiringSoonAmount) }}</dd></div>
       </dl>
-      <el-button size="small" :icon="IconReceipt" @click="detailsVisible = true">赠送明细</el-button>
+      <el-button size="small" :icon="IconReceipt" @click="detailsVisible = true">Chi tiết ưu đãi</el-button>
     </div>
     <el-alert v-if="errorMessage && !detailsVisible" :title="errorMessage" type="error" :closable="false" showIcon>
-      <el-button size="small" :disabled="loading" @click="refresh">重试</el-button>
+        <el-button size="small" :disabled="loading" @click="refresh">Thử lại</el-button>
     </el-alert>
 
-    <el-dialog v-model="detailsVisible" title="赠送明细" width="min(1100px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+    <el-dialog v-model="detailsVisible" title="Chi tiết ưu đãi" width="min(1100px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <div class="bonusDetails" :aria-busy="loading">
-        <el-segmented v-model="status" class="statusSwitch" :options="statusOptions" :disabled="loading" aria-label="赠送金额状态" />
+        <el-segmented v-model="status" class="statusSwitch" :options="statusOptions" :disabled="loading" aria-label="Trạng thái tiền ưu đãi" />
         <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" showIcon>
-          <el-button size="small" :disabled="loading" @click="refresh">重试</el-button>
+        <el-button size="small" :disabled="loading" @click="refresh">Thử lại</el-button>
         </el-alert>
         <div v-loading="loading" class="bonusList">
           <el-table :data="batches" rowKey="id" emptyText="" maxHeight="min(460px, calc(100dvh - 280px))">
-            <el-table-column label="来源 / 活动" minWidth="190">
+            <el-table-column label="Nguồn / chương trình" minWidth="190">
               <template #default="{ row }">
                 <div class="batchIdentity">
                   <strong>{{ row.activityName || sourceLabel(row.source) }}</strong>
@@ -28,16 +28,16 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="赠送金额" minWidth="110">
+            <el-table-column label="Tiền ưu đãi" minWidth="110">
               <template #default="{ row }"><span class="batchAmount">{{ formatMoney(row.amount) }}</span></template>
             </el-table-column>
-            <el-table-column label="剩余金额" minWidth="110">
+            <el-table-column label="Số tiền còn lại" minWidth="110">
               <template #default="{ row }"><span class="batchAmount">{{ formatMoney(row.available) }}</span></template>
             </el-table-column>
-            <el-table-column label="已使用 / 已过期" minWidth="130">
+            <el-table-column label="Đã dùng / đã hết hạn" minWidth="130">
               <template #default="{ row }"><div class="batchFields"><span>{{ formatMoney(row.used) }}</span><span>{{ formatMoney(row.expired) }}</span></div></template>
             </el-table-column>
-            <el-table-column label="创建 / 到期时间" minWidth="175">
+            <el-table-column label="Ngày tạo / ngày hết hạn" minWidth="175">
               <template #default="{ row }"><div class="batchFields"><time>{{ formatTime(row.createdAt) }}</time><time>{{ formatTime(row.expiresAt) }}</time></div></template>
             </el-table-column>
           </el-table>
@@ -57,8 +57,8 @@
           @update:pageSize="changePageSize" />
       </div>
       <template #footer>
-        <el-button @click="detailsVisible = false">关闭</el-button>
-        <el-button type="primary" :loading="loading" @click="refresh">刷新</el-button>
+      <el-button @click="detailsVisible = false">Đóng</el-button>
+      <el-button type="primary" :loading="loading" @click="refresh">Làm mới</el-button>
       </template>
     </el-dialog>
   </section>
@@ -77,7 +77,7 @@ const summary = ref<WalletBonusBatchesPage["summary"]>();
 const batches = ref<WalletBonusBatch[]>([]);
 const detailsVisible = ref(false);
 const status = ref<WalletBonusBatchesParams["status"]>("available");
-const statusOptions = [{ label: "可用", value: "available" }, { label: "已用完", value: "used" }, { label: "已过期", value: "expired" }];
+const statusOptions = [{ label: "Khả dụng", value: "available" }, { label: "Đã dùng hết", value: "used" }, { label: "Đã hết hạn", value: "expired" }];
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
@@ -141,7 +141,7 @@ async function refresh() {
     });
     if (request.signal.aborted || props.token !== token) return;
     if (props.serverTime > 0 && result.summary.nextExpiresAt !== null && result.summary.nextExpiresAt <= Date.now() + clockOffset) {
-      throw new Error("赠送余额信息已过期，请刷新后重试");
+      throw new Error("Thông tin số dư ưu đãi đã cũ, hãy làm mới rồi thử lại");
     }
     const lastPage = Math.max(1, Math.ceil(result.total / pageSize.value));
     if (page.value > lastPage) {
@@ -155,8 +155,8 @@ async function refresh() {
     scheduleExpiryRefresh();
   } catch (error) {
     if (request.signal.aborted) return;
-    errorMessage.value = error instanceof Error && "status" in error && error.status === 401 ? "账号登录已失效，请重新登录"
-      : error instanceof Error ? error.message : "获取赠送明细失败";
+    errorMessage.value = error instanceof Error && "status" in error && error.status === 401 ? "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại"
+      : error instanceof Error ? error.message : "Không lấy được chi tiết ưu đãi";
   } finally {
     if (activeRequest === request) loading.value = false;
   }

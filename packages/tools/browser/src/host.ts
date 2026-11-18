@@ -45,7 +45,7 @@ function isBrowserPageUrl(value: string) {
 }
 
 async function findExecutables(configured: string) {
-  if (configured && !isAbsolute(configured)) throw new Error("executablePath 必须是浏览器程序的绝对路径");
+  if (configured && !isAbsolute(configured)) throw new Error("executablePath phải là đường dẫn tuyệt đối tới ứng dụng trình duyệt");
   // Electrobun 启动器修改环境变量后，Bun Worker 按原始大小写保存 Windows 环境变量。
   const env = process.platform === "win32"
     ? Object.fromEntries(Object.entries(process.env).map(([key, value]) => [key.toUpperCase(), value])) : process.env;
@@ -72,20 +72,20 @@ async function findExecutables(configured: string) {
     catch { /* 尝试下一个已安装浏览器。 */ }
   }
   if (executables.length) return executables;
-  throw new Error(configured ? "浏览器程序不存在或不可执行，请检查 executablePath" : "未找到 Chrome、Chromium 或 Edge，请先安装浏览器，或在工具配置中填写 executablePath");
+  throw new Error(configured ? "Không tìm thấy hoặc không chạy được trình duyệt; hãy kiểm tra executablePath" : "Không tìm thấy Chrome, Chromium hoặc Edge. Hãy cài trình duyệt hoặc cấu hình executablePath.");
 }
 
 async function pressKey(page: Page, key: string, signal: AbortSignal) {
   const aliases: Record<string, string> = { Ctrl: "Control", Cmd: "Meta", Command: "Meta" };
   const keys = (key === "+" ? [key] : key.split("+")).map(value => aliases[value] ?? value);
   const last = keys.pop();
-  if (!last || keys.some(value => !["Control", "Alt", "Shift", "Meta"].includes(value))) throw Object.assign(new Error("按键格式无效，例如 Enter 或 Control+A"), { status: 400 });
+  if (!last || keys.some(value => !["Control", "Alt", "Shift", "Meta"].includes(value))) throw Object.assign(new Error("Cú pháp phím không hợp lệ, ví dụ Enter hoặc Control+A"), { status: 400 });
   try {
     for (const value of keys) { signal.throwIfAborted(); await page.keyboard.down(value as KeyInput); }
     signal.throwIfAborted();
     await page.keyboard.press(last as KeyInput);
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Unknown key:")) throw Object.assign(new Error("不支持此按键，请使用 Enter、Backspace、方向键或 Control+A 等组合"), { status: 400 });
+    if (error instanceof Error && error.message.startsWith("Unknown key:")) throw Object.assign(new Error("Không hỗ trợ phím này; hãy dùng Enter, Backspace, phím mũi tên hoặc tổ hợp như Control+A"), { status: 400 });
     throw error;
   } finally { for (const value of keys.reverse()) await page.keyboard.up(value as KeyInput).catch(() => {}); }
 }
@@ -99,7 +99,7 @@ async function readUserAgent(browser: Browser) {
       const data = (navigator as Navigator & {
         userAgentData?: { getHighEntropyValues(hints: string[]): Promise<Protocol.Emulation.UserAgentMetadata & { uaFullVersion?: string }> };
       }).userAgentData;
-      if (!data) throw new Error("无法读取浏览器客户端信息，请升级本机 Chrome 或 Edge");
+      if (!data) throw new Error("Không đọc được thông tin trình duyệt; hãy cập nhật Chrome hoặc Edge trên máy.");
       const { uaFullVersion, ...metadata } = await data.getHighEntropyValues([
         "architecture", "bitness", "formFactors", "fullVersionList", "model", "platformVersion", "uaFullVersion", "wow64",
       ]);
@@ -184,7 +184,7 @@ export function createBrowserRuntime() {
       const [title, history] = await Promise.all([tab.page.title().catch(() => ""), client.send("Page.getNavigationHistory")]);
       if (session.closed || session.state.tabId !== tab.id || tab.navigationVersion !== navigationVersion) return session.state;
       const url = tab.page.url() === "chrome-error://chromewebdata/" ? history.entries[history.currentIndex]?.url : tab.page.url();
-      if (!url || !isWebUrl(url)) throw new Error("浏览器仅允许 HTTP/HTTPS 网页和空白页");
+      if (!url || !isWebUrl(url)) throw new Error("Trình duyệt chỉ cho phép trang HTTP/HTTPS hoặc trang trống.");
       session.state = { ...session.state, url, title: title.slice(0, 1000), canGoBack: history.currentIndex > 0, canGoForward: history.currentIndex < history.entries.length - 1 };
       emit(session, { type: "state", session: session.state });
       return session.state;
@@ -231,7 +231,7 @@ export function createBrowserRuntime() {
       await client.send("Page.startScreencast", { format: "jpeg", quality: 65, maxWidth: 1280, maxHeight: 800, everyNthFrame: 1 });
     }).catch(async error => {
       await stopStream(session);
-      if (!session.closed) emit(session, { type: "error", message: error instanceof Error ? error.message : "浏览器画面连接失败" });
+      if (!session.closed) emit(session, { type: "error", message: error instanceof Error ? error.message : "Không thể kết nối hình ảnh trình duyệt" });
     });
   }
 
@@ -258,7 +258,7 @@ export function createBrowserRuntime() {
   }
 
   async function activateTab(session: BrowserSession, tab: Tab) {
-    if (session.closed || tab.page.isClosed()) throw new Error("浏览器标签页已关闭");
+    if (session.closed || tab.page.isClosed()) throw new Error("Tab trình duyệt đã đóng");
     if (session.state.tabId !== tab.id) {
       const previous = session.tabs.get(session.state.tabId);
       if (previous) { previous.inputVersion++; await releaseInput(previous); }
@@ -283,8 +283,8 @@ export function createBrowserRuntime() {
     const existing = session.pages.get(page);
     if (existing) return existing;
     const pending = (async () => {
-      if (session.closed) throw new Error("浏览器会话已关闭");
-      if (!isBrowserPageUrl(page.url())) { await page.close(); throw new Error("浏览器仅允许 HTTP/HTTPS 网页和空白页"); }
+      if (session.closed) throw new Error("Phiên trình duyệt đã đóng");
+      if (!isBrowserPageUrl(page.url())) { await page.close(); throw new Error("Trình duyệt chỉ cho phép trang HTTP/HTTPS hoặc trang trống."); }
       const tab: Tab = { id: crypto.randomUUID(), page, navigationVersion: 0, inputVersion: 0, inputKeys: new Set(), inputButtons: new Set() };
       session.tabs.set(tab.id, tab);
       page.setDefaultTimeout(15000);
@@ -296,7 +296,7 @@ export function createBrowserRuntime() {
         if (request.isInterceptResolutionHandled()) return;
         if (request.isNavigationRequest() && request.frame() === page.mainFrame() && !isWebUrl(request.url())) {
           void request.abort("blockedbyclient").catch(() => {});
-          emit(session, { type: "error", message: "已阻止浏览器打开非 HTTP/HTTPS 地址" });
+          emit(session, { type: "error", message: "Đã chặn trình duyệt mở địa chỉ không phải HTTP/HTTPS" });
           void page.close().catch(() => {});
           return;
         }
@@ -308,7 +308,7 @@ export function createBrowserRuntime() {
         tab.navigationVersion++;
         queueInputRelease(session, tab);
         if (!isBrowserPageUrl(page.url())) {
-          emit(session, { type: "error", message: "已关闭跳转到非 HTTP/HTTPS 地址的标签页" });
+          emit(session, { type: "error", message: "Đã đóng tab chuyển tới địa chỉ không phải HTTP/HTTPS" });
           void page.close().catch(() => {});
           return;
         }
@@ -340,7 +340,7 @@ export function createBrowserRuntime() {
     executables.sort((left, right) => Number(browsers.has(right)) - Number(browsers.has(left)));
     for (const executablePath of executables) {
       signal.throwIfAborted();
-      if (shuttingDown) throw new Error("浏览器运行时正在关闭");
+      if (shuttingDown) throw new Error("Bộ điều khiển trình duyệt đang tắt");
       let pending = browsers.get(executablePath);
       if (!pending) {
         pending = puppeteer.launch({
@@ -371,7 +371,7 @@ export function createBrowserRuntime() {
         failures.push(`${executablePath}\n${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    throw new Error(`浏览器暂时没能启动，请更新 Chrome 或 Edge 后重试，也可以在工具设置中指定其他浏览器程序。\n\n${failures.join("\n\n")}`);
+    throw new Error(`Không khởi động được trình duyệt. Hãy cập nhật Chrome hoặc Edge rồi thử lại, hoặc chỉ định ứng dụng trình duyệt khác trong cài đặt công cụ.\n\n${failures.join("\n\n")}`);
   }
 
   async function createSession(cwd: string, ownerKey: string, executablePath: string, signal: AbortSignal) {
@@ -380,12 +380,12 @@ export function createBrowserRuntime() {
     signal.throwIfAborted();
     const browser = await getBrowser(executables, signal);
     signal.throwIfAborted();
-    if (shuttingDown) throw new Error("浏览器运行时正在关闭");
+    if (shuttingDown) throw new Error("Bộ điều khiển trình duyệt đang tắt");
     const context = await browser.createBrowserContext();
     if (signal.aborted || shuttingDown) {
       await context.close().catch(() => {});
       signal.throwIfAborted();
-      throw new Error("浏览器运行时正在关闭");
+      throw new Error("Bộ điều khiển trình duyệt đang tắt");
     }
     const session: BrowserSession = {
       cwd, ownerKey, browser, context,
@@ -415,14 +415,14 @@ export function createBrowserRuntime() {
       const version = session.snapshotVersion;
       const tree = await page.accessibility.snapshot({ includeIframes: true });
       signal.throwIfAborted();
-      if (session.snapshotVersion !== version) throw new Error("页面已变化，请重新读取快照");
+      if (session.snapshotVersion !== version) throw new Error("Trang đã thay đổi, hãy lấy snapshot mới");
       const visit = (node: SerializedAXNode, depth: number) => {
         session.snapshot.push({ node, depth });
         for (const child of node.children ?? []) visit(child, depth + 1);
       };
       if (tree) visit(tree, 0);
-    } else if (!session.snapshot.length) throw new Error("页面已变化，请从 offset: 0 重新读取快照");
-    if (offset > session.snapshot.length) throw new Error("快照 offset 超出内容范围");
+    } else if (!session.snapshot.length) throw new Error("Trang đã thay đổi, hãy đọc snapshot lại từ offset: 0");
+    if (offset > session.snapshot.length) throw new Error("Offset của snapshot vượt phạm vi nội dung");
     const version = session.snapshotVersion;
     const entries = session.snapshot.slice(offset, offset + 60);
     const lines: string[] = [];
@@ -432,24 +432,24 @@ export function createBrowserRuntime() {
       let handle = session.refs.get(ref);
       if (!handle && node.elementHandle) {
         const next = await node.elementHandle().catch(() => null);
-        if (session.closed || session.snapshotVersion !== version) { await next?.dispose(); throw new Error("页面已变化，请重新读取快照"); }
+        if (session.closed || session.snapshotVersion !== version) { await next?.dispose(); throw new Error("Trang đã thay đổi, hãy lấy snapshot mới"); }
         if (next) { handle = next; session.refs.set(ref, handle); }
       }
       const value = node.value === undefined ? "" : ` value=${JSON.stringify(String(node.value).slice(0, 500))}`;
       lines.push(`${"  ".repeat(Math.min(depth, 8))}${handle ? `[${ref}] ` : ""}${node.role} ${JSON.stringify(node.name?.slice(0, 500) ?? "")}${value}${node.disabled ? " disabled" : ""}${node.checked !== undefined ? ` checked=${node.checked}` : ""}`);
     }
-    if (session.snapshotVersion !== version) throw new Error("页面已变化，请重新读取快照");
+    if (session.snapshotVersion !== version) throw new Error("Trang đã thay đổi, hãy lấy snapshot mới");
     const nextOffset = offset + entries.length < session.snapshot.length ? offset + entries.length : null;
-    return { snapshot: lines.join("\n"), offset, nextOffset, total: session.snapshot.length, notice: `名称和数值超过 500 字符时已截断；完整正文使用 read。${nextOffset !== null ? "快照已分页，继续调用 snapshot 并使用 nextOffset。" : ""}` };
+    return { snapshot: lines.join("\n"), offset, nextOffset, total: session.snapshot.length, notice: `Tên và giá trị dài hơn 500 ký tự đã được cắt ngắn; dùng read để xem toàn bộ nội dung.${nextOffset !== null ? "Snapshot đã được phân trang; gọi snapshot tiếp theo với nextOffset." : ""}` };
   }
 
   async function perform(session: BrowserSession, action: BrowserAction, signal: AbortSignal, onUpdate?: ToolUpdate): Promise<ToolResult> {
     signal.throwIfAborted();
-    if (session.closed) throw new Error("浏览器会话已关闭，请重新 open");
-    onUpdate?.(toolResult(session, { action: action.action, message: "浏览器正在执行操作" }));
+    if (session.closed) throw new Error("Phiên trình duyệt đã đóng; hãy dùng open để mở lại");
+    onUpdate?.(toolResult(session, { action: action.action, message: "Trình duyệt đang thao tác" }));
     if (action.action === "close") { await closeSession(session); return toolResult(session); }
     let tab = session.tabs.get(session.state.tabId);
-    if (!tab || tab.page.isClosed()) throw new Error("浏览器没有可用标签页，请重新 open");
+    if (!tab || tab.page.isClosed()) throw new Error("Không còn tab trình duyệt khả dụng; hãy gọi open lại");
     if (["navigate", "newTab", "click", "hover", "type", "pressKey", "scroll"].includes(action.action)) {
       tab.inputVersion++;
       await releaseInput(tab);
@@ -469,7 +469,7 @@ export function createBrowserRuntime() {
     } else if (action.action === "read") {
       data = await tab.page.$eval("body", (body, offset) => {
         const text = body.innerText;
-        if (offset > text.length) throw new Error("正文 offset 超出内容范围");
+        if (offset > text.length) throw new Error("Offset nội dung vượt phạm vi");
         let end = Math.min(offset + 12000, text.length);
         const last = text.charCodeAt(end - 1);
         if (end < text.length && last >= 0xd800 && last <= 0xdbff) end--;
@@ -477,9 +477,9 @@ export function createBrowserRuntime() {
       }, action.offset);
     } else if (action.action === "click" || action.action === "hover" || action.action === "type") {
       const handle = session.refs.get(action.ref);
-      if (!handle || !await handle.evaluate(element => element.isConnected)) throw new Error("元素引用已失效，请重新读取 snapshot 后操作");
+      if (!handle || !await handle.evaluate(element => element.isConnected)) throw new Error("Tham chiếu phần tử đã hết hiệu lực; hãy lấy snapshot mới rồi thao tác.");
       const href = await handle.evaluate(element => element.closest("a[href]")?.getAttribute("href"));
-      if (href && !isWebUrl(new URL(href, tab.page.url()).href)) throw new Error("不能打开非 HTTP/HTTPS 链接");
+      if (href && !isWebUrl(new URL(href, tab.page.url()).href)) throw new Error("Không thể mở liên kết không phải HTTP/HTTPS");
       signal.throwIfAborted();
       if (action.action === "click") await handle.asLocator().click({ signal });
       else if (action.action === "hover") await handle.asLocator().hover({ signal });
@@ -497,17 +497,17 @@ export function createBrowserRuntime() {
       image = await tab.page.screenshot({ type: "jpeg", quality: 80, encoding: "base64" });
     } else if (action.action === "tabs") {
       const tabs = [...session.tabs.values()];
-      if (action.offset > tabs.length) throw new Error("标签页 offset 超出内容范围");
+      if (action.offset > tabs.length) throw new Error("Offset tab vượt phạm vi");
       data = { tabs: await Promise.all(tabs.slice(action.offset, action.offset + 20).map(async item => ({
         tabId: item.id, url: isWebUrl(item.page.url()) ? item.page.url().slice(0, 2000) : "about:blank", title: (await item.page.title().catch(() => "")).slice(0, 300), active: item.id === session.state.tabId,
       }))), total: tabs.length, nextOffset: action.offset + 20 < tabs.length ? action.offset + 20 : null };
     } else if (action.action === "selectTab") {
       const next = session.tabs.get(action.tabId);
-      if (!next) throw new Error("标签页不属于当前浏览器会话");
+      if (!next) throw new Error("Tab không thuộc phiên trình duyệt hiện tại");
       await activateTab(session, next);
     } else if (action.action === "closeTab") {
       const target = action.tabId ? session.tabs.get(action.tabId) : tab;
-      if (!target) throw new Error("标签页不属于当前浏览器会话");
+      if (!target) throw new Error("Tab không thuộc phiên trình duyệt hiện tại");
       await target.page.close();
       if (!session.tabs.size) await closeSession(session);
       else if (!session.tabs.has(session.state.tabId)) await activateTab(session, session.tabs.values().next().value!);
@@ -521,8 +521,8 @@ export function createBrowserRuntime() {
     async execute(cwd: string, ownerSessionId: string, args: Record<string, unknown>, config: Record<string, unknown>, signal?: AbortSignal, onUpdate?: ToolUpdate): Promise<ToolResult> {
       const action = browserActionSchema.parse(args);
       const settings = browserConfigSchema.parse(config);
-      if (shuttingDown) throw new Error("浏览器运行时正在关闭");
-      if (!ownerSessionId) throw new Error("浏览器操作缺少 Agent 会话身份");
+      if (shuttingDown) throw new Error("Bộ điều khiển trình duyệt đang tắt");
+      if (!ownerSessionId) throw new Error("Thao tác trình duyệt thiếu ID phiên Agent");
       const directory = resolve(cwd);
       const ownerKey = JSON.stringify([directory, ownerSessionId]);
       const timeout = AbortSignal.timeout(30000);
@@ -532,7 +532,7 @@ export function createBrowserRuntime() {
       let pendingSession: Promise<BrowserSession> | undefined;
       const cancelled = Promise.withResolvers<never>();
       const abort = () => {
-        const reason = timeout.aborted ? new Error("浏览器操作超时，已关闭当前浏览器会话，避免操作继续执行") : requestSignal.reason;
+        const reason = timeout.aborted ? new Error("Thao tác trình duyệt hết thời gian chờ. Đã đóng phiên để ngăn thao tác tiếp tục.") : requestSignal.reason;
         if (session) void closeSession(session).then(() => cancelled.reject(reason), cancelled.reject);
         else {
           if (pendingSession && owners.get(ownerKey) === pendingSession) owners.delete(ownerKey);
@@ -545,12 +545,12 @@ export function createBrowserRuntime() {
         const operation = (async () => {
           if (action.browserSessionId) {
             const existing = sessions.get(action.browserSessionId);
-            if (!existing || existing.ownerKey !== ownerKey) throw new Error("浏览器会话不存在，或不属于当前 Agent 对话");
+            if (!existing || existing.ownerKey !== ownerKey) throw new Error("Phiên trình duyệt không tồn tại hoặc không thuộc cuộc hội thoại Agent này.");
             session = existing;
           } else {
             let pending = owners.get(ownerKey);
             if (!pending) {
-              if (action.action !== "open") throw new Error("请先调用 open 打开浏览器");
+              if (action.action !== "open") throw new Error("Hãy gọi open để mở trình duyệt trước");
               pending = createSession(directory, ownerKey, settings.executablePath, requestSignal);
               owners.set(ownerKey, pending);
               void pending.catch(() => { if (owners.get(ownerKey) === pending) owners.delete(ownerKey); });
@@ -568,7 +568,7 @@ export function createBrowserRuntime() {
       } catch (error) {
         if (session && (requestSignal.aborted || error instanceof Error && error.name === "TimeoutError")) {
           await closeSession(session);
-          if (timeout.aborted || error instanceof Error && error.name === "TimeoutError") throw new Error("浏览器操作超时，已关闭当前浏览器会话，避免操作继续执行", { cause: error });
+          if (timeout.aborted || error instanceof Error && error.name === "TimeoutError") throw new Error("Thao tác trình duyệt hết thời gian chờ. Đã đóng phiên để ngăn thao tác tiếp tục.", { cause: error });
         }
         throw error;
       } finally { requestSignal.removeEventListener("abort", abort); }
@@ -576,8 +576,8 @@ export function createBrowserRuntime() {
     async input(cwd: string, browserSessionId: string, tabId: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<BrowserSessionState> {
       const input = browserInputSchema.parse(args);
       const session = sessions.get(browserSessionId);
-      if (!session || session.cwd !== resolve(cwd) || session.closed) throw Object.assign(new Error("浏览器会话不存在或已关闭"), { status: 404 });
-      if (shuttingDown) throw new Error("浏览器运行时正在关闭");
+      if (!session || session.cwd !== resolve(cwd) || session.closed) throw Object.assign(new Error("Phiên trình duyệt không tồn tại hoặc đã đóng"), { status: 404 });
+      if (shuttingDown) throw new Error("Bộ điều khiển trình duyệt đang tắt");
       const originalTab = session.tabs.get(tabId);
       const navigationVersion = originalTab?.navigationVersion;
       const inputVersion = originalTab?.inputVersion;
@@ -599,7 +599,7 @@ export function createBrowserRuntime() {
       try {
         const operation = session.queue.then(async () => {
           requestSignal.throwIfAborted();
-          if (session.closed || sessions.get(browserSessionId) !== session) throw Object.assign(new Error("浏览器会话已关闭"), { status: 404 });
+          if (session.closed || sessions.get(browserSessionId) !== session) throw Object.assign(new Error("Phiên trình duyệt đã đóng"), { status: 404 });
           const tab = session.tabs.get(tabId);
           if (input.type === "release") {
             if (tab) await releaseInput(tab);
@@ -607,8 +607,8 @@ export function createBrowserRuntime() {
           }
           const checkTab = () => {
             timeout.throwIfAborted();
-            if (session.state.tabId !== tabId || !tab || tab.page.isClosed()) throw Object.assign(new Error("标签页已切换，请等待新画面后重试"), { status: 409 });
-            if (tab !== originalTab || tab.navigationVersion !== navigationVersion || tab.inputVersion !== inputVersion) throw Object.assign(new Error("页面或输入状态已变化，请等待新画面后重试"), { status: 409 });
+            if (session.state.tabId !== tabId || !tab || tab.page.isClosed()) throw Object.assign(new Error("Tab đã chuyển; đợi hình ảnh mới rồi thử lại"), { status: 409 });
+            if (tab !== originalTab || tab.navigationVersion !== navigationVersion || tab.inputVersion !== inputVersion) throw Object.assign(new Error("Trang hoặc trạng thái nhập đã thay đổi; chờ hình ảnh mới rồi thử lại"), { status: 409 });
             return tab;
           };
           const current = checkTab();
@@ -618,7 +618,7 @@ export function createBrowserRuntime() {
             if (input.type === "mouse" || input.type === "click" || input.type === "wheel") {
               const viewport = current.page.viewport()!;
               const frame = session.frame?.tabId === tabId ? session.frame : viewport;
-              if ((input.type !== "mouse" || input.event === "down") && (input.x < 0 || input.y < 0 || input.x >= frame.width || input.y >= frame.height)) throw Object.assign(new Error("输入坐标超出浏览器画面"), { status: 400 });
+              if ((input.type !== "mouse" || input.event === "down") && (input.x < 0 || input.y < 0 || input.x >= frame.width || input.y >= frame.height)) throw Object.assign(new Error("Tọa độ thao tác nằm ngoài màn hình trình duyệt"), { status: 400 });
               const client = await current.page.createCDPSession();
               try {
                 const { cssVisualViewport } = await client.send("Page.getLayoutMetrics");
@@ -663,7 +663,7 @@ export function createBrowserRuntime() {
           } catch (error) {
             current.inputVersion++;
             await releaseInput(current);
-            if (error instanceof Error && error.message.startsWith("Unknown key:")) throw Object.assign(new Error("不支持此按键"), { status: 400 });
+            if (error instanceof Error && error.message.startsWith("Unknown key:")) throw Object.assign(new Error("Không hỗ trợ phím này"), { status: 400 });
             throw error;
           }
         });
@@ -672,7 +672,7 @@ export function createBrowserRuntime() {
       } catch (error) {
         if (started && (timeout.aborted || error instanceof Error && error.name === "TimeoutError")) {
           await closeSession(session);
-          if (timeout.aborted || error instanceof Error && error.name === "TimeoutError") throw new Error("浏览器输入超时，已关闭当前浏览器会话，避免操作继续执行", { cause: error });
+          if (timeout.aborted || error instanceof Error && error.name === "TimeoutError") throw new Error("Nhập liệu trình duyệt hết thời gian chờ; đã đóng phiên để tránh thao tác tiếp tục.", { cause: error });
         }
         throw error;
       } finally {
@@ -690,7 +690,7 @@ export function createBrowserRuntime() {
     },
     subscribe(cwd: string, browserSessionId: string, listener: (event: BrowserStreamEvent) => void) {
       const session = sessions.get(browserSessionId);
-      if (!session || session.cwd !== resolve(cwd) || session.closed) throw new Error("浏览器会话不存在或已关闭");
+      if (!session || session.cwd !== resolve(cwd) || session.closed) throw new Error("Phiên trình duyệt không tồn tại hoặc đã đóng");
       const subscriber: Subscriber = { listener, scheduled: false };
       session.subscribers.add(subscriber);
       listener({ type: "state", session: { ...session.state } });

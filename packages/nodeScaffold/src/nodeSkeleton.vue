@@ -15,12 +15,12 @@
       @command="handleCommand">
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item v-if="assetOutputs.length && saveNodeToAssets" command="saveAsset" :icon="IconFolderPlus">保存到素材库</el-dropdown-item>
-          <el-dropdown-item :divided="!!(assetOutputs.length && saveNodeToAssets)" command="copy" :icon="IconCopy">复制节点</el-dropdown-item>
-          <el-dropdown-item command="duplicate" :icon="IconCopyPlus">创建副本</el-dropdown-item>
-          <el-dropdown-item command="delete" :icon="IconTrash">删除节点</el-dropdown-item>
+          <el-dropdown-item v-if="assetOutputs.length && saveNodeToAssets" command="saveAsset" :icon="IconFolderPlus">Lưu vào kho tài nguyên</el-dropdown-item>
+          <el-dropdown-item :divided="!!(assetOutputs.length && saveNodeToAssets)" command="copy" :icon="IconCopy">Sao chép node</el-dropdown-item>
+          <el-dropdown-item command="duplicate" :icon="IconCopyPlus">Tạo bản sao</el-dropdown-item>
+          <el-dropdown-item command="delete" :icon="IconTrash">Xóa node</el-dropdown-item>
           <el-dropdown-item divided command="clipboard" :icon="IconCopy" :disabled="!copyNodeToClipboard || copyingToClipboard">
-            复制到剪贴板
+            Sao chép vào bộ nhớ tạm
           </el-dropdown-item>
         </el-dropdown-menu>
       </template>
@@ -40,9 +40,9 @@
             :icon="IconFolderPlus"
             :disabled="!assetOutputs.length || !saveNodeToAssets"
             text
-            title="添加到素材库"
-            aria-label="添加到素材库"
-            @click.stop="handleCommand('saveAsset')">添加到素材库</el-button>
+            title="Thêm vào kho tài nguyên"
+            aria-label="Thêm vào kho tài nguyên"
+            @click.stop="handleCommand('saveAsset')" />
           <slot name="topActions" />
           <el-divider direction="vertical" />
           <slot name="topRightActions" />
@@ -55,8 +55,8 @@
             :loading="downloading"
             :aria-busy="downloading"
             text
-            :title="downloading ? '正在保存…' : '下载'"
-            aria-label="下载"
+            :title="downloading ? 'Đang lưu…' : 'Tải xuống'"
+            aria-label="Tải xuống"
             @downloadstate="downloading = $event.detail"
             @click.stop />
           <el-button
@@ -64,8 +64,8 @@
             :icon="IconMaximize"
             :disabled="!downloadUrl"
             text
-            title="全屏"
-            aria-label="全屏"
+            title="Toàn màn hình"
+            aria-label="Toàn màn hình"
             @click.stop="emit('fullscreen')" />
         </el-card>
       </slot>
@@ -88,7 +88,7 @@
         ref="labelInput"
         v-model="labelDraft"
         class="labelInput nodrag nopan"
-        aria-label="节点名称"
+        aria-label="Tên node"
         @pointerdown.stop
         @mousedown.stop
         @dblclick.stop
@@ -100,7 +100,7 @@
         v-else
         class="labelText"
         :tabindex="readOnly ? undefined : 0"
-        :title="readOnly ? label : `${label}（双击编辑名称）`"
+        :title="readOnly ? label : `${label}(nhấp đúp để đổi tên)`"
         @dblclick="!readOnly && ($event.stopPropagation(), editLabel())"
         @keydown.enter.stop.prevent="editLabel">
         {{ label }}
@@ -111,10 +111,10 @@
           :loading="loading || reloading"
           :disabled="loading || !reloadRemoteNode"
           text
-          title="刷新节点"
-          aria-label="刷新节点"
+          title="Làm mới node"
+          aria-label="Làm mới node"
           @click.stop="reloadNode" />
-        <el-button :icon="IconTrash" text title="移除节点" aria-label="移除节点" @click.stop="deleteNode" :loading="deleting" />
+        <el-button :icon="IconTrash" text title="Gỡ node" aria-label="Gỡ node" @click.stop="deleteNode" :loading="deleting" />
       </div>
     </div>
     <div class="cardContainer">
@@ -124,9 +124,9 @@
         shadow="never"
         :bodyStyle="{ padding: '8px' }"
         :style="{ minHeight: `${cardHeight}px` }">
-        <div v-if="loading" class="loadingContent" role="status" aria-label="节点加载中">
+        <div v-if="loading" class="loadingContent" role="status" aria-label="Đang tải node">
           <icon-loader2 class="loadingIcon" :size="24" aria-hidden="true" />
-          <span>加载中...</span>
+          <span>Đang tải...</span>
         </div>
         <slot v-else-if="previewReady || documentTarget" />
       </el-card>
@@ -160,7 +160,7 @@
         v-if="!readOnly && !loading && !documentTarget"
         class="resizeCorner nodrag nopan"
         type="button"
-        aria-label="调整节点大小（方向键微调）"
+        aria-label="Chỉnh kích thước node (phím mũi tên để tinh chỉnh)"
         @pointerdown.stop.prevent="startResize"
         @pointermove.stop="moveResize"
         @pointerup.stop="finishResize"
@@ -220,7 +220,7 @@ const props = withDefaults(
     }
   >(),
   {
-    label: "未命名节点",
+    label: "Node chưa đặt tên",
     handles: () => [],
     outputs: () => ({}),
     previewReady: true,
@@ -242,9 +242,9 @@ const skeletonElement = ref<HTMLElement>();
 const canvasSize = shallowRef<{ width: string; height: string }>();
 let documentLease: symbol | undefined;
 function mountDocument(target: HTMLElement) {
-  if (props.readOnly) throw new Error("只读节点不能挂载到工作区文档");
+  if (props.readOnly) throw new Error("Không thể gắn node chỉ đọc vào tài liệu workspace");
   const element = skeletonElement.value;
-  if (!documentContext || !element || !target.isConnected) throw new Error("节点视图尚未就绪");
+  if (!documentContext || !element || !target.isConnected) throw new Error("Giao diện node chưa sẵn sàng");
   if (!documentTarget.value) canvasSize.value = {
     width: `${element.offsetWidth || node.dimensions.width || 220}px`,
     height: `${element.offsetHeight || node.dimensions.height || 128}px`,
@@ -346,7 +346,7 @@ function startResize(event: PointerEvent) {
   });
   void (batchHistory ? batchHistory(action) : action()).catch(error => {
     finishResize();
-    ElMessage.error(error instanceof Error ? error.message : "节点缩放失败");
+    ElMessage.error(error instanceof Error ? error.message : "Không thể thay đổi kích thước node");
   });
 }
 
@@ -468,7 +468,7 @@ async function reloadNode() {
   try {
     await reloadRemoteNode(node.type);
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "节点刷新失败");
+    ElMessage.error(error instanceof Error ? error.message : "Làm mới node thất bại");
   } finally {
     reloading.value = false;
   }
@@ -494,7 +494,7 @@ async function deleteNode() {
     removeNodes(nodeId);
   } catch (error) {
     const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-    ElMessage.error(message || (error instanceof Error ? error.message : "节点删除失败"));
+    ElMessage.error(message || (error instanceof Error ? error.message : "Xóa node thất bại"));
   } finally {
     deleting.value = false;
   }
@@ -523,9 +523,9 @@ async function handleCommand(command: string) {
       const patch = await nodeEvent.emit("copy");
       const data = { ...node.data, ...patch };
       await copyNodeToClipboard({ type: node.type, data });
-      ElMessage.success("已复制到剪贴板");
+    ElMessage.success("Đã sao chép vào bộ nhớ tạm");
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "节点复制失败");
+      ElMessage.error(error instanceof Error ? error.message : "Sao chép node thất bại");
     } finally {
       copyingToClipboard.value = false;
     }
@@ -537,7 +537,7 @@ async function handleCommand(command: string) {
       const patch = await nodeEvent.emit("copy");
       data = JSON.parse(JSON.stringify({ ...node.data, ...patch }));
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "节点复制失败");
+      ElMessage.error(error instanceof Error ? error.message : "Sao chép node thất bại");
       return;
     }
     if (findNode(nodeId) !== node) return;
@@ -562,7 +562,7 @@ async function handleCommand(command: string) {
       zIndex: node.zIndex,
       type: node.type,
       position: copyPosition,
-      data: { ...data, label: `${props.label} - 副本` },
+      data: { ...data, label: `${props.label} - Bản sao` },
       parentNode: node.parentNode,
     });
     await nextTick();
@@ -733,21 +733,25 @@ watch(
 
     &.topSlot {
       bottom: calc(100% + 12px);
+
+      &:deep(.el-button) {
+        width: 32px;
+        min-width: 32px;
+        height: 32px;
+        margin: 0;
+        padding: 0;
+        flex-shrink: 0;
+        text-decoration: none;
+      }
+
+      &:deep(.el-button > .el-icon) {
+        margin: 0;
+      }
     }
     &.bottomSlot {
       top: calc(100% + 12px);
     }
 
-    .mediaToolbar {
-      &:deep(.el-button) {
-        width: auto;
-        min-width: 32px;
-        height: 32px;
-        margin: 0;
-        padding: 0 8px;
-        text-decoration: none;
-      }
-    }
   }
 
   .titleBar {

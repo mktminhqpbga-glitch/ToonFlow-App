@@ -3,7 +3,7 @@ import type { ToolDefinition, ToolPlugin } from "@toonflow/tools-scaffold/runtim
 import { createSearchTools } from "./search";
 
 const configSchema = z.object({ readOnly: z.boolean().default(false) }).strict();
-const downloadImageSchema = z.object({ url: z.string().trim().min(1).max(8192).describe("公开 HTTP(S) 图片直链") }).strict();
+const downloadImageSchema = z.object({ url: z.string().trim().min(1).max(8192).describe("URL ảnh HTTP(S) công khai có thể tải trực tiếp") }).strict();
 
 const plugin: ToolPlugin = {
   validateConfig: config => configSchema.parse(config),
@@ -35,10 +35,10 @@ const plugin: ToolPlugin = {
       );
       tools.push({
         name: "downloadImage",
-        label: "下载图片",
-        description: "下载公开 HTTP(S) 图片并保存到当前工作区，返回工作区相对路径和 MIME 类型。支持 PNG、JPEG、WebP、GIF、AVIF、BMP，单张不超过 20 MB；不支持需要登录的图片、SVG、本机和内网地址。输出路径由宿主决定，无需指定目录。",
-        promptSnippet: "将远程图片下载到工作区，返回可用于本地预览和参考素材的相对路径。",
-        promptGuidelines: ["保存远程图片时使用 downloadImage，不用 web_fetch、write 或 FFmpeg 下载；成功后使用返回的工作区相对路径展示 Markdown 图片，例如 ![图片](<assets/chatImages/文件名.jpg>)。"],
+        label: "Ảnh đã tải",
+        description: "Tải ảnh HTTP(S) công khai vào workspace hiện tại và trả đường dẫn tương đối cùng MIME. Hỗ trợ PNG, JPEG, WebP, GIF, AVIF, BMP, tối đa 20 MB/ảnh; không hỗ trợ ảnh cần đăng nhập, SVG, địa chỉ cục bộ hoặc mạng nội bộ. Host tự chọn đường dẫn đầu ra.",
+        promptSnippet: "Tải ảnh từ URL vào workspace và trả đường dẫn tương đối để xem trước hoặc dùng làm tham chiếu.",
+        promptGuidelines: ["Khi lưu ảnh trên web, dùng downloadImage thay vì web_fetch, write hoặc FFmpeg. Khi thành công, dùng đường dẫn tương đối được trả về để hiển thị Markdown, ví dụ ![Ảnh](<assets/chatImages/ten-anh.jpg>)."],
         parameters: z.toJSONSchema(downloadImageSchema, { io: "input", target: "draft-07" }),
         executionMode: "sequential",
         async execute(toolCallId, params, signal) {
@@ -47,7 +47,7 @@ const plugin: ToolPlugin = {
           const result = await files.importImage(url);
           signal?.throwIfAborted();
           return {
-            content: [{ type: "text", text: `图片已保存到工作区：${result.path}\nMIME 类型：${result.mimeType}\n![下载图片](<${result.path}>)` }],
+            content: [{ type: "text", text: `Đã lưu ảnh vào workspace: ${result.path}\nLoại MIME: ${result.mimeType}\n![Ảnh đã tải](<${result.path}>)` }],
             details: result,
           };
         },
@@ -57,7 +57,7 @@ const plugin: ToolPlugin = {
       ...tool,
       promptGuidelines: [
         ...(tool.promptGuidelines ?? []),
-        ...(readOnly ? ["当前文件工具只支持读取、列出和搜索，不能用它们写入或编辑文件；其他工具的能力以各自说明为准。"] : []),
+        ...(readOnly ? ["Công cụ tệp hiện chỉ cho đọc, liệt kê và tìm kiếm, không thể ghi hoặc sửa; công cụ khác theo khả năng riêng."] : []),
       ],
     }));
   },

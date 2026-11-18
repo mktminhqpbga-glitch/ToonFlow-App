@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="`编辑媒体供应商：${provider?.label ?? ''}`"
+    :title="`Sửa nhà cung cấp media: ${provider?.label ?? ''}`"
     width="min(800px, calc(100vw - 32px))"
     alignCenter
     appendToBody
@@ -14,8 +14,8 @@
       <messageMarkdown v-if="provider?.readme" class="providerReadme" :content="provider.readme" />
       <form-create v-model="formValues" v-model:api="formApi" :rule="formRules" :option="formOptions" />
       <div class="modelHeader">
-        <h4>模型配置 <el-text type="info">{{ models.length }}</el-text></h4>
-        <el-button :icon="IconPlus" size="small" :disabled="saving" @click="editModel()">手动添加</el-button>
+        <h4>Cấu hình mô hình <el-text type="info">{{ models.length }}</el-text></h4>
+        <el-button :icon="IconPlus" size="small" :disabled="saving" @click="editModel()">Thêm thủ công</el-button>
       </div>
       <div class="modelList">
         <el-card v-for="(item, index) in models" :key="index" class="modelCard" shadow="never">
@@ -28,9 +28,9 @@
               </div>
             </div>
             <div class="actionButtons">
-              <el-button text size="small" :icon="IconPlayerPlay" :loading="loadingTestModel === index" :disabled="saving || loadingTestModel !== undefined || item.type === 'text'" :title="item.type === 'text' ? '此处支持图片、视频和音频模型测试' : undefined" :aria-label="`测试模型 ${item.label}`" @click="testModel(index)">测试</el-button>
-              <el-button text size="small" :icon="IconEdit" :disabled="saving" :aria-label="`编辑模型 ${item.label}`" @click="editModel(index)">编辑</el-button>
-              <el-button text size="small" type="danger" :icon="IconTrash" :disabled="saving" :aria-label="`删除模型 ${item.label}`" @click="models.splice(index, 1)">删除</el-button>
+              <el-button text size="small" :icon="IconPlayerPlay" :loading="loadingTestModel === index" :disabled="saving || loadingTestModel !== undefined || item.type === 'text'" :title="item.type === 'text' ? 'Tại đây hỗ trợ kiểm thử mô hình ảnh, video và âm thanh' : undefined" :aria-label="`Kiểm thử mô hình ${item.label}`" @click="testModel(index)">Kiểm thử</el-button>
+            <el-button text size="small" :icon="IconEdit" :disabled="saving" :aria-label="`Sửa mô hình ${item.label}`" @click="editModel(index)">Sửa</el-button>
+            <el-button text size="small" type="danger" :icon="IconTrash" :disabled="saving" :aria-label="`Xóa mô hình ${item.label}`" @click="models.splice(index, 1)">Xóa</el-button>
             </div>
           </div>
           <div class="modelTags">
@@ -38,13 +38,13 @@
             <el-tag v-for="(tag, tagIndex) in modelTags(item)" :key="tagIndex" size="small" type="info">{{ tag }}</el-tag>
           </div>
         </el-card>
-        <el-text v-if="!models.length" type="info">暂无模型</el-text>
+        <el-text v-if="!models.length" type="info">Chưa có mô hình</el-text>
       </div>
     </div>
     <el-alert v-if="formError" class="formError" :title="formError" type="error" :closable="false" showIcon />
     <template #footer>
-      <el-button :disabled="saving" @click="visible = false">取消</el-button>
-      <el-button type="primary" :icon="IconDeviceFloppy" :loading="saving" :disabled="!formApi" @click="saveModels">保存</el-button>
+      <el-button :disabled="saving" @click="visible = false">Hủy</el-button>
+      <el-button type="primary" :icon="IconDeviceFloppy" :loading="saving" :disabled="!formApi" @click="saveModels">Lưu</el-button>
     </template>
     <component
       :is="modelEditorDialog"
@@ -53,7 +53,7 @@
       :models="models"
       @confirmed="confirmModel" />
   </el-dialog>
-  <el-dialog v-model="testVisible" :title="`测试媒体模型：${testProvider?.label ?? ''}`" width="min(1120px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose :closeOnClickModal="false">
+  <el-dialog v-model="testVisible" :title="`Kiểm tra mô hình media: ${testProvider?.label ?? ''}`" width="min(1120px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose :closeOnClickModal="false">
     <div class="modelTestBody">
       <providerTestPanel v-if="testVisible && testProvider" :source="testSource" :provider="testProvider" :config="testConfig" :modelId="testModelId" :models="testProvider.models" />
     </div>
@@ -97,9 +97,9 @@ const testConfig = ref<Record<string, unknown>>({});
 let testLoading: AbortController | undefined;
 const modelTypes = { get image() { return translate("图片"); }, get video() { return translate("视频"); }, get audio() { return translate("音频"); }, get text() { return translate("文本"); } };
 const modeLabels: Record<string, string> = {
-  singleImage: "单图参考", multiReference: "多图参考", startEndRequired: "首尾帧必填",
-  endFrameOptional: "尾帧可选", startFrameOptional: "首帧可选",
-  imageReference: "图片参考", videoReference: "视频参考", audioReference: "音频参考",
+  singleImage: "Tham chiếu 1 ảnh", multiReference: "Tham chiếu nhiều ảnh", startEndRequired: "Bắt buộc khung đầu và cuối",
+  endFrameOptional: "Có thể chọn khung cuối", startFrameOptional: "Có thể chọn khung đầu",
+  imageReference: "Tham chiếu ảnh", videoReference: "Tham chiếu video", audioReference: "Tham chiếu âm thanh",
 };
 
 watch(visible, isVisible => {
@@ -135,15 +135,15 @@ async function testModel(index: number) {
       params: { fileName: currentProvider.fileName }, headers: { "x-toonflow-workspace": "1" }, signal: controller.signal,
     });
     if (controller.signal.aborted) return;
-    if (data.code !== 200 || !data.data) throw new Error(data.message || "读取供应商代码失败");
-    if (data.data.revision !== currentRevision) throw new Error("供应商代码已更新，请重新打开编辑窗口后测试");
+    if (data.code !== 200 || !data.data) throw new Error(data.message || "Đọc mã nhà cung cấp thất bại");
+    if (data.data.revision !== currentRevision) throw new Error("Mã nhà cung cấp đã thay đổi, hãy mở lại hộp thoại chỉnh sửa trước khi kiểm tra");
     testSource.value = data.data.source;
     testProvider.value = currentProvider;
     testConfig.value = config;
     testModelId.value = modelId;
     testVisible.value = true;
   } catch (error) {
-    if (!controller.signal.aborted) formError.value = axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : "读取供应商代码失败";
+    if (!controller.signal.aborted) formError.value = axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : "Đọc mã nhà cung cấp thất bại";
   } finally {
     if (testLoading === controller) { testLoading = undefined; loadingTestModel.value = undefined; }
   }
@@ -182,44 +182,44 @@ async function saveModels() {
     const config = formApi.value.formData();
     if ("apiKey" in config) {
       config.apiKey = typeof config.apiKey === "string" ? config.apiKey.trim() : "";
-      if ((config.apiKey as string).length > 8192) throw new Error("API Key 过长");
+      if ((config.apiKey as string).length > 8192) throw new Error("API Key quá dài");
     }
     const ids = new Set<string>();
     const values = models.value.map((item, index) => {
       const id = item.id.trim();
       const label = item.label.trim();
-      if (!id || !label) throw new Error(`请填写第 ${index + 1} 个模型的 ID 和显示名称`);
-      if (ids.has(id)) throw new Error(`模型 ID 重复：${id}`);
+      if (!id || !label) throw new Error(`Vui lòng điền mô hình thứ ${index + 1} - ID và tên hiển thị`);
+      if (ids.has(id)) throw new Error(`ID mô hình trùng lặp: ${id}`);
       ids.add(id);
       return { ...item, id, label };
     });
     const { data } = await axios.put<{ code: number; data: MediaProvider; message?: string }>("/api/providers/media/save", {
       fileName, revision: revision.value, models: values,
     });
-    if (data.code !== 200 || !data.data) throw new Error(data.message || "保存模型失败");
+    if (data.code !== 200 || !data.data) throw new Error(data.message || "Lưu mô hình thất bại");
     revision.value = data.data.revision;
     modelsSaved = true;
     invalidateNodeModels("media");
     await saveSettings(settings => {
       const configs = settings.mediaProviderConfigs as Record<string, Record<string, unknown>> | undefined;
-      if (configs !== undefined && (!configs || typeof configs !== "object" || Array.isArray(configs))) throw new Error("媒体供应商配置格式无效");
+      if (configs !== undefined && (!configs || typeof configs !== "object" || Array.isArray(configs))) throw new Error("Cấu hình nhà cung cấp media không hợp lệ");
       const current = configs?.[providerId];
-      if (current !== undefined && (!current || typeof current !== "object" || Array.isArray(current))) throw new Error("当前供应商配置格式无效");
+      if (current !== undefined && (!current || typeof current !== "object" || Array.isArray(current))) throw new Error("Cấu hình nhà cung cấp hiện tại không hợp lệ");
       if (Object.entries(config).every(([field, value]) => JSON.stringify(value) === JSON.stringify(current?.[field]))) return;
       return { mediaProviderConfigs: { ...configs, [providerId]: { ...current, ...config } } };
     });
     configSaved = true;
     const response = await axios.get<{ code: number; data: MediaProvider[]; message?: string }>("/api/providers/media/list");
-    if (response.data.code !== 200 || !Array.isArray(response.data.data)) throw new Error(response.data.message || "读取最新模型失败");
+    if (response.data.code !== 200 || !Array.isArray(response.data.data)) throw new Error(response.data.message || "Đọc mô hình mới nhất thất bại");
     const latest = response.data.data.find(item => item.fileName === fileName);
-    if (!latest) throw new Error("供应商已不存在");
+    if (!latest) throw new Error("Nhà cung cấp không còn tồn tại");
     revision.value = latest.revision;
     emit("saved", latest);
     visible.value = false;
   } catch (error) {
     const message = axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : translate("保存失败，请重试");
-    formError.value = configSaved ? `模型与连接配置已保存，读取最新模型失败：${message}。请重新打开编辑。`
-      : modelsSaved ? `模型已保存，连接配置未保存：${message}。填写内容已保留，请重试。` : message;
+    formError.value = configSaved ? `Đã lưu mô hình và cấu hình kết nối, nhưng không đọc được mô hình mới nhất: ${message}. Hãy mở lại trình chỉnh sửa.`
+      : modelsSaved ? `Đã lưu mô hình nhưng chưa lưu cấu hình kết nối: ${message}. Nội dung đã nhập vẫn được giữ, vui lòng thử lại.` : message;
   } finally {
     saving.value = false;
   }

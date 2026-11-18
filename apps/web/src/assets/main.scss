@@ -1,6 +1,41 @@
-@use "./typography.scss";
+/*! Be Vietnam Pro — SIL Open Font License 1.1; /fontLicenses/beVietnamPro.txt */
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("./fonts/beVietnamProRegular.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("./fonts/beVietnamProMedium.woff") format("woff");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("./fonts/beVietnamProSemiBold.woff") format("woff");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("./fonts/beVietnamProBold.woff") format("woff");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
 
 html:root {
+  --appFontFamily: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --el-font-family: var(--appFontFamily);
+  --td-font-family: var(--appFontFamily);
+  --td-font-family-medium: var(--appFontFamily);
   --ui-radius: 8px;
   --ui-radius-small: calc(var(--ui-radius) * 0.5);
   --ui-radius-large: calc(var(--ui-radius) * 1.5);
@@ -42,6 +77,20 @@ html,
 body,
 #app {
   margin: 0;
+}
+
+body {
+  font-family: var(--appFontFamily);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 * {

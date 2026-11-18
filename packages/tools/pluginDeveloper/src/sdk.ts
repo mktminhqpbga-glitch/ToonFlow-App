@@ -37,7 +37,7 @@ function isWithin(directory: string, path: string) {
 
 async function removeCache(path: string) {
   const directory = resolve(path);
-  if (!isWithin(cacheDirectory, directory)) throw new Error("插件开发 SDK 清理路径超出当前版本缓存目录");
+  if (!isWithin(cacheDirectory, directory)) throw new Error("Đường dẫn dọn cache SDK phát triển plugin nằm ngoài thư mục phiên bản hiện tại");
   await rm(directory, { recursive: true, force: true });
 }
 
@@ -51,7 +51,7 @@ async function readStream(stream: ReadableStream<Uint8Array>, limit: number, sig
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > limit) throw new Error("插件开发 SDK 超过大小限制");
+      if (size > limit) throw new Error("SDK phát triển plugin vượt giới hạn dung lượng");
       chunks.push(value);
     }
     signal.throwIfAborted();
@@ -63,11 +63,11 @@ async function download(file: string, limit: number, signal: AbortSignal) {
   const response = await fetch(new URL(file, releaseUrl), { signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]) });
   if (!response.ok || !response.body) {
     await response.body?.cancel();
-    throw new Error(`插件开发 SDK 下载失败（HTTP ${response.status}）`);
+    throw new Error(`Không tải được SDK phát triển plugin (HTTP ${response.status}）`);
   }
   if (Number(response.headers.get("content-length")) > limit) {
     await response.body.cancel();
-    throw new Error("插件开发 SDK 超过大小限制");
+    throw new Error("SDK phát triển plugin vượt giới hạn dung lượng");
   }
   return readStream(response.body, limit, signal);
 }
@@ -106,9 +106,9 @@ function archiveEntries(tar: Uint8Array, manifest: SdkManifest) {
   // ACT: files() 会合并重名并跳过链接；先核对普通 USTAR，SDK 发布端不生成 PAX/GNU 扩展。
   for (let offset = 0; offset < tar.byteLength;) {
     const header = tar.subarray(offset, offset + 512);
-    if (header.byteLength !== 512) throw new Error("插件开发 SDK 压缩包文件头不完整");
+    if (header.byteLength !== 512) throw new Error("Header gói nén SDK phát triển plugin chưa đầy đủ");
     if (header.every(byte => byte === 0)) {
-      if (tar.subarray(offset).some(byte => byte !== 0)) throw new Error("插件开发 SDK 压缩包结尾无效");
+      if (tar.subarray(offset).some(byte => byte !== 0)) throw new Error("Phần cuối gói nén SDK phát triển plugin không hợp lệ");
       ended = true;
       break;
     }
@@ -116,39 +116,39 @@ function archiveEntries(tar: Uint8Array, manifest: SdkManifest) {
     const sum = header.reduce((value, byte, index) => value + (index >= 148 && index < 156 ? 32 : byte), 0);
     const sizeField = field(header, 124, 12).trim();
     if (field(header, 257, 6) !== "ustar" || !/^[0-7]+$/.test(checksum) || Number.parseInt(checksum, 8) !== sum || !/^[0-7]+$/.test(sizeField)) {
-      throw new Error("插件开发 SDK 压缩包文件头无效");
+      throw new Error("Header gói nén SDK phát triển plugin không hợp lệ");
     }
     const directory = header[156] === 53;
     const size = Number.parseInt(sizeField, 8);
     if (![0, 48, 53].includes(header[156]!) || (directory && size !== 0) || !Number.isSafeInteger(size)
-      || offset + 512 + Math.ceil(size / 512) * 512 > tar.byteLength) throw new Error("插件开发 SDK 包含链接、特殊文件或无效条目");
+      || offset + 512 + Math.ceil(size / 512) * 512 > tar.byteLength) throw new Error("Gói SDK phát triển plugin chứa liên kết, tệp đặc biệt hoặc mục không hợp lệ");
     const original = [field(header, 345, 155), field(header, 0, 100)].filter(Boolean).join("/");
     const path = directory ? original.replace(/\/$/, "") : original;
     const parts = path.split("/");
     if (!path || path.length > 1024 || parts.some(part => !part || part === "." || part === ".." || /[\\<>:"|?*\x00-\x1f]/.test(part)
-      || /[. ]$/.test(part) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) throw new Error("插件开发 SDK 包含不安全路径");
+      || /[. ]$/.test(part) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) throw new Error("Gói SDK phát triển plugin chứa đường dẫn không an toàn");
     const key = path.normalize("NFC").toLowerCase();
-    if (entries.has(key) || entries.size >= maxFileCount || key === "sdkmanifest.json") throw new Error("插件开发 SDK 包含重名文件或条目过多");
+    if (entries.has(key) || entries.size >= maxFileCount || key === "sdkmanifest.json") throw new Error("Gói SDK phát triển plugin có tệp trùng tên hoặc quá nhiều mục");
     for (let index = 1; index <= parts.length; index++) {
       const parent = parts.slice(0, index).join("/");
       const parentKey = parent.normalize("NFC").toLowerCase();
       const parentDirectory = index < parts.length || directory;
       const existing = paths.get(parentKey);
-      if (existing && (existing.path !== parent || existing.directory !== parentDirectory)) throw new Error("插件开发 SDK 路径大小写或文件类型冲突");
+      if (existing && (existing.path !== parent || existing.directory !== parentDirectory)) throw new Error("Đường dẫn SDK phát triển plugin xung đột chữ hoa/chữ thường hoặc loại tệp");
       paths.set(parentKey, { path: parent, directory: parentDirectory });
     }
     entries.set(key, { size, directory });
     total += size;
     if (!directory) fileCount++;
-    if (total > manifest.unpackedSize || fileCount > manifest.fileCount) throw new Error("插件开发 SDK 解压大小或文件数量不符");
+    if (total > manifest.unpackedSize || fileCount > manifest.fileCount) throw new Error("Kích thước giải nén hoặc số tệp SDK phát triển plugin không khớp");
     offset += 512 + Math.ceil(size / 512) * 512;
   }
-  if (!ended || total !== manifest.unpackedSize || fileCount !== manifest.fileCount) throw new Error("插件开发 SDK 压缩包不完整");
+  if (!ended || total !== manifest.unpackedSize || fileCount !== manifest.fileCount) throw new Error("Gói nén SDK phát triển plugin chưa đầy đủ");
   return entries;
 }
 
 async function prepareSdk(signal: AbortSignal) {
-  if (!target || !architecture) throw new Error("插件开发 SDK 仅支持 Windows、macOS、Linux 的 x64/arm64 平台");
+  if (!target || !architecture) throw new Error("SDK phát triển plugin chỉ hỗ trợ Windows, macOS, Linux trên x64/arm64");
   const markerPath = join(cacheDirectory, "current.json");
   const current = await readManifest(markerPath);
   if (current && await isReady(join(cacheDirectory, current.sha256), current)) return join(cacheDirectory, current.sha256);
@@ -160,15 +160,15 @@ async function prepareSdk(signal: AbortSignal) {
     return destination;
   }
   const compressed = await download(manifest.file, manifest.size, signal);
-  if (compressed.byteLength !== manifest.size || createHash("sha256").update(compressed).digest("hex") !== manifest.sha256) throw new Error("插件开发 SDK 下载大小或 SHA-256 校验失败");
+  if (compressed.byteLength !== manifest.size || createHash("sha256").update(compressed).digest("hex") !== manifest.sha256) throw new Error("Dung lượng tải về hoặc SHA-256 của SDK phát triển plugin không hợp lệ");
   const tar = await readStream(new Blob([compressed]).stream().pipeThrough(new DecompressionStream("zstd")), maxUnpackedBytes, signal);
   const entries = archiveEntries(tar, manifest);
   const files = await new Bun.Archive(tar).files();
-  if (files.size !== manifest.fileCount) throw new Error("插件开发 SDK 文件数量不符");
+  if (files.size !== manifest.fileCount) throw new Error("Số tệp SDK phát triển plugin không khớp");
   for (const directory of [resourcesDirectory, join(resourcesDirectory, "pluginDeveloper"), dirname(cacheDirectory), cacheDirectory]) {
     await mkdir(directory, { recursive: true });
     const info = await lstat(directory);
-    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("插件开发 SDK 缓存目录无效");
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Thư mục cache SDK phát triển plugin không hợp lệ");
   }
   const temporary = await mkdtemp(join(cacheDirectory, "install"));
   try {
@@ -177,13 +177,13 @@ async function prepareSdk(signal: AbortSignal) {
       const entry = entries.get(path.normalize("NFC").toLowerCase());
       const output = resolve(temporary, path);
       if (!entry || entry.directory || entry.size !== file.size || !isWithin(temporary, output)) {
-        throw new Error("插件开发 SDK 解压路径或文件大小不符");
+        throw new Error("Đường dẫn giải nén hoặc kích thước tệp SDK phát triển plugin không khớp");
       }
       await mkdir(dirname(output), { recursive: true });
       await writeAtomic(output, new Uint8Array(await file.arrayBuffer()), { exclusive: true });
     }
     await writeAtomic(join(temporary, "sdkManifest.json"), JSON.stringify(manifest), { exclusive: true });
-    if (!await isReady(temporary, manifest)) throw new Error("插件开发 SDK 缺少构建入口");
+    if (!await isReady(temporary, manifest)) throw new Error("SDK phát triển plugin thiếu tệp chạy build");
     signal.throwIfAborted();
     if (!await isReady(destination, manifest)) {
       await removeCache(destination);

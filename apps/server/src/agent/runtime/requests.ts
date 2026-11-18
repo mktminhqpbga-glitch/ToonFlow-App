@@ -23,7 +23,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
   const configured = getRuntimeModelConfiguration(session.modelRuntime);
   if (configured?.route) session.setAutoRetryEnabled(false);
   for (const value of Object.values(limits ?? {})) {
-    if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) throw new Error("图片请求预算必须为正安全整数");
+    if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) throw new Error("Ngân sách yêu cầu ảnh phải là số nguyên dương an toàn");
   }
   const history = session.sessionManager;
   const cwd = history.getCwd();
@@ -100,13 +100,13 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
         options?.signal?.throwIfAborted();
         if (toolFailure) { const { error } = toolFailure; toolFailure = undefined; throw error; }
         if (configured?.route && (model.provider !== configured.publicProviderId || model.id !== configured.model.id)) {
-          throw new Error("模型路由与当前运行时不匹配");
+          throw new Error("Định tuyến mô hình không khớp với runtime hiện tại");
         }
         const provider = configured?.route ? configured.provider : getConfiguredProviders().find(item => item?.id === model.provider);
         const auth = await session.modelRuntime.getAuth(model, { apiKey: options?.apiKey, env: options?.env, signal: options?.signal });
         const apiKey = options?.apiKey ?? auth?.auth.apiKey;
         if (!configured?.route && model.provider.toLowerCase() === "toonflow" && (!provider || provider.apiKey !== apiKey)) {
-          throw new Error("Toonflow 账号已变更，请重新发起请求");
+          throw new Error("Tài khoản Toonflow đã thay đổi, vui lòng gửi lại yêu cầu");
         }
         const files = createFileTransport({
           apiUrl: auth?.auth.baseUrl ?? model.baseUrl,
@@ -118,7 +118,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
         const maxRequestImageBytes = limits?.maxRequestImageBytes ?? provider?.maxRequestImageBytes ?? 20 * 1024 * 1024;
         const maxRequestBytes = limits?.maxRequestBytes ?? provider?.maxRequestBytes ?? 32 * 1024 * 1024;
         for (const value of [maxRequestImageBytes, maxRequestBytes]) {
-          if (!Number.isSafeInteger(value) || value <= 0) throw new Error("图片请求预算必须为正安全整数");
+          if (!Number.isSafeInteger(value) || value <= 0) throw new Error("Ngân sách yêu cầu ảnh phải là số nguyên dương an toàn");
         }
         const references = new Map<string, AgentImageReference>();
         const offloaded = new Set<string>();
@@ -129,13 +129,13 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
           if (entry.type !== "custom") continue;
           if (entry.customType === "toonflowImageAttachment") {
             const reference = getAgentImageReference({ type: "text", text: "", toonflowImage: entry.data });
-            if (!reference) throw new Error("历史图片附件记录无效");
+            if (!reference) throw new Error("Bản ghi ảnh đính kèm trong lịch sử không hợp lệ");
             references.set(reference.id, reference);
           }
           if (entry.customType === "toonflowImageOffload") {
             const data = entry.data as { images?: unknown; thinking?: unknown } | null;
             if (!data || !Array.isArray(data.images) || !data.images.every(id => typeof id === "string")
-              || !Array.isArray(data.thinking) || !data.thinking.every(id => typeof id === "string")) throw new Error("历史图片卸载记录无效");
+              || !Array.isArray(data.thinking) || !data.thinking.every(id => typeof id === "string")) throw new Error("Bản ghi loại bỏ ảnh trong lịch sử không hợp lệ");
             for (const id of data.images) offloaded.add(id);
             for (const id of data.thinking) invalidThinking.add(id);
           }
@@ -171,7 +171,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
             const content: (TextContent | ImageContent)[] = [];
             for (const [index, part] of message.content.entries()) {
               let reference = getAgentImageReference(part);
-              if ("toonflowImage" in part && !reference) throw new Error("图片附件引用无效");
+              if ("toonflowImage" in part && !reference) throw new Error("Tham chiếu ảnh đính kèm không hợp lệ");
               if (part.type === "image") {
                 const entryId = messageEntries.get(contentHash(message)) ?? contentHash(message);
                 const id = `legacy:${entryId}:${index}`;
@@ -195,7 +195,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
               const key = contentHash(image.data);
               imageQueue.set(key, [...(imageQueue.get(key) ?? []), reference]);
               const text = part.type === "text" ? part.text
-                : `[图片附件：${reference.sourcePath}]${reference.note ? `\n${reference.note}` : ""}`;
+                : `[Tệp ảnh đính kèm: ${reference.sourcePath}]${reference.note ? `\n${reference.note}` : ""}`;
               content.push({ type: "text", text }, image);
             }
             messages.push({ ...message, content });
@@ -212,7 +212,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
             }),
           };
           let restart = false;
-          const rebuildRequest = new Error("图片上下文已调整，重新构建请求");
+          const rebuildRequest = new Error("Ngữ cảnh ảnh đã thay đổi, đang tạo lại yêu cầu");
           let http413 = false;
           let fatalError: { error: unknown } | undefined;
           let activeImages: { reference: AgentImageReference; file: RequestFile }[] = [];
@@ -261,7 +261,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
                   if (!image.id) imageCursors.set(imageKey, cursor + 1);
                   const fromContext = !image.id && Boolean(reference);
                   if (!reference) {
-                    if (!image.id) throw new Error("onPayload 注入的图片必须提供稳定的 toonflowImageId，每次重新观察图片时使用新 ID");
+                    if (!image.id) throw new Error("Ảnh được đưa vào qua onPayload phải có toonflowImageId ổn định; dùng ID mới mỗi lần quan sát lại ảnh");
                     const saved = await saveAgentImage(cwd, { type: "image", data: image.data, mimeType: image.mimeType }, image.id, options?.signal);
                     streamSignal.throwIfAborted();
                     reference = saved.toonflowImage;
@@ -315,7 +315,7 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
                   restart = offloadBytes(Buffer.byteLength(init.body, "utf8") - maxRequestBytes);
                   if (!restart) fatalError = { error: new Error(t`模型请求的非图片内容超过 ${maxRequestBytes} 字节预算，请压缩对话或减少附件内容后重试`) };
                 } catch (error) { fatalError = { error }; }
-                return new Response(JSON.stringify({ error: { message: "请求超过本地字节限制" } }), {
+                return new Response(JSON.stringify({ error: { message: "Yêu cầu vượt quá giới hạn byte cục bộ" } }), {
                   status: 413, headers: { "content-type": "application/json", "x-should-retry": "false" },
                 });
               }
@@ -388,14 +388,14 @@ export function configureAgentRequests(session: AgentSession, limits?: { maxRequ
           },
           failure,
         }) : { value: await execute(), billing: undefined };
-        if (result.billing?.status === "held") throw new Error("模型账务处理失败，请联系管理员");
+        if (result.billing?.status === "held") throw new Error("Xử lý thanh toán mô hình thất bại, vui lòng liên hệ quản trị viên");
         output.push(result.value);
       } catch (error) {
         const reason = runSignal?.aborted ? runSignal.reason : operationSignal?.aborted ? operationSignal.reason : error;
         const message: AssistantMessage = {
           role: "assistant", content: partial?.content ?? [], api: model.api, provider: model.provider, model: model.id,
           stopReason: options?.signal?.aborted ? "aborted" : "error",
-          errorMessage: configured?.route ? "模型请求失败，请稍后重试" : reason instanceof Error ? reason.message : String(reason),
+          errorMessage: configured?.route ? "Yêu cầu mô hình thất bại, vui lòng thử lại sau" : reason instanceof Error ? reason.message : String(reason),
           usage: partial?.usage ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
           timestamp: Date.now(),
         };

@@ -1,35 +1,26 @@
 <template>
   <div class="home" :class="{ sidebarCollapsed }" :inert="creating || opening || workspaceStore.projectLoadingVisible">
     <bg class="pageBackground" :scrollTop="backgroundScrollTop" />
-    <aside id="homeSidebar" class="homeSidebar" :aria-label="translate('首页侧栏')">
+    <aside id="homeSidebar" class="homeSidebar" aria-label="Thanh bên trang chủ">
       <div class="sidebarHeader">
         <div class="sidebarBrand">
           <el-image class="sidebarLogo" :src="logoUrl" fit="contain" alt="Toonflow" />
           <span class="brandName">Toonflow</span>
         </div>
-        <button class="sidebarToggle" type="button" :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :title="sidebarCollapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!sidebarCollapsed" aria-controls="homeSidebar" @click="sidebarCollapsed = !sidebarCollapsed">
+        <button class="sidebarToggle" type="button" :aria-label="sidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" :title="sidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" :aria-expanded="!sidebarCollapsed" aria-controls="homeSidebar" @click="sidebarCollapsed = !sidebarCollapsed">
           <icon-layout-sidebar-left-expand v-if="sidebarCollapsed" :size="18" aria-hidden="true" />
           <icon-layout-sidebar-left-collapse v-else :size="18" aria-hidden="true" />
         </button>
       </div>
-      <nav class="sidebarNav" :aria-label="translate('首页导航')">
+      <nav class="sidebarNav" aria-label="Điều hướng trang chủ">
         <button v-for="section in homeSections" :key="section.id" class="sidebarItem" :class="{ active: activeSection === section.id }" type="button" :aria-current="activeSection === section.id ? 'location' : undefined" :aria-label="translate(section.label)" :title="translate(section.label)" @click="scrollToSection(section.id)">
           <component :is="section.icon" :size="18" aria-hidden="true" />
           <span class="sidebarText">{{ translate(section.label) }}</span>
         </button>
         <hr v-if="currentUser?.role !== 'user'" class="sidebarDivider" />
-        <button v-if="currentUser?.role !== 'user'" class="sidebarItem" :class="{ active: assetsVisible }" type="button" :aria-label="translate('素材库')" :title="translate('素材库')" aria-haspopup="dialog" :aria-expanded="assetsVisible" @click="assetsVisible = true">
+        <button v-if="currentUser?.role !== 'user'" class="sidebarItem" :class="{ active: assetsVisible }" type="button" aria-label="Thư viện tài nguyên" title="Thư viện tài nguyên" aria-haspopup="dialog" :aria-expanded="assetsVisible" @click="assetsVisible = true">
           <icon-library-photo :size="18" aria-hidden="true" />
-          <span class="sidebarText">{{ translate("素材库") }}</span>
-        </button>
-        <hr class="sidebarDivider" />
-        <button class="sidebarItem" type="button" :disabled="creating || opening" aria-label="Tạo ảnh hàng loạt" title="Tạo ảnh hàng loạt" @click="openBatch('batchImage')">
-          <icon-photo :size="18" aria-hidden="true" />
-          <span class="sidebarText">Tạo ảnh hàng loạt</span>
-        </button>
-        <button class="sidebarItem" type="button" :disabled="creating || opening" aria-label="Tạo video hàng loạt" title="Tạo video hàng loạt" @click="openBatch('batchVideo')">
-          <icon-video :size="18" aria-hidden="true" />
-          <span class="sidebarText">Tạo video hàng loạt</span>
+          <span class="sidebarText">Thư viện tài nguyên</span>
         </button>
       </nav>
       <div class="sidebarFooter">
@@ -40,14 +31,14 @@
           </span>
           <span class="sidebarText">{{ mobileConnectionLabel }}</span>
         </button>
-        <button class="sidebarItem" type="button" :aria-label="hasDesktopUpdate ? '设置，有新版本可用' : '设置'" :title="hasDesktopUpdate ? '设置，有新版本可用' : '设置'" @click="settingsVisible = true">
+        <button class="sidebarItem" type="button" :aria-label="hasDesktopUpdate ? 'Cài đặt, có phiên bản mới' : 'Cài đặt'" :title="hasDesktopUpdate ? 'Cài đặt, có phiên bản mới' : 'Cài đặt'" @click="settingsVisible = true">
           <span class="sidebarIcon">
             <icon-settings :size="18" aria-hidden="true" />
             <span v-if="hasDesktopUpdate" class="updateDot" />
           </span>
-          <span class="sidebarText">{{ translate("设置") }}</span>
+          <span class="sidebarText">Cài đặt</span>
         </button>
-        <a class="sidebarItem githubLink" href="https://github.com/mktminhqpbga-glitch/ToonFlow-App" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+        <a class="sidebarItem githubLink" href="https://github.com/HBAI-Ltd/Toonflow-app" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
           <icon-brand-github :size="18" aria-hidden="true" />
           <span class="sidebarText">GitHub</span>
         </a>
@@ -56,67 +47,69 @@
     <el-scrollbar ref="pageScroll" class="pageScroll" @scroll="updateActiveSection">
       <div class="pageBody">
         <el-main class="pageContent">
-          <section class="creationPanel" data-home-section="home" :aria-label="translate('创建项目')">
+          <section class="creationPanel" data-home-section="home" aria-label="Tạo dự án">
             <div class="brand">
               <el-image class="brandLogo" :src="logoUrl" fit="contain" alt="Toonflow" />
-              <h1>{{ translate("今天要做点什么？") }}</h1>
+              <h1>Hôm nay bạn muốn sáng tạo gì?</h1>
             </div>
             <div class="promptArea">
               <el-card class="promptCard" :class="{ draggingAttachments }" shadow="never" @dragenter.capture="dragEnterAttachments" @dragover.capture="dragOverAttachments" @dragleave.capture="dragLeaveAttachments" @drop.capture="dropAttachments">
                 <div v-if="draggingAttachments" class="attachmentDropOverlay" role="status" aria-live="polite">
                   <icon-paperclip :size="20" aria-hidden="true" />
-                  <strong>{{ translate("松开添加附件") }}</strong>
-                  <span>{{ translate("图片、视频、文档或代码文件") }}</span>
+                  <strong>Thả để thêm tệp đính kèm</strong>
+                  <span>Ảnh, video, tài liệu hoặc tệp mã nguồn</span>
                 </div>
                 <input ref="attachmentInput" type="file" :accept="attachmentAccept" multiple hidden :disabled="creating || opening" @change="selectAttachments" />
                 <attachmentList v-if="promptAttachments.length" class="promptAttachments" :attachments="promptAttachments" removable restorable :disabled="creating || opening" @remove="promptAttachments.splice($event, 1)" @restore="restoreAttachment" />
-                <el-input ref="promptInput" v-model="prompt" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" resize="none" :disabled="creating || opening" :placeholder="promptPlaceholder" :aria-label="translate('创作描述')" @paste.capture="pasteAttachments" />
+                <el-input ref="promptInput" v-model="prompt" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" resize="none" :disabled="creating || opening" :placeholder="promptPlaceholder" aria-label="Mô tả ý tưởng sáng tạo" @paste.capture="pasteAttachments" />
                 <template #footer>
                   <div class="composerFooter">
                     <div class="composerTools">
-                      <el-button class="attachmentButton" text circle :icon="IconPaperclip" :disabled="creating || opening" :aria-label="translate('添加附件')" :title="translate('添加附件')" @click="attachmentInput?.click()" />
+                      <el-button class="attachmentButton" text circle :icon="IconPaperclip" :disabled="creating || opening" aria-label="Thêm tệp đính kèm" title="Thêm tệp đính kèm" @click="attachmentInput?.click()" />
                       <workspacePicker ref="promptWorkspacePicker" v-model="workspaceDirectory" :disabled="creating || opening" />
                     </div>
                     <div class="sendActions">
                       <modelPopover v-model="selectedModel" v-model:reasoningEffort="reasoningEffort" class="modelSelect" :disabled="creating || opening" />
-                      <el-button class="sendButton" type="primary" :circle="!!workspaceDirectory" :icon="workspaceDirectory ? IconArrowUp : IconFolder" :loading="creating" :disabled="creating || opening" :aria-label="workspaceDirectory ? '发送' : '选择工作目录'" @click="workspaceDirectory ? createProject() : promptWorkspacePicker?.chooseDirectory()">
-                        <template v-if="!workspaceDirectory" #default>{{ translate("选择工作目录") }}</template>
+                <el-button class="sendButton" type="primary" :circle="!!workspaceDirectory" :icon="workspaceDirectory ? IconArrowUp : IconFolder" :loading="creating" :disabled="creating || opening" :aria-label="workspaceDirectory ? 'Gửi' : 'Chọn thư mục làm việc'" @click="workspaceDirectory ? createProject() : promptWorkspacePicker?.chooseDirectory()">
+                        <template v-if="!workspaceDirectory" #default>Chọn thư mục làm việc</template>
                       </el-button>
                     </div>
                   </div>
                 </template>
               </el-card>
-              <p v-if="!workspaceDirectory" class="workspaceHint" role="status">{{ translate("请先选择一个空文件夹作为工作目录，画布和素材会保存在这里。") }}</p>
+              <p v-if="!workspaceDirectory" class="workspaceHint" role="status">Hãy chọn thư mục trống để làm thư mục làm việc. Canvas và tài nguyên sẽ được lưu tại đây.</p>
             </div>
           </section>
           <section class="projectList" data-home-section="projects" aria-labelledby="projectListTitle">
             <h2 id="projectListTitle" class="projectTabs">
-              <button type="button" :class="{ active: projectType === 'local' }" :aria-pressed="projectType === 'local'" aria-controls="projectListContent" @click="projectType = 'local'">{{ translate("项目") }}</button>
-              <button type="button" :class="{ active: projectType === 'team' }" :aria-pressed="projectType === 'team'" aria-controls="projectListContent" @click="projectType = 'team'">{{ translate("团队项目") }}</button>
+              <button type="button" :class="{ active: projectType === 'local' }" :aria-pressed="projectType === 'local'" aria-controls="projectListContent" @click="projectType = 'local'">Dự án</button>
+              <button type="button" :class="{ active: projectType === 'team' }" :aria-pressed="projectType === 'team'" aria-controls="projectListContent" @click="projectType = 'team'">Dự án nhóm</button>
             </h2>
             <div v-if="projectType === 'local'" id="projectListContent" class="projectItems">
               <el-card class="projectLaunchCard" shadow="never" :bodyStyle="{ padding: '0', height: '100%' }">
-                <button class="projectLaunch" type="button" :disabled="creating || opening || relocationPicker?.selecting" :aria-busy="creating || relocationPicker?.selecting" :title="translate('选择空文件夹新建，或打开已有项目')" @click="createProject(false)">
+                <button class="projectLaunch" type="button" :disabled="creating || opening || relocationPicker?.selecting" :aria-busy="creating || relocationPicker?.selecting" title="Chọn thư mục trống để tạo mới hoặc mở dự án có sẵn" @click="createProject(false)">
                   <span class="launchIcon">
                     <icon-loader-2 v-if="creating || relocationPicker?.selecting" class="isLoading" :size="24" aria-hidden="true" />
                     <icon-plus v-else :size="24" aria-hidden="true" />
                   </span>
                   <span class="launchText">
-                    <span class="launchTitle">{{ translate("新建项目") }}</span>
-                    <span class="launchDescription">{{ translate("或打开已有项目") }}</span>
+                    <span class="launchTitle">Tạo dự án mới</span>
+                    <span class="launchDescription">Hoặc mở dự án có sẵn</span>
                   </span>
                 </button>
               </el-card>
               <projectCard v-for="project in sortedProjects" :key="project.directory" :project="project" :disabled="creating || opening" :actionsLoading="exportingDirectory === project.directory" @select="openProject(project)">
                 <template #actions>
-                  <el-dropdown-item :icon="IconEdit" :disabled="creating || opening || exportingDirectory === project.directory" @click="renameProject(project)">{{ translate("重命名") }}</el-dropdown-item>
-                  <el-dropdown-item :icon="IconFileZip" :disabled="creating || opening || !!exportingDirectory" @click="exportProject(project)">{{ translate("打包导出 ZIP") }}</el-dropdown-item>
-                  <el-dropdown-item class="removeAction" :icon="IconTrash" divided :disabled="creating || opening || exportingDirectory === project.directory" :title="translate('从列表移除，不删除文件')" @click="workspaceStore.removeProject(project.directory)">{{ translate("移除项目") }}</el-dropdown-item>
+                  <el-dropdown-item :icon="IconEdit" :disabled="creating || opening || exportingDirectory === project.directory" @click="renameProject(project)">Đổi tên</el-dropdown-item>
+                  <el-dropdown-item :icon="IconFileZip" :disabled="creating || opening || !!exportingDirectory" @click="exportProject(project)">Xuất tệp ZIP</el-dropdown-item>
+                  <el-dropdown-item class="removeAction" :icon="IconTrash" divided :disabled="creating || opening || exportingDirectory === project.directory" title="Xóa khỏi danh sách, không xóa tệp" @click="workspaceStore.removeProject(project.directory)">Xóa khỏi danh sách</el-dropdown-item>
                 </template>
               </projectCard>
             </div>
             <div v-else id="projectListContent" class="teamProjects" />
           </section>
+          <div data-home-section="prompts"><promptDiscovery /></div>
+          <div data-home-section="explore"><explore :scrollElement="pageScroll?.wrapRef" /></div>
         </el-main>
       </div>
     </el-scrollbar>
@@ -124,14 +117,6 @@
     <settings v-model="settingsVisible" />
     <mobileConnect v-if="!publicWeb" v-model="mobileConnectVisible" />
     <workspacePicker ref="relocationPicker" hideTrigger />
-    <el-dialog v-model="batchProjectPickerVisible" :title="pendingBatch === 'batchImage' ? 'Chọn dự án tạo ảnh hàng loạt' : 'Chọn dự án tạo video hàng loạt'" width="min(460px, 94vw)" alignCenter appendToBody>
-      <p>Chọn dự án để lưu hàng đợi và kết quả tạo nội dung.</p>
-      <div class="batchProjectChoices">
-        <el-button v-for="item in sortedProjects" :key="item.directory" :disabled="creating || opening" @click="selectBatchProject(item)">
-          {{ item.name }}
-        </el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -144,7 +129,7 @@ import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox, type InputInstance, type ScrollbarInstance } from "element-plus";
 import { getReadableFileMimeType, readableFileAccept } from "@toonflow/server/documentFormats";
 import {
-  IconQrcode, IconDeviceDesktop, IconHome,
+  IconQrcode, IconDeviceDesktop, IconHome, IconCompass,
   IconArrowUp, IconPlus, IconLoader2,
   IconFolder, IconEdit, IconFileZip,
   IconTrash, IconPaperclip,
@@ -160,26 +145,29 @@ import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib/mobile";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import saveFile from "@/lib/saveFile";
+import http from "@/lib/http";
 import { waitForControlValue } from "@/lib/mcpControl";
 import settings from "@/components/settings/index.vue";
 import assetLibraryDialog from "./assetLibraryDialog.vue";
 import bg from "./bg.vue";
+import explore from "./explore.vue";
 import projectCard from "./projectCard.vue";
 import workspacePicker from "./workspacePicker.vue";
+import promptDiscovery from "./promptDiscovery.vue";
 
 const settingsVisible = ref(false);
 const assetsVisible = ref(false);
 const mobileConnectVisible = ref(false);
 const sidebarCollapsed = ref(false);
 const pageScroll = ref<ScrollbarInstance>();
-const batchProjectPickerVisible = ref(false);
-const pendingBatch = ref<"batchImage" | "batchVideo">("batchImage");
 const backgroundScrollTop = ref(0);
 const activeSection = ref("home");
 const projectType = ref<"local" | "team">("local");
 const homeSections = [
-  { id: "home", label: "首页", icon: IconHome },
-  { id: "projects", label: "项目", icon: IconFolder },
+  { id: "home", label: "Trang chủ", icon: IconHome },
+  { id: "projects", label: "Dự án", icon: IconFolder },
+  { id: "prompts", label: "Thư viện prompt", icon: IconCompass },
+  { id: "explore", label: "Khám phá", icon: IconCompass },
 ];
 const mobileConnect = defineAsyncComponent(() => import("@/components/mobileConnect.vue"));
 const router = useRouter();
@@ -200,16 +188,16 @@ const workspaceStore = useWorkspaceStore();
 const { project, projectList } = storeToRefs(workspaceStore);
 const workspaceDirectory = ref(project.value?.directory ?? "");
 const placeholderPhrases = [
-  "描述你想创作的内容，让灵感从这里开始…",
-  "把一个故事灵感，变成一段精彩的短片…",
-  "为你的主角设计独特的外形和性格…",
-  "创作一段雨夜街头的电影感镜头…",
-  "把这段文字拆解成连贯的分镜画面…",
-  "为一场奇幻冒险生成场景和角色…",
-  "为你的画面配上一段合适的音乐…",
-  "写一段温暖的旁白，讲述这个故事…",
-  "设计一支富有想象力的产品宣传片…",
-  "从一句话开始，搭建你的创作工作流…",
+  "Mô tả điều bạn muốn tạo để bắt đầu biến ý tưởng thành tác phẩm…",
+  "Biến ý tưởng câu chuyện thành một đoạn phim ngắn cuốn hút…",
+  "Thiết kế ngoại hình và tính cách riêng cho nhân vật chính…",
+  "Tạo cảnh quay đậm chất điện ảnh trên phố vào đêm mưa…",
+  "Chia đoạn văn này thành các khung hình phân cảnh liền mạch…",
+  "Tạo bối cảnh và nhân vật cho một cuộc phiêu lưu kỳ ảo…",
+  "Thêm bản nhạc phù hợp cho hình ảnh của bạn…",
+  "Viết lời thuyết minh ấm áp để kể câu chuyện này…",
+  "Thiết kế video quảng bá sản phẩm giàu trí tưởng tượng…",
+  "Bắt đầu từ một câu để xây dựng quy trình sáng tạo…",
 ];
 const promptPlaceholder = ref(translate(placeholderPhrases[0]!));
 
@@ -290,7 +278,7 @@ function updateActiveSection() {
   if (!wrap) return;
   backgroundScrollTop.value = wrap.scrollTop;
   if (wrap.scrollTop > 0 && wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 2) {
-    activeSection.value = "projects";
+    activeSection.value = "explore";
     return;
   }
   const top = wrap.getBoundingClientRect().top + 120;
@@ -314,7 +302,7 @@ function pasteAttachments(event: ClipboardEvent) {
   } catch (error) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    ElMessage.error(error instanceof Error ? error.message : "添加附件失败，请重试");
+    ElMessage.error(error instanceof Error ? error.message : "Thêm tệp đính kèm thất bại, vui lòng thử lại");
   }
 }
 
@@ -369,19 +357,19 @@ function addAttachments(files: File[]) {
     const readableMimeType = getReadableFileMimeType(file.name, file.type);
     const mimeType = readableMimeType ?? file.type.split(";")[0]!.trim().toLowerCase();
     if (!readableMimeType && !/^(image|video)\//.test(mimeType)) {
-      ElMessage.warning("只支持图片、视频和受支持的文本或文档文件");
+      ElMessage.warning("Chỉ hỗ trợ ảnh, video và các định dạng văn bản hoặc tài liệu tương thích");
       continue;
     }
     if (!file.size || file.size > 100 * 1024 * 1024) {
-      ElMessage.warning("附件不能为空且不能超过 100 MB");
+      ElMessage.warning("Tệp đính kèm không được rỗng hoặc vượt quá 100 MB");
       continue;
     }
     if (mimeType === "text/plain" && file.size > 400000) {
-      ElMessage.warning("文本附件不能超过 400 KB（400000 字节），请缩减内容后重试。");
+      ElMessage.warning("Tệp văn bản không được vượt quá 400 KB (400000 byte). Hãy giảm dung lượng rồi thử lại.");
       continue;
     }
     if (promptAttachments.value.length >= 20) {
-      ElMessage.warning("每条消息最多添加 20 个附件");
+      ElMessage.warning("Mỗi tin nhắn chỉ được đính kèm tối đa 20 tệp");
       break;
     }
     promptAttachments.value.push({ name: file.name, path: "", mimeType, file });
@@ -401,42 +389,21 @@ async function restoreAttachment(index: number) {
     promptInput.value?.focus();
     promptInput.value?.textarea?.setSelectionRange(prompt.value.length, prompt.value.length);
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "取回文本失败，请重试");
+    ElMessage.error(error instanceof Error ? error.message : "Không lấy lại được văn bản, vui lòng thử lại");
   }
 }
 
-async function enterWorkspace(targetPanel?: "batchImage" | "batchVideo") {
+async function enterWorkspace() {
   await waitForControlValue(() => workspaceStore.projectLoadingDrawn || undefined, pageLifetime.signal).catch(error => {
     if (!pageLifetime.signal.aborted) throw error;
   });
   if (pageLifetime.signal.aborted) return;
   if (!document.hidden) await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   if (pageLifetime.signal.aborted) return;
-  await router.push(targetPanel ? { path: "/workspace", query: { panel: targetPanel } } : "/workspace");
+  await router.push("/workspace");
 }
 
-function openBatch(kind: "batchImage" | "batchVideo") {
-  if (creating.value || opening.value) return;
-  if (!sortedProjects.value.length) {
-    ElMessage.warning("Hãy tạo hoặc mở một dự án trước khi sử dụng chức năng hàng loạt.");
-    scrollToSection("projects");
-    return;
-  }
-  if (sortedProjects.value.length === 1) {
-    void openProject(sortedProjects.value[0]!, kind);
-    return;
-  }
-  pendingBatch.value = kind;
-  batchProjectPickerVisible.value = true;
-}
-
-function selectBatchProject(selected: Project) {
-  const kind = pendingBatch.value;
-  batchProjectPickerVisible.value = false;
-  void openProject(selected, kind);
-}
-
-async function openProject(project: Project, targetPanel?: "batchImage" | "batchVideo") {
+async function openProject(project: Project) {
   if (creating.value || opening.value) return;
   opening.value = true;
   try {
@@ -444,19 +411,19 @@ async function openProject(project: Project, targetPanel?: "batchImage" | "batch
     try { await workspaceStore.openProject(directory); }
     catch (err) {
       if (!axios.isAxiosError(err) || err.response?.status !== 404) throw err;
-      const reselect = await ElMessageBox.confirm(`项目“${project.name}”的文件夹不存在，是否重新选择文件夹？`, "工作目录不存在", {
-        confirmButtonText: "重新选择", cancelButtonText: "取消", type: "warning",
+      const reselect = await ElMessageBox.confirm(`Dự án “${project.name}” không còn thư mục tương ứng. Bạn muốn chọn lại thư mục?`, "Thư mục làm việc không tồn tại", {
+        confirmButtonText: "Chọn lại", cancelButtonText: "Hủy", type: "warning",
       }).then(() => true, () => false);
       if (!reselect) return;
       const directory = await relocationPicker.value?.chooseDirectory();
       if (!directory) return;
       await workspaceStore.openProject(directory, project.directory);
     }
-    await enterWorkspace(targetPanel);
+    await enterWorkspace();
   } catch (err) {
     ElMessage.error(axios.isAxiosError<{ message?: string }>(err)
-      ? err.response?.data.message || "无法打开项目，请重试"
-      : err instanceof Error ? err.message : "无法打开项目，请重试");
+      ? err.response?.data.message || "Không mở được dự án, vui lòng thử lại"
+      : err instanceof Error ? err.message : "Không mở được dự án, vui lòng thử lại");
   } finally { opening.value = false; }
 }
 
@@ -482,9 +449,9 @@ async function exportProject(project: Project) {
 }
 
 async function renameProject(project: Project) {
-  const result = await ElMessageBox.prompt("请输入项目名称", "重命名项目", {
-    inputValue: project.name, confirmButtonText: "保存", cancelButtonText: "取消",
-    inputValidator: value => !!value?.trim() || "项目名称不能为空",
+  const result = await ElMessageBox.prompt("Nhập tên dự án", "Đổi tên dự án", {
+    inputValue: project.name, confirmButtonText: "Lưu", cancelButtonText: "Hủy",
+    inputValidator: value => !!value?.trim() || "Tên dự án không được để trống",
   }).catch(() => null);
   if (result) workspaceStore.renameProject(project.directory, result.value);
 }
@@ -496,8 +463,8 @@ async function createProject(fromPrompt = true) {
   creating.value = true;
   try {
     const { directory, empty } = await useWorkspaceFiles(path).list();
-    if (fromPrompt && !empty) return ElMessage.warning("该文件夹不为空，请重新选择空文件夹；已有项目请使用“新建项目”入口或点击项目列表打开。");
-    if (empty) await useWorkspaceFiles(directory).writeJson("画布1.json", { toonflowCanvas: true, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } }, true);
+    if (fromPrompt && !empty) return ElMessage.warning("Thư mục này không trống. Hãy chọn thư mục trống; để mở dự án có sẵn, dùng mục Tạo dự án mới hoặc chọn từ danh sách dự án.");
+    if (empty) await useWorkspaceFiles(directory).writeJson("Bản vẽ 1.json", { toonflowCanvas: true, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } }, true);
     await workspaceStore.openProject(directory);
     if (fromPrompt && (prompt.value.trim() || promptAttachments.value.length)) {
       workspaceStore.pendingAgentMessage = { directory: workspaceStore.project!.directory, prompt: prompt.value, attachments: [...promptAttachments.value], model: selectedModel.value, reasoningEffort: reasoningEffort.value };
@@ -505,8 +472,8 @@ async function createProject(fromPrompt = true) {
     await enterWorkspace();
   } catch (err) {
     ElMessage.error(axios.isAxiosError<{ message?: string }>(err)
-      ? err.response?.data.message || "无法打开或创建项目，请重试"
-      : err instanceof Error ? err.message : "无法打开或创建项目，请重试");
+      ? err.response?.data.message || "Không thể mở hoặc tạo dự án, vui lòng thử lại"
+      : err instanceof Error ? err.message : "Không thể mở hoặc tạo dự án, vui lòng thử lại");
   } finally {
     creating.value = false;
   }
@@ -529,7 +496,6 @@ async function createProject(fromPrompt = true) {
   transition: grid-template-columns var(--sidebarMotion) ease;
 
   @media (prefers-reduced-motion: reduce) { transition: none; }
-
 
   .pageBackground {
     position: absolute;
@@ -1043,19 +1009,5 @@ async function createProject(fromPrompt = true) {
 }
 @keyframes launchSpin {
   to { transform: rotate(360deg); }
-}
-
-.batchProjectChoices {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  max-height: 48vh;
-  overflow-y: auto;
-}
-.batchProjectChoices .el-button {
-  justify-content: flex-start;
-  margin-left: 0;
-  overflow: hidden;
 }
 </style>

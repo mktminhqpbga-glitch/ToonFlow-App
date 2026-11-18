@@ -1,24 +1,24 @@
 <template>
   <component v-if="renderer" :is="renderer" :tool="tool" :directory="directory" :toolSessionId="toolSessionId" @copy="emit('copy', $event)" />
-  <el-text v-if="rendererError" type="danger">工具界面加载失败，请停止后重试：{{ rendererError }}</el-text>
+  <el-text v-if="rendererError" type="danger">Không tải được giao diện công cụ, hãy dừng rồi thử lại: {{ rendererError }}</el-text>
   <chat-reasoning v-model:collapsed="collapsed" class="messageReasoning toolCall" expandIconPlacement="left">
     <template #expandIcon><component :is="collapsed ? IconChevronRight : IconChevronDown" :size="14" aria-hidden="true" /></template>
     <template #header>
       <span class="toolHeader" :data-status="tool.status">
         <icon-tool :size="14" />
-        <span class="toolName">{{ tool.name === "installMarketPlugin" ? "安装插件" : renderer ? "操作工具" : tool.name || "工具调用" }}</span>
-        <span class="toolState">{{ tool.name === 'subAgent' && tool.status === 'success' ? '调用已返回' : toolStatusLabels[tool.status] }}</span>
+        <span class="toolName">{{ tool.name === "installMarketPlugin" ? "Cài plugin" : renderer ? "Công cụ thao tác" : tool.name || "Lệnh gọi công cụ" }}</span>
+        <span class="toolState">{{ tool.name === 'subAgent' && tool.status === 'success' ? 'Lệnh gọi đã phản hồi' : toolStatusLabels[tool.status] }}</span>
       </span>
     </template>
     <div v-if="!collapsed" class="toolDetails">
       <template v-for="(data, index) in [args, result]" :key="index">
         <template v-if="data">
           <span class="toolLabel">
-            {{ index === 0 ? "参数" : "结果" }}
-            <el-button v-if="!data.markdown" text size="small" :icon="IconCopy" :aria-label="index === 0 ? '复制工具参数' : '复制工具结果'" @click="emit('copy', data.content)" />
+            {{ index === 0 ? "Tham số" : "Kết quả" }}
+            <el-button v-if="!data.markdown" text size="small" :icon="IconCopy" :aria-label="index === 0 ? 'Sao chép tham số công cụ' : 'Sao chép kết quả công cụ'" @click="emit('copy', data.content)" />
           </span>
           <messageMarkdown v-if="data.markdown" class="toolData" :class="{ toolError: index === 1 && tool.status === 'error' }" :content="data.markdown" :directory="directory" :codeOptions="toolCodeOptions" />
-          <pre v-else class="toolData toolPlain" :class="{ toolError: index === 1 && tool.status === 'error' }" tabindex="0" :aria-label="index === 0 ? '工具参数' : '工具结果'">{{ data.content }}</pre>
+          <pre v-else class="toolData toolPlain" :class="{ toolError: index === 1 && tool.status === 'error' }" tabindex="0" :aria-label="index === 0 ? 'Tham số công cụ' : 'Kết quả công cụ'">{{ data.content }}</pre>
         </template>
       </template>
     </div>
@@ -54,7 +54,7 @@ watch(() => [tool.name, tool.question?.callId] as const, async ([name], previous
     if (active && (!rendererError.value || component !== initialRenderer)) {
       renderer.value = component;
       rendererError.value = "";
-      if (!component && tool.status === "running" && tool.question?.callId) rendererError.value = "该工具未提供可用的交互组件";
+      if (!component && tool.status === "running" && tool.question?.callId) rendererError.value = "Công cụ này không cung cấp thành phần tương tác khả dụng";
     }
   } catch (error) {
     if (active) {
@@ -70,7 +70,7 @@ onErrorCaptured(error => {
   return false;
 });
 const collapsed = defineModel<boolean>("collapsed", { default: true });
-const toolStatusLabels = { running: "调用中…", success: "已完成", error: "调用失败", interrupted: "已中断" };
+const toolStatusLabels = { running: "Đang gọi…", success: "Đã hoàn tất", error: "Gọi thất bại", interrupted: "Đã gián đoạn" };
 const toolCodeOptions = { maxHeight: 240, lineNumbers: false };
 const args = computed(() => formatToolData(tool.args));
 const result = computed(() => formatToolData(tool.result));

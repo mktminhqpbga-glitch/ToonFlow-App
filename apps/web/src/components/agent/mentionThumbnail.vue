@@ -1,5 +1,5 @@
 <template>
-  <span ref="element" class="mentionThumbnail" aria-hidden="true" :aria-busy="preparingPreview" :title="preparingPreview ? '正在生成兼容预览…' : previewError || undefined">
+  <span ref="element" class="mentionThumbnail" aria-hidden="true" :aria-busy="preparingPreview" :title="preparingPreview ? 'Đang tạo bản xem trước tương thích…' : previewError || undefined">
     <template v-if="mediaSrc && !failed && !preparingPreview && !previewError">
       <video v-if="thumbnail?.mimeType.startsWith('video/')" :src="mediaSrc" preload="auto" muted playsinline @loadeddata="handleLoaded" @error="handleError" />
       <img v-else :src="mediaSrc" alt="" draggable="false" @load="handleLoaded" @error="handleError" />

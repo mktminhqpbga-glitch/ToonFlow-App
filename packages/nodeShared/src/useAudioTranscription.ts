@@ -41,14 +41,14 @@ export function useAudioTranscription(source: MaybeRefOrGetter<NodeMediaValue | 
     const sourceDirectory = directory.value;
     processing.value = true;
     try {
-      if (!nodeTypes?.value?.["remote-textNode"]) throw new Error("请先启用文本节点插件");
-      if (findNode(node.id) !== node) throw new Error("原节点已变化，请重新操作");
+      if (!nodeTypes?.value?.["remote-textNode"]) throw new Error("Hãy bật plugin node Văn bản trước");
+      if (findNode(node.id) !== node) throw new Error("Node gốc đã thay đổi, hãy thao tác lại");
       const text = await asr.transcribe(path, { signal: current.signal });
       current.signal.throwIfAborted();
-      if (!text.trim()) throw new Error("音频中未识别到文本");
+      if (!text.trim()) throw new Error("Không nhận dạng được văn bản trong âm thanh");
       await batchHistory(async () => {
         current.signal.throwIfAborted();
-        if (getCanvas?.()?.id !== canvasId || directory.value !== sourceDirectory || findNode(node.id) !== node || !nodeTypes?.value?.["remote-textNode"]) throw new Error("画布节点已变化，请重新转文本");
+        if (getCanvas?.()?.id !== canvasId || directory.value !== sourceDirectory || findNode(node.id) !== node || !nodeTypes?.value?.["remote-textNode"]) throw new Error("Node trên Canvas đã thay đổi, hãy chuyển âm thanh thành văn bản lại");
         const x = node.computedPosition.x + (node.dimensions.width || 360) + 80;
         const height = 360;
         let y = node.computedPosition.y;
@@ -56,12 +56,12 @@ export function useAudioTranscription(source: MaybeRefOrGetter<NodeMediaValue | 
           const position = other.computedPosition;
           if (position.x < x + 320 && position.x + (other.dimensions.width || 320) > x && position.y < y + height && position.y + (other.dimensions.height || 300) > y) y = position.y + (other.dimensions.height || 300) + 40;
         }
-        addNodes({ id: crypto.randomUUID(), type: "remote-textNode", position: { x, y }, data: { label: `${node.data.label || "音频"} · 转文本`, outputs: { text: { dataType: "STRING", value: text } } } });
+        addNodes({ id: crypto.randomUUID(), type: "remote-textNode", position: { x, y }, data: { label: `${node.data.label || "Âm thanh"} · Chuyển thành văn bản`, outputs: { text: { dataType: "STRING", value: text } } } });
       });
     } catch (error) {
       if (!current.signal.aborted && !(error instanceof Error && error.name === "AbortError")) {
-        console.warn("音频转文本未完成", error);
-        ElMessage({ type: "warning", message: error instanceof Error ? error.message : "这次没能完成音频转文本，请稍后再试。原音频不受影响。", duration: 6000, showClose: true });
+        console.warn("Chưa hoàn thành chuyển âm thanh thành văn bản", error);
+        ElMessage({ type: "warning", message: error instanceof Error ? error.message : "Lần này chưa chuyển được âm thanh thành văn bản. Hãy thử lại sau; tệp âm thanh gốc vẫn được giữ nguyên.", duration: 6000, showClose: true });
       }
     } finally {
       processing.value = false;

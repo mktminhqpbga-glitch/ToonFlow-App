@@ -16,14 +16,14 @@
     <div class="toolbarActions">
       <el-popover v-if="hasGroup" v-model:visible="colorMenuVisible" trigger="click" placement="bottom-start" :width="274" :showArrow="false" :disabled="busy || disabled">
         <template #reference>
-          <el-button text class="colorButton" :disabled="busy || disabled" title="分组背景颜色" aria-label="分组背景颜色">
+          <el-button text class="colorButton" :disabled="busy || disabled" title="Màu nền nhóm" aria-label="Màu nền nhóm">
             <span class="colorPreview" :style="{ background: selectedColors[0]?.value }" />
           </el-button>
         </template>
         <div
           class="groupColors nodrag nopan nowheel"
           role="group"
-          aria-label="分组背景颜色"
+          aria-label="Màu nền nhóm"
           @pointerdown.stop
           @mousedown.stop
           @click.stop
@@ -49,8 +49,8 @@
             :clearable="false"
             :teleported="false"
             :disabled="busy || disabled"
-            title="自定义颜色和透明度"
-            aria-label="自定义分组颜色和透明度"
+            title="Tùy chỉnh màu và độ trong suốt"
+            aria-label="Tùy chỉnh màu và độ trong suốt của nhóm"
             @change="changeGroupColor" />
         </div>
       </el-popover>
@@ -62,9 +62,9 @@
         :disabled="!canArrangeSelection"
         @click="operate(action.mode)">{{ action.label }}</el-button>
       <span class="toolbarDivider" aria-hidden="true" />
-      <el-button text :icon="IconCopyPlus" :disabled="busy || disabled" @click="operate('duplicate')">创建副本</el-button>
-      <el-button text :icon="IconBoxMultiple" :disabled="busy || disabled" @click="operate('group')">打组</el-button>
-      <el-button text :icon="IconDeselect" :disabled="busy || disabled || !hasGroup" @click="operate('ungroup')">解组</el-button>
+      <el-button text :icon="IconCopyPlus" :disabled="busy || disabled" @click="operate('duplicate')">Tạo bản sao</el-button>
+      <el-button text :icon="IconBoxMultiple" :disabled="busy || disabled" @click="operate('group')">Nhóm</el-button>
+      <el-button text :icon="IconDeselect" :disabled="busy || disabled || !hasGroup" @click="operate('ungroup')">Bỏ nhóm</el-button>
     </div>
   </el-card>
 </template>
@@ -92,22 +92,22 @@ const toolbar = ref<InstanceType<typeof ElCard>>();
 const busy = ref(false);
 const colorMenuVisible = ref(false);
 const colors = [
-  { label: "灰色", value: "#808080" },
-  { label: "红色", value: "#ef4444" },
-  { label: "橙色", value: "#f98b28" },
-  { label: "黄色", value: "#f8bd3e" },
-  { label: "绿色", value: "#2acb70" },
-  { label: "青色", value: "#0db5d0" },
-  { label: "蓝色", value: "#3b82f6" },
-  { label: "紫色", value: "#8b5cf6" },
-  { label: "粉色", value: "#ec399d" },
-  { label: "棕色", value: "#b7794e" },
-  { label: "白色", value: "#e6e6e6" },
+  { label: "Xám", value: "#808080" },
+  { label: "Đỏ", value: "#ef4444" },
+  { label: "Cam", value: "#f98b28" },
+  { label: "Vàng", value: "#f8bd3e" },
+  { label: "Xanh lá", value: "#2acb70" },
+  { label: "Xanh ngọc", value: "#0db5d0" },
+  { label: "Xanh dương", value: "#3b82f6" },
+  { label: "Tím", value: "#8b5cf6" },
+  { label: "Hồng", value: "#ec399d" },
+  { label: "Nâu", value: "#b7794e" },
+  { label: "Trắng", value: "#e6e6e6" },
 ];
 const layoutActions = [
-  { mode: "horizontal", label: "水平排列", icon: IconLayoutColumns },
-  { mode: "vertical", label: "垂直排列", icon: IconLayoutRows },
-  { mode: "grid", label: "宫格排列", icon: IconLayoutGrid },
+  { mode: "horizontal", label: "Sắp xếp ngang", icon: IconLayoutColumns },
+  { mode: "vertical", label: "Sắp xếp dọc", icon: IconLayoutRows },
+  { mode: "grid", label: "Sắp xếp dạng lưới", icon: IconLayoutGrid },
 ] as const;
 const selectionRoots = computed(() => getSelectionRoots(flow.getSelectedNodes.value, flow.getNodes.value));
 const canArrangeSelection = computed(() => !busy.value && !props.disabled && selectionRoots.value.length > 1
@@ -173,11 +173,11 @@ async function duplicateNodes(selection: GraphNode[], signal: AbortSignal, withE
     copy.parentNode = ids.get(saved.parentNode ?? "") ?? saved.parentNode;
     copy.position = positions ? { ...positions.get(node.id)! }
       : { x: saved.position.x + (rootsIds.has(node.id) ? bounds.width + 64 : 0), y: saved.position.y };
-    copy.data = { ...copy.data, label: `${copy.data?.label || "未命名节点"} - 副本` };
+    copy.data = { ...copy.data, label: `${copy.data?.label || "Node chưa đặt tên"} - bản sao` };
     return copy;
   }));
   signal.throwIfAborted();
-  if (nodes.some(node => flow.findNode(node.id) !== node)) throw new Error("节点已变化，请重新创建副本");
+  if (nodes.some(node => flow.findNode(node.id) !== node)) throw new Error("Node đã thay đổi, hãy thử tạo bản sao lại");
   const edges = incomingEdges.filter(edge => ids.has(edge.source) || flow.findNode(edge.source)).map(edge => ({
     ...JSON.parse(JSON.stringify(edge)),
     id: crypto.randomUUID(),
@@ -207,7 +207,7 @@ function groupNodes(selection: GraphNode[]) {
     style: { width: `${bounds.width + 48}px`, height: `${bounds.height + 64}px` },
     connectable: false,
     expandParent: false,
-    data: { label: "分组" },
+    data: { label: "Nhóm" },
   };
   const nodes: Node[] = flow.getNodes.value.map(node => rootIds.has(node.id) ? {
     ...node,
@@ -248,7 +248,7 @@ function ungroupNodes(selection: GraphNode[]) {
 
 function mergeGroups(selection: GraphNode[]) {
   const groups = getSelectionRoots(selection.filter(node => node.type === "canvasGroup"), flow.getNodes.value);
-  if (groups.length < 2) throw new Error("请至少选择两个分组");
+  if (groups.length < 2) throw new Error("Hãy chọn ít nhất hai nhóm");
   const first = groups[0]!;
   const groupIds = new Set(groups.map(node => node.id));
   const bounds = getRectOfNodes(groups);
@@ -328,7 +328,7 @@ function startDragCopy(selection: GraphNode[], withEdges: boolean) {
         finishGroupDrag(flow.getNodes.value, created);
       });
     } catch (error) {
-      if (!signal.aborted) ElMessage.error(error instanceof Error ? error.message : "拖动复制失败");
+      if (!signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Sao chép bằng cách kéo thất bại");
     } finally {
       signal.removeEventListener("abort", finish);
       busy.value = false;
@@ -374,7 +374,7 @@ async function operate(command: "duplicate" | "group" | "ungroup" | "mergeGroup"
       }
     });
   } catch (error) {
-    if (!signal.aborted) ElMessage.error(error instanceof Error ? error.message : "选区操作失败");
+    if (!signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Thao tác vùng chọn thất bại");
   } finally {
     busy.value = false;
   }

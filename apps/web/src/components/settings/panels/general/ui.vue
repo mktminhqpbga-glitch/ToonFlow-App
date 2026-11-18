@@ -1,40 +1,40 @@
 <template>
   <div class="ui">
-    <p class="intro">让创作空间更合你的习惯，修改会自动保存。</p>
+    <p class="intro">Tùy chỉnh không gian sáng tạo theo thói quen của bạn. Các thay đổi được lưu tự động.</p>
 
     <section v-if="isMobile" class="settingSection" aria-labelledby="mobileScaleTitle">
       <div class="settingHeader">
-        <h3 id="mobileScaleTitle">界面缩放</h3>
+        <h3 id="mobileScaleTitle">Tỉ lệ giao diện</h3>
         <span class="settingValue">{{ mobileScale }}%</span>
       </div>
-      <p class="description">缩小后可显示更多内容，字体大小仍可单独调整。</p>
+      <p class="description">Thu nhỏ để hiển thị nhiều nội dung hơn; bạn vẫn có thể chỉnh riêng cỡ chữ.</p>
       <el-slider
         v-model="mobileScale"
         class="settingSlider"
         :min="50"
         :max="100"
         :step="5"
-        :marks="{ 50: '50%', 75: '75%（默认）', 100: '100%' }"
+        :marks="{ 50: '50%', 75: '75% (mặc định)', 100: '100%' }"
         showStops
-        aria-label="界面缩放"
+        aria-label="Tỉ lệ giao diện"
         @change="value => typeof value === 'number' && updateUiSettings({ mobileScale: value })" />
     </section>
 
     <section class="settingSection" aria-labelledby="languageTitle">
-      <h3 id="languageTitle"><icon-language :size="18" />语言</h3>
-      <p class="description">界面语言立即生效，可选择跟随电脑语言。</p>
+      <h3 id="languageTitle"><icon-language :size="18" />Ngôn ngữ</h3>
+      <p class="description">Ngôn ngữ giao diện được áp dụng ngay. Mặc định là tiếng Việt; bạn có thể chọn Theo hệ thống hoặc ngôn ngữ khác.</p>
       <languageSelect class="languageCards" />
     </section>
 
     <section class="settingSection" aria-labelledby="themeTitle">
       <h3 id="themeTitle">
         <icon-sun-moon :size="18" />
-        外观模式
+        Chế độ giao diện
       </h3>
       <el-radio-group
         class="themeOptions"
         :modelValue="uiSettings.theme"
-        aria-label="外观模式"
+        aria-label="Chế độ giao diện"
         @click="captureThemeClickPoint"
         @change="(value) => changeTheme(String(value))">
         <el-radio v-for="item in themes" :key="item.value" :value="item.value" border>
@@ -51,11 +51,11 @@
       <div class="settingHeader">
         <h3 id="colorTitle">
           <icon-palette :size="18" />
-          主题颜色
+          Màu chủ đề
         </h3>
         <span class="settingValue">{{ uiSettings.primaryColor.toUpperCase() }}</span>
       </div>
-      <p class="description">用于按钮、选中状态与创作背景。</p>
+      <p class="description">Áp dụng cho nút bấm, trạng thái chọn và nền sáng tạo.</p>
       <div class="colorOptions">
         <el-button
           v-for="color in colors"
@@ -72,9 +72,9 @@
         <el-color-picker
           :modelValue="uiSettings.primaryColor"
           colorFormat="hex"
-          aria-label="自定义主题颜色"
+          aria-label="Tùy chỉnhMàu chủ đề"
           @change="changeColor" />
-        <span class="description">自定义</span>
+        <span class="description">Tùy chỉnh</span>
       </div>
     </section>
 
@@ -82,19 +82,19 @@
       <div class="settingHeader">
         <h3 id="fontTitle">
           <icon-text-size :size="18" />
-          字体大小
+          Cỡ chữ
         </h3>
         <span class="settingValue">{{ fontScale }}%</span>
       </div>
-      <p class="description">统一调整界面、聊天和节点中的文字大小。</p>
+      <p class="description">Điều chỉnh đồng bộ cỡ chữ của giao diện, hội thoại và node.</p>
       <el-slider
         v-model="fontScale"
         class="settingSlider"
         :min="85"
         :max="125"
         :step="5"
-        :marks="{ 85: '较小', 100: '默认', 125: '较大' }"
-        aria-label="字体大小"
+        :marks="{ 85: 'Nhỏ hơn', 100: 'Mặc định', 125: 'Lớn hơn' }"
+        aria-label="Cỡ chữ"
         @change="(value) => typeof value === 'number' && updateUiSettings({ fontScale: value })" />
     </section>
 
@@ -102,7 +102,7 @@
       <div class="settingHeader">
         <h3 id="radiusTitle">
           <icon-border-radius :size="18" />
-          界面圆角
+          Độ bo góc giao diện
         </h3>
         <span class="settingValue">{{ radius }} px</span>
       </div>
@@ -112,22 +112,22 @@
         :min="0"
         :max="16"
         :step="2"
-        :marks="{ 0: '直角', 8: '默认', 16: '圆润' }"
-        aria-label="界面圆角"
+        :marks="{ 0: 'Góc vuông', 8: 'Mặc định', 16: 'Bo tròn' }"
+        aria-label="Độ bo góc giao diện"
         @change="(value) => typeof value === 'number' && updateUiSettings({ radius: value })" />
     </section>
 
     <el-card class="appearancePreview" shadow="never">
       <div class="previewIcon"><icon-sparkles :size="20" /></div>
       <div class="previewText">
-        <strong>Toonflow 每一个灵感，都值得被看见</strong>
-        <p>这是当前颜色、字体与圆角的实际效果。</p>
+        <strong>Toonflow - Mọi ý tưởng đều xứng đáng được thể hiện</strong>
+        <p>Đây là bản xem trước màu sắc, phông chữ và góc bo hiện tại.</p>
       </div>
-      <el-tag type="primary" effect="light">预览</el-tag>
+      <el-tag type="primary" effect="light">Xem trước</el-tag>
     </el-card>
 
     <div class="settingsFooter">
-      <el-button :icon="IconRestore" @click="updateUiSettings({ ...defaultUiSettings, language: uiSettings.language, startupAnimation: uiSettings.startupAnimation })">恢复界面默认设置</el-button>
+      <el-button :icon="IconRestore" @click="updateUiSettings({ ...defaultUiSettings, language: uiSettings.language, startupAnimation: uiSettings.startupAnimation })">Khôi phục cài đặt giao diện mặc định</el-button>
     </div>
   </div>
 </template>
@@ -158,17 +158,17 @@ watchEffect(() => {
 });
 
 const themes = [
-  { value: "light", label: "浅色", description: "明亮清晰", icon: IconSun },
-  { value: "dark", label: "深色", description: "沉浸创作", icon: IconMoon },
-  { value: "system", label: "跟随系统", description: "自动切换", icon: IconDeviceDesktop },
+  { value: "light", label: "Sáng", description: "Sáng và rõ", icon: IconSun },
+  { value: "dark", label: "Tối", description: "Tập trung sáng tạo", icon: IconMoon },
+  { value: "system", label: "Theo hệ thống", description: "Tự động chuyển", icon: IconDeviceDesktop },
 ];
 const colors = [
-  { value: "#409eff", label: "天空蓝" },
-  { value: "#6366f1", label: "鸢尾紫" },
-  { value: "#a855f7", label: "薰衣紫" },
-  { value: "#e34b83", label: "蔷薇粉" },
-  { value: "#e89524", label: "琥珀橙" },
-  { value: "#18a17c", label: "松石绿" },
+  { value: "#409eff", label: "Xanh da trời" },
+  { value: "#6366f1", label: "Tím diên vĩ" },
+  { value: "#a855f7", label: "Tím oải hương" },
+  { value: "#e34b83", label: "Hồng phấn" },
+  { value: "#e89524", label: "Cam hổ phách" },
+  { value: "#18a17c", label: "Xanh ngọc" },
 ];
 function changeColor(value: string | null) {
   if (value) updateUiSettings({ primaryColor: value });

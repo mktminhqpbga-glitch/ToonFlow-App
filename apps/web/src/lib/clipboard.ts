@@ -6,19 +6,19 @@ const headers = { "x-toonflow-desktop": "1" };
 export async function readClipboardText(): Promise<string> {
   if (!actualPlatform.isDesktop) return navigator.clipboard.readText();
   const { data } = await axios.post<{ code: number; data: { text: string }; message: string }>("/api/desktop/clipboard/read", {}, { headers });
-  if (data.code !== 200) throw new Error(data.message || "读取剪贴板失败");
+  if (data.code !== 200) throw new Error(data.message || "Không thể đọc bảng nhớ tạm");
   return data.data.text;
 }
 
 export async function readClipboardImage(): Promise<Blob | null> {
   if (actualPlatform.isDesktop) {
     const { data } = await axios.post<{ code: number; data: { image: string | null }; message: string }>("/api/desktop/clipboard/read", { format: "image" }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "读取剪贴板图片失败");
+    if (data.code !== 200) throw new Error(data.message || "Không thể đọc ảnh trong bảng nhớ tạm");
     if (!data.data.image) return null;
     const binary = atob(data.data.image);
     return new Blob([Uint8Array.from(binary, (char) => char.charCodeAt(0))], { type: "image/png" });
   }
-  if (!navigator.clipboard?.read) throw new Error("当前环境不支持读取剪贴板图片");
+  if (!navigator.clipboard?.read) throw new Error("Môi trường hiện tại không hỗ trợ đọc ảnh từ bảng nhớ tạm");
   for (const item of await navigator.clipboard.read()) {
     const imageType = item.types.find((type) => type.startsWith("image/"));
     if (imageType) return item.getType(imageType);
@@ -39,10 +39,10 @@ export async function readClipboardFiles(): Promise<File[]> {
       { format: "files" },
       { headers }
     );
-    if (data.code !== 200) throw new Error(data.message || "读取剪贴板文件失败");
+    if (data.code !== 200) throw new Error(data.message || "Không thể đọc tệp trong bảng nhớ tạm");
     return data.data.files.map(file => clipboardFile(file.mimeType, file.data, file.name));
   }
-  if (!navigator.clipboard?.read) throw new Error("当前环境不支持读取剪贴板文件");
+  if (!navigator.clipboard?.read) throw new Error("Môi trường hiện tại không hỗ trợ đọc tệp từ bảng nhớ tạm");
   const files: File[] = [];
   for (const item of await navigator.clipboard.read()) {
     for (const type of item.types.filter(type => /^(image|audio|video)\//.test(type))) {
@@ -57,7 +57,7 @@ function blobBase64(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-    reader.onerror = () => reject(reader.error ?? new Error("图片读取失败"));
+    reader.onerror = () => reject(reader.error ?? new Error("Không thể đọc ảnh"));
     reader.readAsDataURL(blob);
   });
 }
@@ -70,9 +70,9 @@ async function imagePngBlob(image: Blob) {
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("当前环境无法处理图片");
+    if (!context) throw new Error("Môi trường hiện tại không thể xử lý ảnh");
     context.drawImage(bitmap, 0, 0);
-    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("图片转换失败")), "image/png"));
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Chuyển đổi ảnh thất bại")), "image/png"));
   } finally {
     bitmap.close();
   }
@@ -83,14 +83,14 @@ export async function writeClipboardImage(image: Blob): Promise<void> {
       format: "image",
       image: await blobBase64(image),
     }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "写入剪贴板图片失败");
+    if (data.code !== 200) throw new Error(data.message || "Không thể ghi ảnh vào bảng nhớ tạm");
     return;
   }
-  if (!navigator.clipboard?.write) throw new Error("当前环境不支持写入剪贴板图片");
+  if (!navigator.clipboard?.write) throw new Error("Môi trường hiện tại không hỗ trợ ghi ảnh vào bảng nhớ tạm");
   await navigator.clipboard.write([new ClipboardItem({ "image/png": await imagePngBlob(image) })]);
 }
 export async function writeClipboardText(text: string): Promise<void> {
   if (!actualPlatform.isDesktop) return navigator.clipboard.writeText(text);
   const { data } = await axios.post<{ code: number; message: string }>("/api/desktop/clipboard/write", { text }, { headers });
-  if (data.code !== 200) throw new Error(data.message || "写入剪贴板失败");
+  if (data.code !== 200) throw new Error(data.message || "Không thể ghi vào bảng nhớ tạm");
 }

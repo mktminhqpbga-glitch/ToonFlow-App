@@ -35,7 +35,7 @@ const worker = await Bun.build({
     },
   }],
 });
-if (!worker.success || worker.outputs.length !== 1) throw new AggregateError(worker.logs, "内置编译器构建失败");
+if (!worker.success || worker.outputs.length !== 1) throw new AggregateError(worker.logs, "Build trình biên dịch tích hợp thất bại");
 const workerInputs = Object.keys(worker.metafile!.inputs).map(path => resolve(root, path));
 const files = await browserModules([...workerInputs, Bun.resolveSync("fflate", root)]);
 files["pluginBuild.js"] = new Uint8Array(await worker.outputs[0]!.arrayBuffer());
@@ -63,12 +63,12 @@ try {
   });
   const name = `${metadata.name}.tool.js`;
   const tool = await readFile(join(stage, name));
-  if (tool.length >= 10_000_000) throw new Error(`工具文件 ${tool.length} 字节，必须小于 10 MB（含 ZIP 编码和文档）`);
+  if (tool.length >= 10_000_000) throw new Error(`Tệp công cụ có ${tool.length} byte, phải nhỏ hơn 10 MB (bao gồm dữ liệu ZIP và tài liệu).`);
   await writeAtomic(join(output, name), tool);
   if (process.env.NODE_ENV === "dev") {
     const dataDirectory = resolve(root, "../../../data/tools");
     await mkdir(dataDirectory, { recursive: true });
     await copyFile(join(output, name), join(dataDirectory, name));
   }
-  console.log(`${name}: ${tool.length} 字节；内置 ZIP: ${archive.byteLength} 字节`);
+  console.log(`${name}: ${tool.length} byte; ZIP tích hợp: ${archive.byteLength} byte`);
 } finally { await rm(stage, { recursive: true, force: true }); }

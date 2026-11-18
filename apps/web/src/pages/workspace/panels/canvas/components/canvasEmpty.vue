@@ -2,7 +2,7 @@
   <div class="canvasEmpty">
     <div class="emptyHint">
       <icon-click :size="24" aria-hidden="true" />
-      <span>双击画布 自由生成节点</span>
+      <span>Nhấp đúp vào Canvas để tạo node</span>
     </div>
     <div class="emptyActions">
       <button
@@ -28,9 +28,9 @@ import { getNodeIcon } from "../loadNodeComponent";
 defineProps<{ availableNodes: { type: string }[] }>();
 const emit = defineEmits<{ create: [type: string] }>();
 const actions = [
-  { type: "remote-imageGenerationNode", label: "图片生成" },
-  { type: "remote-videoGenerationNode", label: "视频生成" },
-  { type: "remote-audioGenerationNode", label: "音频生成" },
+  { type: "remote-imageGenerationNode", label: "Tạo ảnh" },
+  { type: "remote-videoGenerationNode", label: "Tạo video" },
+  { type: "remote-audioGenerationNode", label: "Tạo âm thanh" },
 ];
 </script>
 

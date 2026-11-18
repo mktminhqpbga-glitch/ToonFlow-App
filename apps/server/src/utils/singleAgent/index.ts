@@ -224,7 +224,7 @@ export async function run(options: {
       retry: { enabled: true, maxRetries: 3, baseDelayMs: 2000, provider: { maxRetries: 0 } },
     });
     const agentDir = join(state.cwd, ".agent");
-    const systemPrompt = [...new Set([state.systemPrompt || "请根据用户要求完成当前任务，按需使用提供的工具。", ...tools.flatMap(tool => tool.promptGuidelines ?? [])])].filter(Boolean).join("\n\n");
+    const systemPrompt = [...new Set([state.systemPrompt || "Hãy hoàn thành yêu cầu hiện tại của người dùng; sử dụng những công cụ được cung cấp khi cần.", ...tools.flatMap(tool => tool.promptGuidelines ?? [])])].filter(Boolean).join("\n\n");
     const resourceLoader = new DefaultResourceLoader({
       cwd: state.cwd, agentDir, settingsManager,
       noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,

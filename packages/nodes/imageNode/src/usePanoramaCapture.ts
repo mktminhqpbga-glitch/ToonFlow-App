@@ -33,12 +33,12 @@ export function usePanoramaCapture(source: () => string) {
       if (![1, 4, 12].includes(payload.count) || !Number.isInteger(payload.columns) || payload.columns < 1 || payload.columns > payload.count
         || ![1, payload.count].includes(payload.images.length) || payload.images.some(image => !Number.isSafeInteger(image.width) || image.width < 1
           || !Number.isSafeInteger(image.height) || image.height < 1 || !image.blob.size || image.blob.type !== "image/png")) {
-        throw new Error("截图内容无效，请重新截图");
+        throw new Error("Nội dung ảnh chụp không hợp lệ, hãy chụp lại");
       }
-      if (!source() || findNode(node.id) !== node) throw new Error("原图片节点已变化，请重新打开全景预览");
-      if (!nodeTypes?.value?.["remote-imageNode"]) throw new Error("请先启用图片节点插件");
+      if (!source() || findNode(node.id) !== node) throw new Error("Node ảnh gốc đã thay đổi, hãy mở lại bản xem trước toàn cảnh");
+      if (!nodeTypes?.value?.["remote-imageNode"]) throw new Error("Hãy bật plugin node ảnh trước");
       const grouped = payload.images.length > 1;
-      if (grouped && !nodeTypes?.value?.canvasGroup) throw new Error("当前画布不支持分组");
+      if (grouped && !nodeTypes?.value?.canvasGroup) throw new Error("Canvas hiện tại không hỗ trợ nhóm");
       workspace = files.getWorkspaceFiles();
       for (const image of payload.images) {
         controller.signal.throwIfAborted();
@@ -48,11 +48,11 @@ export function usePanoramaCapture(source: () => string) {
         controller.signal.throwIfAborted();
         createdNodes.push({
           id, type: "remote-imageNode", position: { x: 0, y: 0 },
-          data: { label: `${node.data.label || "图片"} · ${image.label}`, outputs: { image: { dataType: "IMAGE", value: { url: path, mimeType: "image/png" } } } },
+          data: { label: `${node.data.label || "Ảnh"} · ${image.label}`, outputs: { image: { dataType: "IMAGE", value: { url: path, mimeType: "image/png" } } } },
         });
       }
       if (findNode(node.id) !== node || !nodeTypes?.value?.["remote-imageNode"] || (grouped && !nodeTypes?.value?.canvasGroup)) {
-        throw new Error("画布节点已变化，请重新截图");
+        throw new Error("Node trên Canvas đã thay đổi, hãy chụp lại");
       }
       const columns = grouped ? payload.columns : 1;
       const rows = Math.ceil(createdNodes.length / columns);
@@ -80,7 +80,7 @@ export function usePanoramaCapture(source: () => string) {
       const nodes: Node[] = groupId ? [{
         id: groupId, type: "canvasGroup", position: { x, y },
         style: { width: `${width}px`, height: `${height}px` }, connectable: false, expandParent: false,
-        data: { label: `${node.data.label || "图片"} · 全景 ${payload.count} 宫格` },
+        data: { label: `${node.data.label || "Ảnh"} · Toàn cảnh lưới ${payload.count} ô` },
       }, ...createdNodes] : createdNodes;
       await batchHistory(async () => {
         controller.signal.throwIfAborted();
@@ -93,14 +93,14 @@ export function usePanoramaCapture(source: () => string) {
           throw error;
         }
       });
-      ElMessage.success(grouped ? `已创建 ${createdNodes.length} 张截图并成组连线` : "已创建截图并连接原节点");
+      ElMessage.success(grouped ? `Đã tạo ${createdNodes.length} ảnh chụp, gom nhóm và kết nối` : "Đã tạo ảnh chụp và nối với node gốc");
     } catch (error) {
-      if (!controller.signal.aborted) showNodeError(error, "全景截图保存失败");
+      if (!controller.signal.aborted) showNodeError(error, "Lưu ảnh chụp toàn cảnh thất bại");
     } finally {
       if (!committed && workspace) {
         const cleanup = await Promise.allSettled(pendingIds.map(id => workspace!.remove(`assets/${id}`, true)));
         const failure = cleanup.find(result => result.status === "rejected" && result.reason?.response?.data?.data?.code !== "ENOENT");
-        if (failure?.status === "rejected") showNodeError(failure.reason, "全景截图中断，临时图片清理失败");
+        if (failure?.status === "rejected") showNodeError(failure.reason, "Chụp ảnh toàn cảnh bị gián đoạn, không xóa được ảnh tạm");
       }
       saving.value = false;
       operation = undefined;

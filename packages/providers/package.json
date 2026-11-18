@@ -10,8 +10,12 @@
     ".": "./index.ts",
     "./types": "./types.d.ts",
     "./language/deepSeek": "./src/language/deepSeek.ts",
+    "./language/gemini": "./src/language/gemini.ts",
+    "./language/geminiWebToApi": "./src/language/geminiWebToApi.ts",
     "./media/apiMart": "./src/media/apiMart.ts",
     "./media/metaso": "./src/media/metaso.ts",
-    "./media/compshare": "./src/media/compshare.ts"
+    "./media/compshare": "./src/media/compshare.ts",
+    "./media/muse2Api": "./src/media/muse2Api.ts",
+    "./media/geminiWebToApi": "./src/media/geminiWebToApi.ts"
   }
 }

@@ -1,14 +1,14 @@
 import { z } from "@toonflow/nodes-scaffold/runtime";
 
 export const lightingPresets = [
-  { id: "film", label: "柔曝胶片", prompt: "airy high-key exposure with gently faded highlights, broad soft illumination and a subtle analogue-film finish", settings: { azimuth: 0, elevation: 25, brightness: 85, lightColor: "#fff3dd", rimLight: false } },
-  { id: "blue", label: "冰蓝背光", prompt: "a cool blue backlight separating the silhouette from the scene, restrained frontal fill and a luminous atmospheric edge", settings: { azimuth: 0, elevation: 20, brightness: 25, lightColor: "#ffffff", rimLight: true, rimAzimuth: -180, rimElevation: 20, rimBrightness: 70, rimColor: "#72a7ff" } },
-  { id: "portrait", label: "经典肖像", prompt: "a sculpted portrait key light from the upper side, a small triangular highlight on the shadowed cheek and rich painterly tonal depth", settings: { azimuth: -45, elevation: 35, brightness: 50, lightColor: "#ffffff", rimLight: false } },
-  { id: "neon", label: "霓虹夜色", prompt: "contrasting cyan and pink light spilling across existing surfaces, vivid nocturnal color separation and a futuristic urban mood", settings: { azimuth: 90, elevation: 10, brightness: 55, lightColor: "#52e5ec", rimLight: true, rimAzimuth: -135, rimElevation: 15, rimBrightness: 65, rimColor: "#ff67ca" } },
-  { id: "sunset", label: "暮色暖调", prompt: "low amber sunset illumination, elongated soft shadows and warm nostalgic color with a dreamy dusk atmosphere", settings: { azimuth: -120, elevation: 10, brightness: 65, lightColor: "#ffad69", rimLight: true, rimAzimuth: 150, rimElevation: 10, rimBrightness: 50, rimColor: "#ffc078" } },
-  { id: "noir", label: "暗影悬疑", prompt: "restrained low-key illumination, dense shadow areas and selective highlights for a tense monochromatic cinematic mood", settings: { azimuth: -90, elevation: 30, brightness: 15, lightColor: "#ffffff", rimLight: false } },
-  { id: "golden", label: "金色柔光", prompt: "gentle late-afternoon golden light, smooth luminous skin highlights and delicate warm reflections with natural shadow detail", settings: { azimuth: -45, elevation: 15, brightness: 65, lightColor: "#ffd28a", rimLight: false } },
-  { id: "steel", label: "冷灰银幕", prompt: "muted steel-blue and slate-grey cinematic lighting, controlled saturation, crisp tonal separation and subtle cool shadows", settings: { azimuth: 45, elevation: 25, brightness: 40, lightColor: "#b7c9db", rimLight: false } },
+  { id: "film", label: "Phim sáng dịu", prompt: "airy high-key exposure with gently faded highlights, broad soft illumination and a subtle analogue-film finish", settings: { azimuth: 0, elevation: 25, brightness: 85, lightColor: "#fff3dd", rimLight: false } },
+  { id: "blue", label: "Viền sáng xanh", prompt: "a cool blue backlight separating the silhouette from the scene, restrained frontal fill and a luminous atmospheric edge", settings: { azimuth: 0, elevation: 20, brightness: 25, lightColor: "#ffffff", rimLight: true, rimAzimuth: -180, rimElevation: 20, rimBrightness: 70, rimColor: "#72a7ff" } },
+  { id: "portrait", label: "Chân dung cổ điển", prompt: "a sculpted portrait key light from the upper side, a small triangular highlight on the shadowed cheek and rich painterly tonal depth", settings: { azimuth: -45, elevation: 35, brightness: 50, lightColor: "#ffffff", rimLight: false } },
+  { id: "neon", label: "Neon ban đêm", prompt: "contrasting cyan and pink light spilling across existing surfaces, vivid nocturnal color separation and a futuristic urban mood", settings: { azimuth: 90, elevation: 10, brightness: 55, lightColor: "#52e5ec", rimLight: true, rimAzimuth: -135, rimElevation: 15, rimBrightness: 65, rimColor: "#ff67ca" } },
+  { id: "sunset", label: "Hoàng hôn ấm", prompt: "low amber sunset illumination, elongated soft shadows and warm nostalgic color with a dreamy dusk atmosphere", settings: { azimuth: -120, elevation: 10, brightness: 65, lightColor: "#ffad69", rimLight: true, rimAzimuth: 150, rimElevation: 10, rimBrightness: 50, rimColor: "#ffc078" } },
+  { id: "noir", label: "Điện ảnh bí ẩn", prompt: "restrained low-key illumination, dense shadow areas and selective highlights for a tense monochromatic cinematic mood", settings: { azimuth: -90, elevation: 30, brightness: 15, lightColor: "#ffffff", rimLight: false } },
+  { id: "golden", label: "Ánh vàng dịu", prompt: "gentle late-afternoon golden light, smooth luminous skin highlights and delicate warm reflections with natural shadow detail", settings: { azimuth: -45, elevation: 15, brightness: 65, lightColor: "#ffd28a", rimLight: false } },
+  { id: "steel", label: "Xanh thép điện ảnh", prompt: "muted steel-blue and slate-grey cinematic lighting, controlled saturation, crisp tonal separation and subtle cool shadows", settings: { azimuth: 45, elevation: 25, brightness: 40, lightColor: "#b7c9db", rimLight: false } },
 ] as const;
 
 const lightingSchema = z.object({
@@ -89,30 +89,42 @@ export function buildLightingPrompt(value: LightingSettings) {
     : "";
   const lightColorPrompt = settings.lightColor ? `tint the key illumination toward ${settings.lightColor}, keeping the subject's original surface colors recognizable` : "";
   const lightingMeta = `[relight key azimuth:${Math.round(settings.azimuth)}deg elevation:${Math.round(settings.elevation)}deg intensity:${Math.round(settings.brightness)}% rim:${settings.rimLight ? `on azimuth:${Math.round(settings.rimAzimuth)}deg elevation:${Math.round(settings.rimElevation)}deg intensity:${Math.round(settings.rimBrightness)}% color:${settings.rimColor || "neutral"}` : "off"}]`;
-  if (typeof document !== "undefined" && document.documentElement.lang === "vi") {
-    const descriptions: Record<string, string> = {
-      film: "Ánh sáng high-key thoáng đãng, vùng sáng dịu, chiếu sáng mềm rộng, chất ảnh phim tương tự tinh tế",
-      blue: "Ánh sáng nền xanh lam lạnh tách đường viền chủ thể, ánh sáng bù phía trước nhẹ và mép sáng có không khí",
-      portrait: "Nguồn sáng chính chân dung từ trên và lệch một bên, vùng sáng tam giác nhỏ trên má phía tối, sắc độ đậm có chiều sâu",
-      neon: "Ánh sáng neon cyan và hồng tương phản trên bề mặt có sẵn, màu đêm sống động, không khí đô thị hiện đại",
-      sunset: "Ánh sáng hoàng hôn hổ phách thấp, bóng mềm kéo dài, gam ấm hoài niệm",
-      noir: "Ánh sáng low-key tiết chế, vùng bóng tối sâu, chỉ điểm sáng chọn lọc, không khí điện ảnh đen trắng căng thẳng",
-      golden: "Ánh sáng vàng giờ chiều dịu, vùng sáng da tự nhiên, phản chiếu ấm tinh tế và bóng đổ giữ chi tiết",
-      steel: "Ánh sáng điện ảnh xanh thép và xám đá, màu ít bão hòa, tương phản sắc độ rõ và bóng lạnh",
-    };
-    const direction = (azimuth: number, elevation: number, role: string) =>
-      `${role}: góc ngang ${azimuth} độ, góc nâng ${elevation} độ, ánh sáng chiếu TỪ vị trí nguồn về tâm chủ thể; +X hướng về mép phải ảnh gốc, +Y hướng lên, +Z hướng về camera tham chiếu`;
-    return [
-      "Chiếu sáng lại ảnh tham chiếu {{ref 1}} nhưng giữ nguyên bối cảnh, bố cục, điểm nhìn, hình học nền, danh tính, khuôn mặt, kiểu tóc, trang phục, tư thế, hành động và số lượng chủ thể.",
-      "Chỉ điều chỉnh hướng sáng, cường độ, màu, bóng đổ, độ tương phản và không khí; không tự thêm hoặc xóa vật thể. Không vẽ đèn chiếu, softbox, phản quang, nến hoặc thiết bị chiếu sáng thành vật thể trong ảnh.",
-      descriptions[settings.preset] ?? "",
-      smartDesc,
-      direction(settings.azimuth, settings.elevation, "Nguồn sáng chính"),
-      `Cường độ sáng ${Math.round(settings.brightness)}%, giữ sắc độ và chi tiết phù hợp với độ sáng yêu cầu.`,
-      settings.rimLight ? `${direction(settings.rimAzimuth, settings.rimElevation, "Nguồn sáng viền độc lập")}; cường độ ${Math.round(settings.rimBrightness)}%, màu ${settings.rimColor || "trung tính"}. Không dời nguồn sáng qua phía đối diện chỉ để tạo viền.` : "",
-      settings.lightColor ? `Nghiêng màu nguồn sáng chính về ${settings.lightColor} nhưng giữ màu bề mặt gốc dễ nhận dạng.` : "",
-      lightingMeta,
-    ].filter(Boolean).join(". ");
-  }
   return [consistencyPrompt, presetPrompt, smartDesc, lightDirectionPrompt, brightnessPrompt, rimLightPrompt, lightColorPrompt, lightingMeta].filter(Boolean).join(", ");
+}
+
+/** Bắt buộc kèm thông số đang chọn, kể cả khi người dùng thay prompt ẩn. */
+export function buildLightingParameters(value: LightingSettings) {
+  const settings = readLightingSettings(value);
+  const keyPosition = getLightingPosition(settings.azimuth, settings.elevation);
+  const formatPosition = (position: ReturnType<typeof getLightingPosition>) =>
+    `(${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)})`;
+  return [
+    "LIGHTING CONTROL VALUES — apply these actual slider settings to reference image {{ref 1}}; they take precedence over any conflicting stylistic descriptions.",
+    "Coordinate system: +X = right of original image, +Y = up, +Z = toward original camera; the subject center is the origin.",
+    `Key light: azimuth=${settings.azimuth}°, elevation=${settings.elevation}°, intensity=${settings.brightness}%, color=${settings.lightColor}, normalized position=${formatPosition(keyPosition)}.`,
+    settings.rimLight
+      ? `Rim light: ON, azimuth=${settings.rimAzimuth}°, elevation=${settings.rimElevation}°, intensity=${settings.rimBrightness}%, color=${settings.rimColor}, normalized position=${formatPosition(getLightingPosition(settings.rimAzimuth, settings.rimElevation))}.`
+      : "Rim light: OFF; do not add a separate rim source.",
+    `Selected lighting preset: ${settings.preset || "custom"}; smart mode: ${settings.smartMode ? "ON" : "OFF"}.`,
+    settings.smartMode && settings.smartDesc.trim() ? `Additional lighting directions: ${settings.smartDesc.trim()}` : "",
+    "These percentages are requested relative illumination strengths, not calibrated physical lux values. Change lighting only; keep subjects, clothing, framing and background geometry unchanged.",
+  ].filter(Boolean).join("\n");
+}
+
+/** Các giá trị thực từ thanh trượt, dùng trong mẫu prompt tùy chỉnh. */
+export function getLightingPromptVariables(value: LightingSettings) {
+  const settings = readLightingSettings(value);
+  return {
+    keyAzimuth: settings.azimuth,
+    keyElevation: settings.elevation,
+    keyIntensity: settings.brightness,
+    keyColor: settings.lightColor,
+    rimEnabled: settings.rimLight ? "on" : "off",
+    rimAzimuth: settings.rimAzimuth,
+    rimElevation: settings.rimElevation,
+    rimIntensity: settings.rimBrightness,
+    rimColor: settings.rimColor,
+    preset: settings.preset || "custom",
+    smartMode: settings.smartMode ? "on" : "off",
+  };
 }

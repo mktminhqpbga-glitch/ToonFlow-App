@@ -16,7 +16,7 @@ function isWithin(directory: string, path: string) {
 function validateStyle(source: string) {
   if (source.includes("\\") || /sourceMappingURL/i.test(source)
     || /@import\b|(?:url|image-set)\s*\(/i.test(source.replace(/\/\*[\s\S]*?\*\//g, ""))) {
-    throw new Error("插件样式仅支持无文件引用和转义的 CSS；请在脚本中 import 资源后绑定到模板");
+    throw new Error("CSS plugin không được tham chiếu tệp hoặc dùng escape; hãy import tài nguyên trong script rồi liên kết với template");
   }
 }
 
@@ -39,42 +39,42 @@ export function validateImports(source: string, filename: string) {
   });
   visitNodes(ast.program, node => {
     if ((Array.isArray(node.attributes) && node.attributes.length) || (Array.isArray(node.assertions) && node.assertions.length)) {
-      throw new Error("插件源码不支持构建时导入属性或自定义 loader");
+      throw new Error("Mã plugin không hỗ trợ import attributes khi build hoặc loader tùy chỉnh");
     }
     if (["ImportDeclaration", "ExportNamedDeclaration", "ExportAllDeclaration"].includes(String(node.type)) && node.source) {
       const imported = node.source as { value?: string; end: number };
       const clause = source.slice(imported.end, node.end as number).replace(/\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g, "").trim();
       // Babel 为空 with {} 和普通 import 都生成 attributes: []，须核对原始子句。
-      if (/^(?:with|assert)\b/.test(clause)) throw new Error("插件源码不支持构建时导入属性或自定义 loader");
-      if (imported.value?.startsWith("macro:")) throw new Error("插件源码不支持 Bun 宏");
+      if (/^(?:with|assert)\b/.test(clause)) throw new Error("Mã plugin không hỗ trợ import attributes khi build hoặc loader tùy chỉnh");
+      if (imported.value?.startsWith("macro:")) throw new Error("Mã plugin không hỗ trợ Bun macro");
     }
     if (node.type === "ImportExpression") {
-      if (node.options) throw new Error("插件源码不支持构建时导入属性或自定义 loader");
-      if ((node.source as { value?: string }).value?.startsWith("macro:")) throw new Error("插件源码不支持 Bun 宏");
+      if (node.options) throw new Error("Mã plugin không hỗ trợ import attributes khi build hoặc loader tùy chỉnh");
+      if ((node.source as { value?: string }).value?.startsWith("macro:")) throw new Error("Mã plugin không hỗ trợ Bun macro");
     }
     const callee = node.callee as { type?: string; name?: string; property?: { name?: string; value?: string } } | undefined;
     if (node.type === "CallExpression" && (callee?.type === "Import" || (callee?.type === "Identifier" && callee.name === "require")
       || (callee?.type === "MemberExpression" && (callee.property?.name === "require" || callee.property?.value === "require")))) {
       const args = node.arguments as { value?: unknown }[];
-      if (args.length > 1) throw new Error("插件源码不支持构建时导入属性或自定义 loader");
-      if (String(args[0]?.value).startsWith("macro:")) throw new Error("插件源码不支持 Bun 宏");
+      if (args.length > 1) throw new Error("Mã plugin không hỗ trợ import attributes khi build hoặc loader tùy chỉnh");
+      if (String(args[0]?.value).startsWith("macro:")) throw new Error("Mã plugin không hỗ trợ Bun macro");
     }
-    if (node.type === "TSExternalModuleReference" && (node.expression as { value?: string })?.value?.startsWith("macro:")) throw new Error("插件源码不支持 Bun 宏");
+    if (node.type === "TSExternalModuleReference" && (node.expression as { value?: string })?.value?.startsWith("macro:")) throw new Error("Mã plugin không hỗ trợ Bun macro");
   });
   return ast;
 }
 
 function validateScript(source: string, filename: string) {
-  if (/\bimport\s*[./]/.test(source)) throw new Error("插件前端请使用静态 import 引入资源，不支持 import.meta 或 import 与模块名之间的注释");
+  if (/\bimport\s*[./]/.test(source)) throw new Error("Frontend plugin phải dùng import tĩnh để nhập tài nguyên; không hỗ trợ import.meta hoặc chú thích giữa import và tên module");
   const ast = validateImports(source, filename);
   visitNodes(ast.program, node => {
-    if (node.type === "MetaProperty" && (node.meta as { name?: string } | undefined)?.name === "import") throw new Error("插件源码不支持 import.meta");
-    if (node.type === "ImportExpression" && (node.source as { type?: string })?.type !== "StringLiteral") throw new Error("插件只支持可静态解析的模块路径");
+    if (node.type === "MetaProperty" && (node.meta as { name?: string } | undefined)?.name === "import") throw new Error("Mã plugin không hỗ trợ import.meta");
+    if (node.type === "ImportExpression" && (node.source as { type?: string })?.type !== "StringLiteral") throw new Error("Plugin chỉ hỗ trợ đường dẫn module phân giải tĩnh");
     const callee = node.callee as { type?: string; name?: string; property?: { name?: string; value?: string } } | undefined;
     if (node.type === "CallExpression" && (callee?.type === "Import" || (callee?.type === "Identifier" && callee.name === "require")
       || (callee?.type === "MemberExpression" && (callee.property?.name === "require" || callee.property?.value === "require")))) {
       const args = node.arguments as { type?: string }[];
-      if (args.length !== 1 || args[0]?.type !== "StringLiteral") throw new Error("插件只支持可静态解析的模块路径");
+      if (args.length !== 1 || args[0]?.type !== "StringLiteral") throw new Error("Plugin chỉ hỗ trợ đường dẫn module phân giải tĩnh");
     }
   });
 }
@@ -88,10 +88,10 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
     tool: Record<string, string>;
     sdkExports?: string[];
   };
-  if (!registry.node || !registry.tool || typeof registry.node !== "object" || typeof registry.tool !== "object") throw new Error("内置 SDK 缺少浏览器宿主映射");
+  if (!registry.node || !registry.tool || typeof registry.node !== "object" || typeof registry.tool !== "object") throw new Error("SDK tích hợp thiếu ánh xạ host trình duyệt");
   const globals = manifest.type === "node" ? registry.node : registry.tool;
   for (const global of Object.values(globals)) {
-    if (typeof global !== "string" || !/^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/.test(global)) throw new Error("内置 SDK 浏览器宿主映射无效");
+    if (typeof global !== "string" || !/^[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*$/.test(global)) throw new Error("Ánh xạ host trình duyệt của SDK tích hợp không hợp lệ");
   }
   const packageName = (source: string) => source.startsWith("@") ? source.split("/").slice(0, 2).join("/") : source.split("/")[0]!;
   const supportedPackages = new Set([
@@ -104,12 +104,12 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
   const entryId = "toonflow:browserEntry";
 
   function missingDependency(source: string) {
-    return Object.assign(new Error(`SDK_DEPENDENCY_MISSING: 内置 SDK 未包含依赖：${source}`), { code: "SDK_DEPENDENCY_MISSING" });
+    return Object.assign(new Error(`SDK_DEPENDENCY_MISSING: SDK tích hợp thiếu phụ thuộc: ${source}`), { code: "SDK_DEPENDENCY_MISSING" });
   }
 
   async function allowedPath(path: string) {
     const actual = await realpath(path);
-    if (!isWithin(root, actual) && !isWithin(sdkModules, actual)) throw new Error(`插件只能引用项目源码或内置 SDK：${path}`);
+    if (!isWithin(root, actual) && !isWithin(sdkModules, actual)) throw new Error(`Plugin chỉ được tham chiếu mã nguồn dự án hoặc SDK tích hợp: ${path}`);
     return actual;
   }
 
@@ -123,13 +123,13 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
   const typeFiles = {
     fileExists: (path: string) => Boolean(typeFile(path)),
     readFile(path: string) { const file = typeFile(path); return file ? readFileSync(file, "utf8") : undefined; },
-    realpath(path: string) { const file = typeFile(path); if (!file) throw new Error("类型文件不在插件项目或 SDK 内"); return file; },
+    realpath(path: string) { const file = typeFile(path); if (!file) throw new Error("Tệp kiểu dữ liệu không nằm trong dự án plugin hoặc SDK"); return file; },
   };
 
   registerTS(() => {
     const path = Bun.resolveSync("typescript", sdkModules);
     const actual = realpathSync(path);
-    if (!isWithin(sdkModules, actual)) throw new Error("TypeScript 编译器必须位于内置 SDK 中");
+    if (!isWithin(sdkModules, actual)) throw new Error("Trình biên dịch TypeScript phải nằm trong SDK tích hợp");
     const ts = createRequire(join(dirname(sdkModules), "package.json"))(actual);
     // ACT: Vue 只需配置中的模块解析选项，不做项目类型检查；不扫描 include 目录。
     return { ...ts, sys: { ...ts.sys, ...typeFiles, readDirectory: () => [] } };
@@ -148,10 +148,10 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
     const { descriptor, errors } = parse(source, { filename, sourceMap: false });
     if (errors.length) throw errors[0];
     if (descriptor.customBlocks.length || descriptor.template?.src || descriptor.template?.lang
-      || descriptor.script?.src || descriptor.scriptSetup?.src) throw new Error("插件 Vue 组件仅支持内联模板、脚本和样式");
+      || descriptor.script?.src || descriptor.scriptSetup?.src) throw new Error("Component Vue plugin chỉ hỗ trợ template, script và style nội tuyến");
     for (const script of [descriptor.script, descriptor.scriptSetup]) {
       if (!script) continue;
-      if (script.lang && !["js", "ts", "jsx", "tsx"].includes(script.lang)) throw new Error("插件组件脚本仅支持 JavaScript 和 TypeScript");
+      if (script.lang && !["js", "ts", "jsx", "tsx"].includes(script.lang)) throw new Error("Script component plugin chỉ hỗ trợ JavaScript hoặc TypeScript");
       if (isWithin(root, filename)) validateScript(script.content, `${filename}.${script.lang ?? "js"}`);
     }
     const hash = createHash("sha256").update(relative(root, filename)).update(source).digest("hex").slice(0, 12);
@@ -159,7 +159,7 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
     const component = `__toonflowComponent${hash}`;
     const scoped = descriptor.styles.some(style => style.scoped);
     for (const [index, style] of descriptor.styles.entries()) {
-      if (style.src || style.module || (style.lang && style.lang !== "css")) throw new Error("插件组件的 style 仅支持内联普通 CSS");
+      if (style.src || style.module || (style.lang && style.lang !== "css")) throw new Error("Style của component plugin chỉ hỗ trợ CSS thường nội tuyến");
       if (isWithin(root, filename)) validateStyle(style.content);
       styles.set(`${filename}:${index}`, css(style.content, filename, scopeId, style.scoped));
     }
@@ -199,8 +199,8 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
             const source = args.path;
             if (source === entryId && !args.importer && args.kind.startsWith("entry-point")) return { path: entryId, namespace: "pluginEntry" };
             if (Object.hasOwn(globals, source)) return { path: source, namespace: "pluginHost" };
-            if (isBuiltin(source) || (!isAbsolute(source) && /^[a-z][a-z\d+.-]*:/i.test(source)) || /[?#\0]/.test(source)) throw new Error(`插件浏览器源码不支持此模块路径：${source}`);
-            if (/\.(?:s[ac]ss|less|styl(?:us)?|sss|module\.css)$/i.test(source)) throw new Error("插件项目仅支持普通 CSS");
+            if (isBuiltin(source) || (!isAbsolute(source) && /^[a-z][a-z\d+.-]*:/i.test(source)) || /[?#\0]/.test(source)) throw new Error(`Mã plugin cho trình duyệt không hỗ trợ đường dẫn module này: ${source}`);
+            if (/\.(?:s[ac]ss|less|styl(?:us)?|sss|module\.css)$/i.test(source)) throw new Error("Dự án plugin chỉ hỗ trợ CSS thông thường");
             const bare = !source.startsWith(".") && !isAbsolute(source) && !source.split("/").some(part => part === ".." || !part);
             let path: string;
             try {
@@ -211,7 +211,7 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
               const name = packageName(source);
               if (bare && supportedPackages.has(name) && (!statSync(join(sdkModules, name, "package.json"), { throwIfNoEntry: false })
                 || registry.sdkExports?.includes(source))) throw missingDependency(source);
-              throw new Error(`无法解析插件依赖：${source}；请使用内置 SDK 或项目相对路径`, { cause: error });
+              throw new Error(`Không phân giải được phụ thuộc plugin: ${source}; hãy dùng SDK tích hợp hoặc đường dẫn tương đối trong dự án`, { cause: error });
             }
             return { path: await allowedPath(path) };
           } catch (error) {
@@ -228,7 +228,7 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
             const extension = extname(actual).toLowerCase();
             if (extension === ".vue") return vue(await readFile(actual, "utf8"), actual);
             if (extension === ".css") {
-              if (actual.endsWith(".module.css")) throw new Error("插件项目仅支持普通 CSS");
+              if (actual.endsWith(".module.css")) throw new Error("Dự án plugin chỉ hỗ trợ CSS thông thường");
               const source = await readFile(actual, "utf8");
               if (isWithin(root, actual)) validateStyle(source);
               styles.set(actual, css(source, actual, ""));
@@ -249,7 +249,7 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
               const content = await readFile(actual);
               return { contents: `export default ${JSON.stringify(`data:${file(actual).type};base64,${content.toString("base64")}`)};`, loader: "js" };
             }
-            throw new Error(`插件浏览器源码不支持此文件类型：${actual}`);
+            throw new Error(`Mã plugin cho trình duyệt không hỗ trợ loại tệp: ${actual}`);
           } catch (error) {
             const failure = error instanceof Error ? error : new Error(String(error));
             failures.push(failure);
@@ -263,13 +263,13 @@ export async function buildBrowser(root: string, sdkModules: string, manifest: P
     const failure = failures.find(error => (error as Error & { code?: string }).code !== "SDK_DEPENDENCY_MISSING");
     if (failure) throw failure;
     if (failures.length && result.logs.every(log => log.level !== "error" || failures.some(error => log.message.includes(error.message)))) throw failures[0];
-    throw new AggregateError(result.logs, "插件浏览器构建失败");
+    throw new AggregateError(result.logs, "Build plugin cho trình duyệt thất bại");
   }
-  if (result.outputs.length !== 1) throw new Error("插件浏览器构建必须生成单个脚本，资源须内联");
+  if (result.outputs.length !== 1) throw new Error("Plugin trình duyệt phải build thành một script và nội tuyến tài nguyên");
   const source = await result.outputs[0]!.text();
   const style = [...styles.values()].join("\n");
   const target = manifest.type === "node" ? "toonflowNodes" : "toonflowToolViews";
-  const host = manifest.type === "node" ? 'if(!globalThis.toonflowNodeHost)throw new Error("缺少节点宿主");' : "";
+  const host = manifest.type === "node" ? 'if(!globalThis.toonflowNodeHost)throw new Error("Thiếu host dành cho node");' : "";
   let code = `;(() => {${host}const module={exports:{}};const exports=module.exports;${source}\nglobalThis.${target} ??= {};globalThis.${target}.${manifest.name}=module.exports.default;})();`;
   if (manifest.type === "node" && style) {
     code += `\n;(() => {const id=${JSON.stringify(`toonflowNodeStyle:${manifest.name}`)};let style=document.getElementById(id);if(!style){style=document.createElement("style");style.id=id;document.head.append(style);}style.textContent=${JSON.stringify(style)};})();`;

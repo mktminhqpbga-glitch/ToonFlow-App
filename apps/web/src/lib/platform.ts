@@ -1,9 +1,9 @@
-// ACT: 客户端切换连接会重新加载页面，运行模式只在启动时读取。
+// ACT: MacFlow only runs in the browser; native URL flags are ignored.
 const parameters = new URLSearchParams(window.location.search);
-const desktop = parameters.get("desktop") === "1";
-const mobile = parameters.get("mobile") === "1";
-const remoteConnection = (mobile || desktop) && parameters.get("remote") === "1";
-const platformSimulationValues = ["actual", "browser", "windowsDesktop", "macDesktop", "mobile"] as const;
+const desktop = false;
+const mobile = false;
+const remoteConnection = false;
+const platformSimulationValues = ["actual", "browser"] as const;
 
 // ACT: 模拟只用于前端分支；宿主握手、原生调用与连接边界始终读取真实平台。
 export const actualPlatform = {
@@ -17,16 +17,16 @@ export const actualPlatform = {
 } as const;
 
 export const platformSimulation = platformSimulationValues.find(value => value === parameters.get("simulatePlatform")) ?? "actual";
-export const isMobile = platformSimulation === "actual" ? actualPlatform.isMobile : platformSimulation === "mobile";
-export const isDesktop = platformSimulation === "actual" ? actualPlatform.isDesktop : platformSimulation === "windowsDesktop" || platformSimulation === "macDesktop";
+export const isMobile = actualPlatform.isMobile;
+export const isDesktop = actualPlatform.isDesktop;
 export const isRemoteConnection = actualPlatform.isRemoteConnection;
 export const isLocalDesktop = isDesktop && !isRemoteConnection;
 export const isLocalMobile = isMobile && !isRemoteConnection;
-export const isWindows = platformSimulation === "actual" || platformSimulation === "browser" ? actualPlatform.isWindows : platformSimulation === "windowsDesktop";
-export const isMac = platformSimulation === "actual" || platformSimulation === "browser" ? actualPlatform.isMac : platformSimulation === "macDesktop";
+export const isWindows = actualPlatform.isWindows;
+export const isMac = actualPlatform.isMac;
 
 export function setPlatformSimulation(value: string) {
-  if (!platformSimulationValues.some(option => option === value)) throw new Error("不支持的模拟平台");
+  if (!platformSimulationValues.some(option => option === value)) throw new Error("Nền tảng mô phỏng không được hỗ trợ");
   if (value === platformSimulation) return;
   const url = new URL(window.location.href);
   if (value === "actual") url.searchParams.delete("simulatePlatform");

@@ -1,14 +1,14 @@
 {
   "name": "storyboardTeam",
-  "displayName": "分镜创作团队",
-  "description": "由导演统筹编写与审阅成员，根据已有故事和约束整理可审阅的文字分镜方案。",
+  "displayName": "Nhóm xây dựng phân cảnh",
+  "description": "Đạo diễn điều phối người viết và người rà soát để xây dựng bản phân cảnh văn bản có thể thẩm định từ câu chuyện và ràng buộc đã có.",
   "version": "2.0.0",
   "author": "Toonflow",
   "github": "https://github.com/HBAI-Ltd/Toonflow-app",
   "entry": "director",
   "members": {
     "director": {
-      "description": "明确创作边界、分配编写与审阅任务，交付统一方案。",
+      "description": "Xác định giới hạn sáng tạo, giao việc viết và rà soát, bàn giao phương án thống nhất.",
       "instructions": "members/director.md",
       "delegates": ["writer", "reviewer"],
       "tools": ["read", "ls"],
@@ -16,14 +16,14 @@
       "knowledge": ["continuity.md"]
     },
     "writer": {
-      "description": "根据明确的剧情、角色与时长约束编写文字分镜。",
+      "description": "Viết phân cảnh văn bản theo cốt truyện, nhân vật và giới hạn thời lượng đã xác định.",
       "instructions": "members/writer.md",
       "tools": ["read", "ls"],
       "skills": ["storyboard"],
       "knowledge": ["continuity.md"]
     },
     "reviewer": {
-      "description": "核查剧情覆盖、镜头可执行性和角色场景连续性。",
+      "description": "Kiểm tra bao phủ cốt truyện, tính khả thi của góc máy và sự liên tục giữa nhân vật và bối cảnh.",
       "instructions": "members/reviewer.md",
       "tools": ["read", "ls"],
       "knowledge": ["continuity.md"]

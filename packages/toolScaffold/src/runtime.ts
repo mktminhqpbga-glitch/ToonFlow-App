@@ -9,7 +9,7 @@ export type { FfmpegFactory, FfmpegCommand, FfprobeData } from "@toonflow/ffmpeg
 
 export const asrRequestSchema = z.strictObject({
   path: z.string().min(1).max(4096).refine(path => !/^(?:[\\/]|[a-z][a-z\d+.-]*:)/i.test(path)
-    && !path.replaceAll("\\", "/").split("/").includes(".."), "音频路径必须位于工作区内"),
+    && !path.replaceAll("\\", "/").split("/").includes(".."), "Đường dẫn âm thanh phải nằm trong workspace"),
   lang: z.string().min(1).max(100).optional(),
 });
 
@@ -22,7 +22,7 @@ export const toolMetadataSchema = z.object({
   prompt: z.string().max(20000).default(""),
   readme: z.string().max(200000).default(""),
   components: z.array(z.string().max(96).regex(/^[a-z][a-zA-Z0-9_]*$/)).max(100)
-    .refine(names => new Set(names).size === names.length, "工具组件名称不能重复").default([]),
+    .refine(names => new Set(names).size === names.length, "Tên component công cụ không được trùng").default([]),
   author: z.string().max(100),
   github: z.string().refine(value => !value || (URL.canParse(value) && new URL(value).origin === "https://github.com" && !new URL(value).username && !new URL(value).password)),
   configRules: z.array(z.record(z.string(), z.json())).max(100),

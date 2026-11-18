@@ -16,52 +16,52 @@
         <div class="updateCopy">
           <div class="cardLabel">
             <icon-refresh :size="18" aria-hidden="true" />
-            <span>版本更新</span>
+            <span>Cập nhật phiên bản</span>
           </div>
         </div>
         <div class="updateActions">
           <el-button v-if="isMobile" tag="a" size="small" type="primary" plain :href="`${repositoryUrl}/releases/latest`" target="_blank" rel="noopener noreferrer">
-            前往 GitHub 更新
+            Xem bản cập nhật trên GitHub
           </el-button>
           <template v-else>
-            <el-select :modelValue="updateSource" aria-label="更新源" size="small" :disabled="working || sourceSaving" @change="saveUpdateSource">
+            <el-select :modelValue="updateSource" aria-label="Nguồn cập nhật" size="small" :disabled="working || sourceSaving" @change="saveUpdateSource">
               <template #prefix>
                 <icon-brand-github v-if="updateSource === 'github'" :size="14" aria-hidden="true" />
                 <icon-world v-else :size="14" aria-hidden="true" />
               </template>
-              <el-option label="官方源" value="official" />
+              <el-option label="Nguồn chính thức" value="official" />
               <el-option label="GitHub" value="github" />
-              <el-option v-if="customUpdateUrl" label="自定义源" value="custom" />
+              <el-option v-if="customUpdateUrl" label="Nguồn tùy chỉnh" value="custom" />
             </el-select>
             <el-badge isDot :hidden="!hasDesktopUpdate">
               <el-button size="small" type="primary" plain :loading="checking" :disabled="sourceSaving" @click="openUpdate">
-                {{ snapshot?.installFailure ? "查看更新失败原因" : snapshot?.updateReady ? "更新已就绪" : snapshot?.updating || action === "download" ? "查看更新进度" : "检查更新" }}
+                {{ snapshot?.installFailure ? "Xem nguyên nhân cập nhật thất bại" : snapshot?.updateReady ? "Bản cập nhật đã sẵn sàng" : snapshot?.updating || action === "download" ? "Xem tiến độ cập nhật" : "Kiểm tra cập nhật" }}
               </el-button>
             </el-badge>
           </template>
         </div>
       </div>
       <div v-if="isLocalDesktop" class="autoUpdateSetting">
-        <span>自动更新</span>
-        <el-switch :modelValue="desktopAutoUpdate" size="small" :loading="autoUpdateSaving" :disabled="!actualPlatform.isLocalDesktop" aria-label="自动更新" @change="(value) => saveAutoUpdate(value === true)" />
+        <span>Tự động cập nhật</span>
+        <el-switch :modelValue="desktopAutoUpdate" size="small" :loading="autoUpdateSaving" :disabled="!actualPlatform.isLocalDesktop" aria-label="Tự động cập nhật" @change="(value) => saveAutoUpdate(value === true)" />
       </div>
       <div v-if="!isMobile && snapshot?.hash" class="buildInfo">
-        <span>构建标识</span>
+        <span>Mã bản dựng</span>
         <code>{{ snapshot.hash }}</code>
       </div>
       <div v-if="!isMobile && snapshot?.installFailure" class="installFailureNotice" role="alert">
-        <strong>上次更新未成功</strong>
+        <strong>Lần cập nhật trước thất bại</strong>
         <p>{{ snapshot.installFailure.message }}</p>
-        <p>请前往 GitHub 最新发布页，选择适合当前系统的完整安装包，关闭客户端后重新安装。</p>
-        <el-button tag="a" type="primary" size="small" :href="snapshot.installFailure.downloadUrl" target="_blank" rel="noopener noreferrer">前往下载页</el-button>
+        <p>Hãy mở trang phát hành mới nhất trên GitHub, tải bộ cài đầy đủ phù hợp với hệ điều hành, đóng ứng dụng rồi cài lại.</p>
+        <el-button tag="a" type="primary" size="small" :href="snapshot.installFailure.downloadUrl" target="_blank" rel="noopener noreferrer">Đến trang tải xuống</el-button>
       </div>
     </el-card>
 
     <el-card class="infoCard repositoryCard" shadow="never">
-      <a class="repositoryLink" :href="repositoryUrl" target="_blank" rel="noopener noreferrer" aria-label="GitHub 仓库：HBAI-Ltd/Toonflow-app">
+      <a class="repositoryLink" :href="repositoryUrl" target="_blank" rel="noopener noreferrer" aria-label="Kho mã nguồn GitHub: HBAI-Ltd/Toonflow-app">
         <icon-brand-github class="repositoryIcon" :size="22" aria-hidden="true" />
         <div class="repositoryInfo">
-          <span class="repositoryTitle">GitHub 仓库</span>
+          <span class="repositoryTitle">Kho mã nguồn GitHub</span>
         </div>
         <icon-external-link class="externalIcon" :size="16" aria-hidden="true" />
       </a>
@@ -71,11 +71,11 @@
       <div class="cardHeader">
         <div class="cardLabel">
           <icon-brand-wechat :size="20" aria-hidden="true" />
-          <span>微信交流群</span>
+          <span>Nhóm trao đổi WeChat</span>
         </div>
-        <el-popover trigger="click" placement="top" title="微信扫码加入交流群" :width="196">
+        <el-popover trigger="click" placement="top" title="Quét mã WeChat để tham gia nhóm trao đổi" :width="196">
           <template #reference>
-            <el-button size="small" :icon="IconQrcode">展示二维码</el-button>
+            <el-button size="small" :icon="IconQrcode">Hiển thị mã QR</el-button>
           </template>
           <q-r-code
             :value="communityUrl"
@@ -85,9 +85,9 @@
             bgColor="#ffffff"
             borderless
             role="img"
-            aria-label="Toonflow 交流群二维码" />
+            aria-label="Mã QR nhóm trao đổi Toonflow" />
           <div class="tips">
-            Toonflow 是为爱发电的开源项目。欢迎文明交流、友善反馈；回复可能需要一些时间，请避免责问或命令式沟通，感谢你的理解与尊重。
+            Toonflow là dự án mã nguồn mở được phát triển từ niềm đam mê. Rất mong mọi người trao đổi lịch sự và góp ý thiện chí. Phản hồi có thể mất thời gian; cảm ơn bạn đã thông cảm và tôn trọng nhau.
           </div>
         </el-popover>
       </div>
@@ -97,20 +97,20 @@
       <div class="cardHeader">
         <div class="cardLabel">
           <icon-shield-lock :size="20" aria-hidden="true" />
-          <span>隐私</span>
+          <span>Quyền riêng tư</span>
         </div>
-        <el-button size="small" aria-haspopup="dialog" @click="privacyVisible = true">查看</el-button>
+        <el-button size="small" aria-haspopup="dialog" @click="privacyVisible = true">Xem</el-button>
       </div>
     </el-card>
 
-    <section class="sponsorPanel" aria-label="赞助商">
+    <section class="sponsorPanel" aria-label="Nhà tài trợ">
       <h3 class="sponsorTitle">
         <icon-gift :size="20" aria-hidden="true" />
-        赞助商
-        <span class="sponsorHint">排名不分先后</span>
-        <el-popover trigger="click" placement="top" title="微信扫码洽谈商务合作" :width="196">
+        Nhà tài trợ
+        <span class="sponsorHint">Không xếp theo thứ tự ưu tiên</span>
+        <el-popover trigger="click" placement="top" title="Quét mã WeChat để trao đổi hợp tác" :width="196">
           <template #reference>
-            <el-button class="sponsorContact" size="small" type="primary" link>成为赞助商</el-button>
+            <el-button class="sponsorContact" size="small" type="primary" link>Trở thành nhà tài trợ</el-button>
           </template>
           <q-r-code
             value="https://work.weixin.qq.com/u/vc0f54596c5837d05a?v=5.0.8.70675"
@@ -120,7 +120,7 @@
             bgColor="#ffffff"
             borderless
             role="img"
-            aria-label="Toonflow 商务合作二维码" />
+            aria-label="Mã QR hợp tác Toonflow" />
         </el-popover>
       </h3>
       <div v-if="sponsors.length" class="sponsorGrid" @keydown.esc="closeSponsor">
@@ -136,7 +136,7 @@
           :persistent="false"
           @update:visible="(visible) => setSponsorVisible(sponsor.id, visible)">
           <template #reference>
-            <button class="sponsorEntry" type="button" :aria-label="`查看 ${sponsor.name} 详情`">
+            <button class="sponsorEntry" type="button" :aria-label="`Xem ${sponsor.name} - chi tiết`">
               <span v-if="sponsor.logoUrl" class="sponsorLogo"><img :src="sponsor.logoUrl" :alt="`${sponsor.name} logo`" /></span>
               <span class="sponsorName">{{ sponsor.name }}</span>
             </button>
@@ -146,11 +146,11 @@
       </div>
     </section>
 
-    <el-dialog v-model="privacyVisible" title="隐私" width="min(660px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+    <el-dialog v-model="privacyVisible" title="Quyền riêng tư" width="min(660px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <privacy />
     </el-dialog>
 
-    <el-dialog v-model="resultVisible" title="版本更新" width="min(480px, 92vw)" alignCenter appendToBody>
+    <el-dialog v-model="resultVisible" title="Cập nhật phiên bản" width="min(480px, 92vw)" alignCenter appendToBody>
       <div class="updateResult" aria-live="polite" :aria-busy="working">
         <div class="resultHeader">
           <span class="resultIcon" :class="{ warning: !!updateError, success: !working && !updateError && !snapshot?.updateAvailable }">
@@ -168,7 +168,7 @@
           v-if="!updateError && !snapshot?.installFailure && (action === 'download' || updateProgress || (snapshot?.updateReady && !updateInProgress))"
           class="updateProgress">
           <div v-if="updateInProgress" class="progressHeader">
-            <span>{{ updateProgress?.phase === "preparing" ? "正在解压并校验更新包" : "下载进度" }}</span>
+            <span>{{ updateProgress?.phase === "preparing" ? "Đang giải nén và xác minh gói cập nhật" : "Tiến độ tải" }}</span>
             <span v-if="updateProgress && (updateProgress.received > 0 || updateProgress.total)">
               {{ formatBytes(updateProgress.received) }}<template v-if="updateProgress.total"> / {{ formatBytes(updateProgress.total) }}</template>
             </span>
@@ -181,12 +181,12 @@
         <div v-if="!checking && !updateError && snapshot?.updateAvailable" class="releaseInfo">
           <div class="versionComparison">
             <div class="versionItem">
-              <span>当前版本</span>
+              <span>Phiên bản hiện tại</span>
               <strong>v{{ currentVersion }}</strong>
             </div>
             <icon-arrow-right class="versionArrow" :size="18" aria-hidden="true" />
             <div class="versionItem latestVersion">
-              <span>最新版本</span>
+              <span>Phiên bản mới nhất</span>
               <strong>v{{ snapshot.latestVersion }}</strong>
             </div>
           </div>
@@ -197,17 +197,17 @@
         </div>
       </div>
       <template #footer>
-        <el-button size="small" @click="resultVisible = false">关闭</el-button>
+          <el-button size="small" @click="resultVisible = false">Đóng</el-button>
         <el-button v-if="updateError && !snapshot?.installFailure && !updateInProgress" tag="a" size="small" :href="`${repositoryUrl}/releases/latest`" target="_blank" rel="noopener noreferrer">前往下载页</el-button>
-        <el-button v-if="snapshot?.installFailure" tag="a" type="primary" size="small" :href="snapshot.installFailure.downloadUrl" target="_blank" rel="noopener noreferrer">前往下载页</el-button>
-        <el-button v-else-if="snapshot?.updating && !working" size="small" type="primary" @click="runUpdate('read')">重新读取状态</el-button>
+        <el-button v-if="snapshot?.installFailure" tag="a" type="primary" size="small" :href="snapshot.installFailure.downloadUrl" target="_blank" rel="noopener noreferrer">Đến trang tải xuống</el-button>
+        <el-button v-else-if="snapshot?.updating && !working" size="small" type="primary" @click="runUpdate('read')">Đọc lại trạng thái</el-button>
         <el-button
           v-else-if="snapshot?.canUpdate && snapshot.updateAvailable"
           size="small"
           :type="snapshot.updateReady ? 'danger' : 'primary'"
           :loading="working"
           @click="runUpdate(snapshot.updateReady ? 'apply' : 'download')">
-          {{ snapshot.updateReady ? "重启并更新" : "下载更新" }}
+          {{ snapshot.updateReady ? "Khởi động lại và cập nhật" : "Tải bản cập nhật" }}
         </el-button>
       </template>
     </el-dialog>
@@ -374,7 +374,7 @@ async function runUpdate(nextAction: "read" | "check" | "download" | "apply") {
   updateError.value = "";
   try {
     await runDesktopUpdate(nextAction);
-    if (snapshot.value?.channel === "dev") updateError.value = "开发版本不提供更新检查，请使用正式桌面客户端。";
+    if (snapshot.value?.channel === "dev") updateError.value = "Phiên bản dành cho phát triển không hỗ trợ kiểm tra cập nhật; hãy dùng ứng dụng desktop phát hành chính thức.";
   } catch {
     // 错误与交接状态由全局 Store 保留，关闭面板不取消更新观察。
   }

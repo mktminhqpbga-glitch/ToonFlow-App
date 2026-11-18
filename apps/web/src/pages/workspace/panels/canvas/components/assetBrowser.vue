@@ -1,12 +1,12 @@
 <template>
-  <div class="assetBrowser" role="region" aria-label="素材库">
-    <aside class="browserSidebar" aria-label="素材目录">
+  <div class="assetBrowser" role="region" aria-label="Thư viện tài nguyên">
+    <aside class="browserSidebar" aria-label="Thư mục tài nguyên">
       <button class="allAssets" :class="{ active: folder === '.' }" type="button" :disabled="navigationLocked" @click="navigateTo('.')">
         <icon-layout-grid :size="19" aria-hidden="true" />
-        <span>全部素材</span>
+        <span>Tất cả tài nguyên</span>
         <span class="assetCount">{{ allFiles.length }}</span>
       </button>
-      <div class="directoryHeading"><span>文件夹</span><span>{{ allEntries.length - allFiles.length }}</span></div>
+        <div class="directoryHeading"><span>Thư mục</span><span>{{ allEntries.length - allFiles.length }}</span></div>
       <el-scrollbar class="directoryScroll">
         <el-tree class="directoryTree" :data="directoryTree" nodeKey="path" :props="{ label: 'name' }" :icon="IconChevronRight" :currentNodeKey="folder === '.' ? undefined : folder" :expandOnClickNode="false" defaultExpandAll highlightCurrent emptyText="" @nodeClick="selectDirectory">
           <template #default="{ data, node }">
@@ -21,8 +21,8 @@
 
     <section class="browserMain">
       <header class="browserHeader">
-        <nav class="breadcrumb" aria-label="当前目录">
-          <button type="button" :disabled="navigationLocked" @click="navigateTo('.')">素材库</button>
+        <nav class="breadcrumb" aria-label="Thư mục hiện tại">
+          <button type="button" :disabled="navigationLocked" @click="navigateTo('.')">Thư viện tài nguyên</button>
           <template v-for="part in breadcrumb" :key="part.path">
             <icon-chevron-right :size="13" aria-hidden="true" />
             <button type="button" :disabled="navigationLocked" :aria-current="part.path === folder ? 'page' : undefined" @click="navigateTo(part.path)">{{ part.name }}</button>
@@ -31,18 +31,18 @@
         <div class="headingRow">
           <div class="directoryTitle">
             <div class="titleLine">
-              <h2>{{ currentDirectory?.name ?? '全部素材' }}</h2>
-              <el-button v-if="currentDirectory" class="directoryMore" text :icon="IconDots" :aria-label="'更多 ' + currentDirectory.name" title="目录操作" @click="emit('menu', $event, currentDirectory)" />
+              <h2>{{ currentDirectory?.name ?? 'Tất cả tài nguyên' }}</h2>
+              <el-button v-if="currentDirectory" class="directoryMore" text :icon="IconDots" :aria-label="'Tùy chọn ' + currentDirectory.name" title="Thao tác thư mục" @click="emit('menu', $event, currentDirectory)" />
             </div>
-            <p>{{ scopeFiles.length }} 个素材<span v-if="scopeDirectories.length"> · {{ scopeDirectories.length }} 个文件夹</span></p>
+            <p>{{ scopeFiles.length }}  tài nguyên<span v-if="scopeDirectories.length"> · {{ scopeDirectories.length }}  thư mục</span></p>
           </div>
           <div class="headerActions">
-            <el-input v-model="searchQuery" class="searchInput" :prefixIcon="IconSearch" :placeholder="folder === '.' ? '搜索全部素材' : '搜索当前文件夹'" aria-label="搜索素材" clearable @keydown.esc.stop="searchQuery = ''" />
-            <el-button class="createButton" :icon="IconFolderPlus" :disabled="newFolderParent !== undefined || loading" @click="emit('startFolder')">新建文件夹</el-button>
-            <el-button class="uploadButton" type="primary" :icon="IconUpload" :loading="uploading" :disabled="newFolderParent !== undefined || loading || selecting" @click="emit('upload')">本地上传</el-button>
+            <el-input v-model="searchQuery" class="searchInput" :prefixIcon="IconSearch" :placeholder="folder === '.' ? 'Tìm tất cả tài nguyên' : 'Tìm trong thư mục hiện tại'" aria-label="Tìm tài nguyên" clearable @keydown.esc.stop="searchQuery = ''" />
+            <el-button class="createButton" :icon="IconFolderPlus" :disabled="newFolderParent !== undefined || loading" @click="emit('startFolder')">Tạo thư mục mới</el-button>
+            <el-button class="uploadButton" type="primary" :icon="IconUpload" :loading="uploading" :disabled="newFolderParent !== undefined || loading || selecting" @click="emit('upload')">Tải lên từ máy</el-button>
           </div>
         </div>
-        <div class="filterRow" role="group" aria-label="素材类型">
+        <div class="filterRow" role="group" aria-label="Loại tài nguyên">
           <button v-for="item in filters" :key="item.value" class="filterButton" :class="{ active: selectedKind === item.value }" type="button" :aria-pressed="selectedKind === item.value" @click="selectedKind = item.value">
             {{ item.label }}<span>{{ item.count }}</span>
           </button>
@@ -51,15 +51,15 @@
 
       <form v-if="newFolderParent !== undefined" class="newFolderRow" @submit.prevent="emit('saveFolder')">
         <icon-folder-plus :size="20" aria-hidden="true" />
-        <el-input ref="folderInput" v-model="newFolderName" class="folderNameInput" aria-label="新文件夹名称" :disabled="folderSaving" @keydown.esc.prevent.stop="emit('cancelFolder')" />
-        <el-button type="primary" nativeType="submit" :loading="folderSaving" :disabled="!newFolderName.trim()">创建</el-button>
-        <el-button text :disabled="folderSaving" @click="emit('cancelFolder')">取消</el-button>
+        <el-input ref="folderInput" v-model="newFolderName" class="folderNameInput" aria-label="Tên thư mục mới" :disabled="folderSaving" @keydown.esc.prevent.stop="emit('cancelFolder')" />
+          <el-button type="primary" nativeType="submit" :loading="folderSaving" :disabled="!newFolderName.trim()">Tạo</el-button>
+          <el-button text :disabled="folderSaving" @click="emit('cancelFolder')">Hủy</el-button>
       </form>
 
-      <el-scrollbar v-loading="loading" class="assetScroll" aria-label="素材列表">
+      <el-scrollbar v-loading="loading" class="assetScroll" aria-label="Danh sách tài nguyên">
         <div v-if="displayEntries.length" class="assetGrid">
           <article v-for="entry in displayEntries" :key="entry.path" class="assetCard" :draggable="!canSelect && entry.type === 'file'" @dragstart="emit('drag', $event, entry)" @contextmenu.prevent.stop="emit('menu', $event, entry)">
-            <component :is="canSelect || entry.type === 'directory' || mediaKind(entry) ? 'button' : 'div'" class="assetOpen" :type="canSelect || entry.type === 'directory' || mediaKind(entry) ? 'button' : undefined" :disabled="entry.type === 'directory' ? navigationLocked : canSelect && (selecting || !canSelect(entry))" :aria-label="entry.type === 'directory' ? '打开文件夹 ' + entry.name : canSelect ? '引用素材 ' + entry.name : mediaKind(entry) ? '预览素材 ' + entry.name : undefined" @click="openEntry(entry)">
+            <component :is="canSelect || entry.type === 'directory' || mediaKind(entry) ? 'button' : 'div'" class="assetOpen" :type="canSelect || entry.type === 'directory' || mediaKind(entry) ? 'button' : undefined" :disabled="entry.type === 'directory' ? navigationLocked : canSelect && (selecting || !canSelect(entry))" :aria-label="entry.type === 'directory' ? 'Mở thư mục ' + entry.name : canSelect ? 'Tham chiếu tài nguyên ' + entry.name : mediaKind(entry) ? 'Xem trước tài nguyên ' + entry.name : undefined" @click="openEntry(entry)">
               <span class="assetVisual" :class="entry.type === 'directory' ? 'folderVisual' : mediaKind(entry) + 'Visual'">
                 <mentionThumbnail v-if="mediaKind(entry) === 'image'" class="assetImage" :thumbnail="{ url: entry.path, mimeType: getMediaMimeType({ name: entry.path, type: '' }) }" globalAsset><span class="imageError"><icon-photo :size="38" aria-hidden="true" /></span></mentionThumbnail>
                 <icon-folder v-else-if="entry.type === 'directory'" :size="58" stroke="1.25" aria-hidden="true" />
@@ -71,15 +71,15 @@
               <span class="assetName" :title="entry.name">{{ entry.name }}</span>
             </component>
             <div class="cardFooter">
-              <span class="assetDetails" :title="entry.path">{{ entry.type === 'directory' ? `${entry.children?.length ?? 0} 个项目` : folder === '.' && entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : typeLabel(entry) }}</span>
-              <el-button class="moreButton" text :icon="IconDots" :aria-label="'更多 ' + entry.name" title="更多操作" @click="emit('menu', $event, entry)" />
+              <span class="assetDetails" :title="entry.path">{{ entry.type === 'directory' ? `${entry.children?.length ?? 0}  mục` : folder === '.' && entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : typeLabel(entry) }}</span>
+              <el-button class="moreButton" text :icon="IconDots" :aria-label="'Tùy chọn ' + entry.name" title="Thao tác khác" @click="emit('menu', $event, entry)" />
             </div>
           </article>
         </div>
         <div v-else-if="!loading" class="emptyState">
           <icon-search v-if="searchQuery.trim()" :size="40" stroke="1.25" aria-hidden="true" />
           <icon-folder v-else :size="44" stroke="1.25" aria-hidden="true" />
-          <span>{{ searchQuery.trim() ? '没有找到匹配的素材' : '暂无素材' }}</span>
+          <span>{{ searchQuery.trim() ? 'Không tìm thấy tài nguyên phù hợp' : 'Chưa có tài nguyên' }}</span>
         </div>
       </el-scrollbar>
     </section>

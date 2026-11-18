@@ -5,7 +5,7 @@ import { createFfmpeg } from "./runtime";
 import { executeRemoteFfmpeg, serializeError } from "./remote";
 import type { FfmpegWorkerRequest, FfmpegWorkerResponse } from "./workerClient";
 
-if (!parentPort) throw new Error("FFmpeg 必须在工作线程中运行");
+if (!parentPort) throw new Error("FFmpeg phải chạy trong worker");
 const port = parentPort;
 const active = new Map<string, AbortController>();
 port.on("close", () => {
@@ -24,7 +24,7 @@ async function run(message: Exclude<FfmpegWorkerRequest, { type: "cancel" }>, si
     signal.throwIfAborted();
     const version = output.split(/\r?\n/, 1)[0];
     if (code !== 0 || !version?.startsWith(`${message.name} version `)) {
-      throw messageError(msg`${message.name} 无法运行，请检查平台兼容性或重新下载`);
+      throw messageError(msg`${message.name} không chạy được; hãy kiểm tra khả năng tương thích nền tảng hoặc tải lại`);
     }
     send({ id: message.id, type: "done", version });
     return;

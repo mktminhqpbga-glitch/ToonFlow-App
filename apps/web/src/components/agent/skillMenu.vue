@@ -1,10 +1,10 @@
 <template>
   <div v-click-outside:[editor]="closeMenu" class="skillMenu" @keydown.capture="handleKeydown">
-    <el-button class="skillButton" text circle :disabled="disabled" :aria-expanded="visible" :aria-controls="listId" aria-label="选择技能" title="选择技能" @click="visible ? closeMenu() : buttonVisible = true"><icon-book :size="16" /></el-button>
+    <el-button class="skillButton" text circle :disabled="disabled" :aria-expanded="visible" :aria-controls="listId" aria-label="Chọn kỹ năng" title="Chọn kỹ năng" @click="visible ? closeMenu() : buttonVisible = true"><icon-book :size="16" /></el-button>
     <el-card v-if="visible" class="skillPopup" shadow="always" :bodyStyle="{ padding: '6px' }">
       <el-scrollbar maxHeight="min(320px, 50dvh)">
-        <div :id="listId" class="skillList" role="listbox" aria-label="技能指令" :aria-busy="loading">
-          <div v-if="loading || loadError || !filteredSkills.length" class="skillStatus" role="status">{{ loading ? "正在加载技能…" : loadError || (skills.length ? "没有匹配的技能" : "暂无可用技能") }}</div>
+        <div :id="listId" class="skillList" role="listbox" aria-label="Lệnh kỹ năng" :aria-busy="loading">
+          <div v-if="loading || loadError || !filteredSkills.length" class="skillStatus" role="status">{{ loading ? "Đang tải kỹ năng…" : loadError || (skills.length ? "Không tìm thấy kỹ năng phù hợp" : "Chưa có kỹ năng khả dụng") }}</div>
           <button v-for="(skill, index) in filteredSkills" v-else :id="`${listId}-${index}`" :key="skill.name" class="skillItem" :class="{ active: index === activeIndex }" type="button" role="option" :aria-selected="index === activeIndex" @mouseenter="activeIndex = index" @mousedown.prevent @click="selectSkill(skill.name)">
             <icon-book class="skillIcon" :size="18" aria-hidden="true" />
             <span class="skillContent">
@@ -90,10 +90,10 @@ watch(visible, async (open, _previous, onCleanup) => {
       params: { directory: props.directory }, signal: controller.signal,
       headers: { "x-toonflow-workspace": "1" },
     });
-    if (data.code !== 200) throw new Error(data.message || "加载技能失败");
+    if (data.code !== 200) throw new Error(data.message || "Tải kỹ năng thất bại");
     skills.value = data.data;
   } catch (error) {
-    if (!axios.isCancel(error)) loadError.value = "加载技能失败，请重新打开重试";
+    if (!axios.isCancel(error)) loadError.value = "Tải kỹ năng thất bại, hãy mở lại rồi thử tiếp";
   } finally {
     if (!controller.signal.aborted) loading.value = false;
   }

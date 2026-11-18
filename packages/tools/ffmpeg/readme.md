@@ -1,16 +1,16 @@
-# FFmpeg 媒体处理
+# Xử lý media bằng FFmpeg
 
-为 Agent 提供 `ffmpeg` 和 `ffprobe`，直接连接 `context.ffmpeg()`，复用插件市场配置的执行程序及节点已有的调用桥接。
+Cung cấp `ffmpeg` và `ffprobe` cho Agent, kết nối trực tiếp qua `context.ffmpeg()`, dùng lại chương trình thực thi cấu hình trong chợ plugin và cầu nối gọi lệnh sẵn có của node.
 
-## 调用方式
+## Cách gọi
 
-`ffprobe` 接收文件路径和可选的原生参数：
+`ffprobe` nhận đường dẫn tệp và các tham số gốc tùy chọn:
 
 ```json
 { "path": "assets/input.mp4", "options": ["-count_frames"] }
 ```
 
-`ffmpeg` 的 `steps` 按顺序调用 fluent 方法，`operation` 指定最后执行的方法，省略时使用 `run()`。例如输出图片序列：
+`steps` của `ffmpeg` gọi các phương thức fluent theo thứ tự; `operation` chỉ định phương thức thực thi cuối cùng, mặc định `run()` nếu bỏ qua. Ví dụ xuất chuỗi ảnh:
 
 ```json
 {
@@ -22,15 +22,15 @@
 }
 ```
 
-也可使用 `operation: { "method": "save", "args": ["assets/output.mp4"] }`，或者原生的 `screenshots`、`concat` 等操作。查询可用编码器、编解码器、格式、滤镜时，省略 `steps`，将 `operation.method` 设为 `availableEncoders`、`availableCodecs`、`availableFormats` 或 `availableFilters`。
+Cũng có thể dùng `operation: { "method": "save", "args": ["assets/output.mp4"] }` hoặc thao tác gốc như `screenshots`, `concat`. Để truy vấn encoder, codec, định dạng hoặc bộ lọc được hỗ trợ, bỏ `steps` và đặt `operation.method` thành `availableEncoders`, `availableCodecs`, `availableFormats` hoặc `availableFilters`.
 
-`options` 对应宿主支持的 fluent 构造选项：`source`、`cwd`、`niceness`、`priority`、`stdoutLines`、`timeout`。`steps` 支持宿主已有的全部配置方法和别名；`args` 中的 JSON 值保持原样，`undefinedArgs` 可指定要传入 `undefined` 的位置。
+`options` tương ứng với tham số khởi tạo fluent mà host hỗ trợ: `source`, `cwd`, `niceness`, `priority`, `stdoutLines`, `timeout`. `steps` hỗ trợ toàn bộ phương thức cấu hình và tên thay thế có sẵn của host; các giá trị JSON trong `args` được giữ nguyên, còn `undefinedArgs` có thể chỉ định vị trí cần truyền `undefined`.
 
-## 原生能力与执行
+## Năng lực gốc và thực thi
 
-- 不另设 FFmpeg 参数白名单，不拆分或重写 `inputOptions`、`outputOptions`、滤镜参数。
-- 不限制为单文件输出，图片序列、HLS/DASH 分片、多输入多输出均按原生方式处理。
-- 不重定向到临时文件，不强制设置执行时长。输出目录按原生要求准备，已有文件的覆盖遵循 FFmpeg 原生规则；未要求覆盖时应使用新文件名。
-- 保留宿主已有的显式工作区路径检查、缺少 FFmpeg 时的安装提示、错误传播和转换取消。取消或失败可能留下原生处理产生的部分文件，工具不自动删除素材。
+- Không đặt thêm danh sách cho phép các tham số FFmpeg; không tách hoặc viết lại `inputOptions`, `outputOptions` hay tham số bộ lọc.
+- Không giới hạn đầu ra ở một tệp: chuỗi ảnh, phân đoạn HLS/DASH, nhiều đầu vào/đầu ra đều được xử lý theo khả năng gốc.
+- Không chuyển hướng sang tệp tạm hay ép giới hạn thời gian chạy. Thư mục đầu ra phải được chuẩn bị theo yêu cầu gốc; ghi đè tệp có sẵn tuân theo quy tắc FFmpeg. Nếu không yêu cầu ghi đè, nên chọn tên tệp mới.
+- Giữ nguyên kiểm tra đường dẫn workspace tường minh của host, thông báo cài đặt khi thiếu FFmpeg, cơ chế truyền lỗi và hủy chuyển đổi. Khi hủy hoặc lỗi, có thể còn tệp dở do quá trình xử lý gốc tạo ra; công cụ không tự xóa tài nguyên.
 
-此工具传递 JSON 调用数据，不接收 JavaScript、回调或 Node 流；可执行文件由插件市场配置。宿主只检查显式文件入口，原始参数、滤镜和媒体清单中的间接访问不是文件系统沙箱。FFprobe 和能力查询的原生接口不暴露子进程，取消会停止等待，底层查询自行退出。
+Công cụ truyền dữ liệu gọi lệnh ở dạng JSON, không nhận JavaScript, callback hay luồng Node; chương trình thực thi được cấu hình qua chợ plugin. Host chỉ kiểm tra các đường dẫn tệp được khai báo trực tiếp: truy cập gián tiếp qua tham số gốc, bộ lọc hoặc danh sách media không phải sandbox hệ thống tệp. Giao diện gốc của FFprobe và truy vấn khả năng không cung cấp tiến trình con; hủy chỉ dừng chờ, còn truy vấn bên dưới tự thoát.

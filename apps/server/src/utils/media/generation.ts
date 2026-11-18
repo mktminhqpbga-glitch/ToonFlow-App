@@ -11,10 +11,10 @@ import { lockWorkspaceFiles, resolveWorkspacePath, writeWorkspaceFile } from "@/
 import { beginGeneration, getProviderPrice } from "@/utils/media/billing";
 import { detectMimeType, readPriceReference } from "@/utils/media/priceReference";
 import { modelGateway } from "@/utils/multiTenant/gateway";
-import { type BridgeProvider } from "@/utils/chromeBridge/runtime";
-import { chromeBridge } from "@/utils/chromeBridge/manager";
-import { mediaErrorText } from "./mediaErrorVi";
-import { verifyChromeMediaSignature } from "@/utils/chromeBridge/mediaSignature";
+import { chromeModels, runTask } from "@/utils/aiChrome";
+import { readReferences } from "@/utils/aiChrome/files";
+import { providerForChromeModel } from "@/utils/aiChrome/protocol";
+import { generateBridgeMedia, listBridgeMediaModels } from "@/utils/media/aiBridge";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
@@ -45,14 +45,14 @@ const mediaExtensions: Record<string, string> = {
 };
 
 function invalid(message: string): never {
-  throw Object.assign(new Error(mediaErrorText(message)), { status: 400 });
+  throw Object.assign(new Error(message), { status: 400 });
 }
 
 function requireGenerationMode(task?: MediaGenerationTask) {
   if (modelGateway.enabled()) {
     if (!task?.modelRouteCipher) invalid("多租户媒体生成必须通过持久任务提交");
   } else if (task?.modelRouteCipher) {
-    throw Object.assign(new Error(mediaErrorText("多租户模型路由尚未开启")), { status: 403 });
+    throw Object.assign(new Error("多租户模型路由尚未开启"), { status: 403 });
   }
 }
 
@@ -67,20 +67,12 @@ function imageOptions(value: unknown, pattern: RegExp) {
 export async function listMediaModels(): Promise<MediaModel[]> {
   if (modelGateway.enabled()) return modelGateway.catalog(["image", "video", "audio"]);
   const installedProviders = await listMediaProviders();
-  const providerConfigs = record(conf.get("settings", {}).mediaProviderConfigs);
   installedProviders.sort((left, right) => Number(right.id === "toonflow") - Number(left.id === "toonflow"));
   const installedModels = installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => provider.models.flatMap(model => {
     if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
     const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
-    const config = record(providerConfigs[provider.id]);
-    const apiKeyRule = provider.rules.find(rule => rule.field === "apiKey");
-    const apiKey = config.apiKey ?? (apiKeyRule && "value" in apiKeyRule ? apiKeyRule.value : undefined);
-    // A saved key proves configuration only, never live connectivity or available credits.
-    const availability = provider.id === "toonflow" ? "configured"
-      : apiKeyRule && (typeof apiKey !== "string" || !apiKey.trim()) ? "needsConfiguration" : "configured";
     return [{
       providerId: provider.id, providerLabel: provider.label, modelId: model.id, label: model.label, type: model.type,
-      availability,
       supportsPrice: "supportsPrice" in provider && provider.supportsPrice === true,
       rules: model.rules,
       mode: model.mode, durationResolutionMap: model.durationResolutionMap, audio: model.audio,
@@ -91,9 +83,7 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       } : {}),
     } as MediaModel];
   }));
-  // ACT: chỉ hiện nguồn AI theo khả năng được tab Chrome đã chọn xác nhận; provider gốc giữ nguyên.
-  return [...installedModels, ...chromeBridge.models("image").map(model => ({ ...model, availability: "ready" })),
-    ...chromeBridge.models("video").map(model => ({ ...model, availability: "ready" }))] as MediaModel[];
+  return [...installedModels, ...chromeModels(), ...await listBridgeMediaModels()] as MediaModel[];
 }
 
 export async function readReference(cwd: string, reference: MediaReference, mediaType: string, signal?: AbortSignal): Promise<Extract<MediaInput, { type: "base64" }>> {
@@ -138,7 +128,7 @@ async function downloadAsset(url: string, signal?: AbortSignal) {
   return { bytes: Buffer.concat(chunks, size), mimeType: response.headers.get("content-type") ?? "" };
 }
 
-async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "audio", signal?: AbortSignal, strictChrome = false) {
+async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "audio", signal?: AbortSignal) {
   if (!asset || asset.mediaType !== mediaType) invalid("供应商返回的媒体类型不正确");
   let bytes: Uint8Array;
   let mimeType = asset.mimeType ?? "";
@@ -158,7 +148,6 @@ async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "aud
   } else { return invalid("供应商返回了无效的媒体结果"); }
   if (!bytes.byteLength || bytes.byteLength > maxMediaSize) invalid("生成文件为空或超过 100 MB");
   mimeType = detectMimeType(bytes, mimeType);
-  if (strictChrome) verifyChromeMediaSignature(bytes, mimeType);
   if (!mimeType.startsWith(`${mediaType}/`) || !mediaExtensions[mimeType]) invalid("生成结果不是支持的图片、视频或音频格式");
   return { bytes, mimeType };
 }
@@ -184,10 +173,10 @@ async function prepareRequest<T>(directory: string | undefined, mediaType: "imag
       const available = reference.type === "text" || ("index" in reference
         ? Number.isSafeInteger(reference.index) && reference.index >= 0 && !!media[reference.type]?.[reference.index]
         : !!request[reference.type]);
-      if (!available) invalid(`参考 ${index + 1} 指向的素材不存在，请重新选择引用`);
+      if (!available) invalid(t`参考 ${index + 1} 指向的素材不存在，请重新选择引用`);
     }
     for (const match of request.prompt.matchAll(/\{\{ref (\d+)\}\}/g)) {
-      if (!referenceOrder[Number(match[1]) - 1]) invalid(`引用标记 ${match[0]} 没有对应素材，请重新选择引用`);
+      if (!referenceOrder[Number(match[1]) - 1]) invalid(t`引用标记 ${match[0]} 没有对应素材，请重新选择引用`);
     }
   }
   const references = async (items: MediaReference[] | undefined, type: string) => {
@@ -238,14 +227,14 @@ async function preparePriceRequest(directory: string | undefined, mediaType: "im
   }
   catch (error) {
     signal?.throwIfAborted();
-    if (deadline.aborted) throw new Error(mediaErrorText("读取参考媒体信息超时，请稍后重试"));
+    if (deadline.aborted) throw new Error("读取参考媒体信息超时，请稍后重试");
     throw error;
   }
 }
 
 export async function getMediaPrice(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  if (request.providerId === "chromeBridge") return null;
+  if ((request.providerId === "aiChrome" || request.providerId === "aiBridge") && !modelGateway.enabled()) return null;
   if (modelGateway.enabled()) {
     const quote = await modelGateway.quoteRequest(mediaType, request.providerId, request.modelId, request);
     return { ...quote, price: `${quote.amount} ${quote.currency}`, tips: translateMessage("平台售价，按实际用量结算") };
@@ -271,7 +260,7 @@ export async function generateMedia(
     return await executeMedia(cwd, mediaType, request, signal, task, () => { submitted = true; });
   } catch (cause) {
     // ACT: 仅宿主确认尚未调用供应商的异常证明未提交；供应商错误码不能伪造此证据。
-    if (!task?.modelRouteCipher || submitted) throw cause;
+    if (submitted) throw cause;
     const failure = cause instanceof Error ? cause : new Error(String(cause));
     notSubmittedFailures.add(failure);
     throw failure;
@@ -324,32 +313,57 @@ async function executeMedia(
   try {
     signal?.throwIfAborted();
     let assets: MediaAsset[] | undefined;
-    if (request.providerId === "chromeBridge") {
-      if (task?.resume) invalid("Tác vụ Chrome đã bị gián đoạn; không được tự gửi lại. Hãy kiểm tra tab trước khi chủ động tạo yêu cầu mới");
-      if (mediaType === "audio") invalid("Chrome Bridge không hỗ trợ sinh âm thanh");
-      const provider = request.modelId.replace(/_(image|video)$/, "") as BridgeProvider;
-      if (!["muse", "gemini", "chatgpt"].includes(provider) || request.modelId !== provider + "_" + mediaType)
-        invalid("Nguồn AI không phù hợp với loại media");
-      if (mediaType === "video" && provider !== "muse") invalid("Chỉ Muse có adapter video");
-      if (mediaType === "video" && (request.videos?.length || request.audios?.length || request.lastFrame))
-        invalid("Chrome Bridge hiện chỉ nhận prompt hoặc tối đa một ảnh đầu vào cho video");
-      const references = [...(request.images ?? []), ...(request.firstFrame ? [request.firstFrame] : [])];
-      if (references.length > (mediaType === "video" ? 1 : 4)) invalid("Số lượng ảnh tham chiếu vượt giới hạn Chrome Bridge");
-      const images = await Promise.all(references.map(async reference => {
-        const file = await readReference(directory, reference, "image", signal);
-        return { data: file.data, mimeType: file.mimeType };
-      }));
-      signal?.throwIfAborted();
-      if (!chromeBridge.models(mediaType).some(model => model.modelId === request.modelId))
-        invalid("Tab Chrome chưa sẵn sàng hoặc chức năng hiện không được hỗ trợ");
-      // ACT: đánh dấu gửi trước hành động không thể khôi phục; timeout/mất kết nối không tự retry.
-      markSubmitted();
-      const result = await chromeBridge.run(provider, mediaType, request.prompt, images,
-        { ratio: request.ratio, ...("size" in request ? { size: request.size } : {}),
-          ...("duration" in request ? { duration: request.duration } : {}) },
-        signal, task?.taskId);
-      if (result.kind !== mediaType || !result.data || !result.mimeType) invalid("AI trả media không đúng loại");
-      assets = [{ type: "base64", mediaType, data: result.data, mimeType: result.mimeType }];
+    if (request.providerId === "aiBridge") {
+      if (modelGateway.enabled() || modelRouteCipher || !task || mediaType === "audio")
+        invalid("AI-Bridge chỉ cho phép tạo ảnh/video từ MacFlow cục bộ với tác vụ bền vững.");
+      if (task.resume || checkpoint?.providerData)
+        invalid("Không tự gửi lại AI-Bridge khi tác vụ chưa xác định. Hãy xem tab AI trước khi chủ động gửi tác vụ mới.");
+      let submitted = false;
+      try {
+        assets = await generateBridgeMedia({
+          directory, request, kind: mediaType, signal,
+          readReference,
+          beforeSubmit: async () => {
+            await task.save({ providerData: { transport: "aiBridge", requestId: task.taskId, stage: "submitting", kind: mediaType } });
+            submitted = true;
+            markSubmitted();
+          },
+        });
+      } catch (cause) {
+        if (!submitted && cause && typeof cause === "object") notSubmittedFailures.add(cause);
+        throw cause;
+      }
+    } else if (request.providerId === "aiChrome") {
+      if (modelGateway.enabled() || modelRouteCipher || !task || !providerForChromeModel(request.modelId)
+        || request.modelId === "museImage" && mediaType !== "image") invalid("AI chrome cần tác vụ bền vững ở chế độ độc lập và mô hình hợp lệ.");
+      if (task.resume || checkpoint?.providerData) invalid("Tác vụ Chrome đã gián đoạn; kiểm tra tab trước khi chủ động tạo yêu cầu mới.");
+      const references = [
+        ...(request.images ?? []).map((ref, index) => ({ ...ref, key: `image:${index}`, label: `Image ${index + 1}` })),
+        ...(request.firstFrame ? [{ ...request.firstFrame, key: "firstFrame", label: "First frame" }] : []),
+        ...(request.lastFrame ? [{ ...request.lastFrame, key: "lastFrame", label: "Last frame" }] : []),
+        ...(request.videos ?? []).map((ref, index) => ({ ...ref, key: `video:${index}`, label: `Video ${index + 1}` })),
+        ...(request.audios ?? []).map((ref, index) => ({ ...ref, key: `audio:${index}`, label: `Audio ${index + 1}` })),
+      ];
+      const excluded = new Set(["providerId", "modelId", "prompt", "outputDirectory", "images", "videos", "audios", "firstFrame", "lastFrame"]);
+      const specification = Object.fromEntries(Object.entries(request).filter(([key]) => !excluded.has(key)));
+      if (request.referenceOrder) specification.referenceBindings = request.referenceOrder.map((ref, index) => {
+        const marker = `{{ref ${index + 1}}}`;
+        if (ref.type === "text") return { marker, source: "Text already included in the prompt" };
+        const key = "index" in ref ? `${ref.type}:${ref.index}` : ref.type;
+        const position = references.findIndex(file => file.key === key);
+        if (position < 0) invalid(`Tham chiếu ${marker} không có tệp tương ứng. Chưa gửi sang Chrome.`);
+        return { marker, attachment: position + 1, source: references[position]!.label };
+      });
+      const files = await readReferences(directory, references, signal);
+      const chromeTabId = record(request.other).chromeTabId;
+      if (chromeTabId !== undefined && (!Number.isSafeInteger(chromeTabId) || (chromeTabId as number) < 0))
+        invalid("ID tab AI Chrome không hợp lệ; hãy chọn lại tab từ menu của node.");
+      const output = await runTask({ id: task.taskId, kind: mediaType, modelId: request.modelId,
+        tabId: typeof chromeTabId === "number" ? chromeTabId : undefined,
+        prompt: request.prompt, specification, files,
+        save: async stage => { markSubmitted(); await task.save({ providerData: { transport: "aiChrome", requestId: task.taskId, kind: mediaType, stage } }); },
+      }, signal);
+      assets = [{ type: "binary", mediaType, data: output.bytes, mimeType: output.mimeType }];
     } else if (task?.resume) {
       assets = checkpoint?.assets ?? await resumeAssets();
     } else {
@@ -378,7 +392,7 @@ async function executeMedia(
       const existing = saved.get(index);
       if (existing) { result.push(existing); continue; }
       let content: Awaited<ReturnType<typeof assetBytes>>;
-      try { content = await assetBytes(assets[index]!, mediaType, signal, request.providerId === "chromeBridge"); }
+      try { content = await assetBytes(assets[index]!, mediaType, signal); }
       catch (cause) {
         if (refreshed || !checkpoint?.providerData || (cause as { code?: string } | null)?.code !== "MEDIA_ASSET_URL_EXPIRED") throw cause;
         // 下载地址过期时只重新查询原任务一次，不重提生成，也不无限重试同一失效地址。
@@ -386,7 +400,7 @@ async function executeMedia(
         refreshed = true;
         if (!Array.isArray(assets) || assets.length !== checkpoint.assetCount) invalid("恢复任务的结果数量发生变化");
         await task!.save({ assets: resumableAssets(assets, mediaType) });
-        content = await assetBytes(assets[index]!, mediaType, signal, request.providerId === "chromeBridge");
+        content = await assetBytes(assets[index]!, mediaType, signal);
       }
       const { bytes, mimeType } = content;
       signal?.throwIfAborted();

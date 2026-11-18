@@ -4,91 +4,91 @@
     <section v-if="!publicWeb" class="settingSection" aria-labelledby="extensionAssociationsTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="extensionAssociationsTitle">默认打开方式</h3>
-          <p class="description">按文件类型选择默认扩展。</p>
+          <h3 id="extensionAssociationsTitle">Cách mở mặc định</h3>
+          <p class="description">Chọn tiện ích mặc định theo loại tệp.</p>
         </div>
-        <el-button size="small" aria-label="设置默认打开方式" @click="associationsVisible = true">设置</el-button>
+          <el-button size="small" aria-label="Cấu hình cách mở mặc định" @click="associationsVisible = true">Cài đặt</el-button>
       </div>
     </section>
     <section class="settingSection" aria-labelledby="startupTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="startupTitle">启动动画</h3>
-          <p class="description">启动时播放动画。关闭可加快启动速度，可能出现闪屏，下次启动生效。</p>
+          <h3 id="startupTitle">Hiệu ứng khởi động</h3>
+          <p class="description">Phát hiệu ứng khi khởi động. Tắt có thể tăng tốc độ mở nhưng đôi khi gây nháy màn hình; có hiệu lực từ lần khởi động sau.</p>
         </div>
         <el-switch
           :modelValue="uiSettings.startupAnimation"
-          aria-label="启动动画"
+          aria-label="Hiệu ứng khởi động"
           @change="(value) => updateUiSettings({ startupAnimation: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="agentNotificationsTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="agentNotificationsTitle">Agent 通知</h3>
+          <h3 id="agentNotificationsTitle">Thông báo Agent</h3>
           <p class="description">
-            窗口未激活时，Agent 完成回答或等待确认会发送通知。
+            Khi cửa sổ không hoạt động, Agent sẽ gửi thông báo khi trả lời xong hoặc chờ xác nhận.
             <template v-if="!actualPlatform.isDesktop && generalSettings.agentNotificationsEnabled">
               <template v-if="notificationPermission === 'default'">
-                浏览器需授权，<el-button class="permissionAction" link type="primary" :loading="requestingPermission" @click="authorizeNotifications">点击授权</el-button>。
+                Trình duyệt cần được cấp quyền, <el-button class="permissionAction" link type="primary" :loading="requestingPermission" @click="authorizeNotifications">Nhấn để cấp quyền</el-button>.
               </template>
-              <template v-else-if="notificationPermission === 'granted'">浏览器已授权。</template>
-              <template v-else-if="notificationPermission === 'denied'">请在浏览器的网站设置中允许通知。</template>
-              <template v-else-if="notificationPermission === 'insecure'">浏览器通知需要 HTTPS 或 localhost。</template>
-              <template v-else>当前浏览器不支持系统通知。</template>
+              <template v-else-if="notificationPermission === 'granted'">Trình duyệt đã được cấp quyền.</template>
+              <template v-else-if="notificationPermission === 'denied'">Hãy cho phép thông báo trong cài đặt trang web của trình duyệt.</template>
+              <template v-else-if="notificationPermission === 'insecure'">Thông báo trình duyệt yêu cầu HTTPS hoặc localhost.</template>
+              <template v-else>Trình duyệt này không hỗ trợ thông báo hệ thống.</template>
             </template>
           </p>
         </div>
         <el-switch
           :modelValue="generalSettings.agentNotificationsEnabled"
-          aria-label="Agent 通知"
+          aria-label="Thông báo Agent"
           @change="(value) => updateGeneralSettings({ agentNotificationsEnabled: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="canvasCompositingTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="canvasCompositingTitle">画布合成优化</h3>
-          <p class="description">优化大量节点时的平移和缩放，可能增加显存占用并导致模糊，立即生效。</p>
+          <h3 id="canvasCompositingTitle">Tối ưu dựng Canvas</h3>
+          <p class="description">Tối ưu thao tác kéo và thu phóng khi có nhiều node. Có thể tăng sử dụng bộ nhớ đồ họa và gây mờ; áp dụng ngay.</p>
         </div>
         <el-switch
           :modelValue="generalSettings.canvasCompositingEnabled"
-          aria-label="画布合成优化"
+          aria-label="Tối ưu dựng Canvas"
           @change="(value) => updateGeneralSettings({ canvasCompositingEnabled: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="canvasEdgeAnimationTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="canvasEdgeAnimationTitle">节点连线动画</h3>
-          <p class="description">选中或拖动节点时，与它直接相连的线条显示流动动画。关闭仍保留高亮，立即生效。</p>
+          <h3 id="canvasEdgeAnimationTitle">Hiệu ứng dây nối node</h3>
+          <p class="description">Khi chọn hoặc kéo node, các dây nối trực tiếp sẽ có hiệu ứng chuyển động. Tắt hiệu ứng vẫn giữ nổi bật; áp dụng ngay.</p>
         </div>
         <el-switch
           :modelValue="generalSettings.canvasEdgeAnimationEnabled"
-          aria-label="节点连线动画"
+          aria-label="Hiệu ứng dây nối node"
           @change="(value) => updateGeneralSettings({ canvasEdgeAnimationEnabled: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="canvasEdgeColorTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="canvasEdgeColorTitle">节点连线高亮颜色</h3>
-          <p class="description">设置选中或拖动节点时，与它直接相连的线条的高亮颜色，立即生效。</p>
+          <h3 id="canvasEdgeColorTitle">Màu nổi bật của dây nối node</h3>
+          <p class="description">Đặt màu nổi bật cho các dây nối trực tiếp của node khi chọn hoặc kéo; áp dụng ngay.</p>
         </div>
         <div class="edgeColorControls">
           <el-select
             :modelValue="generalSettings.canvasEdgeColorMode"
-            aria-label="节点连线颜色模式"
+            aria-label="Chế độ màu dây nối"
             @change="(value) => updateGeneralSettings({ canvasEdgeColorMode: value })">
-            <el-option label="不使用高亮颜色" value="none" />
-            <el-option label="跟随主题色" value="theme" />
-            <el-option label="自选颜色" value="custom" />
+            <el-option label="Không dùng màu nổi bật" value="none" />
+            <el-option label="Theo màu chủ đề" value="theme" />
+            <el-option label="Chọn màu tùy ý" value="custom" />
           </el-select>
           <el-color-picker
             v-if="generalSettings.canvasEdgeColorMode === 'custom'"
             :modelValue="generalSettings.canvasEdgeColor"
             colorFormat="hex"
-            aria-label="节点连线自选颜色"
+            aria-label="Màu dây nối tùy chỉnh"
             @change="(value) => updateGeneralSettings({ canvasEdgeColor: value || defaultUiSettings.primaryColor })" />
         </div>
       </div>
@@ -123,7 +123,7 @@ async function authorizeNotifications() {
   if (requestingPermission.value) return;
   requestingPermission.value = true;
   try { notificationPermission.value = await requestNotificationPermission(); }
-  catch { ElMessage.error("请求通知授权失败，请检查浏览器的网站设置"); }
+  catch { ElMessage.error("Không xin được quyền thông báo; hãy kiểm tra cài đặt trang web trong trình duyệt"); }
   finally { requestingPermission.value = false; }
 }
 

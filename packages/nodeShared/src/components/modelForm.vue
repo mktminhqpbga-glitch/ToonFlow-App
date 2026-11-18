@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import formCreate, { type Options } from "@form-create/element-ui";
+import { translateFormRules } from "@toonflow/i18n/vue";
 import {
   ElForm, ElFormItem, ElRow, ElCol, ElInput, ElInputNumber, ElSwitch,
   ElSelect, ElOption, ElCheckbox, ElCheckboxGroup, ElRadio, ElRadioGroup,
@@ -15,7 +16,7 @@ import type { NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 
 const props = defineProps<{ rules?: NodeMediaModel["rules"]; disabled?: boolean }>();
 const other = defineModel<Record<string, unknown>>({ required: true });
-const formState = computed(() => ({ rules: formCreate.copyRules(props.rules ?? []), key: Symbol() }));
+const formState = computed(() => ({ rules: translateFormRules(formCreate.copyRules(props.rules ?? [])), key: Symbol() }));
 const formOptions = computed<Options>(() => ({
   form: { labelPosition: "top", size: "small", disabled: props.disabled },
   appendValue: false,

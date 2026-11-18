@@ -1,7 +1,7 @@
-# 连续性核对
+# Kiểm tra tính liên tục
 
-- 角色的衣着、携带物、受伤状态和情绪变化应能追溯到故事或前一镜头。
-- 同一空间中的相对位置、出入方向、视线与主要光线方向应保持可理解；有跳切或时空变化时明确标注。
-- 动作起点和终点应能衔接；不能在相邻镜头无说明地改变持物手、道具数量或人物位置。
-- 对话、环境声和动作声音需与镜头中实际发生的事情一致；不为无声设定擅自添加对白。
-- 尚无实际图像或视频时只能审阅文字方案，不能评价不存在素材的画质、口型或运动效果。
+- Trang phục, vật dụng mang theo, trạng thái thương tích và thay đổi cảm xúc của nhân vật phải truy được từ câu chuyện hoặc cảnh quay trước.
+- Vị trí tương đối trong cùng không gian, hướng vào/ra, hướng nhìn và nguồn sáng chính phải dễ hiểu; đánh dấu rõ nếu có nhảy cảnh hoặc chuyển không gian/thời gian.
+- Điểm bắt đầu và kết thúc của hành động phải tiếp nối nhau; không tự đổi tay cầm vật, số lượng đạo cụ hoặc vị trí nhân vật giữa hai cảnh liền kề mà không giải thích.
+- Lời thoại, âm thanh môi trường và âm thanh hành động phải phù hợp những gì thực sự diễn ra trong cảnh; không tự thêm thoại vào tình huống đã được xác định là không lời.
+- Khi chưa có ảnh/video thực tế, chỉ được rà soát phương án văn bản; không đánh giá chất lượng hình ảnh, khẩu hình hoặc hiệu ứng chuyển động của tài nguyên chưa tồn tại.

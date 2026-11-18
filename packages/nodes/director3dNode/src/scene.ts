@@ -1,5 +1,4 @@
 import { z } from "@toonflow/nodes-scaffold/runtime";
-import { aperturePresets, cameraBodies, cameraLenses } from "@toonflow/node-shared/cameraStudio";
 import { createJsonScene, registerObject, type SceneRuntime } from "threejson/core";
 import { AmbientLight, Box3, DirectionalLight, GridHelper, HemisphereLight, Mesh, PCFSoftShadowMap, PlaneGeometry, ShadowMaterial, Sphere, Vector3 } from "three";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
@@ -13,15 +12,7 @@ export const sceneSchema = z.strictObject({
   version: z.literal("next"),
   sceneConfig: z.strictObject({
     scene: z.strictObject({ background: color }),
-    camera: z.strictObject({ position: vector, fov: z.number().min(5).max(120), near: z.number().min(0.01).max(10), far: z.number().min(20).max(10000) }),
-    // Metadata travels with the existing scene document; aperture is guidance only.
-    cameraStudio: z.strictObject({
-      enabled: z.boolean(),
-      body: z.string().refine(value => cameraBodies.includes(value)),
-      lens: z.string().refine(value => cameraLenses.includes(value)),
-      focalLength: z.number().min(12).max(200),
-      aperture: z.number().refine(value => aperturePresets.includes(value)),
-    }).optional(),
+    camera: z.strictObject({ position: vector, fov: z.number().min(10).max(120), near: z.number().min(0.01).max(10), far: z.number().min(20).max(10000) }),
     controls: z.strictObject({ target: vector }),
     lights: z.array(z.strictObject({
       type: z.enum(["ambient", "directional", "point", "spot", "hemisphere"]),
@@ -32,18 +23,18 @@ export const sceneSchema = z.strictObject({
     threeJsonId: z.string().trim().min(1).max(100), name: z.string().max(100).optional(),
     objType: z.enum(["box", "sphere", "cylinder", "cone", "ring", "torus", "capsule", "plane", "mannequin"]),
     geometry: z.record(z.string().regex(/^[a-zA-Z]+$/), z.union([z.number().min(0).max(10000), z.boolean()]))
-      .refine(value => Object.entries(value).every(([key, size]) => !/segments/i.test(key) || (typeof size === "number" && Number.isInteger(size) && size >= 1 && size <= 64)), "细分段数必须是 1～64 的整数"),
+      .refine(value => Object.entries(value).every(([key, size]) => !/segments/i.test(key) || (typeof size === "number" && Number.isInteger(size) && size >= 1 && size <= 64)), "Số đoạn chia nhỏ phải là số nguyên từ 1 đến 64"),
     position: vector,
     rotation: z.strictObject({ rotationX: coordinate, rotationY: coordinate, rotationZ: coordinate }).optional(),
     scale: z.strictObject({ scaleX: coordinate, scaleY: coordinate, scaleZ: coordinate }).optional(),
-    pose: z.partialRecord(z.enum(mannequinJoints), vector).describe("仅 mannequin：关节相对父关节的局部 XYZ 旋转，弧度，省略为自然站姿").optional(),
-    hiddenParts: z.array(z.enum(mannequinJoints)).max(mannequinJoints.length).describe("仅 mannequin：不显示指定关节及其下游部位，省略为完整人偶").optional(),
+    pose: z.partialRecord(z.enum(mannequinJoints), vector).describe("Chỉ cho mannequin: góc xoay XYZ cục bộ của khớp so với khớp cha, đơn vị radian; bỏ qua để dùng tư thế đứng tự nhiên").optional(),
+    hiddenParts: z.array(z.enum(mannequinJoints)).max(mannequinJoints.length).describe("Chỉ cho mannequin: ẩn khớp được chỉ định và các bộ phận phía dưới; bỏ qua để dùng hình nhân đầy đủ").optional(),
     material: z.strictObject({
       type: z.enum(["standard", "basic", "phong", "lambert"]), color,
       roughness: z.number().min(0).max(1).optional(), metalness: z.number().min(0).max(1).optional(),
       opacity: z.number().min(0).max(1).optional(), transparent: z.boolean().optional(), wireframe: z.boolean().optional(),
     }),
-  }).refine(object => object.objType === "mannequin" || (!object.pose && !object.hiddenParts), "仅人偶支持关节姿态和部位隐藏")).max(200).refine(objects => new Set(objects.map(object => object.threeJsonId)).size === objects.length, "物体 ID 不能重复"),
+  }).refine(object => object.objType === "mannequin" || (!object.pose && !object.hiddenParts), "Chỉ hình nhân hỗ trợ tư thế khớp và ẩn bộ phận")).max(200).refine(objects => new Set(objects.map(object => object.threeJsonId)).size === objects.length, "ID đối tượng không được trùng nhau"),
 });
 export type SceneDocument = z.infer<typeof sceneSchema>;
 export const cameraViewSchema = sceneSchema.shape.sceneConfig.pick({ camera: true, controls: true });
@@ -51,7 +42,7 @@ export type CameraView = z.infer<typeof cameraViewSchema>;
 
 export function createMannequinObject(id: string): SceneDocument["objectList"][number] {
   return {
-    threeJsonId: id, name: "关节人偶", objType: "mannequin", geometry: {},
+    threeJsonId: id, name: "Hình nhân khớp nối", objType: "mannequin", geometry: {},
     position: { x: 0, y: 0, z: 0 },
     material: { type: "standard", color: "#c7a77b", roughness: 0.75 },
   };
@@ -184,12 +175,11 @@ export async function createStage(canvas: HTMLCanvasElement, document: SceneDocu
   const height = Math.round(960 / Math.max(1, aspect) / 2) * 2;
   let runtime: SceneRuntime | undefined;
   try {
-    const { cameraStudio: _cameraStudio, ...sceneConfig } = document.sceneConfig;
     const next = await createJsonScene({
       ...document,
       objectList: document.objectList.filter(object => object.objType !== "mannequin"),
       sceneConfig: {
-        ...sceneConfig, canvasWidth: width, canvasHeight: height,
+        ...document.sceneConfig, canvasWidth: width, canvasHeight: height,
         controls: { enabled: false },
         renderer: { antialias: true, ratioRate: 1 / window.devicePixelRatio, shadowMapEnabled: true },
         renderLoop: { autoResize: false, firstAutoResize: false, updateAnimations: false, scheduleMode: "demand" },
@@ -251,7 +241,7 @@ export function captureCamera(runtime: SceneRuntime): CameraView {
 export function capturePreview(runtime: SceneRuntime) {
   runtime.renderer.render(runtime.scene, runtime.camera);
   const preview = runtime.renderer.domElement.toDataURL("image/jpeg", 0.85);
-  if (!preview.startsWith("data:image/jpeg;base64,")) throw new Error("镜头截图失败");
+  if (!preview.startsWith("data:image/jpeg;base64,")) throw new Error("Chụp khung hình camera thất bại");
   return preview;
 }
 

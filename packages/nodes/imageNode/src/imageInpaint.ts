@@ -2,17 +2,19 @@ import { useNode, useVueFlow } from "@vue-flow/core";
 import { uploadNodeFile, useNodeAi, useNodeFiles, type NodeImageRequest, type NodeImageResult } from "@toonflow/nodes-scaffold/runtime";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { createMediaPreview } from "@toonflow/node-shared/mediaPreview";
+import { resolveNodePrompt } from "@toonflow/node-shared/nodePrompts";
 
 export type ImageInpaint = { source: string; original: string; guide: string; mask: string; images: NonNullable<NodeImageRequest["images"]> };
 export type InpaintDraftInput = { prompt: string; images?: NodeImageRequest["images"] };
 
-const inpaintInstruction = "对父节点提供的第一张原图片进行局部重绘。第二张图片是同一原图的标注图，红色涂抹标出了需要修改的区域；红色仅用于指示选区，不要把标注画进结果。只修改标注区域，保留原图的构图、尺寸比例和区域外内容，返回完整图片。";
-const inpaintInstructionVi = "Hãy vẽ lại một phần ảnh gốc đầu tiên do node nguồn cung cấp. Ảnh thứ hai là ảnh đánh dấu trên cùng ảnh gốc; vùng tô đỏ là khu vực cần sửa, không được vẽ nét đánh dấu màu đỏ lên kết quả. Chỉ thay đổi vùng đánh dấu, giữ nguyên bố cục, tỷ lệ kích thước và mọi nội dung nằm ngoài vùng sửa. Xuất ảnh hoàn chỉnh.";
+const inpaintInstruction = "Vẽ lại một vùng trên ảnh gốc đầu tiên do node cha cung cấp. Ảnh thứ hai là bản đánh dấu của cùng ảnh gốc, trong đó vùng tô đỏ chỉ phần cần chỉnh sửa. Màu đỏ chỉ là ký hiệu vùng chọn, tuyệt đối không vẽ dấu đỏ vào kết quả. Chỉ sửa vùng được đánh dấu, giữ nguyên bố cục, tỷ lệ kích thước và mọi nội dung bên ngoài vùng đó, trả về ảnh hoàn chỉnh.";
+
 export function buildInpaintPrompt(prompt: string) {
-  // The generated instruction is not user-authored text. Preserve the latter byte-for-byte.
-  if (prompt.startsWith(inpaintInstruction) || prompt.startsWith(inpaintInstructionVi)) return prompt;
-  const vietnamese = typeof document !== "undefined" && document.documentElement.lang === "vi";
-  return `${vietnamese ? inpaintInstructionVi : inpaintInstruction}\n\n${vietnamese ? "Yêu cầu vẽ lại:" : "重绘要求："}\n${prompt}`;
+  return prompt.startsWith(inpaintInstruction) ? prompt : `${inpaintInstruction}\n\nYêu cầu vẽ lại:\n${prompt}`;
+}
+
+export async function resolveInpaintPrompt(prompt: string, signal?: AbortSignal) {
+  return resolveNodePrompt("image.inpaint", buildInpaintPrompt(prompt), signal);
 }
 
 export function buildInpaintRequest<T extends Pick<NodeImageRequest, "prompt" | "images">>(input: T, inpaint: ImageInpaint): T {
@@ -33,7 +35,7 @@ export function useImageInpaint(generate?: (input: NodeImageRequest, signal: Abo
     signal.throwIfAborted();
     if (!inpaint || ![inpaint.original, inpaint.guide, inpaint.mask].every(path => typeof path === "string" && path.trim())
       || !Array.isArray(inpaint.images) || inpaint.images.some(image => !image || typeof image.path !== "string" || !image.path.trim() || typeof image.mimeType !== "string" || !image.mimeType.startsWith("image/"))) {
-      throw new Error("局部重绘素材无效，请重新创建重绘节点");
+      throw new Error("Tư liệu vẽ lại một vùng không hợp lệ, hãy tạo lại node vẽ lại");
     }
     const workspace = files.getWorkspaceFiles();
     const temporaryId = recovered?.[0]?.path.match(/^assets\/([^/]+)\/[^/]+$/)?.[1] ?? crypto.randomUUID();
@@ -69,14 +71,14 @@ export function useImageInpaint(generate?: (input: NodeImageRequest, signal: Abo
       const mask = await readImage(inpaint.mask);
       const guide = await readImage(inpaint.guide);
       if (!original.naturalWidth || !original.naturalHeight || [mask, guide].some(image => image.naturalWidth !== original.naturalWidth || image.naturalHeight !== original.naturalHeight)) {
-        throw new Error("局部重绘原图、引导图与蒙版尺寸不一致，请重新创建重绘节点");
+        throw new Error("Ảnh gốc, ảnh hướng dẫn và mặt nạ vẽ lại không cùng kích thước, hãy tạo lại node vẽ lại");
       }
       canvas.width = original.naturalWidth;
       canvas.height = original.naturalHeight;
       const context = canvas.getContext("2d");
-      if (!context) throw new Error("无法创建绘画画布");
+      if (!context) throw new Error("Không tạo được Canvas để vẽ");
       context.drawImage(mask, 0, 0);
-      if (!context.getImageData(0, 0, canvas.width, canvas.height).data.some((value, index) => index % 4 === 3 && value)) throw new Error("局部重绘蒙版为空，请重新涂抹区域");
+      if (!context.getImageData(0, 0, canvas.width, canvas.height).data.some((value, index) => index % 4 === 3 && value)) throw new Error("Mặt nạ vẽ lại đang rỗng, hãy tô vùng cần sửa");
       const { directory } = await workspace.list();
       signal.throwIfAborted();
       requested = true;
@@ -86,9 +88,11 @@ export function useImageInpaint(generate?: (input: NodeImageRequest, signal: Abo
         directory,
         outputDirectory: generate ? `assets/${id}/generation` : `assets/${temporaryId}`,
       }, inpaint);
+      // Chỉ đọc cài đặt khi chuẩn bị một tác vụ mới; khôi phục tác vụ cũ giữ nguyên prompt đã lưu.
+      if (!recovered) request.prompt = await resolveNodePrompt("image.inpaint", request.prompt, signal);
       const [result] = recovered ?? await (generate ? generate(request, signal, { input, inpaint }) : ai.generateImage(request, signal));
       signal.throwIfAborted();
-      if (!result) throw new Error("供应商未返回图片");
+      if (!result) throw new Error("Nhà cung cấp không trả về ảnh");
       const generated = await readImage(result.path, result.mimeType);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(generated, 0, 0, canvas.width, canvas.height);
@@ -96,14 +100,14 @@ export function useImageInpaint(generate?: (input: NodeImageRequest, signal: Abo
       context.drawImage(mask, 0, 0);
       context.globalCompositeOperation = "destination-over";
       context.drawImage(original, 0, 0);
-      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("图片编码失败")), "image/png"));
+      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Mã hóa ảnh thất bại")), "image/png"));
       signal.throwIfAborted();
       outputPath = await uploadNodeFile(workspace, id, new File([blob], "image.png", { type: "image/png" }));
       signal.throwIfAborted();
-      if (findNode(id) !== node) throw new Error("重绘节点已移除");
+      if (findNode(id) !== node) throw new Error("Node vẽ lại đã bị xóa");
       // ACT: 可恢复任务原图保留在节点的 generation 子目录，关闭后仍可合成，并随节点素材统一清理。
       if (!generate) await workspace.remove(`assets/${temporaryId}`, true).catch(error => {
-        if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "重绘临时文件清理失败");
+        if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "Không xóa được tệp vẽ lại tạm");
       });
       requested = false;
       signal.throwIfAborted();
@@ -112,9 +116,9 @@ export function useImageInpaint(generate?: (input: NodeImageRequest, signal: Abo
     } finally {
       urls.forEach(url => URL.revokeObjectURL(url));
       canvas.width = canvas.height = 0;
-      if (outputPath && !committed) await workspace.remove(outputPath).catch(error => showNodeError(error, "重绘临时文件清理失败"));
+      if (outputPath && !committed) await workspace.remove(outputPath).catch(error => showNodeError(error, "Không xóa được tệp vẽ lại tạm"));
       if (requested && !generate) await workspace.remove(`assets/${temporaryId}`, true).catch(error => {
-        if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "重绘临时文件清理失败");
+        if (error?.response?.data?.data?.code !== "ENOENT") showNodeError(error, "Không xóa được tệp vẽ lại tạm");
       });
     }
   };

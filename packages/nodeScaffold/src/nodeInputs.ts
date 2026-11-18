@@ -28,7 +28,7 @@ function readSourceValue(node: Node<NodeData>, handle: NodeHandle): NodeOutput |
   const output = outputs[handle.id];
   if (output === undefined || !Object.hasOwn(outputs, handle.id)) return;
   if (!isNodeOutput(output) || !isTypeCompatible(output.dataType, handle.dataType)) {
-    throw new Error(`节点 ${node.id} 的输出端口 ${handle.id} 值不符合类型声明`);
+    throw new Error(`Node ${node.id} có cổng đầu ra ${handle.id} có giá trị không đúng kiểu dữ liệu khai báo`);
   }
   return output;
 }

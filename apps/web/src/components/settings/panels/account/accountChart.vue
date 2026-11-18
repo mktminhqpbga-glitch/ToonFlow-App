@@ -10,8 +10,8 @@
     @blur="hideTooltip"
     @keydown="selectKey">
     <div ref="chartElement" class="chartCanvas" />
-    <div v-if="loading" class="chartPlaceholder" role="status">正在加载图表…</div>
-    <span :id="hintId" class="chartAccessible">{{ hasData ? '使用左右方向键查看每日金额，Home 和 End 跳转首尾日期，Escape 关闭提示。' : '暂无消费数据' }}</span>
+    <div v-if="loading" class="chartPlaceholder" role="status">Đang tải biểu đồ…</div>
+    <span :id="hintId" class="chartAccessible">{{ hasData ? 'Dùng phím mũi tên trái/phải để xem số tiền từng ngày. Home và End chuyển đến ngày đầu/cuối; Escape đóng gợi ý.' : 'Chưa có dữ liệu chi phí' }}</span>
     <span class="chartAccessible" aria-live="polite">{{ activeDescription }}</span>
   </div>
 </template>
@@ -42,10 +42,10 @@ const chartSeries = computed(() => props.kind === "line" ? props.series.slice(0,
 const hasData = computed(() => props.dates.some((_, index) => chartSeries.value.some(series => typeof series.data[index] === "number" && Number.isFinite(series.data[index]))));
 const activeDescription = computed(() => {
   if (activeIndex.value === null) return "";
-  return props.dates[activeIndex.value] + "，" + chartSeries.value.flatMap(series => {
+  return props.dates[activeIndex.value] + ", " + chartSeries.value.flatMap(series => {
     const amount = series.data[activeIndex.value!];
     return amount == null ? [] : [series.name + " " + moneyFormat.format(amount)];
-  }).join("，");
+  }).join(", ");
 });
 let chart: EChartsType | undefined;
 let resizeObserver: ResizeObserver | undefined;

@@ -21,7 +21,7 @@ export function getModelFormValues(model: NodeMediaModel, values: Record<string,
   const fields = new Map<string, unknown>();
   collectFields(formCreate.copyRules(model.rules ?? []), fields);
   for (const field of Object.keys(updates)) {
-    if (!fields.has(field)) throw new Error(`当前模型不支持自定义配置 ${field}，请查看 getConfig 返回的模型 rules`);
+    if (!fields.has(field)) throw new Error(`Mô hình hiện tại không hỗ trợ cấu hình tùy chỉnh ${field}，hãy xem rules mô hình do getConfig trả về`);
   }
   const nextValues = { ...values, ...updates };
   return Object.fromEntries([...fields].map(([field, value]) => [field, Object.hasOwn(nextValues, field) ? nextValues[field] : value]));
@@ -33,7 +33,7 @@ export function useImageModelForm(data: Ref<{ model: string; other: Record<strin
   const ratioOptions = computed(() => model.value?.imageRatios?.length ? model.value.imageRatios : ["16:9"]);
   watch(model, choice => {
     if (!choice) return;
-    // ACT: 现有分辨率使用 K 单位；出现其他单位时再统一换算，未知名称排在数值选项之后。
+    // ACT: 现有Độ phân giải使用 K 单位；出现其他单位时再统一换算，未知名称排在数值选项之后。
     if (!sizeOptions.value.includes(data.value.size)) data.value.size = sizeOptions.value.toSorted((left, right) =>
       (Number.parseFloat(left) || Infinity) - (Number.parseFloat(right) || Infinity)
     )[0]!;

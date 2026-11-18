@@ -1,6 +1,6 @@
 import { computed, onScopeDispose, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { translate } from "@toonflow/i18n/vue";
+import { locale, translate } from "@toonflow/i18n/vue";
 import { createBrowserAsr, isBrowserAsrSupported, type BrowserAsrState } from "@toonflow/asr";
 import type xSender from "x-sender";
 
@@ -16,7 +16,7 @@ export default function useVoiceInput(options: {
   const voiceText = ref("");
   const voiceLevel = ref(0);
   const voiceActive = computed(() => voiceState.value !== "idle");
-  const voiceButtonLabel = computed(() => !voiceSupported ? "当前浏览器不支持原生语音识别" : voiceActive.value ? "取消语音输入" : "长按输入框语音输入，也可点击开始");
+  const voiceButtonLabel = computed(() => !voiceSupported ? translate("当前浏览器不支持原生语音识别") : voiceActive.value ? translate("取消语音输入") : translate("长按输入框语音输入，也可点击开始"));
   let voiceAsr: ReturnType<typeof createBrowserAsr> | undefined;
   let voicePress: { pointerId: number; x: number; y: number; timer: number } | undefined;
   let voiceFinalText = "";
@@ -34,14 +34,14 @@ export default function useVoiceInput(options: {
     meterStream = undefined;
     const context = meterContext;
     meterContext = undefined;
-    if (context && context.state !== "closed") void context.close().catch(error => console.warn("关闭麦克风音量采集失败", error));
+    if (context && context.state !== "closed") void context.close().catch(error => console.warn("Không thể ngừng thu mức âm lượng micrô", error));
   }
 
   async function startVoiceMeter(asr: ReturnType<typeof createBrowserAsr>) {
     stopVoiceMeter();
     const run = meterRun;
     try {
-      if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === "undefined") throw new Error("当前环境无法读取麦克风音量");
+      if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === "undefined") throw new Error(translate("当前环境无法读取麦克风音量"));
       const context = new AudioContext();
       meterContext = context;
       const media = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -72,14 +72,14 @@ export default function useVoiceInput(options: {
           meterFrame = requestAnimationFrame(updateLevel);
         } catch (error) {
           stopVoiceMeter();
-          console.warn("无法读取麦克风音量", error);
+          console.warn("Không thể đọc mức âm lượng micrô", error);
         }
       }
       meterFrame = requestAnimationFrame(updateLevel);
     } catch (error) {
       if (run !== meterRun) return;
       stopVoiceMeter();
-      console.warn("无法读取麦克风音量", error);
+      console.warn("Không thể đọc mức âm lượng micrô", error);
     }
   }
 
@@ -106,7 +106,7 @@ export default function useVoiceInput(options: {
       voiceAsr?.stop();
     } catch (error) {
       cancelVoiceInput();
-      ElMessage.warning(error instanceof Error ? error.message : "无法结束语音识别");
+      ElMessage.warning(error instanceof Error ? error.message : translate("无法结束语音识别"));
     }
   }
 
@@ -128,7 +128,7 @@ export default function useVoiceInput(options: {
     try {
       asr?.destroy();
     } catch (error) {
-      console.warn("关闭语音识别失败", error);
+      console.warn("Không thể đóng phiên nhận dạng giọng nói", error);
     }
   }
 
@@ -137,7 +137,7 @@ export default function useVoiceInput(options: {
     if (!instance || options.locked() || !options.active() || instance.chatEditor.isComposition) return;
     if (!voiceSupported) {
       clearVoicePress();
-      ElMessage.warning("当前浏览器或 WebView 不支持原生语音识别，无法使用语音输入，请改用文字输入。");
+      ElMessage.warning(translate("当前浏览器或 WebView 不支持原生语音识别，无法使用语音输入，请改用文字输入。"));
       return;
     }
     try {
@@ -153,7 +153,7 @@ export default function useVoiceInput(options: {
         }
       }
       const asr = createBrowserAsr({
-        lang: "zh-CN",
+        lang: locale.value === "vi" ? "vi-VN" : locale.value,
         continuous: true,
         onStateChange(state) {
           if (voiceAsr !== asr || state === "destroyed") return;
@@ -167,7 +167,7 @@ export default function useVoiceInput(options: {
         },
         onError({ code, message }) {
           if (voiceAsr !== asr) return;
-          console.warn("浏览器原生语音识别失败", { code, message, userAgent: navigator.userAgent });
+          console.warn("Nhận dạng giọng nói của trình duyệt thất bại", { code, message, userAgent: navigator.userAgent });
           const errors: Record<string, string> = {
             "not-allowed": translate("麦克风权限未获允许，请在浏览器或系统设置中开启"),
             "service-not-allowed": translate("当前浏览器或 WebView 未允许使用语音识别服务，暂时无法进行语音输入。"),
@@ -177,7 +177,7 @@ export default function useVoiceInput(options: {
             "language-not-supported": translate("当前语音识别服务不支持中文"),
           };
           cancelVoiceInput();
-          ElMessage.warning(errors[code] ?? `语音识别失败：${message}`);
+          ElMessage.warning(errors[code] ?? `Nhận dạng giọng nói thất bại: ${message}`);
         },
       });
       voiceAsr = asr;
@@ -188,7 +188,7 @@ export default function useVoiceInput(options: {
       void startVoiceMeter(asr);
     } catch (error) {
       cancelVoiceInput();
-      ElMessage.warning(error instanceof Error ? error.message : "无法启动语音识别");
+      ElMessage.warning(error instanceof Error ? error.message : translate("无法启动语音识别"));
     }
   }
 
@@ -205,7 +205,7 @@ export default function useVoiceInput(options: {
       else instance.focus("last");
       await instance.setText(text);
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "语音文字回填失败，未能将识别结果填入输入框。");
+      ElMessage.error(error instanceof Error ? error.message : translate("语音文字回填失败，未能将识别结果填入输入框。"));
     } finally {
       if (voiceAsr === asr) {
         voiceAsr = undefined;

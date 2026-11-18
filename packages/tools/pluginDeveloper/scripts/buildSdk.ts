@@ -25,7 +25,7 @@ async function copyPluginSdk(outputDirectory: string) {
   const buildDirectory = resolve(projectDirectory, "build");
   const outputPath = relative(buildDirectory, outputDirectory);
   if (!outputPath || isAbsolute(outputPath) || outputPath.startsWith("..") || resolve(buildDirectory, outputPath) !== outputDirectory) {
-    throw new Error("插件 SDK 只能生成到项目 build 的子目录");
+    throw new Error("SDK plugin chỉ được tạo trong thư mục con của build của dự án");
   }
   const nodeModulesDirectory = join(outputDirectory, "node_modules");
   const packages = new Map<string, string>();
@@ -40,7 +40,7 @@ async function copyPluginSdk(outputDirectory: string) {
         .catch((error: NodeJS.ErrnoException) => { if (error.code !== "ENOENT") throw error; });
       if (info?.name) return { directory, info };
       const parent = dirname(directory);
-      if (parent === directory) throw new Error(`无法定位 SDK 依赖包：${name}`);
+      if (parent === directory) throw new Error(`Không tìm thấy gói phụ thuộc SDK: ${name}`);
       directory = parent;
     }
   }
@@ -112,7 +112,7 @@ async function copyPluginSdk(outputDirectory: string) {
       packages: "bundle",
       external: compilerExternals,
     });
-    if (!result.success) throw new AggregateError(result.logs, `插件脚手架构建失败：${name}`);
+    if (!result.success) throw new AggregateError(result.logs, `Build bộ khung plugin thất bại: ${name}`);
     const info = JSON.parse(await readFile(join(target, "package.json"), "utf8")) as PackageInfo;
     await writeAtomic(join(target, "package.json"), JSON.stringify({ ...info, exports: { ...info.exports, ".": "./index.js" } }, null, 2) + "\n", { mode: 0o644 });
   }
@@ -124,7 +124,7 @@ async function copyPluginSdk(outputDirectory: string) {
     packages: "bundle",
     external: [...compilerExternals, "@toonflow/nodes-scaffold", "@toonflow/tools-scaffold"],
   });
-  if (!result.success) throw new AggregateError(result.logs, "插件构建进程打包失败");
+  if (!result.success) throw new AggregateError(result.logs, "Đóng gói tiến trình build plugin thất bại");
   await mkdir(join(outputDirectory, "docs"), { recursive: true });
   await cp(resolve(projectDirectory, "readme.md"), join(outputDirectory, "docs/guide.md"));
   await cp(join(scaffolds[0]!.directory, "readme.md"), join(outputDirectory, "docs/node.md"));
@@ -134,7 +134,7 @@ async function copyPluginSdk(outputDirectory: string) {
 export default async function buildSdk() {
   const platformNames: Record<string, string> = { darwin: "Macos", linux: "Linux", win32: "Windows" };
   const platformName = platformNames[process.platform];
-  if (!platformName || !["x64", "arm64"].includes(process.arch)) throw new Error(`不支持的 SDK 平台：${process.platform}/${process.arch}`);
+  if (!platformName || !["x64", "arm64"].includes(process.arch)) throw new Error(`Nền tảng SDK không được hỗ trợ: ${process.platform}/${process.arch}`);
   const architectureName = process.arch === "x64" ? "X64" : "Arm64";
   const outputDirectory = resolve(projectDirectory, "build");
   const sdkDirectory = join(outputDirectory, "sdk");
@@ -150,7 +150,7 @@ export default async function buildSdk() {
         await collectFiles(path);
         continue;
       }
-      if (!info.isFile()) throw new Error(`SDK 不能包含特殊文件：${path}`);
+      if (!info.isFile()) throw new Error(`SDK không được chứa tệp đặc biệt: ${path}`);
       const content = await readFile(path);
       entries[relative(sdkDirectory, path).replaceAll("\\", "/")] = content;
       unpackedSize += content.byteLength;
@@ -165,10 +165,10 @@ export default async function buildSdk() {
     const size = Buffer.from(header.subarray(124, 136)).toString("ascii").replace(/\0.*$/, "").trim();
     if (header.byteLength !== 512 || ![0, 48, 53].includes(header[156]!)
       || Buffer.from(header.subarray(257, 262)).toString("ascii") !== "ustar" || !/^[0-7]+$/.test(size)) {
-      throw new Error("SDK 压缩包仅支持 USTAR 普通文件和目录，不支持 PAX/GNU 扩展");
+      throw new Error("Gói nén SDK chỉ hỗ trợ tệp và thư mục thường USTAR, không hỗ trợ phần mở rộng PAX/GNU");
     }
     offset += 512 + Math.ceil(Number.parseInt(size, 8) / 512) * 512;
-    if (offset > tar.byteLength) throw new Error("SDK 压缩包条目大小无效");
+    if (offset > tar.byteLength) throw new Error("Kích thước mục trong gói SDK không hợp lệ");
   }
   const archive = await Bun.zstdCompress(tar, { level: 12 });
   const file = `sdk${platformName}${architectureName}.tar.zst`;

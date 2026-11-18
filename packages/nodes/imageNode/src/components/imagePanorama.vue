@@ -2,17 +2,17 @@
   <el-dropdown ref="dropdown" trigger="click" virtualTriggering :virtualRef="trigger" :disabled="disabled || busy || !src" @command="selectAction">
     <template #dropdown>
       <el-dropdown-menu>
-        <el-dropdown-item command="generateSphere">生成720°全景图</el-dropdown-item>
-        <el-dropdown-item command="generateCylinder">生成360°环绕图</el-dropdown-item>
-        <el-dropdown-item command="previewSphere" divided>预览720°全景图</el-dropdown-item>
-        <el-dropdown-item command="previewCylinder">预览360°环绕图</el-dropdown-item>
+        <el-dropdown-item command="generateSphere">Tạo ảnh toàn cảnh 720°</el-dropdown-item>
+        <el-dropdown-item command="generateCylinder">Tạo ảnh bao quanh 360°</el-dropdown-item>
+        <el-dropdown-item command="previewSphere" divided>Xem trước ảnh toàn cảnh 720°</el-dropdown-item>
+        <el-dropdown-item command="previewCylinder">Xem trước ảnh bao quanh 360°</el-dropdown-item>
       </el-dropdown-menu>
     </template>
   </el-dropdown>
   <el-dialog
     v-model="visible"
     class="panoramaDialog"
-    :title="`预览${mode === 'sphere' ? '720°全景图' : '360°环绕图'}`"
+    :title="`Xem trước ${mode === 'sphere' ? 'ảnh toàn cảnh 720°' : 'ảnh bao quanh 360°'}`"
     width="80%"
     alignCenter
     appendToBody
@@ -25,8 +25,8 @@
     <template #header>
       <div class="panoramaHeader">
         <icon-panorama-horizontal :size="20" />
-        <strong>{{ mode === 'sphere' ? '720°全景图' : '360°环绕图' }}</strong>
-        <span>预览与校正</span>
+        <strong>{{ mode === 'sphere' ? 'Ảnh toàn cảnh 720°' : 'Ảnh bao quanh 360°' }}</strong>
+        <span>Xem trước và hiệu chỉnh</span>
       </div>
     </template>
     <div class="panoramaPanel nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @wheel.stop @keydown.stop>
@@ -45,6 +45,7 @@ import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { buildPanoramaPrompt, type PanoramaMode } from "../imagePanorama";
 import { usePanoramaCapture } from "../usePanoramaCapture";
 import { useImageVariationNode } from "../useImageVariationNode";
+import { resolveNodePrompt } from "@toonflow/node-shared/nodePrompts";
 import imagePanoramaPreview from "./imagePanoramaPreview.vue";
 
 const props = defineProps<{ src: string; source?: NodeMediaValue; disabled?: boolean }>();
@@ -83,14 +84,14 @@ async function selectAction(command: string) {
   creating.value = true;
   try {
     await createVariation({
-      label: mode.value === "sphere" ? "720°全景图" : "360°环绕图",
-      prompt: buildPanoramaPrompt(mode.value),
+      label: mode.value === "sphere" ? "Ảnh toàn cảnh 720°" : "Ảnh bao quanh 360°",
+      prompt: await resolveNodePrompt(`panorama.${mode.value}`, buildPanoramaPrompt(mode.value)),
       model: typeof node.data.model === "string" ? node.data.model : "",
       size: typeof node.data.size === "string" ? node.data.size : "",
       ratio: mode.value === "sphere" ? "2:1" : "4:1",
     });
   } catch (error) {
-    showNodeError(error, "全景节点创建失败");
+    showNodeError(error, "Không tạo được node toàn cảnh");
   } finally {
     creating.value = false;
   }

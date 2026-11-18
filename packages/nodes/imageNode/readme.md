@@ -1,15 +1,15 @@
-# 图片节点
+# Node hình ảnh
 
-在画布中展示图片，可作为角色、场景、道具或分镜参考。
+Hiển thị ảnh trên Canvas để làm tham chiếu nhân vật, bối cảnh, đạo cụ hoặc phân cảnh.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 导入本地图片文件，单个文件不能为空且不超过 100 MB。
-- 输出当前图片素材，可连接图片生成、视频生成等支持图片输入的节点。
+- Nhập tệp ảnh từ máy, không được rỗng và không quá 100 MB.
+- Xuất ảnh hiện tại tới node tạo ảnh, tạo video hoặc node khác hỗ trợ ảnh đầu vào.
 
-## 使用方法
+## Cách sử dụng
 
-1. 点击上传按钮，选择图片文件。
-2. 上传完成后，节点按图片比例显示预览。
-3. 将图片输出连接到需要参考图的节点。
-4. 选中节点后，使用顶部工具栏下载、预览或替换图片。
+1. Bấm nút tải lên và chọn tệp ảnh.
+2. Khi tải xong, node hiển thị ảnh theo đúng tỉ lệ của tệp.
+3. Nối cổng đầu ra ảnh với node cần ảnh tham chiếu.
+4. Chọn node rồi dùng thanh công cụ phía trên để tải xuống, xem trước hoặc thay ảnh.

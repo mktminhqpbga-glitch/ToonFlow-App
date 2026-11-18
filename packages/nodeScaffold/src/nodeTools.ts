@@ -8,7 +8,7 @@ export type { NodeToolCall, NodeToolInfo, NodeToolsContext } from "@toonflow/too
 
 export interface NodeToolDefinition<Schema extends z.ZodType = z.ZodType> {
   name: string;
-  description: string | (() => string);
+  description: string;
   parameters: Schema;
   execute(args: z.output<Schema>, context: { signal?: AbortSignal }): unknown | Promise<unknown>;
 }
@@ -78,27 +78,24 @@ function getRegistry(flow: ReturnType<typeof useVueFlow>) {
 
 export const nodeTools = {
   register<Schema extends z.ZodType>(definition: NodeToolDefinition<Schema>) {
-    if (!getCurrentScope()) throw new Error("请在节点 setup 中注册 nodeTools");
+    if (!getCurrentScope()) throw new Error("Hãy đăng ký nodeTools trong phần setup của node");
     const nodeId = useNodeId();
-    if (!nodeId) throw new Error("当前组件不属于画布节点");
-    if (!/^[a-z][a-zA-Z0-9]{0,63}$/.test(definition.name)) throw new Error("节点函数名必须使用小驼峰，最多 64 个字符");
+    if (!nodeId) throw new Error("Component hiện tại không thuộc node trên Canvas");
+    if (!/^[a-z][a-zA-Z0-9]{0,63}$/.test(definition.name)) throw new Error("Tên hàm node phải theo camelCase, tối đa 64 ký tự");
     const parameters = z.toJSONSchema(definition.parameters, { io: "input", target: "draft-07" });
-    const currentDescription = () => typeof definition.description === "function" ? definition.description().trim() : definition.description.trim();
-    if (!currentDescription() || parameters.type !== "object" || typeof definition.execute !== "function") {
-      throw new Error("节点函数需要描述、Zod 对象参数和 execute 方法");
+    if (!definition.description.trim() || parameters.type !== "object" || typeof definition.execute !== "function") {
+      throw new Error("Hàm node cần mô tả, tham số đối tượng Zod và phương thức execute");
     }
     const { registry } = getRegistry(useVueFlow());
     const name = `node:${definition.name}` as const;
     const key = `${nodeId}:${name}`;
     const entry: RegisteredNodeTool = {
-      nodeId, name,
-      // ACT: đọc lại ngôn ngữ giao diện khi AI liệt kê tool; giữ nguyên tên hàm và schema.
-      get description() { return currentDescription(); },
+      nodeId, name, description: definition.description.trim(),
       parameters,
       async execute(args, context) {
         const parsed = await definition.parameters.safeParseAsync(args);
         if (!parsed.success) {
-          throw new Error(`节点函数 ${name} 参数校验失败，未执行。请按以下 parameters 修正 args；需要其他操作时，用 getNodeTools 查询此节点的函数后分别调用，不要原样重试。${JSON.stringify({
+          throw new Error(`Hàm node ${name} không vượt qua kiểm tra tham số nên chưa thực thi. Hãy chỉnh args theo parameters bên dưới; nếu muốn thao tác khác, tra cứu hàm node bằng getNodeTools rồi gọi riêng, không gửi lại nguyên yêu cầu.${JSON.stringify({
             nodeId, name, description: entry.description, parameters, issues: parsed.error.issues,
           })}`);
         }
@@ -139,14 +136,14 @@ export function useNodeToolsContext() {
       callSignal.throwIfAborted();
       const key = `${nodeId}:${name}`;
       const entry = registry.get(key);
-      if (!entry) throw new Error(`节点未注册函数 ${name}，请先通过 getNodeTools 查询可用节点函数`);
-      if (!flow.findNode(nodeId)) throw new Error("节点函数已卸载或不属于本轮画布");
+      if (!entry) throw new Error(`Node chưa đăng ký hàm ${name}，hãy dùng getNodeTools để tra cứu các hàm node hiện có trước`);
+      if (!flow.findNode(nodeId)) throw new Error("Hàm node đã được gỡ hoặc không thuộc Canvas hiện tại");
       let cancel: () => void = () => {};
       try {
         const result = await Promise.race([
           Promise.resolve().then(() => {
             callSignal.throwIfAborted();
-            if (registry.get(key) !== entry || !flow.findNode(nodeId)) throw new Error("节点函数已卸载或不属于本轮画布");
+            if (registry.get(key) !== entry || !flow.findNode(nodeId)) throw new Error("Hàm node đã được gỡ hoặc không thuộc Canvas hiện tại");
             return entry.execute(args, { signal: callSignal });
           }),
           new Promise<never>((_resolve, reject) => {

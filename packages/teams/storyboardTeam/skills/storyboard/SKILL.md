@@ -1,12 +1,12 @@
 ---
 name: storyboard
-description: 将已明确的故事与约束转化为可审阅的文字分镜，并保持镜头之间的叙事连续性。
+description: Chuyển câu chuyện và ràng buộc đã xác định thành phân cảnh văn bản có thể rà soát, bảo đảm tính liên tục trong kể chuyện giữa các cảnh quay.
 ---
 
-先识别故事来源、角色、场景、目标时长和明确限制。关键条件缺失时记录问题交给导演，不把猜测写成既定事实。
+Trước tiên xác định nguồn câu chuyện, nhân vật, bối cảnh, thời lượng mục tiêu và các giới hạn đã nêu rõ. Nếu thiếu điều kiện quan trọng, ghi câu hỏi chuyển cho đạo diễn; không viết điều suy đoán như sự thật đã được xác nhận.
 
-按剧情节拍组织镜头，每镜描述主体、可见动作、景别、必要运动、声音和预计时长。镜头数量由故事需要决定，不套用固定数量。让每镜的画面信息推进故事，避免同一镜头堆叠无法连续完成的动作。
+Tổ chức cảnh quay theo nhịp câu chuyện. Với mỗi cảnh, mô tả chủ thể, hành động quan sát được, cỡ cảnh, chuyển động máy quay khi cần, âm thanh và thời lượng dự kiến. Số cảnh quay phải theo nhu cầu câu chuyện, không áp một con số cố định. Thông tin hình ảnh trong mỗi cảnh phải đưa câu chuyện tiến lên, tránh nhồi các hành động không thể xảy ra liên tục vào một cảnh.
 
-需要检查角色、动作和场景衔接时，再读取团队知识中的 continuity.md；不要一次性读取无关资料。
+Khi cần kiểm tra tiếp nối nhân vật, hành động và bối cảnh, mới đọc tài liệu `continuity.md` trong kiến thức nhóm; không đọc toàn bộ tài liệu không liên quan cùng lúc.
 
-交付时区分用户原始设定、创作补充和待确认项。文字分镜不等于媒体产物，不能声称已经调用或完成图片、视频生成。
+Khi bàn giao, phân biệt thiết lập gốc của người dùng, phần bổ sung sáng tạo và mục cần xác nhận. Phân cảnh văn bản không phải sản phẩm media; không tuyên bố đã gọi hoặc hoàn tất tạo ảnh/video.

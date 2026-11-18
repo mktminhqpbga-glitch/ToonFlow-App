@@ -21,19 +21,19 @@
       @cancelEdit="input?.cancelEdit()" />
     <div v-if="compacting" class="compactionStatus" role="status">
       <el-icon class="is-loading" aria-hidden="true"><icon-loader-2 :size="14" /></el-icon>
-      <span>正在压缩上下文…</span>
+      <span>Đang nén ngữ cảnh…</span>
     </div>
-    <section v-if="queuedMessages.length" class="messageQueue" aria-label="排队消息">
+    <section v-if="queuedMessages.length" class="messageQueue" aria-label="Tin nhắn đang chờ gửi">
       <div v-for="message in queuedMessages" :key="message.id" class="queueMessage">
         <icon-list-details class="queueIcon" :size="14" aria-hidden="true" />
         <p class="queueContent" :title="message.content">{{ message.content }}</p>
         <div class="queueActions">
-          <el-button class="queueSteer" text size="small" :disabled="queueLocked" :loading="queueAction?.id === message.id && queueAction.type === 'steer'" title="发送引导，按这条消息继续当前任务，已完成的操作不会撤销" @click="updateQueuedMessage(message, 'steer')">
+          <el-button class="queueSteer" text size="small" :disabled="queueLocked" :loading="queueAction?.id === message.id && queueAction.type === 'steer'" title="Gửi hướng dẫn để tiếp tục tác vụ hiện tại theo tin nhắn này; các thao tác đã hoàn tất sẽ được giữ nguyên" @click="updateQueuedMessage(message, 'steer')">
             <icon-corner-down-right v-if="!(queueAction?.id === message.id && queueAction.type === 'steer')" :size="14" aria-hidden="true" />
-            <span>引导</span>
+                  <span>Hướng dẫn</span>
           </el-button>
-          <el-button class="queueIconButton" text circle :disabled="queueLocked" :loading="queueAction?.id === message.id && queueAction.type === 'delete'" aria-label="删除排队消息" title="删除" @click="updateQueuedMessage(message, 'delete')"><icon-trash v-if="!(queueAction?.id === message.id && queueAction.type === 'delete')" :size="14" /></el-button>
-          <el-button class="queueIconButton" text circle :disabled="queueLocked" :loading="queueAction?.id === message.id && queueAction.type === 'edit'" aria-label="编辑排队消息" title="编辑，暂时移出队列" @click="updateQueuedMessage(message, 'edit')"><icon-pencil v-if="!(queueAction?.id === message.id && queueAction.type === 'edit')" :size="14" /></el-button>
+          <el-button class="queueIconButton" text circle :disabled="queueLocked" :loading="queueAction?.id === message.id && queueAction.type === 'delete'" aria-label="Xóa tin nhắn chờ gửi" title="Xóa" @click="updateQueuedMessage(message, 'delete')"><icon-trash v-if="!(queueAction?.id === message.id && queueAction.type === 'delete')" :size="14" /></el-button>
+          <el-button class="queueIconButton" text circle :disabled="queueLocked" :loading="queueAction?.id === message.id && queueAction.type === 'edit'" aria-label="Sửa tin nhắn chờ gửi" title="Sửa, tạm chuyển khỏi hàng đợi" @click="updateQueuedMessage(message, 'edit')"><icon-pencil v-if="!(queueAction?.id === message.id && queueAction.type === 'edit')" :size="14" /></el-button>
         </div>
       </div>
     </section>
@@ -220,9 +220,9 @@ async function sendQueuedMessage(streamingBehavior: "steer" | "followUp") {
   const sessionFile = props.sessionFile;
   if (!props.active || props.disabled || submitting.value || stopping.value || projectStops.value > 0 || compacting.value
     || deletingId.value || restoringAttachment.value || voiceActive.value || editingId.value || !instance || !draft || !prompt) return;
-  if (draft.attachments.length || draft.mentionedIds.length) return ElMessage.warning("生成中的排队和引导仅支持文字，附件和提及请在本轮结束后发送");
-  if (!directory || !sessionFile || !expectedRunId) return ElMessage.warning("对话正在准备，请稍后发送");
-  if (!model) return ElMessage.warning("请先选择模型");
+  if (draft.attachments.length || draft.mentionedIds.length) return ElMessage.warning("Tin nhắn chờ và hướng dẫn khi đang tạo chỉ hỗ trợ văn bản; hãy gửi tệp đính kèm và tham chiếu sau khi lượt hiện tại hoàn tất");
+  if (!directory || !sessionFile || !expectedRunId) return ElMessage.warning("Hội thoại đang được chuẩn bị, vui lòng gửi sau");
+  if (!model) return ElMessage.warning("Hãy chọn mô hình trước");
   const requestController = new AbortController();
   const requestRunId = crypto.randomUUID();
   queueController = requestController;
@@ -232,7 +232,7 @@ async function sendQueuedMessage(streamingBehavior: "steer" | "followUp") {
   try {
     await refreshModelChoices(true, requestController.signal);
     const currentModel = selectedModelChoice.value;
-    if (!currentModel) throw new Error("请先选择模型");
+    if (!currentModel) throw new Error("Hãy chọn mô hình trước");
     const response = await fetch("/api/agent", {
       method: "POST",
       headers: { "Accept-Language": locale.value, "Content-Type": "application/json", "x-toonflow-workspace": "1" },
@@ -250,17 +250,17 @@ async function sendQueuedMessage(streamingBehavior: "steer" | "followUp") {
         await instance.clearDraft();
       }
     }
-    if (!accepted) throw new Error("服务端未确认接收，请重试");
+    if (!accepted) throw new Error("Máy chủ chưa xác nhận đã nhận, vui lòng thử lại");
   } catch (error) {
     if (!accepted && !requestController.signal.aborted) {
-      let message = error instanceof Error ? error.message : "发送失败，请重试";
+      let message = error instanceof Error ? error.message : "Gửi thất bại, vui lòng thử lại";
       let refreshed = false;
       if ((error as { terminal?: boolean })?.terminal && !controller && !busy.value && runId === expectedRunId) {
         try {
           const { data } = await axios.get<{ code: number; data: AgentConversation; message?: string }>("/api/agent/get", {
             params: { directory, sessionFile }, headers: { "x-toonflow-workspace": "1" }, signal: requestController.signal, timeout: 10000,
           });
-          if (data.code !== 200) throw new Error(data.message || "读取对话失败");
+          if (data.code !== 200) throw new Error(data.message || "Đọc hội thoại thất bại");
           const session = data.data;
           if (!requestController.signal.aborted && !controller && !busy.value && runId === expectedRunId && props.sessionFile === sessionFile
             && input.value === instance && (!session.running || session.runId !== expectedRunId)) {
@@ -274,11 +274,11 @@ async function sendQueuedMessage(streamingBehavior: "steer" | "followUp") {
             compacting.value = false;
             queue.value = session.queue ?? { runId: session.runId ?? "", revision: 0, steering: [], followUp: [] };
             for (const message of queue.value.steering) showSteeringMessage(message);
-            message = "会话状态已更新，草稿已保留，请重新发送";
+            message = "Trạng thái phiên đã cập nhật, bản nháp vẫn được giữ; hãy gửi lại";
             refreshed = true;
           }
         } catch {
-          message += "；读取最新会话状态失败，请重新打开对话";
+          message += "; không đọc được trạng thái phiên mới nhất, hãy mở lại hội thoại";
         }
       }
       if (!requestController.signal.aborted) {
@@ -296,9 +296,9 @@ async function sendQueuedMessage(streamingBehavior: "steer" | "followUp") {
 async function copyMessage(content: string) {
   try {
     await writeClipboardText(content);
-    ElMessage.success("已复制");
+    ElMessage.success("Đã sao chép");
   } catch {
-    ElMessage.error("复制失败，请重试");
+    ElMessage.error("Sao chép thất bại, vui lòng thử lại");
   }
 }
 
@@ -308,7 +308,7 @@ async function updateQueuedMessage(message: AgentQueuedMessage, action: "steer" 
   const queueRunId = queue.value.runId;
   if (queueLocked.value || !instance || !draft || !directory || !props.sessionFile || !queueRunId || queueRunId !== runId) return;
   if (action === "edit" && (draft.prompt.trim() || draft.attachments.length || draft.mentionedIds.length)) {
-    return ElMessage.warning("请先发送或清空输入框，再编辑排队消息");
+    return ElMessage.warning("Hãy gửi hoặc xóa nội dung trong ô nhập trước khi sửa tin nhắn chờ");
   }
   submitting.value = true;
   queueAction.value = { id: message.id, type: action };
@@ -323,7 +323,7 @@ async function updateQueuedMessage(message: AgentQueuedMessage, action: "steer" 
       headers: { "x-toonflow-workspace": "1" },
       timeout: 10000,
     });
-    if (data.code !== 200) throw new Error(data.message || "操作排队消息失败");
+    if (data.code !== 200) throw new Error(data.message || "Thao tác với tin nhắn chờ thất bại");
     applyQueue(data.data.queue);
     if (action === "steer") showSteeringMessage(data.data.message ?? message);
     if (action === "edit") await instance.fillQueuedMessage(data.data.message?.content ?? message.content);
@@ -331,11 +331,11 @@ async function updateQueuedMessage(message: AgentQueuedMessage, action: "steer" 
     if (axios.isAxiosError(error) && !error.response) {
       if (action === "edit") {
         await instance.fillQueuedMessage(message.content);
-        ElMessage.warning("取回结果未确认，文字已保留到输入框；原消息可能仍会执行，请核对对话后再发送");
-      } else ElMessage.warning("操作结果未确认，请核对队列状态后重试");
+        ElMessage.warning("Chưa xác nhận việc thu hồi; văn bản vẫn nằm trong ô nhập. Tin nhắn cũ có thể vẫn được xử lý; hãy kiểm tra hội thoại trước khi gửi lại");
+      } else ElMessage.warning("Chưa xác nhận kết quả; hãy kiểm tra hàng đợi rồi thử lại");
     } else {
       const detail = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-      ElMessage.error(detail || (error instanceof Error ? error.message : "操作排队消息失败"));
+      ElMessage.error(detail || (error instanceof Error ? error.message : "Thao tác với tin nhắn chờ thất bại"));
     }
   } finally {
     queueAction.value = undefined;
@@ -348,7 +348,7 @@ async function deleteMessage(item: AgentMessage) {
   deletingId.value = item.id;
   try {
     if (item.entryId || item.replyTo) {
-      if (!directory || !props.sessionFile) throw new Error("请重新打开对话后再删除");
+      if (!directory || !props.sessionFile) throw new Error("Hãy mở lại hội thoại trước khi xóa");
       const { data } = await axios.delete<{ code: number; data: AgentConversation; message?: string }>("/api/agent/message", {
         data: {
           directory, sessionFile: props.sessionFile,
@@ -356,7 +356,7 @@ async function deleteMessage(item: AgentMessage) {
         },
         headers: { "x-toonflow-workspace": "1" },
       });
-      if (data.code !== 200) throw new Error(data.message || "删除消息失败");
+      if (data.code !== 200) throw new Error(data.message || "Xóa tin nhắn thất bại");
       stats.value = data.data.stats;
       contextUsage.value = data.data.contextUsage;
     }
@@ -364,7 +364,7 @@ async function deleteMessage(item: AgentMessage) {
       !(item.replyTo && message.role === "assistant" && !message.report && !message.agentMessage && message.replyTo === item.replyTo));
   } catch (error) {
     const message = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
-    ElMessage.error(message || (error instanceof Error ? error.message : "删除消息失败"));
+    ElMessage.error(message || (error instanceof Error ? error.message : "Xóa tin nhắn thất bại"));
   } finally {
     deletingId.value = undefined;
   }
@@ -412,7 +412,7 @@ async function stopMessage() {
     if ((!runId || runIds.includes(runId)) && !controller && !receivingForwardedStream) receiveEvent({ type: "done" });
   } catch (error) {
     remoteRunning.value = !!runId || pendingRunIds.size > 0;
-    ElMessage.error(error instanceof Error ? error.message : "停止生成失败，请重试");
+    ElMessage.error(error instanceof Error ? error.message : "Dừng tạo thất bại, vui lòng thử lại");
   } finally {
     stopping.value = false;
   }
@@ -444,7 +444,7 @@ async function sendCanvasResult(event: Extract<AgentEvent, { type: "canvasCall" 
   let body: string;
   try {
     signal.throwIfAborted();
-    if (!canvasContext) throw Object.assign(new Error("当前页面没有激活的画布"), { code: "CANVAS_UNAVAILABLE" });
+    if (!canvasContext) throw Object.assign(new Error("Không có Canvas đang hoạt động trên trang này"), { code: "CANVAS_UNAVAILABLE" });
     const result = await canvasContext.call(event, signal);
     body = JSON.stringify({ directory, callId: event.callId, result: result ?? null });
   } catch (error) {
@@ -462,7 +462,7 @@ async function sendCanvasResult(event: Extract<AgentEvent, { type: "canvasCall" 
     });
     if (!response.ok) {
       const error = await response.json().catch(() => null);
-      throw new Error(error?.message || "画布操作结果回传失败");
+      throw new Error(error?.message || "Không gửi lại được kết quả thao tác Canvas");
     }
   } catch (error) {
     // 局部停止也可能发生在回传途中，不能因此断开父任务的流。
@@ -480,15 +480,15 @@ async function sendMessage(source?: AgentMessage) {
     : draft?.mentionedIds ?? [];
   const references = source && !editing ? source.mentions ?? [] : draft?.mentions ?? [];
   const mentions = references.filter(mention => mentionedIds.includes(mention.id)).map(mention => ({ ...mention }));
-  if (mentionedIds.some(id => !mentions.some(mention => mention.id === id))) return ElMessage.warning("存在无法读取的提及，请删除后重新选择");
+  if (mentionedIds.some(id => !mentions.some(mention => mention.id === id))) return ElMessage.warning("Có tham chiếu không đọc được; hãy xóa và chọn lại");
   if (!source && editingId.value !== undefined) return;
   const resendIndex = source ? messages.value.findIndex(item => item.id === source.id) : -1;
   if (source && (source.role !== "user" || resendIndex < 0)) return;
   const resendFrom = source ? source.entryId ?? messages.value.slice(resendIndex + 1).find(item => item.role === "user" && item.entryId)?.entryId : undefined;
   if (locked.value || !instance || (!prompt && !attachments.length)) return;
   const model = selectedModelChoice.value;
-  if (!directory) return ElMessage.warning("请先打开项目");
-  if (!model) return ElMessage.warning("请先选择模型");
+  if (!directory) return ElMessage.warning("Hãy mở dự án trước");
+  if (!model) return ElMessage.warning("Hãy chọn mô hình trước");
 
   const requestController = new AbortController();
   const requestRunId = crypto.randomUUID();
@@ -528,7 +528,7 @@ async function sendMessage(source?: AgentMessage) {
     await uploadAttachments(attachments, directory, requestController.signal);
     await refreshModelChoices(true, requestController.signal);
     const currentModel = selectedModelChoice.value;
-    if (!currentModel) throw new Error("请先选择模型");
+    if (!currentModel) throw new Error("Hãy chọn mô hình trước");
     if (!isSuperseded()) remoteRunning.value = true;
     pendingRunIds.add(requestRunId);
     const response = await fetch("/api/agent", {
@@ -583,7 +583,7 @@ async function sendMessage(source?: AgentMessage) {
         }
       }
       if (toolEvent.type === "canvasCall") {
-        if (handledCanvasCalls.has(toolEvent.callId)) throw new Error("收到重复的画布调用");
+        if (handledCanvasCalls.has(toolEvent.callId)) throw new Error("Nhận lệnh gọi Canvas trùng lặp");
         handledCanvasCalls.add(toolEvent.callId);
         canvasCall = { controller: new AbortController(), runIds: canvasRunIds };
         if (canvasRunIds.some(id => stoppedRunIds.has(id))) canvasCall.controller.abort();
@@ -650,7 +650,7 @@ async function sendMessage(source?: AgentMessage) {
     }
     pendingRunIds.delete(requestRunId);
     if (runId === requestRunId) runId = undefined;
-    if (source && !accepted) throw new Error("服务端未确认重发，请重新打开对话后重试");
+    if (source && !accepted) throw new Error("Máy chủ chưa xác nhận gửi lại; hãy mở lại hội thoại rồi thử tiếp");
     finishStats("success");
     emit("sent", mentionPlainText(prompt, mentions) || attachments[0]?.name || "新对话");
     if (accepted && ownsStream && !forwarded && !isSuperseded() && !props.initialSession?.parentFile && !stopping.value && !projectStops.value

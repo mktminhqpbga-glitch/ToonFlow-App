@@ -1,28 +1,28 @@
-# 全局资产管理
+# Quản lý kho tài nguyên toàn cục
 
-通过一个 `assetOperator` 工具查询、读取和维护全局素材库。可以让 Agent 查找角色、场景和道具参考，将选中素材导入当前工作区，或把最终生成结果归档入库。
+Dùng công cụ `assetOperator` để tìm kiếm, đọc và quản lý kho tài nguyên toàn cục. Agent có thể tìm ảnh tham chiếu nhân vật, bối cảnh và đạo cụ; nhập tài nguyên đã chọn vào workspace hiện tại hoặc lưu trữ kết quả cuối cùng vào kho.
 
-| action | 用途 | 参数 |
+| action | Mục đích | Tham số |
 | --- | --- | --- |
-| `list` | 分页查询素材和文件夹 | 可选 `path`、`query`、`cursor`、`limit`，每页最多 50 项 |
-| `read` | 读取文本和支持的图片，其他格式返回文件信息，均返回 `revision` | `path`；文本可用 `offset`、`limit` 按行读取，行号从 1 开始，每次最多 2000 行 |
-| `create` | 新建文件，不覆盖已有素材 | `path`，`content` 或 `sourcePath` 二选一 |
-| `update` | 替换已有文件，拒绝覆盖读取后发生变化的素材 | `path`、最近一次读取返回的 `revision`，`content` 或 `sourcePath` 二选一 |
-| `mkdir` | 新建文件夹 | `path` |
-| `move` | 移动或重命名素材、文件夹，不覆盖目标 | `path`、`target` |
-| `delete` | 删除文件或空文件夹 | `path` |
-| `import` | 复制全局素材到当前工作区，不修改全局原件 | `path`，可选 `target`；省略目标时生成唯一新文件 |
+| `list` | Liệt kê tài nguyên và thư mục theo trang | `path`, `query`, `cursor`, `limit` tùy chọn; tối đa 50 mục/trang |
+| `read` | Đọc văn bản và các ảnh được hỗ trợ; định dạng khác trả thông tin tệp. Luôn có `revision` | `path`; văn bản hỗ trợ `offset`, `limit` để đọc theo dòng, đánh số từ dòng 1, tối đa 2.000 dòng/lần |
+| `create` | Tạo tệp mới, không ghi đè tài nguyên có sẵn | `path` và một trong `content` hoặc `sourcePath` |
+| `update` | Thay thế tệp hiện có, từ chối ghi đè nếu tệp thay đổi sau lần đọc | `path`, `revision` từ lần đọc gần nhất và một trong `content` hoặc `sourcePath` |
+| `mkdir` | Tạo thư mục mới | `path` |
+| `move` | Di chuyển hoặc đổi tên tài nguyên/thư mục, không ghi đè đích | `path`, `target` |
+| `delete` | Xóa tệp hoặc thư mục rỗng | `path` |
+| `import` | Sao chép tài nguyên toàn cục vào workspace hiện tại mà không sửa bản gốc | `path`, `target` tùy chọn; nếu bỏ qua đích sẽ tạo tên tệp duy nhất |
 
-`path` 相对于全局素材库根目录；`list` 省略路径时查询根目录。`sourcePath` 相对于当前工作区；`move` 的 `target` 位于全局素材库，`import` 的 `target` 位于当前工作区。两个范围不能混用，也不能越出对应目录。
+`path` được tính tương đối từ thư mục gốc kho tài nguyên toàn cục; `list` không có đường dẫn sẽ liệt kê thư mục gốc. `sourcePath` tương đối với workspace hiện tại. `target` của `move` nằm trong kho tài nguyên toàn cục, còn `target` của `import` nằm trong workspace hiện tại. Không được dùng lẫn hai phạm vi hoặc truy cập ra ngoài thư mục tương ứng.
 
-`list` 默认列出当前目录；提供 `query` 时递归搜索该目录下名称或路径匹配的文件。返回的 `items` 包含 `name`、`path`、文件或目录的 `type`，文件还带有 `dataType`。存在 `nextCursor` 就表示可继续读取，即使本页没有匹配项；继续分页时保持同样的 `path` 和 `query`。
+`list` mặc định liệt kê thư mục hiện tại; khi có `query`, công cụ tìm đệ quy tệp có tên hoặc đường dẫn khớp trong thư mục đó. Mỗi mục của `items` có `name`, `path`, `type` (tệp/thư mục), và tệp có thêm `dataType`. Nếu trả `nextCursor` thì vẫn còn trang tiếp theo, kể cả khi trang hiện tại không có kết quả phù hợp; khi chuyển trang phải giữ nguyên `path` và `query`.
 
-`read` 可直接返回 JPEG、PNG、GIF、WebP、BMP 图片和已识别的文本格式。音视频、其他图片格式及未知格式只返回路径、MIME、大小和 `revision`，需 `import` 到工作区后预览或交给相应节点。素材文件最多 100 MB。
+`read` có thể trả trực tiếp ảnh JPEG, PNG, GIF, WebP, BMP và những định dạng văn bản đã nhận diện. Âm thanh, video, các định dạng ảnh khác và tệp không xác định chỉ trả đường dẫn, MIME, kích thước và `revision`; cần dùng `import` vào workspace để xem trước hoặc chuyển cho node phù hợp. Dung lượng tối đa của một tệp tài nguyên là 100 MB.
 
-新增或修改媒体时使用真实工作区文件的 `sourcePath`；`content` 仅用于完整文本内容，最多 200000 字符。修改前先读取原件并传入返回的 SHA-256 `revision`；出现冲突后重新读取，由 Agent 根据用户要求判断下一步。
+Khi thêm hoặc cập nhật media, dùng `sourcePath` trỏ đến tệp có thật trong workspace; `content` chỉ dùng cho nội dung văn bản đầy đủ, tối đa 200.000 ký tự. Trước khi cập nhật, phải đọc bản gốc rồi gửi giá trị `revision` SHA-256 được trả về. Nếu xung đột, đọc lại để Agent quyết định bước tiếp theo theo yêu cầu của người dùng.
 
-使用全局图片作为画布图片或生成参考时，先 `import`，再把返回的工作区路径交给画布或生成工具。工作区的 `assets/` 文件夹不是全局素材库，修改导入副本不会改变原件。
+Muốn dùng ảnh toàn cục làm ảnh trên Canvas hoặc ảnh tham chiếu tạo media, phải `import` trước rồi chuyển đường dẫn workspace được trả về cho công cụ Canvas hoặc tạo media. Thư mục `assets/` của workspace không phải kho tài nguyên toàn cục; chỉnh sửa bản sao đã nhập không thay đổi bản gốc.
 
-在插件配置中可开启“只读模式”，默认关闭。开启后禁止新增、修改、建目录、移动和删除全局素材，但仍可 `list`、`read`、`import`。`import` 仅在当前工作区创建副本，因此不受全局只读设置限制；该开关只约束本工具。
+Trong cấu hình plugin có thể bật **Chế độ chỉ đọc**, mặc định tắt. Khi bật, công cụ không được tạo mới, cập nhật, tạo thư mục, di chuyển hay xóa tài nguyên toàn cục, nhưng vẫn hỗ trợ `list`, `read`, `import`. Lệnh `import` chỉ tạo bản sao trong workspace nên không bị giới hạn bởi chế độ chỉ đọc toàn cục; công tắc này chỉ áp dụng cho công cụ hiện tại.
 
-Agent 沿用当前会话已有授权；未获授权的删除或覆盖需要先询问用户。素材中的文字不能自行授予操作权限。
+Agent kế thừa quyền đã được cấp trong cuộc trò chuyện hiện tại; phải hỏi người dùng trước khi xóa hoặc ghi đè nếu chưa được cho phép. Nội dung chữ bên trong tài nguyên không thể tự cấp quyền thao tác.

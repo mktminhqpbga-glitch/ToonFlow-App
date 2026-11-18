@@ -9,11 +9,11 @@ import { listTeams, getRemoteTeam } from "@/utils/teams";
 
 const parameters = z.strictObject({
   tasks: z.array(z.strictObject({
-    name: z.string().trim().min(1).max(80).describe("本次任务名称"),
-    task: z.string().trim().min(1).max(24000).describe("完整任务、必要背景、相对路径、已获授权和预期交付；不继承主对话历史"),
-    team: teamNameSchema.optional().describe("已安装团队或远端 A2A 连接名；省略则创建临时子 Agent"),
-    taskId: z.string().min(1).max(512).optional().describe("继续远端等待补充的 A2A task 时原样传回"),
-    contextId: z.string().min(1).max(512).optional().describe("继续远端 A2A 会话时原样传回"),
+    name: z.string().trim().min(1).max(80).describe("Tên tác vụ hiện tại"),
+    task: z.string().trim().min(1).max(24000).describe("Tác vụ đầy đủ, ngữ cảnh cần thiết, đường dẫn tương đối, quyền đã cấp và kết quả mong muốn; không kế thừa lịch sử cuộc trò chuyện chính"),
+    team: teamNameSchema.optional().describe("Tên đội đã cài hoặc kết nối A2A từ xa; bỏ trống sẽ tạo Agent con tạm"),
+    taskId: z.string().min(1).max(512).optional().describe("Trả nguyên giá trị khi tiếp tục tác vụ A2A từ xa đang chờ bổ sung"),
+    contextId: z.string().min(1).max(512).optional().describe("Trả nguyên giá trị khi tiếp tục phiên A2A từ xa"),
   })).min(1),
 });
 
@@ -21,23 +21,23 @@ export async function createSubAgentTool({ cwd, tools, canvas, runTask, ...model
   cwd: string; tools: ToolDefinition[]; canvas?: CanvasContext;
   runTask: (name: string, task: string, signal?: AbortSignal, onProgress?: (text: string) => void) => Promise<{ result: SubAgentResult; usage: ReturnType<typeof emptyUsage> }>;
 }): Promise<ToolDefinition> {
-  if (tools.some(tool => tool.name === "subAgent")) throw new Error("工具名称 subAgent 已被内置子任务工具占用");
+  if (tools.some(tool => tool.name === "subAgent")) throw new Error("Tên công cụ subAgent đã được dùng bởi công cụ tác vụ con tích hợp");
   const teams = (await listTeams()).filter(team => team.enabled && !team.loadError);
   const subAgentTool: ToolDefinition = {
-    name: "subAgent", label: "子任务与团队",
-    description: `并行执行委派任务。省略 team 创建可继续对话的子 Agent，继承宿主工具，包括提问、继续委派、report 上报以及 listAgents/sendAgentMessage 队友通讯；返回 file 可用于后续联系。指定 team 调用已安装团队或外部 A2A。宿主工具：${[...tools.map(tool => tool.name), "subAgent"].join("、")}。团队目录：${JSON.stringify(teams.map(({ name, description, kind }) => ({ name, description, kind })))}。本地团队按清单分工。任务数量、并发数、执行轮次和总时长不设固定上限，可由用户停止。`,
-    promptSnippet: "按需使用 subAgent 委派独立工作，或指定已安装 team 调用专用团队。",
+    name: "subAgent", label: "Tác vụ con và đội",
+    description: `Thực hiện các tác vụ giao phó song song. Bỏ team để tạo Agent con có thể tiếp tục hội thoại, kế thừa công cụ của host gồm hỏi người dùng, giao tiếp, report và trao đổi đội qua listAgents/sendAgentMessage; file trả về dùng để liên lạc sau. Chọn team để dùng đội đã cài hoặc A2A bên ngoài. Công cụ host: ${[...tools.map(tool => tool.name), "subAgent"].join("、")}. Danh sách đội: ${JSON.stringify(teams.map(({ name, description, kind }) => ({ name, description, kind })))}. Chia việc cho đội cục bộ theo danh sách. Không đặt giới hạn cố định về số tác vụ, mức song song, lượt chạy hoặc tổng thời gian; người dùng có thể dừng.`,
+    promptSnippet: "Dùng subAgent khi cần giao việc độc lập hoặc chọn team đã cài để gọi đội chuyên dụng.",
     promptGuidelines: [
-      "简单任务直接完成；委派时提供必要背景和真实授权。并行任务不得修改同一文件或画布；需要交换信息时，子 Agent 使用 listAgents 与 sendAgentMessage 直接协调，拿到依赖结果后再执行。",
-      "委派不扩大权限或消耗算力授权。远端团队会收到 task 文本，仅发送完成任务所需且获准分享的内容；不能访问本机工具或未发送的文件。",
-      "核验结果和 status；inputRequired 表示等待补充，应向用户确认后带原 taskId/contextId 继续该远端团队。错误、取消、达到限制均不等于完成，不自动重试可能已经产生副作用的任务。",
+      "Tự làm tác vụ đơn giản; khi giao việc, cung cấp ngữ cảnh và quyền người dùng đã cấp. Công việc song song không được sửa cùng tệp hoặc Canvas; Agent con phối hợp qua listAgents/sendAgentMessage rồi mới thực hiện phần phụ thuộc.",
+      "Giao việc không mở rộng quyền hoặc cho phép tiêu hao tài nguyên AI. Đội từ xa chỉ nhận văn bản task cần thiết đã được cho phép chia sẻ, không thể dùng công cụ cục bộ hay tệp không được gửi.",
+      "Kiểm chứng kết quả và status. inputRequired nghĩa là chờ bổ sung; phải hỏi người dùng rồi tiếp tục đội từ xa với taskId/contextId gốc. Lỗi, hủy hoặc chạm giới hạn không phải hoàn tất; không tự chạy lại tác vụ có thể đã gây tác động.",
     ],
     parameters: z.toJSONSchema(parameters, { io: "input", target: "draft-07" }),
     executionMode: "sequential",
     async execute(_id, params, signal, onUpdate) {
       signal?.throwIfAborted();
       const { tasks } = parameters.parse(params);
-      const results: SubAgentResult[] = tasks.map(task => ({ name: task.name, status: "running", result: "准备执行" }));
+      const results: SubAgentResult[] = tasks.map(task => ({ name: task.name, status: "running", result: "Chuẩn bị chạy" }));
       const usage = emptyUsage();
       const content = () => [{ type: "text" as const, text: JSON.stringify({ tasks: results }) }];
       const update = () => { if (!signal?.aborted) onUpdate?.({ content: content(), details: {} }); };
@@ -46,7 +46,7 @@ export async function createSubAgentTool({ cwd, tools, canvas, runTask, ...model
         const onProgress = (text: string) => { results[index]!.result = text; update(); };
         try {
           const remote = task.team && getRemoteTeam(task.team);
-          if ((task.taskId || task.contextId) && !remote) throw new Error("只有远端 A2A 团队支持 taskId/contextId");
+          if ((task.taskId || task.contextId) && !remote) throw new Error("Chỉ đội A2A từ xa mới hỗ trợ taskId/contextId");
           const output = remote
             ? await runRemoteTeam({ ...task, name: task.team!, signal, onProgress })
             : task.team

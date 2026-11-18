@@ -1,5 +1,5 @@
-# 画布节点文档
+# Tài liệu node Canvas
 
-在文档标签页中显示原画布节点的上槽位、内容和下槽位，复用节点运行实例与生成状态。
+Hiển thị khu vực công cụ phía trên, nội dung và khu vực công cụ phía dưới của node Canvas gốc ngay trong tab tài liệu; dùng lại phiên chạy và trạng thái tạo nội dung của chính node đó.
 
-运行 `bun run build` 生成 `build/ext/ext-canvasNode.umd.js`，可在插件市场的已安装页面导出、安装和更新。
+Chạy `bun run build` để tạo `build/ext/ext-canvasNode.umd.js`. Có thể xuất, cài đặt và cập nhật tiện ích trong trang **Đã cài** của chợ plugin.

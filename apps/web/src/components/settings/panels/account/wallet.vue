@@ -1,14 +1,14 @@
 <template>
-  <section class="walletPanel" aria-label="钱包" :aria-busy="loading">
-    <section class="balanceCard" aria-label="钱包余额">
+  <section class="walletPanel" aria-label="Ví" :aria-busy="loading">
+    <section class="balanceCard" aria-label="Số dư ví">
       <div class="balanceHeader">
-        <span>我的余额</span>
-        <el-button size="small" :icon="IconReceipt" @click="ordersVisible = true">充值记录</el-button>
+        <span>Số dư của tôi</span>
+        <el-button size="small" :icon="IconReceipt" @click="ordersVisible = true">Lịch sử nạp tiền</el-button>
       </div>
       <strong class="balanceAmount">{{ formatMoney(balance) }}</strong>
       <el-form class="exchangeForm" :disabled="mutationBusy" @submit.prevent="exchangeCode">
-        <el-input v-model="code" type="password" showPassword autocomplete="off" placeholder="请输入兑换码" aria-label="兑换码" />
-        <el-button nativeType="submit" type="primary" plain :loading="exchanging" :disabled="!code.trim() || mutationBusy">兑换</el-button>
+        <el-input v-model="code" type="password" showPassword autocomplete="off" placeholder="Nhập mã đổi" aria-label="Mã đổi" />
+        <el-button nativeType="submit" type="primary" plain :loading="exchanging" :disabled="!code.trim() || mutationBusy">Đổi</el-button>
       </el-form>
       <el-alert v-if="exchangeError" class="exchangeError" :title="exchangeError" type="error" :closable="false" showIcon />
     </section>
@@ -16,11 +16,11 @@
     <walletBonus ref="bonusPanel" v-model:loading="bonusLoading" :visible="visible" :token="token" :serverTime="rechargeNow" />
 
     <section class="rechargeSection" aria-labelledby="rechargeTitle">
-      <h3 id="rechargeTitle">选择充值套餐</h3>
+      <h3 id="rechargeTitle">Chọn gói nạp tiền</h3>
       <el-alert v-if="plansError" :title="plansError" type="error" :closable="false" showIcon>
-        <el-button size="small" @click="loadPlans">重试</el-button>
+        <el-button size="small" @click="loadPlans">Thử lại</el-button>
       </el-alert>
-      <div v-loading="plansLoading" class="plansGrid" role="group" aria-label="充值套餐">
+      <div v-loading="plansLoading" class="plansGrid" role="group" aria-label="Gói nạp tiền">
         <button
           v-for="plan in rechargeStale ? [] : plans"
           :key="plan.id"
@@ -31,9 +31,9 @@
           :disabled="mutationBusy"
           @click="selectedPlanId = plan.id">
           <strong>{{ formatMoney(plan.amount) }}</strong>
-          <span>充值到账 {{ formatMoney(plan.points) }}</span>
-          <span v-if="plan.bonusAmount > 0" class="planBonus">赠送 {{ formatMoney(plan.bonusAmount) }}</span>
-          <span v-if="plan.bonusAmount > 0">合计到账 {{ formatMoney(plan.totalAmount) }}</span>
+          <span>Số dư nhận được {{ formatMoney(plan.points) }}</span>
+          <span v-if="plan.bonusAmount > 0" class="planBonus">Tặng {{ formatMoney(plan.bonusAmount) }}</span>
+          <span v-if="plan.bonusAmount > 0">Tổng nhận được {{ formatMoney(plan.totalAmount) }}</span>
           <span v-if="plan.description" class="planDescription">{{ plan.description }}</span>
         </button>
         <button
@@ -43,42 +43,42 @@
           :aria-pressed="selectedPlanId === -1"
           :disabled="mutationBusy"
           @click="selectedPlanId = -1">
-          <strong>自定义金额</strong>
+          <strong>Số tiền tùy chỉnh</strong>
         </button>
       </div>
       <el-form v-if="selectedPlanId === -1" class="customAmountForm" labelPosition="top" :disabled="mutationBusy" @submit.prevent>
-        <el-form-item label="充值金额（元）">
-          <el-input-number v-model="customMoney" :min="1" :precision="2" :step="1" :controls="false" placeholder="请输入充值金额" />
+        <el-form-item label="Số tiền nạp (CNY)">
+          <el-input-number v-model="customMoney" :min="1" :precision="2" :step="1" :controls="false" placeholder="Nhập số tiền nạp" />
         </el-form-item>
       </el-form>
       <section v-if="activeRechargeActivity" class="bonusRules" aria-labelledby="bonusRulesTitle">
         <header class="bonusRulesHeader">
-          <h4 id="bonusRulesTitle"><icon-gift :size="17" aria-hidden="true" />赠送细则</h4>
+          <h4 id="bonusRulesTitle"><icon-gift :size="17" aria-hidden="true" />Chi tiết ưu đãi</h4>
           <span class="bonusActivityName">{{ activeRechargeActivity.name }}</span>
         </header>
         <dl class="bonusRuleFacts">
           <div>
-            <dt>赠送方式</dt>
-            <dd v-if="activeRechargeActivity.rateMode === 'fixed'">赠送比例 <strong>{{ formatRate(activeRechargeActivity.rate) }}</strong></dd>
-            <dd v-else>按本次支付金额匹配档位，整笔金额使用对应比例</dd>
+            <dt>Cách tặng ưu đãi</dt>
+            <dd v-if="activeRechargeActivity.rateMode === 'fixed'">Tỉ lệ tặng <strong>{{ formatRate(activeRechargeActivity.rate) }}</strong></dd>
+            <dd v-else>Áp dụng mức ưu đãi theo tổng tiền thanh toán của lần này</dd>
           </div>
-          <div v-if="bonusRulesExpiry"><dt>赠送金有效期</dt><dd>{{ bonusRulesExpiry }}</dd></div>
-          <div v-if="activeRechargeActivity.startsAt !== null"><dt>活动开始</dt><dd><time>{{ formatTime(activeRechargeActivity.startsAt) }}</time></dd></div>
-          <div v-if="activeRechargeActivity.endsAt !== null"><dt>活动截止</dt><dd><time>{{ formatTime(activeRechargeActivity.endsAt) }}</time></dd></div>
+          <div v-if="bonusRulesExpiry"><dt>Thời hạn tiền ưu đãi</dt><dd>{{ bonusRulesExpiry }}</dd></div>
+          <div v-if="activeRechargeActivity.startsAt !== null"><dt>Bắt đầu chương trình</dt><dd><time>{{ formatTime(activeRechargeActivity.startsAt) }}</time></dd></div>
+          <div v-if="activeRechargeActivity.endsAt !== null"><dt>Kết thúc chương trình</dt><dd><time>{{ formatTime(activeRechargeActivity.endsAt) }}</time></dd></div>
         </dl>
-        <div v-if="activeRechargeActivity.rateMode === 'tiered'" class="bonusTierList" tabindex="0" role="region" aria-label="阶梯赠送比例">
+        <div v-if="activeRechargeActivity.rateMode === 'tiered'" class="bonusTierList" tabindex="0" role="region" aria-label="Tỉ lệ ưu đãi theo bậc">
           <table class="bonusTierTable">
-            <thead><tr><th scope="col">本次支付金额</th><th scope="col">赠送比例</th><th scope="col"><span class="srOnly">当前档位</span></th></tr></thead>
+            <thead><tr><th scope="col">Số tiền thanh toán lần này</th><th scope="col">Tỉ lệ tặng</th><th scope="col"><span class="srOnly">Bậc hiện tại</span></th></tr></thead>
             <tbody>
               <tr v-for="(tier, index) in activeRechargeActivity.tiers" :key="tier.upTo" :class="{ currentTier: currentBonusTier === index }" :aria-current="currentBonusTier === index ? 'true' : undefined">
                 <td>
-                  <template v-if="activeRechargeActivity.tiers.length === 1">全部支付金额</template>
-                  <template v-else-if="index === 0">不超过 {{ formatMoney(tier.upTo) }}</template>
-                  <template v-else-if="index === activeRechargeActivity.tiers.length - 1">超过 {{ formatMoney(activeRechargeActivity.tiers[index - 1]?.upTo) }}</template>
-                  <template v-else>超过 {{ formatMoney(activeRechargeActivity.tiers[index - 1]?.upTo) }}，不超过 {{ formatMoney(tier.upTo) }}</template>
+                  <template v-if="activeRechargeActivity.tiers.length === 1">Mọi mức thanh toán</template>
+                  <template v-else-if="index === 0">Không quá {{ formatMoney(tier.upTo) }}</template>
+                  <template v-else-if="index === activeRechargeActivity.tiers.length - 1">Trên {{ formatMoney(activeRechargeActivity.tiers[index - 1]?.upTo) }}</template>
+                  <template v-else>Trên {{ formatMoney(activeRechargeActivity.tiers[index - 1]?.upTo) }}, không quá {{ formatMoney(tier.upTo) }}</template>
                 </td>
                 <td>{{ formatRate(tier.rate) }}</td>
-                <td><span v-if="currentBonusTier === index" class="currentTierLabel">当前档位</span></td>
+                <td><span v-if="currentBonusTier === index" class="currentTierLabel">Bậc hiện tại</span></td>
               </tr>
             </tbody>
           </table>
@@ -86,9 +86,9 @@
       </section>
       <div v-if="rechargeReady" class="rechargeSummary" aria-live="polite">
         <dl>
-          <div><dt>充值到账</dt><dd>{{ formatMoney(rechargePoints) }}</dd></div>
-          <div v-if="rechargeBonus.bonusAmount > 0" class="bonusMetric"><dt>本次赠送</dt><dd>+{{ formatMoney(rechargeBonus.bonusAmount) }}</dd></div>
-          <div v-if="rechargeBonus.bonusAmount > 0" class="totalMetric"><dt>合计到账</dt><dd>{{ formatMoney(rechargeTotal) }}</dd></div>
+          <div><dt>Số dư nhận được</dt><dd>{{ formatMoney(rechargePoints) }}</dd></div>
+          <div v-if="rechargeBonus.bonusAmount > 0" class="bonusMetric"><dt>Ưu đãi lần này</dt><dd>+{{ formatMoney(rechargeBonus.bonusAmount) }}</dd></div>
+          <div v-if="rechargeBonus.bonusAmount > 0" class="totalMetric"><dt>Tổng nhận được</dt><dd>{{ formatMoney(rechargeTotal) }}</dd></div>
         </dl>
       </div>
       <div v-for="activity in rechargeActivities" :key="activity.id" class="rechargeActivity">
@@ -96,14 +96,14 @@
         <p v-if="activity.rechargeConfig.summary">{{ activity.rechargeConfig.summary }}</p>
       </div>
       <div v-if="presentation?.agreement" class="agreementActions">
-        <el-checkbox v-model="agreementAccepted" :disabled="mutationBusy || plansLoading">我已阅读并同意</el-checkbox>
+        <el-checkbox v-model="agreementAccepted" :disabled="mutationBusy || plansLoading">Tôi đã đọc và đồng ý</el-checkbox>
         <el-button link type="primary" @click="agreementVisible = true">《{{ presentation.agreement.title }}》</el-button>
       </div>
-      <el-alert v-else-if="!plansLoading && !plansError" title="充值协议暂不可用，请刷新后重试" type="warning" :closable="false" showIcon />
+      <el-alert v-else-if="!plansLoading && !plansError" title="Điều khoản nạp tiền hiện không khả dụng. Hãy làm mới rồi thử lại." type="warning" :closable="false" showIcon />
       <div class="paymentActions">
-        <el-segmented v-model="payType" :options="paymentOptions" :disabled="mutationBusy" aria-label="支付方式" />
+        <el-segmented v-model="payType" :options="paymentOptions" :disabled="mutationBusy" aria-label="Phương thức thanh toán" />
         <el-button type="primary" :loading="paying" :disabled="!rechargeReady || !agreementAccepted || mutationBusy" @click="createPayment">
-          {{ rechargeReady ? `支付 ${formatMoney(rechargeAmount)}` : '生成支付订单' }}
+          {{ rechargeReady ? `Thanh toán ${formatMoney(rechargeAmount)}` : 'Tạo đơn thanh toán' }}
         </el-button>
       </div>
       <el-alert v-if="paymentError" :title="paymentError" type="error" :closable="false" showIcon />
@@ -111,35 +111,35 @@
 
     <el-dialog v-model="agreementVisible" :title="presentation?.agreement?.title" width="min(720px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <div v-if="presentation?.agreement" class="agreementDialog">
-        <p class="agreementMeta">版本 {{ presentation.agreement.version }} · 更新于 {{ formatTime(presentation.agreement.updatedAt) }}</p>
+        <p class="agreementMeta">Phiên bản {{ presentation.agreement.version }} · cập nhật lúc {{ formatTime(presentation.agreement.updatedAt) }}</p>
         <div class="agreementContent" v-html="agreementContent"></div>
       </div>
-      <template #footer><el-button @click="agreementVisible = false">关闭</el-button></template>
+      <template #footer><el-button @click="agreementVisible = false">Đóng</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="ordersVisible" title="充值记录" width="min(1000px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+    <el-dialog v-model="ordersVisible" title="Lịch sử nạp tiền" width="min(1000px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <div class="ordersSection" :aria-busy="ordersLoading">
         <el-alert v-if="ordersError" :title="ordersError" type="error" :closable="false" showIcon>
-          <el-button size="small" @click="loadOrders()">重试</el-button>
+          <el-button size="small" @click="loadOrders()">Thử lại</el-button>
         </el-alert>
         <div v-loading="ordersLoading" class="ordersList">
           <el-table :data="orders" rowKey="id" emptyText="" maxHeight="min(460px, calc(100dvh - 260px))">
-            <el-table-column label="订单" minWidth="220">
+            <el-table-column label="Đơn hàng" minWidth="220">
               <template #default="{ row }"><div class="orderIdentity"><strong>{{ row.name }}</strong><span>{{ row.orderNumber }}</span><span v-if="row.remark">{{ row.remark }}</span></div></template>
             </el-table-column>
-            <el-table-column label="类型 / 支付方式" minWidth="125">
+            <el-table-column label="Loại / phương thức thanh toán" minWidth="125">
               <template #default="{ row }"><div class="orderFields"><span>{{ orderTypeLabel(row.type) }}</span><span>{{ paymentLabel(row.paymentMethod) }}</span></div></template>
             </el-table-column>
-            <el-table-column label="支付 / 到账金额" minWidth="125">
+            <el-table-column label="Số tiền thanh toán / nhận được" minWidth="125">
               <template #default="{ row }"><div class="orderFields"><span>{{ formatMoney(row.amount) }}</span><span>{{ formatMoney(row.points) }}</span></div></template>
             </el-table-column>
-            <el-table-column label="赠送金额 / 有效期" minWidth="175">
+            <el-table-column label="Tiền ưu đãi / thời hạn" minWidth="175">
               <template #default="{ row }"><div v-if="row.bonusAmount !== undefined" class="orderFields"><span>{{ formatMoney(row.bonusAmount) }}</span><span v-if="row.bonusAmount > 0">{{ row.bonusActivityName }}<br />{{ bonusExpiry(row) }}</span></div></template>
             </el-table-column>
-            <el-table-column label="状态" width="90">
+            <el-table-column label="Trạng thái" width="90">
               <template #default="{ row }"><el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="创建 / 支付时间" minWidth="170">
+            <el-table-column label="Ngày tạo / ngày thanh toán" minWidth="170">
               <template #default="{ row }"><div class="orderFields"><time>{{ formatTime(row.createdAt) }}</time><time v-if="row.paidAt !== null">{{ formatTime(row.paidAt) }}</time></div></template>
             </el-table-column>
           </el-table>
@@ -159,36 +159,36 @@
           @update:pageSize="changePageSize" />
       </div>
       <template #footer>
-        <el-button @click="ordersVisible = false">关闭</el-button>
-        <el-button type="primary" :loading="ordersLoading" @click="loadOrders()">刷新</el-button>
+        <el-button @click="ordersVisible = false">Đóng</el-button>
+        <el-button type="primary" :loading="ordersLoading" @click="loadOrders()">Làm mới</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="paymentVisible" title="充值支付" width="min(420px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+    <el-dialog v-model="paymentVisible" title="Thanh toán nạp tiền" width="min(420px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
       <div v-if="payment" class="paymentDialog">
         <p class="paymentAmount">{{ formatMoney(payment.amount) }}</p>
         <div v-if="payment.bonusAmount > 0" class="paymentBonus">
-          <div class="paymentBonusAmount"><icon-gift :size="17" aria-hidden="true" /><span>本次赠送</span><strong>+{{ formatMoney(payment.bonusAmount) }}</strong></div>
+          <div class="paymentBonusAmount"><icon-gift :size="17" aria-hidden="true" /><span>Ưu đãi lần này</span><strong>+{{ formatMoney(payment.bonusAmount) }}</strong></div>
           <dl>
-            <div v-if="payment.bonusActivityName"><dt>赠送活动</dt><dd>{{ payment.bonusActivityName }}</dd></div>
-            <div v-if="bonusExpiry(payment)"><dt>赠送金有效期</dt><dd>{{ bonusExpiry(payment) }}</dd></div>
+            <div v-if="payment.bonusActivityName"><dt>Chương trình ưu đãi</dt><dd>{{ payment.bonusActivityName }}</dd></div>
+            <div v-if="bonusExpiry(payment)"><dt>Thời hạn tiền ưu đãi</dt><dd>{{ bonusExpiry(payment) }}</dd></div>
           </dl>
         </div>
         <template v-if="payment.kind === 'image'">
-          <img class="paymentQr" :src="payment.payUrl" alt="微信支付二维码" referrerpolicy="no-referrer" @error="qrImageError = true" />
-          <p v-if="!qrImageError" class="paymentHint">请使用微信扫描二维码支付</p>
-          <el-alert v-else title="二维码图片加载失败，请打开付款页面查看" type="error" :closable="false" showIcon />
+          <img class="paymentQr" :src="payment.payUrl" alt="Mã QR thanh toán WeChat" referrerpolicy="no-referrer" @error="qrImageError = true" />
+          <p v-if="!qrImageError" class="paymentHint">Hãy dùng WeChat quét mã QR để thanh toán</p>
+          <el-alert v-else title="Không tải được ảnh mã QR, hãy mở trang thanh toán để xem" type="error" :closable="false" showIcon />
         </template>
         <el-button tag="a" :href="payment.payUrl" target="_blank" rel="noopener noreferrer" type="primary" plain>
-          {{ payment.kind === 'image' ? '打开付款页面' : '前往支付宝付款' }}
+          {{ payment.kind === 'image' ? 'Mở trang thanh toán' : 'Thanh toán bằng Alipay' }}
         </el-button>
-        <p class="paymentOrder">订单号：{{ payment.orderNumber }}</p>
+        <p class="paymentOrder">Mã đơn hàng: {{ payment.orderNumber }}</p>
         <el-alert v-if="paymentNotice" :title="paymentNotice" :type="paymentConfirmed ? 'success' : 'info'" :closable="false" showIcon />
         <el-alert v-if="checkError" :title="checkError" type="error" :closable="false" showIcon />
       </div>
       <template #footer>
-        <el-button @click="paymentVisible = false">关闭</el-button>
-        <el-button type="primary" :loading="checking" :disabled="!payment || paymentConfirmed" @click="checkPayment()">已完成支付，刷新</el-button>
+        <el-button @click="paymentVisible = false">Đóng</el-button>
+        <el-button type="primary" :loading="checking" :disabled="!payment || paymentConfirmed" @click="checkPayment()">Đã thanh toán, làm mới</el-button>
       </template>
     </el-dialog>
   </section>
@@ -262,7 +262,7 @@ const rechargeActivities = computed(() => rechargeStale.value ? [] : presentatio
     && (config.scope === "all" || (selectedPlanId.value === -1 ? config.scope === "custom" : config.scope === "packages" && config.packageIds.includes(selectedPlanId.value!)));
 }) ?? []);
 const payType = ref<WalletPaymentParams["payType"]>("wechat");
-const paymentOptions = [{ label: "微信支付", value: "wechat" }, { label: "支付宝", value: "alipay" }];
+const paymentOptions = [{ label: "WeChat Pay", value: "wechat" }, { label: "Alipay", value: "alipay" }];
 const code = ref("");
 const orders = ref<WalletOrder[]>([]);
 const ordersVisible = ref(false);
@@ -422,7 +422,7 @@ async function loadPlans() {
     if (activity.eligible && ((activity.startsAt !== null && activity.startsAt > rechargeNow.value)
       || (activity.endsAt !== null && activity.endsAt <= rechargeNow.value)
       || (activity.expireMode === "fixed" && activity.expiresAt !== null && activity.expiresAt <= rechargeNow.value))) {
-      throw new Error("充值活动信息已变化，请刷新后重试");
+      throw new Error("Thông tin chương trình nạp đã thay đổi, hãy làm mới rồi thử lại");
     }
     if (JSON.stringify(presentation.value?.agreement) !== JSON.stringify(details.agreement)) {
       agreementAccepted.value = false;
@@ -503,7 +503,7 @@ async function exchangeCode() {
     });
     if (request.signal.aborted || props.token !== token) return;
     code.value = "";
-    ElMessage.success("兑换成功");
+    ElMessage.success("Đổi mã thành công");
     emit("balanceChanged");
     page.value = 1;
     await Promise.all([loadOrders(true), loadPlans(), bonusPanel.value?.refresh()]);
@@ -529,11 +529,11 @@ async function createPayment() {
   try {
     if (!await loadPlans() || request.signal.aborted || props.token !== token) return;
     if (agreement !== JSON.stringify(presentation.value?.agreement) || !agreementAccepted.value) {
-      paymentError.value = "充值协议已更新，请阅读后重新勾选";
+      paymentError.value = "Điều khoản nạp tiền đã thay đổi, hãy đọc và chọn đồng ý lại";
       return;
     }
     if (!rechargeReady.value || snapshot !== paymentSnapshot()) {
-      paymentError.value = "充值信息已更新，请确认金额和赠送规则后重新支付";
+      paymentError.value = "Thông tin nạp tiền đã thay đổi, hãy xác nhận số tiền và ưu đãi trước khi thanh toán lại";
       return;
     }
     const data: WalletPaymentParams = {
@@ -546,7 +546,7 @@ async function createPayment() {
     });
     if (request.signal.aborted || props.token !== token) return;
     if (result.amount !== amount || (Object.keys(bonus) as (keyof WalletBonus)[]).some(key => result[key] !== bonus[key])) {
-      paymentError.value = "支付订单的金额或赠送规则已变化，请刷新充值信息后重新确认";
+      paymentError.value = "Số tiền hoặc quy tắc ưu đãi của đơn hàng đã thay đổi, hãy làm mới thông tin nạp và xác nhận lại";
       await loadPlans();
       return;
     }

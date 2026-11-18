@@ -27,7 +27,15 @@ export function useCanvasHistory(flow: ReturnType<typeof useVueFlow>, binding: (
     );
     // ACT: 只复制结构和名称；删除后恢复内容由上面的节点、连线引用保留。
     const key = JSON.stringify({
-      nodes: flow.getNodes.value.map(node => ({ ...fields(node, nodeRuntimeFields), data: { label: node.data?.label } })),
+      nodes: flow.getNodes.value.map(node => ({ ...fields(node, nodeRuntimeFields), data: {
+        label: node.data?.label,
+        ...(node.type === "remote-imageGenerationNode" ? {
+          // Prompt template selection is a discrete Canvas action. Preserve
+          // the prompt in history without putting generated media into it.
+          prompt: node.data?.prompt,
+          promptModel: node.data?.promptModel,
+        } : {}),
+      } })),
       edges: flow.getEdges.value.map(edge => fields(edge, edgeRuntimeFields)),
     });
     return { ...JSON.parse(key), key };
@@ -83,11 +91,19 @@ export function useCanvasHistory(flow: ReturnType<typeof useVueFlow>, binding: (
           restoreFields(node, saved, nodeRuntimeFields);
           if (Object.hasOwn(saved.data ?? {}, "label")) node.data.label = saved.data!.label;
           else delete node.data.label;
+          if (node.type === "remote-imageGenerationNode") {
+            node.data.prompt = saved.data?.prompt ?? "";
+            node.data.promptModel = saved.data?.promptModel ?? [];
+          }
           return node;
         }
         const data = JSON.parse(JSON.stringify(nodeReferences.get(saved.id)?.data ?? saved.data ?? {}));
         if (Object.hasOwn(saved.data ?? {}, "label")) data.label = saved.data!.label;
         else delete data.label;
+        if (saved.type === "remote-imageGenerationNode") {
+          data.prompt = saved.data?.prompt ?? "";
+          data.promptModel = saved.data?.promptModel ?? [];
+        }
         const restored = { ...saved, data };
         Reflect.deleteProperty(restored, "initialized");
         return restored;

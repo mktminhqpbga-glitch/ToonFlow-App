@@ -30,3 +30,6 @@ await cp(resolve(projectDir, "packages/skills"), skillsOutput, { recursive: true
 const providersOutput = resolve(projectDir, "build/providers");
 await rm(providersOutput, { recursive: true, force: true });
 await cp(resolve(projectDir, "packages/providers/src"), providersOutput, { recursive: true });
+
+await cp(resolve(projectDir, "packages/chromeExtension"), resolve(projectDir, "build/chromeExtension"), { recursive: true });
+await $`${process.execPath} build src/chromeRelay/index.ts --target=bun --minify --outdir ${resolve(projectDir, "build/chromeRelay")}`.cwd(resolve(projectDir, "apps/server"));

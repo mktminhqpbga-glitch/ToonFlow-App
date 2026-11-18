@@ -13,6 +13,7 @@ import { generateMedia, isMediaNotSubmitted, type MediaGenerationCheckpoint } fr
 import { lockWorkspaceFiles, resolveWorkspacePath } from "@/utils/workspace/files";
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { readPriceReference } from "@/utils/media/priceReference";
+import { completeTask, failTask } from "@/utils/aiChrome";
 
 const maxRecordSize = 16 * 1024 * 1024;
 const maxBlobSize = 140 * 1024 * 1024;
@@ -233,7 +234,7 @@ async function load(cwd: string, taskId: string, key: string, owner?: AuthIdenti
 async function resumable(task: MediaTask) {
   const { checkpoint, state } = task.record;
   if (state !== "running" && state !== "interrupted") return false;
-  if (checkpoint.providerData || checkpoint.assets?.length) return true;
+  if (task.record.request?.providerId !== "aiChrome" && (checkpoint.providerData || checkpoint.assets?.length)) return true;
   if (!checkpoint.assetCount || checkpoint.files?.length !== checkpoint.assetCount) return false;
   for (const file of checkpoint.files) {
     const { path } = await resolveWorkspacePath(task.record.cwd, file.path, true);
@@ -381,8 +382,10 @@ async function execute(task: MediaTask, resume: boolean) {
       record.state = "succeeded";
       record.result = success(files);
       await persist(task);
+      if (record.request?.providerId === "aiChrome") await completeTask(record.taskId);
     });
   } catch (cause) {
+    if (record.request?.providerId === "aiChrome") failTask(record.taskId, cause);
     try {
       await locked(task.key, async () => {
         if (record.state !== "running") return;
@@ -505,20 +508,6 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
     }
     return snapshot(task, owner);
   });
-}
-
-// Read-only inspection for batch crash recovery. Unlike status(), this never launches
-// an interrupted/running provider task: an unknown remote submission must not be retried.
-export async function inspect(cwd: string, taskIds: string[], owner?: AuthIdentity | null) {
-  requireOwner(owner);
-  cwd = await realpath(cwd);
-  return Promise.all(taskIds.map(taskId => {
-    const key = taskPath(cwd, taskId);
-    return locked(key, async () => {
-      const task = await load(cwd, taskId, key, owner);
-      return task ? { ...await snapshot(task, owner), active: task.active } : { taskId, state: "unknown" as const, resumable: false, active: false, result: undefined };
-    });
-  }));
 }
 
 export async function status(cwd: string, taskIds: string[], resume = false, owner?: AuthIdentity | null) {

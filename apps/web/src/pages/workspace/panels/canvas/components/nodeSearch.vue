@@ -1,17 +1,17 @@
 <template>
-  <el-dialog v-model="visible" title="画布节点搜索" width="min(480px, calc(100vw - 32px))" alignCenter appendToBody @opened="searchInput?.focus()">
+  <el-dialog v-model="visible" title="Tìm kiếm node Canvas" width="min(480px, calc(100vw - 32px))" alignCenter appendToBody @opened="searchInput?.focus()">
     <div class="nodeSearch">
       <el-input
         ref="searchInput"
         v-model="query"
         :prefixIcon="IconSearch"
-        placeholder="搜索节点名称或类型"
-        aria-label="搜索画布节点"
+        placeholder="Tìm theo tên hoặc loại node"
+        aria-label="Tìm node Canvas"
         aria-controls="canvasSearchResults"
         :aria-activedescendant="results[activeIndex] ? `canvasSearchResult-${activeIndex}` : undefined"
         clearable
         @keydown="navigateResults" />
-      <div id="canvasSearchResults" ref="resultList" class="resultList" role="listbox" aria-label="画布节点">
+      <div id="canvasSearchResults" ref="resultList" class="resultList" role="listbox" aria-label="Node Canvas">
         <button
           v-for="(item, index) in results"
           :id="`canvasSearchResult-${index}`"
@@ -24,9 +24,9 @@
           @mouseenter="activeIndex = index"
           @click="selectNode(index)">
           <span class="nodeLabel">{{ item.label }}</span>
-          <span class="nodeType">{{ item.node.type === 'canvasGroup' ? '分组' : item.node.type?.replace(/^remote-/, '') }}</span>
+            <span class="nodeType">{{ item.node.type === 'canvasGroup' ? 'Nhóm' : item.node.type?.replace(/^remote-/, '') }}</span>
         </button>
-        <p v-if="!results.length" class="empty">没有匹配的节点</p>
+        <p v-if="!results.length" class="empty">Không có node phù hợp</p>
       </div>
     </div>
   </el-dialog>

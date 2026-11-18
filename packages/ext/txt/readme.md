@@ -1,7 +1,7 @@
-# 文本编辑器
+# Trình soạn thảo văn bản
 
-提供纯文本文件编辑，文件读取、保存队列和关闭前保存由文档宿主管理。组件通过 `context.text` 接收文本，通过 `context.updateText(text)` 提交修改。
+Cho phép chỉnh sửa tệp văn bản thuần túy. Host tài liệu quản lý việc đọc tệp, hàng đợi lưu và lưu trước khi đóng. Component nhận nội dung qua `context.text` và gửi thay đổi bằng `context.updateText(text)`.
 
-扩展自行声明文件图标、字号和自动换行设置，通过 `context.config` 读取当前配置。
+Tiện ích tự khai báo biểu tượng tệp, cỡ chữ và thiết lập tự xuống dòng; đọc cấu hình hiện tại qua `context.config`.
 
-在仓库根目录执行 `bun run --cwd packages/ext/txt build`，产物为 `build/ext/ext-txt.umd.js`。扩展开发与上下文接口见 `packages/extScaffold/readme.md`。
+Chạy `bun run --cwd packages/ext/txt build` từ gốc repository để tạo `build/ext/ext-txt.umd.js`. Xem giao diện lập trình và ngữ cảnh tiện ích tại `packages/extScaffold/readme.md`.

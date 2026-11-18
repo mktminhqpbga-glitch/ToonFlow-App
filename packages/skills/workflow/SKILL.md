@@ -1,859 +1,860 @@
 ---
 name: workflow
-description: 在 Toonflow 当前画布中把创意、小说或定稿剧本制作成可查看的文本、图片资产和视频片段，支持复用素材、续作与局部修改。用于实际制作或继续已有项目；明确只要对话文字时不操作画布，讨论或编辑技能本身时不启动制作。
+description: Quy trình sản xuất trên Canvas Toonflow từ ý tưởng, truyện hoặc kịch bản thành văn bản, ảnh tài nguyên và video, có thể dùng lại tư liệu, tiếp tục hoặc chỉnh sửa một phần. Áp dụng khi thực sự sản xuất hoặc tiếp tục dự án; không sửa Canvas khi người dùng chỉ muốn trao đổi hay chỉnh chính kỹ năng.
 metadata:
   version: "2.7.0"
-  displayName: 视频制作工作流
+  displayName: Quy trình sản xuất video
   author: Toonflow
   github: https://github.com/HBAI-Ltd/Toonflow-app
 ---
 
-# Toonflow 画布制作工作流
+# Quy trình sản xuất trên Canvas Toonflow
 
-从用户已有内容接续，把成果放到当前 Toonflow 项目。以本次剧本与真实素材组织制作，不要求用户先补齐一套制片文档。这个包包含所需方法，不依赖原来的多岗位 Skill 组。
+**Ngôn ngữ sử dụng:** Mặc định toàn bộ câu trả lời, bản tóm tắt, danh sách tài nguyên, mô tả cảnh và prompt tạo media phải bằng tiếng Việt, trừ khi người dùng yêu cầu ngôn ngữ khác. Giữ nguyên lời thoại gốc, ID, nhãn tham chiếu, tên trường API, tiêu đề kỹ thuật cố định và ký hiệu toán học. Những đoạn tiếng Trung còn lại trong tài liệu phương pháp bên dưới là hướng dẫn tham khảo, không phải yêu cầu xuất đầu ra bằng tiếng Trung.
 
-## 从哪里开始
+Tiếp tục từ nội dung người dùng đã có và đưa kết quả vào dự án Toonflow hiện tại. Tổ chức sản xuất dựa trên kịch bản và tư liệu thực tế của lượt này; không yêu cầu người dùng phải hoàn thiện trước một bộ tài liệu sản xuất phim. Gói này đã chứa các phương pháp cần thiết, không phụ thuộc nhóm kỹ năng nhiều vai trò của phiên bản cũ.
 
-先判断本次交付、已有资料和用户明确限制，沿用已知的时长、风格、画幅、语言与版本。只问影响结果且无法合理判断的缺项。
+## Bắt đầu từ đâu
 
-| 已有输入 | 处理方式 |
+Trước tiên xác định sản phẩm cần bàn giao trong lượt này, tư liệu hiện có và các giới hạn người dùng đã nêu rõ. Kế thừa thời lượng, phong cách, tỷ lệ khung hình, ngôn ngữ và phiên bản đã biết. Chỉ hỏi những thông tin thiếu có ảnh hưởng đến kết quả mà không thể suy ra hợp lý.
+
+| Đầu vào hiện có | Cách xử lý |
 |---|---|
-| 创意或一句话 | 补齐人物目标、阻力和结果，形成可审阅的故事与本次完整剧本 |
-| 小说、故事或原著片段 | 确认改编范围，保留原文，追踪事件、人物、对白与未知信息，转成可视听剧本 |
-| 已定稿剧本 / 时间轴 + 当前目标是制作、生成、继续或修订视频 | **无论用户是否提到“Seedance”“提示词”或具体模型，都立即进入本文件内嵌的「SEEDANCE EPISODE DIRECTOR · PART A」执行。** 用户未指定模型时，立即锁存 Seedance 路由，并只用一次简短提问确认“Seedance 2.0 还是 2.5”；用户已指定 2.0/2.5 时按对应模型路由。询问模型不得转去画布配置、资产流程或其他提示词方法。 |
-| 已定稿剧本 / 时间轴 + 仅要求资产、剧本阅读、诊断或非视频任务 | 只处理用户明确要求的非视频范围；不因为存在定稿剧本就自动生成视频提示词。 |
-| Seedance 任务中用户未指定模型 | **必须先确认目标模型。** 只问一次“Seedance 2.0 还是 2.5”；这一步属于 PART A 的 A0 输入判定，不是普通配置询问。用户回答后继续同一个 Seedance 执行态；画幅、分辨率、参考模式、原生音频等执行配置不能替代、绕过或中断该路由。 |
-| Seedance 任务中用户已指定 2.0/2.5 | 直接执行 PART A；2.0 走 A9.1、2.5 走 A9.2。 |
-| 续集或已有制作 | 读取指定的历史、当前节点和采用记录，确认本次范围，从实际进度继续 |
-| 指定一个片段、资产或修改 | 只处理该范围和确实受影响的依赖，不重跑整条链 |
+| Ý tưởng hoặc một câu mô tả | Bổ sung mục tiêu, trở ngại và kết quả của nhân vật để hình thành câu chuyện có thể duyệt và kịch bản hoàn chỉnh cho lượt này |
+| Tiểu thuyết, câu chuyện hoặc đoạn trích tác phẩm gốc | Xác nhận phạm vi chuyển thể, giữ nguyên nguyên tác, theo dõi sự kiện, nhân vật, lời thoại và thông tin chưa biết rồi chuyển thành kịch bản nghe nhìn |
+| Kịch bản đã chốt / timeline + mục tiêu hiện tại là sản xuất, tạo, tiếp tục hoặc sửa video | **Dù người dùng có nhắc “Seedance”, “prompt” hoặc mô hình cụ thể hay không, lập tức thực thi phần “SEEDANCE EPISODE DIRECTOR · PART A” tích hợp ngay trong tệp này.** Nếu người dùng chưa chỉ định mô hình, lập tức khóa tuyến Seedance và chỉ hỏi ngắn một lần “Seedance 2.0 hay 2.5?”; nếu đã chỉ định 2.0/2.5 thì đi theo tuyến mô hình tương ứng. Không chuyển sang cấu hình Canvas, quy trình tài nguyên hoặc cách viết prompt khác chỉ để hỏi mô hình. |
+| Kịch bản đã chốt / timeline + chỉ yêu cầu tài nguyên, đọc kịch bản, chẩn đoán hoặc tác vụ không phải video | Chỉ xử lý phạm vi ngoài video mà người dùng yêu cầu rõ; không tự tạo prompt video chỉ vì có kịch bản đã chốt. |
+| Tác vụ Seedance nhưng chưa chỉ định mô hình | **Bắt buộc xác nhận mô hình đích trước.** Chỉ hỏi một lần “Seedance 2.0 hay 2.5?”; đây là phần xác định đầu vào A0 của PART A, không phải câu hỏi cấu hình thông thường. Sau khi người dùng trả lời, tiếp tục cùng trạng thái thực thi Seedance; cấu hình tỷ lệ khung hình, độ phân giải, chế độ tham chiếu, âm thanh gốc và các thông số thực thi khác không thể thay thế, vượt qua hoặc cắt ngang tuyến này. |
+| Tác vụ Seedance đã chỉ định 2.0/2.5 | Thực thi trực tiếp PART A; 2.0 theo A9.1, 2.5 theo A9.2. |
+| Tập tiếp theo hoặc dự án đang sản xuất | Đọc lịch sử được chỉ định, các node hiện tại và bản ghi lựa chọn, xác nhận phạm vi lượt này rồi tiếp tục từ tiến độ thực tế |
+| Chỉ định một đoạn, tài nguyên hoặc sửa đổi | Chỉ xử lý phạm vi đó và các phần phụ thuộc thực sự bị ảnh hưởng, không chạy lại toàn bộ quy trình |
 
-> **Seedance 提示词生成规则已直接嵌入本 workflow，不是外部 Skill，也不是 workflow 去调用另一个 Skill。** 当任务进入「已确认剧本 → Seedance 2.0/2.5 分段提示词」阶段时，必须直接执行本文件下方的 **「SEEDANCE EPISODE DIRECTOR · PART A」**。该内嵌规则是本 workflow 在 Seedance 提示词生成阶段的最高优先级执行规范：以用户提供的 `SKILL-seedance-episode-director.md` A0–A12 为基线，并合入用户之后明确追加的连续性、生成稳定性与穿帮校验规则；若本 workflow 其他段落、references/methods、storyboard 或旧说明与其冲突，以当前内嵌 PART A 为准。除用户后续明确修改外，不得用其他方法重写、弱化或替换其中的剧情保真锁、目标模型确认规则、分段/时长规则、Reference binding、A9 模板、A11 校验或 A12 单次优化。
+> **Các quy tắc tạo prompt Seedance được tích hợp trực tiếp trong workflow này; đây không phải Skill bên ngoài và workflow cũng không gọi một Skill khác.** Khi nhiệm vụ bước vào giai đoạn “Kịch bản đã xác nhận → prompt từng đoạn Seedance 2.0/2.5”, phải thực thi trực tiếp **“SEEDANCE EPISODE DIRECTOR · PART A”** bên dưới. Những quy tắc tích hợp này có ưu tiên cao nhất trong giai đoạn viết prompt Seedance của workflow: lấy A0–A12 trong `SKILL-seedance-episode-director.md` do người dùng cung cấp làm cơ sở và bổ sung các yêu cầu kiểm tra tính liên tục, ổn định khi tạo và lỗi xuyên cảnh mà người dùng đã nêu sau đó. Nếu phần khác của workflow, references/methods, storyboard hoặc hướng dẫn cũ mâu thuẫn, PART A tích hợp ở đây được ưu tiên. Trừ khi người dùng sửa đổi rõ sau này, không được dùng phương pháp khác để viết lại, làm yếu hoặc thay thế khóa trung thành cốt truyện, quy tắc xác nhận mô hình, cách chia đoạn và tính thời lượng, Reference binding, mẫu A9, kiểm tra A11 hoặc bước tối ưu A12 thực hiện một lần.
 
-### Seedance 路由锁存（最高优先级入口规则）
+### Khóa tuyến Seedance (quy tắc đầu vào ưu tiên cao nhất)
 
-当同时满足以下两项时，**自动视为 Seedance 任务**，不要求用户必须说出“Seedance”“2.0/2.5”“生成提示词”等触发词：
+Khi đồng thời thỏa mãn hai điều kiện sau, **tự động coi đây là tác vụ Seedance**, không yêu cầu người dùng phải nói các từ kích hoạt như “Seedance”, “2.0/2.5” hoặc “tạo prompt”:
 
-1. 当前已有可执行的定稿剧本、时间轴、镜头剧情段、已确认片段文本，或用户明确要求继续已有视频制作；
-2. 当前意图是制作视频、生成视频、继续视频、修订视频、准备视频生成、把剧情做成视频，或对即将生成的视频进行配置。
+1. Hiện đã có kịch bản hoàn chỉnh có thể thực thi, timeline, đoạn nội dung theo góc máy, văn bản đoạn phim đã xác nhận, hoặc người dùng yêu cầu rõ tiếp tục dự án video đã có;
+2. Ý định hiện tại là sản xuất, tạo, tiếp tục, sửa video, chuẩn bị tạo video, chuyển tình tiết thành video hoặc cấu hình video sắp được tạo.
 
-一旦命中，立即锁存为 **Seedance 执行态**，并遵守：
+Ngay khi thỏa mãn, lập tức khóa **trạng thái thực thi Seedance** và tuân thủ:
 
-- **先进入 PART A，再处理画布执行配置。** 目标模型本身属于 A0 必要输入，不算画布配置；不得先调用画布读取工具（`getCanvas/findCanvasNodes/getCanvasNodes/getCanvasEdges/getNodeTools`）或节点的 `node:getConfig`、先问 provider/resolution/ratio/mode、先做通用分镜，或先进入其他 prompt 方法再决定是否用 Seedance。
-- 用户没有指定 2.0/2.5 时，**必须在 Seedance 路由已经锁存后，用一次简短提问确认“Seedance 2.0 还是 2.5”**。提问后保持 Seedance 执行态，不退出、不切换到普通 workflow；用户回答模型后立即从 A0 继续执行 PART A。
-- 用户已经指定 2.0/2.5 时，直接把该信息作为 A0 输入；不得再重复询问。
-- **目标模型确认与执行配置询问分开。** 未指定 2.0/2.5 时，先在 A0 内确认目标模型；确认后，若执行层还需要询问画幅、分辨率、生成音频、参考模式、供应商等配置，这些问题只能作为同一个 Seedance 任务的执行参数补充。用户回答后仍处于同一个 Seedance 执行态，不得回到通用 workflow、重新选择提示词方法或跳过 A0–A12。
-- 用户在配置问答中只回复“16:9”“1080p”“开原生音频”“2.5”等短答案时，这些答案视为**当前 Seedance 任务的配置补充**，不是新任务；不得因为这条回复本身没有再次出现“Seedance/提示词”字样而解除锁存。
-- 若用户先问“有什么配置/用什么配置”后再决定，回答配置问题不取消 Seedance 路由；一旦继续制作视频，必须回到/继续 PART A。
-- 只有用户明确把任务改成“不要生成/修订视频提示词，只做资产、剧本创作、咨询或其他非视频工作”，才解除 Seedance 路由锁存。
-- 实际媒体生成阶段若实时节点不支持 A0 已选模型，只能报告真实能力冲突并回到 PART A 的受影响项处理；**不得用配置层的默认模型静默替换 Seedance 路由。**
+- **Vào PART A trước, sau đó mới xử lý cấu hình thực thi Canvas.** Mô hình đích là đầu vào bắt buộc A0, không được coi là cấu hình Canvas. Không được gọi trước các công cụ đọc Canvas (`getCanvas/findCanvasNodes/getCanvasNodes/getCanvasEdges/getNodeTools`) hoặc `node:getConfig` của node; không hỏi trước provider/resolution/ratio/mode, không làm storyboard chung hoặc chuyển sang phương pháp prompt khác rồi mới quyết định có dùng Seedance hay không.
+- Nếu người dùng chưa chỉ định 2.0/2.5, **sau khi đã khóa tuyến Seedance, bắt buộc hỏi ngắn đúng một lần “Seedance 2.0 hay 2.5?”**. Sau câu hỏi vẫn giữ trạng thái thực thi Seedance, không thoát hoặc chuyển về workflow thông thường. Khi người dùng chọn mô hình, tiếp tục ngay PART A từ A0.
+- Nếu người dùng đã chỉ định 2.0/2.5, đưa thông tin đó trực tiếp vào đầu vào A0; không hỏi lặp lại.
+- **Tách biệt việc xác nhận mô hình đích và câu hỏi cấu hình thực thi.** Nếu chưa chỉ định 2.0/2.5, xác nhận mô hình trong A0 trước. Sau đó, nếu lớp thực thi còn cần hỏi tỷ lệ khung hình, độ phân giải, tạo âm thanh, chế độ tham chiếu, nhà cung cấp, v.v., những câu hỏi đó chỉ được bổ sung tham số cho cùng một tác vụ Seedance. Sau khi người dùng trả lời vẫn ở cùng trạng thái thực thi Seedance, không quay về workflow chung, chọn lại phương pháp prompt hoặc bỏ qua A0–A12.
+- Khi người dùng chỉ trả lời ngắn “16:9”, “1080p”, “bật âm thanh gốc”, “2.5”, v.v. cho câu hỏi cấu hình, phải xem đó là **thông tin bổ sung cho tác vụ Seedance hiện tại**, không phải tác vụ mới. Không gỡ khóa chỉ vì câu trả lời không lặp lại chữ “Seedance/prompt”.
+- Nếu người dùng hỏi “có những cấu hình nào/nên dùng cấu hình nào” rồi mới quyết định, việc trả lời câu hỏi cấu hình không hủy tuyến Seedance. Khi tiếp tục sản xuất video phải trở lại/tiếp tục PART A.
+- Chỉ gỡ khóa tuyến Seedance khi người dùng đổi yêu cầu rõ ràng thành “không tạo/sửa prompt video, chỉ làm tài nguyên, sáng tác kịch bản, tư vấn hoặc việc khác không liên quan đến video”.
+- Nếu khi tạo phương tiện thực tế, node đang chạy không hỗ trợ mô hình đã chọn ở A0, chỉ được báo xung đột khả năng thực tế và quay về sửa các mục bị ảnh hưởng của PART A. **Không được âm thầm thay tuyến Seedance bằng mô hình mặc định của lớp cấu hình.**
 
-**核心：Seedance 是视频制作阶段的导演执行内核，不是只有用户说出某个关键词才触发的可选插件。**
+**Cốt lõi: Seedance là bộ quy tắc đạo diễn thực thi trong giai đoạn sản xuất video, không phải plugin tùy chọn chỉ kích hoạt khi người dùng nói một từ khóa cụ thể.**
 
-### Seedance 阶段硬隔离（强制）
+### Cách ly nghiêm ngặt giai đoạn Seedance (bắt buộc)
 
-一旦命中上方“Seedance 路由锁存”——即已有可执行剧情输入且当前目标进入视频制作/生成/修订——立即进入**硬隔离执行态**；不要求用户额外说出“Seedance”或“提示词”：
+Khi thỏa điều kiện “khóa tuyến Seedance” ở trên, tức là đã có nội dung kịch bản có thể thực thi và mục tiêu hiện tại bước vào sản xuất/tạo/sửa video, phải lập tức vào **trạng thái thực thi cách ly nghiêm ngặt**; không yêu cầu người dùng nói thêm “Seedance” hoặc “prompt”:
 
-- 从进入 PART A 到最终提示词输出完成，**只执行本文件内嵌 PART A**，不得再读取或套用 `references/sourceAndScript.md`、`references/methods/*`、任何旧 storyboard/分镜规则或人类教学 references，亦不得从这些文件补第二套分段、时长、镜头、站位、表演、运镜、连续性、声音、Reference binding、模板或 QA 规则。
-- 用户已经给定的剧本、时间轴、角色/场景/道具设定、真实参考节点/资产句柄属于 PART A 的输入，不受本隔离限制。
-- **唯一例外**：PART A 的 A1.2/A4 明确需要“无参考图时补参考资产/必要设计提案”时，才可按需读取 `references/assets.md`、`references/methods/visualDesign.md`、`references/methods/colorAndLight.md`；只取外观/空间/材质/光线设计所需内容，**不得把这些文件中的时长、镜头、表演或叙事方法带回 Seedance 提示词规则**。完成资产/设计提案后立即回到 PART A。
-- Seedance 最终提示词已经按 A11/A12 定稿后，如用户明确要求实际连接参考、写入生成节点或生成/验收媒体，才退出提示词硬隔离，进入 `canvasExecution.md` / `stateAndDelivery.md` 的**执行层**。执行层只能搬运已定稿 prompt、连接真实参考、设置真实模型参数和核验结果，**不得重新改写 PART A 已确定的分段、格式、剧情、站位、表演、运镜或连续性**。
-- 若执行层发现模型真实能力与已定稿 prompt 存在硬冲突，只报告具体能力冲突并回到 PART A 受影响项处理；不得由画布规则自行另造兼容提示词。
+- Từ lúc vào PART A cho đến khi hoàn tất đầu ra prompt cuối cùng, **chỉ thực thi PART A tích hợp trong tệp này**. Không đọc hoặc áp dụng `references/sourceAndScript.md`, `references/methods/*`, quy tắc storyboard/cảnh quay cũ hoặc tài liệu giảng dạy dành cho con người; cũng không lấy những tài liệu đó để bổ sung hệ quy tắc thứ hai về chia đoạn, thời lượng, góc máy, vị trí nhân vật, diễn xuất, chuyển động camera, tính liên tục, âm thanh, Reference binding, mẫu prompt hoặc QA.
+- Kịch bản, timeline, thiết kế nhân vật/bối cảnh/đạo cụ, node tham chiếu thực hoặc mã nhận diện tài nguyên mà người dùng đã cung cấp là đầu vào của PART A, không chịu giới hạn cách ly này.
+- **Ngoại lệ duy nhất:** chỉ khi A1.2/A4 của PART A yêu cầu rõ “bổ sung tư liệu tham chiếu/đề xuất thiết kế cần thiết khi chưa có ảnh tham chiếu”, mới được đọc `references/assets.md`, `references/methods/visualDesign.md`, `references/methods/colorAndLight.md` khi cần. Chỉ lấy phần về ngoại hình, không gian, vật liệu và ánh sáng; **không đem cách tính thời lượng, bố trí góc máy, diễn xuất hoặc phương pháp kể chuyện từ các tệp đó trở lại quy tắc prompt Seedance**. Sau khi hoàn tất tài nguyên/đề xuất thiết kế phải quay lại PART A ngay.
+- Sau khi prompt cuối cùng của Seedance đã được chốt theo A11/A12, chỉ khi người dùng yêu cầu rõ kết nối tham chiếu thực, ghi vào node tạo hoặc tạo/nghiệm thu phương tiện mới thoát khỏi cách ly prompt và bước vào **lớp thực thi** của `canvasExecution.md` / `stateAndDelivery.md`. Lớp thực thi chỉ được chuyển prompt đã chốt, kết nối tham chiếu thực, đặt tham số mô hình thực tế và kiểm tra kết quả; **không viết lại cách chia đoạn, định dạng, tình tiết, vị trí, diễn xuất, chuyển động camera hoặc tính liên tục đã được PART A quyết định**.
+- Nếu lớp thực thi phát hiện xung đột bắt buộc giữa khả năng mô hình thực tế và prompt đã chốt, chỉ báo xung đột cụ thể rồi quay về các mục bị ảnh hưởng của PART A; quy tắc Canvas không được tự tạo một prompt tương thích khác.
 
-**目的：Seedance 阶段只有一个导演规则源——本文件内嵌 PART A。优先级声明不能替代硬隔离。**
+**Mục đích: giai đoạn Seedance chỉ có một nguồn quy tắc đạo diễn là PART A tích hợp trong tệp này. Chỉ tuyên bố mức ưu tiên là chưa đủ thay cho cách ly nghiêm ngặt.**
 
-**仅在剧本尚未定稿、确实需要创作或改编时**读取[输入与剧本](references/sourceAndScript.md)。一旦进入 Seedance 提示词硬隔离，本条停止生效。
+**Chỉ khi kịch bản chưa chốt và thực sự cần sáng tác hoặc chuyển thể**, mới đọc [Đầu vào và kịch bản](references/sourceAndScript.md). Khi đã bước vào cách ly nghiêm ngặt của prompt Seedance, quy tắc này ngừng áp dụng.
 
 
 
-## Seedance 提示词生成的内嵌执行核心
+## Bộ quy tắc thực thi tích hợp để tạo prompt Seedance
 
-以下内容以用户提供的 `SKILL-seedance-episode-director.md` PART A 为执行基线，并已合入用户后续明确追加的连续性、生成稳定性与穿帮校验要求。**运行时直接执行本节，不再读取、不再调用任何独立 seedance-episode-director Skill。** 本节与 workflow 其他内容冲突时，本节优先。
+Nội dung sau lấy PART A trong `SKILL-seedance-episode-director.md` do người dùng cung cấp làm cơ sở thực thi, đồng thời tích hợp các yêu cầu bổ sung rõ ràng sau này về tính liên tục, độ ổn định khi tạo và kiểm tra lỗi xuyên cảnh. **Khi chạy, thực thi trực tiếp mục này; không đọc hoặc gọi bất kỳ Skill seedance-episode-director riêng biệt nào.** Nếu có xung đột với phần khác của workflow, mục này được ưu tiên.
 
-# PART A — 执行规则
+# PART A — Quy tắc thực thi
 ═══════════════════════════════════════════
 
-## A0. 输入判定
+## A0. Xác định đầu vào
 
-拿到用户输入后，先在心里判定以下事项；能从文本推断就直接执行，除非缺失会导致成片方向根本不同，否则不要问超过 2 个问题：
+Sau khi nhận đầu vào, trước tiên tự xác định các điểm sau. Nếu có thể suy ra từ văn bản thì thực hiện trực tiếp; không hỏi quá hai câu trừ khi thông tin thiếu có thể làm thay đổi căn bản hướng của thành phẩm:
 
-1. **目标模型** —— 用户说 2.5 就按单段最长 30s；说 2.0 就按单段最长 15s；**如果用户没说，必须用一次简短提问确认“Seedance 2.0 还是 2.5”后再继续**。该提问属于本 Seedance 任务的 A0 输入判定，提问前后都保持 Seedance 路由锁存；不得因为需要确认模型而转去普通 workflow、画布配置或其他提示词方法。
-2. **总时长要求** —— 用户给了严格总时长（如“55s”）就按 A3 做时长预算；没给则由完整剧情的自然节奏估算总长。
-3. **叙事规模** —— 判断是单场戏、短集，还是 2–3 分钟甚至更长的一整集。
-   - 不论多长，**先规划全片，再决定分几批交付**。
-   - 分批只是交付容量管理，不等于删剧情，也不等于重新切剧情。
-4. **原始时间码** —— 若用户已给【0–10s】【10–25s】等时间块，把它们视为原剧情节奏/参考时间轴；除非用户明确说“严格锁死”，否则不能机械等同于生成段。
-5. **是否已有资产参考库**（角色图 / 场景图 / 道具图 / 命名标签）？
-   - 有 → **直接引用**（按 A1.2）
-   - 无 → 从剧情文本里抽取资产，只登记本集真实出现过的资产；若模型为 2.5 且需要锁定身份，按 A1.2「情况二补充」可先生成参考图。
-6. **画面文字来源** —— 区分“后期字幕/标题”与“场景内实体文字/产品包装文字”，按 A1.3 处理。
+1. **Mô hình đích** — Nếu người dùng nói 2.5, thời lượng tối đa mỗi đoạn là 30s; nếu nói 2.0, tối đa 15s. **Nếu chưa nói, bắt buộc hỏi ngắn một lần “Seedance 2.0 hay 2.5?” trước khi tiếp tục**. Đây là bước xác định đầu vào A0 của tác vụ Seedance; trước và sau câu hỏi đều phải giữ khóa tuyến Seedance. Không chuyển sang workflow chung, cấu hình Canvas hoặc phương pháp prompt khác chỉ vì cần xác nhận mô hình.
+2. **Yêu cầu tổng thời lượng** — Nếu người dùng ấn định thời lượng nghiêm ngặt (ví dụ “55s”), lập ngân sách thời gian theo A3; nếu không, ước tính tổng thời lượng từ nhịp tự nhiên của toàn bộ câu chuyện.
+3. **Quy mô tự sự** — Xác định đây là một cảnh, một tập ngắn hay tập hoàn chỉnh dài 2–3 phút hoặc hơn.
+   - Dù dài bao nhiêu, **lên kế hoạch toàn bộ phim trước, sau đó mới quyết định chia mấy lô bàn giao**.
+   - Chia lô chỉ để quản lý khả năng bàn giao, không có nghĩa cắt bỏ hay chia lại tình tiết.
+4. **Mã thời gian gốc** — Nếu người dùng cung cấp những đoạn như 【0–10s】【10–25s】, xem chúng là nhịp gốc của câu chuyện/timeline tham khảo; trừ khi họ yêu cầu “khóa chính xác”, không được mặc định mỗi khối là một đoạn tạo.
+5. **Đã có thư viện tham chiếu tài nguyên chưa** (ảnh nhân vật / ảnh bối cảnh / ảnh đạo cụ / nhãn định danh)?
+   - Có → **dùng tham chiếu trực tiếp** (theo A1.2).
+   - Chưa có → trích tài nguyên từ văn bản kịch bản, chỉ đăng ký những tài nguyên thực sự xuất hiện trong tập này. Nếu mô hình là 2.5 và cần khóa danh tính, có thể tạo ảnh tham chiếu trước theo phần “Bổ sung cho trường hợp hai” của A1.2.
+6. **Nguồn gốc chữ trong khung hình** — Phân biệt “phụ đề/tiêu đề thêm hậu kỳ” với “chữ trên vật thể thật trong cảnh/chữ trên bao bì sản phẩm”, xử lý theo A1.3.
 
-**核心约束：完整、顺序、可生成。**
-- 不丢剧情，不跳过“难拍”节拍。
-- 不重排原剧情先后顺序。
-- 不为了把段数压到理论最少而牺牲自然对白、动作过程或反应时间。
-- 长剧情先建立“全片段表”，再按单批容量切成 Batch 1 / Batch 2 / Batch 3……；每批都保留全局段号。
+**Ràng buộc cốt lõi: đầy đủ, đúng thứ tự, có thể tạo được.**
+- Không bỏ tình tiết, không bỏ qua nhịp câu chuyện chỉ vì “khó quay”.
+- Không đảo thứ tự sự kiện của câu chuyện gốc.
+- Không hy sinh lời thoại tự nhiên, quá trình hành động hay thời gian phản ứng để ép số đoạn xuống mức tối thiểu lý thuyết.
+- Với chuyện dài, lập “bảng toàn bộ các đoạn phim” trước, sau đó chia Batch 1 / Batch 2 / Batch 3… theo dung lượng mỗi lô; mọi lô đều giữ số thứ tự đoạn trên toàn phim.
 
-### A0.1 剧情保真锁（最高优先级 · 全流程生效）
+### A0.1 Khóa trung thành cốt truyện (ưu tiên cao nhất · áp dụng toàn quy trình)
 
-**总纲：只导演，不编剧。**
+**Nguyên tắc chung: chỉ đạo diễn, không tự viết thêm kịch bản.**
 
-本 Skill 可以做：**拆分、合段、计时、镜头化、站位化、把已有动作写得可见、补充不改变剧情事实的物理/摄影执行细节。**
+Skill này được phép: **chia hoặc ghép đoạn, tính thời gian, chuyển thành các góc máy, xác định vị trí nhân vật, mô tả hành động đã có để có thể nhìn thấy và bổ sung chi tiết thực thi về vật lý/quay phim nếu không thay đổi sự thật của cốt truyện.**
 
-本 Skill 不可以做：**新增剧情事件、删除剧情事件、替换剧情事件、改变事件先后、改变事件执行者/承受者、改变道具来源或用途、补写用户没有提供的前史/因果、把模糊角色擅自具体化。**
+Skill này không được phép: **thêm, xóa hoặc thay thế sự kiện cốt truyện; đổi thứ tự sự kiện; thay người thực hiện/chịu tác động của sự kiện; đổi nguồn gốc hoặc công dụng đạo cụ; bịa quá khứ hoặc quan hệ nhân quả người dùng chưa cung cấp; tự cụ thể hóa nhân vật được giữ mơ hồ.**
 
-#### A0.1.1 剧情事实来源优先级
+#### A0.1.1 Thứ tự ưu tiên nguồn sự thật của cốt truyện
 
-发生冲突时，按以下顺序认定“什么才是剧情事实”：
+Khi có mâu thuẫn, xác định “điều gì là sự thật trong câu chuyện” theo thứ tự sau:
 
-1. **用户最新一条明确修改指令**
-2. **用户当前提供的原始剧情 / 脚本 / 时间轴**
-3. **用户明确提供的角色、场景、道具资产设定**
-4. **AI 之前生成的提示词、总结、补充说明**
+1. **Chỉ thị chỉnh sửa rõ ràng gần nhất của người dùng**
+2. **Tình tiết / kịch bản / timeline gốc mà người dùng hiện đang cung cấp**
+3. **Thiết kế tài nguyên nhân vật, bối cảnh và đạo cụ do người dùng cung cấp rõ ràng**
+4. **Prompt, bản tóm tắt và phần giải thích bổ sung do AI tạo trước đây**
 
-**AI 自己上一轮补出来的内容永远不能反过来升级成剧情事实。**
+**Nội dung do AI tự thêm trong lượt trước tuyệt đối không được nâng thành sự thật của cốt truyện.**
 
-例如：AI 上一版自行补了“角色A先从容器中取出道具A”，但用户原剧情只写“角色A使用道具A”，下一版不得因为“连续性”继续继承这个额外取出动作。
+Ví dụ: AI ở phiên bản trước tự thêm “Nhân vật A lấy đạo cụ A ra khỏi hộp trước”, nhưng kịch bản gốc của người dùng chỉ ghi “Nhân vật A sử dụng đạo cụ A”. Phiên bản tiếp theo không được giữ lại hành động lấy ra được thêm vào chỉ vì “tính liên tục”.
 
-#### A0.1.2 五类绝对禁止改动
+#### A0.1.2 Năm loại thay đổi tuyệt đối bị cấm
 
-对用户原始剧情中的每个事件，禁止：
+Đối với mỗi sự kiện trong câu chuyện gốc của người dùng, cấm:
 
-1. **新增**：原文没有“开盖 / 抽纸 / 起身 / 递给 / 回头 / 拿起包装”，不得为了顺畅自行补上。
-2. **删除**：原文已有动作、对白、反应、停顿、空镜，不得为了时长或表演克制删掉。
-3. **替换**：原文是 A 动作，不得改成看起来更合理的 B 动作。
-4. **改归属**：原文写“父母 / 家长 / 成人”时，不得擅自指定为“爸爸”或“妈妈”；谁说、谁做、谁拿、谁被擦都必须保持。
-5. **改顺序 / 改因果**：不得为了产品逻辑、连续性或镜头美感，把后面的行为提前，或为后面的状态补一个原文不存在的前置动作。
+1. **Thêm mới:** nếu nguyên tác không có “mở nắp / rút giấy / đứng dậy / đưa cho / quay đầu / cầm bao bì” thì không được tự bổ sung để câu chuyện trôi chảy.
+2. **Xóa bỏ:** không được xóa hành động, lời thoại, phản ứng, khoảng dừng hoặc khung hình trống có trong nguyên tác chỉ vì giới hạn thời lượng hay mong muốn diễn xuất tiết chế.
+3. **Thay thế:** không được đổi hành động A trong nguyên tác thành hành động B có vẻ hợp lý hơn.
+4. **Thay đổi chủ thể:** khi nguyên tác ghi “cha mẹ / phụ huynh / người lớn”, không được tự quyết đó là “bố” hoặc “mẹ”. Phải giữ đúng ai nói, ai làm, ai cầm, ai được lau.
+5. **Đổi thứ tự / quan hệ nhân quả:** không đưa hành động ở sau lên trước vì logic sản phẩm, tính liên tục hoặc vẻ đẹp khung hình; cũng không tự thêm hành động chuẩn bị không có trong nguyên tác chỉ để giải thích một trạng thái xuất hiện về sau.
 
-#### A0.1.3 允许的“具体化”边界
+#### A0.1.3 Ranh giới của việc “cụ thể hóa” được phép
 
-只有满足以下条件，才允许把原文动作写得更具体：
+Chỉ được mô tả hành động gốc cụ thể hơn khi đáp ứng tất cả điều kiện:
 
-- 具体化内容**直接包含在原动作的物理执行中**；
-- 不新增新的剧情决定、道具状态变化或角色关系；
-- 删除这条具体描述后，剧情事实完全不变；
-- 不要求观众获得一个原文没有的新信息。
+- Chi tiết cụ thể đó **nằm trực tiếp trong quá trình thực hiện vật lý của hành động gốc**;
+- Không thêm quyết định cốt truyện, thay đổi trạng thái đạo cụ hoặc quan hệ nhân vật mới;
+- Nếu bỏ mô tả cụ thể đó, các sự thật của cốt truyện vẫn hoàn toàn giữ nguyên;
+- Không buộc khán giả nhận thêm thông tin mà nguyên tác chưa có.
 
-例如：
-- 原文“角色A用道具A擦拭手部” → 可以写“道具A接触掌心并擦过手指”，这是已有动作的可视化。
-- 原文“角色A用道具A擦拭手部” → **不能**写“拿起容器 → 打开容器 → 取出新道具A → 再擦拭”，因为新增了多个剧情事件。
+Ví dụ:
+- Nguyên tác “Nhân vật A dùng đạo cụ A lau tay” → có thể viết “Đạo cụ A chạm lòng bàn tay rồi lướt qua các ngón tay” vì đây là cách thể hiện trực quan hành động đã có.
+- Nguyên tác “Nhân vật A dùng đạo cụ A lau tay” → **không được** viết “Nhấc hộp → mở hộp → lấy đạo cụ A mới → rồi lau” vì như vậy đã thêm nhiều sự kiện vào cốt truyện.
 
-摄影机移动、构图、景别、焦点、光线可见结果、已有碰撞对应的拟音，属于技术实现，不视为新增剧情；但它们也不得制造新的剧情事实。
+Chuyển động camera, bố cục, cỡ cảnh, điểm lấy nét, hiệu ứng ánh sáng nhìn thấy và tiếng động mô phỏng tương ứng với va chạm đã có đều là chi tiết thực thi kỹ thuật, không tính là thêm tình tiết; tuy nhiên chúng cũng không được tạo ra sự thật cốt truyện mới.
 
-#### A0.1.4 不补前史、不追溯来源
+#### A0.1.4 Không thêm quá khứ hoặc tự truy tìm nguồn gốc
 
-如果某个时间块开始时，原文已经给出一个状态，就把它当作该节拍的**既定初始状态**。
+Nếu ở đầu một khối thời gian, nguyên tác đã cho một trạng thái thì coi đó là **trạng thái khởi đầu đã xác định** của nhịp truyện này.
 
-- 原文写“角色A手里已经拿着道具A进入画面” → 直接从“手里已有道具A”开始。
-- 不得因为“道具总要有来源”而自行补“拿容器 / 开盖 / 取出”。
-- 原文写“角色已经站在某位置” → 可以从该位置状态开始；除非原文明确写了起身/走过去，否则不得补完整移动过程。
+- Nếu nguyên tác ghi “Nhân vật A bước vào khung hình, trong tay đã có đạo cụ A” → bắt đầu trực tiếp ở trạng thái “tay đã cầm đạo cụ A”.
+- Không được tự thêm “lấy hộp / mở nắp / lấy ra” chỉ vì “đạo cụ phải có nguồn gốc”.
+- Nếu nguyên tác ghi “nhân vật đã đứng tại một vị trí” → có thể bắt đầu tại vị trí đó; trừ khi nguyên tác nói rõ nhân vật đứng lên/đi đến, không được thêm toàn bộ quá trình di chuyển.
 
-**连续性只维护用户已经定义的状态，不负责替用户补没有写出的前史。**
+**Tính liên tục chỉ duy trì các trạng thái người dùng đã định nghĩa, không có nhiệm vụ tự viết thêm quá khứ chưa được nêu.**
 
-#### A0.1.5 模糊信息保持模糊
+#### A0.1.5 Giữ nguyên thông tin mơ hồ
 
-用户没有明确的内容，默认保持原有抽象层级：
+Với nội dung người dùng chưa xác định rõ, mặc định giữ mức độ trừu tượng ban đầu:
 
-- “父母 / 家长 / 成人 / 工作人员 / 某人”等泛称保持原有抽象层级，不擅自确定身份、性别或人数；
-- “一只手”不推断具体左手/右手，除非镜头执行确实需要且不会形成后续剧情事实；
-- “拿道具A”不自动推断“从容器中新取出一件”；
-- “使用道具A完成动作”不自动推断使用次数、消耗数量或第几件；
-- “在旁边”不擅自创造精确空间关系，除非为镜头生成需要给出中性坐标，且不改变剧情。
+- Các cách gọi chung như “cha mẹ / phụ huynh / người lớn / nhân viên / ai đó” phải giữ nguyên mức độ khái quát; không tự quyết danh tính, giới tính hoặc số lượng người;
+- “Một bàn tay” không suy ra là tay trái hay tay phải, trừ khi thực thi góc máy thực sự cần và không tạo thành sự thật mới ở phần tiếp theo;
+- “Cầm đạo cụ A” không tự suy thành “lấy một món mới từ trong hộp”;
+- “Dùng đạo cụ A để thực hiện hành động” không tự suy ra số lần dùng, số lượng tiêu hao hoặc món thứ mấy;
+- “Ở bên cạnh” không tự tạo ra quan hệ không gian chính xác, trừ khi việc tạo góc máy cần tọa độ trung tính và không thay đổi cốt truyện.
 
-#### A0.1.6 源剧情存在空缺/矛盾时
+#### A0.1.6 Khi cốt truyện nguồn có thiếu sót hoặc mâu thuẫn
 
-- **空缺**：不自行编桥接剧情；优先用 HARD CUT / 新时间块 / 新段从下一个已知状态开始。
-- **矛盾**：不自行选择一个版本覆盖另一个；按用户最新明确修正优先，否则在全片总览标注“源文本冲突”。
-- **严格总时长与剧情冲突**：允许增加段数或标注时长冲突，不允许删改剧情解决。
-
----
-
-## A1. 输出语言与资产命名
-
-### A1.1 输出语言（强制）
-**默认全中文。** 正式提示词、资产清单、站位说明、表演层、时间轴——
-全部用中文写。
-
-**保留原文不译的部分：**
-- 对白台词（原文照抄，如「君は？」「何が？」）
-- 数值与单位：`15s` `30s` `24fps` `4K` `2–3mm` `180°` `0:00–0:06`
-- 光学角度：`29°` `47°` `84°` `107°`
-- 技术缩写：`HARD CUT`
-
-**结构标题规则：**
-- Seedance 2.0：结构标题默认中文。
-- Seedance 2.5：最终正式提示词固定使用以下英文字段标题：`Objective`、`Reference binding`、`Immutable locks`、`Target duration`、`Timeline`、`Visual direction`、`Audio direction`、`Preserve`、`Avoid`；字段内容默认仍用中文。
-
-**整段英文版例外**：只有用户明确说“给我英文版 / for an international pipeline”时，才把字段内容也改为英文。
-
-### A1.2 资产命名与参考标签
-
-**分两种情况：**
-
-**情况一 · 用户已建立参考标签库**
-用户在自己管线里用了命名标签（如 `@HERO1V2`、`@林直人_v2`、
-`#老宅客厅` 等）——
-- **直接原样引用**，用户给什么就照抄什么，包括 `@` / `#` / 任何符号
-- 这些标签是**角色/场景/道具的身份参考句柄**，
-  对应真实的参考图或已建立的资产库
-- **禁止的是：用上一段的尾帧画面作为站位参考**——
-  站位永远靠绝对坐标在文字里重建（见 A5）
-
-**情况二 · 用户没有标签库**
-- 资产名**不加 @**，只用中文名
-- 清单写：`角色｜林直人` `场景｜老宅客厅` `道具｜梅酒瓶`
-- 正文引用：直接写「林直人」「老宅客厅」「梅酒瓶」
-- 同一段多个同类资产：用中文区分「直人杯 / 佐藤杯」
-
-**情况二补充 · 无参考库但需要锁定身份时（Seedance 2.5）**
-
-当目标模型为 2.5、用户既没有标签库也没有参考图，但本段需要锁定角色 / 场景 / 道具身份时：
-- 允许先按 Toonflow 资产方法（角色四视图参考板 / 场景主视图 / 道具 2×2 板）生成参考图，再进入 A1.2.1 / A9.2 的 Reference binding；
-- 生成的参考图只锁「用户指定或可明确判断」的维度：角色脸 / 发型 / 年龄感 / 体型 / 服装，场景结构与材质，道具主色 / 形态 / 开合结构；
-- 参考图不越权控制站位、光线、镜头或额外剧情（同 A1.2.1 的参考图角色分类与冲突处理）；
-- 仍遵循 A0.1 剧情保真：生成的外观一律视为「设计提案」，不冒充原文事实；不得因此新增剧情事件、道具来源、角色关系或世界规则；参考图中出现原文未提及的人物 / 道具 / 文字，不得自动带入剧情。
+- **Khoảng trống:** không tự viết tình tiết nối. Ưu tiên dùng HARD CUT / khối thời gian mới / đoạn mới bắt đầu từ trạng thái đã biết tiếp theo.
+- **Mâu thuẫn:** không tự chọn một phiên bản để ghi đè phiên bản khác. Ưu tiên chỉnh sửa rõ ràng gần nhất của người dùng; nếu không có, đánh dấu “Mâu thuẫn trong văn bản nguồn” ở bản tổng quan toàn phim.
+- **Tổng thời lượng nghiêm ngặt xung đột với cốt truyện:** được phép tăng số đoạn hoặc đánh dấu xung đột thời lượng; không được giải quyết bằng cách xóa/sửa tình tiết.
 
 ---
 
-### A1.2.1 Seedance 2.5 参考图片绑定（强制）
+## A1. Ngôn ngữ đầu ra và tên tài nguyên
 
-当目标模型为 **Seedance 2.5**，且用户提供了角色图、场景图、商品图、道具图、站位图或其他视觉参考时，必须把这些参考图作为正式提示词的一部分绑定到每个相关生成段。
+### A1.1 Ngôn ngữ đầu ra (bắt buộc)
+**Mặc định toàn bộ bằng tiếng Việt.** Prompt chính thức, danh sách tài nguyên, vị trí đứng, diễn xuất và timeline đều dùng tiếng Việt.
 
-**硬规则：**
-- 用户提供的真实图片节点 / 参考句柄必须**原样引用**，例如 `{{node/image-xxxx}}`、`@角色名_v2`、`#场景名`；禁止自行改名、简写或编造不存在的 Ref。
-- 每个 2.5 生成段都是**自包含**的：该段需要的参考图片必须在该段自己的 `Reference binding` 中重新列出，不能写“同上”“沿用上一段参考图”。
-- 全片反复使用的角色图 / 商品图，也要在每个实际涉及它们的段中重复绑定。
-- 只绑定本段真正相关的参考图，不把全集所有图片无差别塞进每一段。
-- 一张图片只控制它被用户指定或可明确判断的维度，禁止越权控制其他维度。
+**Những phần phải giữ nguyên bản gốc, không dịch:**
+- Lời thoại nhân vật (chép đúng nguyên văn, ví dụ 「君は？」「何が？」).
+- Giá trị số và đơn vị: `15s` `30s` `24fps` `4K` `2–3mm` `180°` `0:00–0:06`.
+- Góc quang học: `29°` `47°` `84°` `107°`.
+- Viết tắt kỹ thuật: `HARD CUT`.
 
-**参考资产提取与简单标识：**
-- 先从本段剧情、镜头、动作与画面内容中自动提取**本段实际涉及且确实需要调用**的真实参考资产；角色图、场景图、商品图、道具图、站位图、动作图等都按实际用途识别。
-- 对每个真实参考只做**简洁身份标识**，说明它对应谁 / 什么 / 哪类用途即可，例如“林直人角色参考”“老宅客厅场景参考”“梅酒瓶道具参考”“本段站位参考”。
-- 不在最终 `Reference binding` 中展开长篇“控制什么 / 不控制什么”说明；参考图的内部作用边界仍按用户明确用途与可明确判断的内容理解，禁止越权把参考图里的额外人物、道具、背景、文字或姿态带入剧情。
-- 用户明确说“仅位置参考 / 仅服装参考 / 仅产品参考”等时，简单标识中保留这个“仅”的用途限定，例如“仅站位参考”“仅服装参考”。
+**Quy tắc tiêu đề cấu trúc:**
+- Seedance 2.0: tiêu đề các phần mặc định bằng tiếng Việt.
+- Seedance 2.5: giữ đúng tiêu đề trường tiếng Anh `Objective`, `Reference binding`, `Immutable locks`, `Target duration`, `Timeline`, `Visual direction`, `Audio direction`, `Preserve`, `Avoid`; nội dung từng trường mặc định bằng tiếng Việt.
 
-**冲突处理：**
-- 用户文字设定与参考图冲突时，按 A0.1.1 的事实来源优先级处理；用户最新明确文字修改优先。
-- 多张参考图彼此冲突时，不自行融合成新设定；按用户明确用途分别使用。
-- 参考图中存在用户未提及的额外人物、道具、文字或装饰，不自动引入剧情。
+**Ngoại lệ cho phiên bản tiếng Anh toàn bộ:** chỉ khi người dùng yêu cầu rõ “cho tôi bản tiếng Anh / for an international pipeline” mới chuyển cả nội dung từng trường sang tiếng Anh.
 
-**2.5 Reference binding 推荐格式：**
+### A1.2 Đặt tên tài nguyên và nhãn tham chiếu
+
+**Chia thành hai trường hợp:**
+
+**Trường hợp một · Người dùng đã có thư viện nhãn tham chiếu**
+Người dùng đã sử dụng các nhãn định danh trong quy trình riêng (ví dụ `@HERO1V2`, `@林直人_v2`,
+`#老宅客厅`, v.v.) —
+- **Tham chiếu trực tiếp và giữ nguyên y hệt:** sao chép đúng nhãn người dùng cung cấp, bao gồm `@` / `#` và bất kỳ ký hiệu nào.
+- Các nhãn này là **mã tham chiếu danh tính nhân vật/bối cảnh/đạo cụ**,
+  tương ứng ảnh tham chiếu thực hoặc thư viện tài nguyên đã có.
+- **Điều bị cấm là dùng khung hình cuối của đoạn trước làm tham chiếu vị trí đứng.**
+  Vị trí đứng luôn phải được dựng lại bằng tọa độ tuyệt đối trong văn bản (xem A5).
+
+**Trường hợp hai · Người dùng chưa có thư viện nhãn**
+- Tên tài nguyên **không tự thêm @**, dùng tên tiếng Việt; nếu là tên riêng hoặc định danh gốc của người dùng thì giữ nguyên.
+- Trong danh sách, dùng: `角色｜林直人` `场景｜老宅客厅` `道具｜梅酒瓶`.
+- Trong nội dung, nhắc trực tiếp tên gốc: 「林直人」「老宅客厅」「梅酒瓶」.
+- Khi một đoạn có nhiều tài nguyên cùng loại, phân biệt bằng tên sở hữu hoặc ký hiệu rõ ràng, ví dụ "cốc của Naoto / cốc của Sato".
+
+**Bổ sung cho trường hợp hai · Không có thư viện tham chiếu nhưng cần khóa danh tính (Seedance 2.5)**
+
+Khi mô hình đích là 2.5, người dùng chưa có cả thư viện nhãn lẫn ảnh tham chiếu nhưng đoạn hiện tại cần khóa danh tính nhân vật/bối cảnh/đạo cụ:
+- Được phép tạo ảnh tham chiếu trước bằng phương pháp tài nguyên Toonflow (bảng bốn góc nhìn nhân vật / góc nhìn chính của bối cảnh / bảng đạo cụ 2×2), sau đó đưa vào Reference binding ở A1.2.1 / A9.2.
+- Ảnh tham chiếu tạo ra chỉ khóa những đặc điểm “được người dùng chỉ định hoặc có thể xác định rõ”: khuôn mặt, kiểu tóc, độ tuổi cảm nhận, dáng người, trang phục của nhân vật; cấu trúc và vật liệu của bối cảnh; màu chủ đạo, hình dáng, cấu trúc đóng/mở của đạo cụ.
+- Ảnh tham chiếu không được vượt phạm vi để kiểm soát vị trí đứng, ánh sáng, góc máy hay tình tiết bổ sung (tuân theo phân loại vai trò và quy tắc xử lý xung đột của ảnh tham chiếu ở A1.2.1).
+- Vẫn phải tuân theo A0.1 về trung thành cốt truyện: mọi ngoại hình được tạo chỉ là “đề xuất thiết kế”, không giả làm sự thật của nguyên tác. Không được vì đó mà thêm sự kiện, nguồn gốc đạo cụ, quan hệ nhân vật hoặc quy tắc thế giới; nhân vật/đạo cụ/chữ xuất hiện trong ảnh tham chiếu mà nguyên tác không nêu không được tự đưa vào cốt truyện.
+
+---
+
+### A1.2.1 Liên kết ảnh tham chiếu Seedance 2.5 (bắt buộc)
+
+Khi mô hình đích là **Seedance 2.5** và người dùng có ảnh nhân vật, bối cảnh, sản phẩm, đạo cụ, sơ đồ vị trí hoặc tham chiếu hình ảnh khác, bắt buộc liên kết các ảnh đó vào mỗi đoạn tạo liên quan như một phần của prompt chính thức.
+
+**Quy tắc bắt buộc:**
+- Node ảnh thực/mã tham chiếu do người dùng cung cấp phải được **giữ và trích dẫn nguyên dạng**, ví dụ `{{node/image-xxxx}}`, `@角色名_v2`, `#场景名`. Không tự đổi tên, viết tắt hay bịa Ref không tồn tại.
+- Mỗi đoạn tạo 2.5 phải **tự chứa đầy đủ thông tin**: các ảnh tham chiếu cần thiết phải liệt kê lại trong `Reference binding` của chính đoạn đó, không viết “như trên” hoặc “dùng ảnh tham chiếu của đoạn trước”.
+- Ảnh nhân vật/sản phẩm dùng xuyên suốt phim vẫn phải được liên kết lại trong từng đoạn thực sự liên quan.
+- Chỉ liên kết các ảnh tham chiếu có liên quan thực sự đến đoạn hiện tại; không đưa mọi ảnh của cả tập vào tất cả các đoạn một cách tùy tiện.
+- Mỗi ảnh chỉ được kiểm soát những khía cạnh mà người dùng chỉ định hoặc có thể xác định rõ, không được vượt quyền chi phối các khía cạnh khác.
+
+**Trích xuất tài nguyên tham chiếu và đánh dấu ngắn gọn:**
+- Trước tiên tự động trích xuất những **tài nguyên tham chiếu thực sự có mặt và cần được gọi trong đoạn này** từ tình tiết, góc máy, hành động và nội dung hình ảnh. Xác định vai trò ảnh nhân vật, bối cảnh, sản phẩm, đạo cụ, vị trí, chuyển động, v.v. theo công dụng thực tế.
+- Với mỗi tham chiếu thực, chỉ dùng **nhãn nhận diện ngắn gọn** nêu nó là ai, là gì hoặc dùng vào việc gì; ví dụ “Tham chiếu nhân vật Naoto”, “Tham chiếu bối cảnh phòng khách nhà cũ”, “Tham chiếu đạo cụ chai rượu mơ”, “Tham chiếu vị trí của đoạn này”.
+- Không thêm giải thích dài về “kiểm soát gì/không kiểm soát gì” trong `Reference binding` cuối cùng. Giới hạn vai trò của từng ảnh vẫn phải hiểu theo mục đích rõ ràng của người dùng và thông tin xác định được; cấm đưa thêm nhân vật, đạo cụ, phông nền, chữ hoặc tư thế từ ảnh vào cốt truyện vượt quyền.
+- Nếu người dùng nói rõ “chỉ tham chiếu vị trí / chỉ trang phục / chỉ sản phẩm”, giữ từ “chỉ” trong nhãn ngắn gọn, ví dụ “Chỉ tham chiếu vị trí đứng”, “Chỉ tham chiếu trang phục”.
+
+**Xử lý xung đột:**
+- Nếu thiết kế người dùng viết bằng chữ mâu thuẫn với ảnh tham chiếu, dùng thứ tự ưu tiên nguồn sự thật ở A0.1.1; nội dung sửa bằng chữ rõ ràng gần nhất của người dùng có ưu tiên.
+- Nếu nhiều ảnh tham chiếu mâu thuẫn nhau, không tự trộn thành thiết kế mới; dùng riêng từng ảnh theo mục đích người dùng đã nêu.
+- Nếu ảnh tham chiếu có nhân vật, đạo cụ, chữ hoặc trang trí bổ sung mà người dùng chưa đề cập, không tự đưa chúng vào cốt truyện.
+
+**Định dạng Reference binding khuyến nghị cho 2.5:**
 ```text
 Reference binding:
-- {{node/image-xxxx}}：林直人角色参考
-- {{node/image-yyyy}}：老宅客厅场景参考
-- {{node/image-zzzz}}：梅酒瓶道具参考
-- {{node/image-aaaa}}：仅站位参考
+- {{node/image-xxxx}}：Tham chiếu nhân vật 林直人
+- {{node/image-yyyy}}：Tham chiếu bối cảnh 老宅客厅
+- {{node/image-zzzz}}：Tham chiếu đạo cụ 梅酒瓶
+- {{node/image-aaaa}}：Chỉ tham chiếu vị trí đứng
 ```
 
-上例中的节点形式仅表示**格式位置**；运行时必须替换为用户真实提供、且本段实际需要的完整节点 ID / 资产句柄，禁止照抄或编造示例 ID。若本段没有任何真实参考图片 / 资产句柄，则整节省略。
+Các dạng node trong ví dụ trên chỉ minh họa **vị trí theo định dạng**. Khi chạy, bắt buộc thay chúng bằng ID node/mã tài nguyên đầy đủ do người dùng thực sự cung cấp và đoạn này cần dùng; không sao chép nguyên ID minh họa hoặc tự bịa. Nếu đoạn không có ảnh tham chiếu/mã tài nguyên thực nào, bỏ toàn bộ mục này.
 
 
-### A1.3 画面文字：后期字幕 vs 实体资产文字
+### A1.3 Chữ trên hình: phụ đề hậu kỳ và chữ trên tài nguyên thật
 
-必须区分两类文字：
+Phải phân biệt hai loại chữ:
 
-**A. 后期型文字（默认禁止交给生成模型）**
-- 字幕、标题、说明卡、旁白卡、贴纸文案、UI 叠字、水印
-- 默认写成：**无字幕、无额外屏幕文字、无后期文字叠加**
-- 这些文字如有需要，默认留给后期剪辑添加
+**A. Chữ thêm ở hậu kỳ (mặc định không giao cho mô hình tạo)**
+- Phụ đề, tiêu đề, thẻ giải thích, thẻ lời dẫn, chữ trên nhãn dán, chữ giao diện đè lên hình, hình mờ.
+- Mặc định viết: **Không phụ đề, không chữ màn hình bổ sung, không lớp chữ hậu kỳ**.
+- Nếu cần những chữ này, mặc định để khâu dựng hậu kỳ bổ sung.
 
-**B. 剧情内实体文字 / 产品资产文字（不是字幕）**
-- 包装袋原有印刷、招牌、信件、书页、手机界面等
-- 若用户提供了参考图/资产图：优先写“**严格保持参考资产外观，不新增、不改写、不重绘包装文字**”，不要要求模型凭空生成清晰文字
-- 若没有参考资产：除非剧情必须读到具体文字，否则不要把“文字必须清晰可读”设为生成任务
-- 用户明确要求某段必须读出文字时，才逐字锁定；同时提示这是高风险生成项
+**B. Chữ thực trong cốt truyện / trên sản phẩm (không phải phụ đề)**
+- Chữ in sẵn trên bao bì, biển hiệu, thư, trang sách, giao diện điện thoại, v.v.
+- Nếu người dùng cung cấp ảnh tham chiếu/ảnh tài nguyên, ưu tiên ghi **“Giữ nguyên nghiêm ngặt hình thức của tài nguyên tham chiếu; không thêm, viết lại hoặc vẽ lại chữ trên bao bì”**. Không buộc mô hình tự tạo chữ sắc nét từ đầu.
+- Nếu không có tài nguyên tham chiếu, trừ khi cốt truyện yêu cầu phải đọc được chữ cụ thể, không biến “chữ phải rõ để đọc” thành yêu cầu tạo.
+- Chỉ khi người dùng yêu cầu rõ phải đọc được chữ trong đoạn nào đó mới khóa chính xác từng chữ; đồng thời lưu ý đây là hạng mục tạo có rủi ro cao.
 
-**因此：**“无字幕 / 无额外屏幕文字”与“产品包装上已有文字”不冲突。禁止的是 AI 自行新增或改写文字，不是把真实包装变成无字包装。
+**Vì vậy:** “Không phụ đề / không chữ màn hình bổ sung” không mâu thuẫn với “chữ đã in trên bao bì sản phẩm”. Điều bị cấm là AI tự thêm hoặc sửa chữ, chứ không phải biến bao bì thật thành bao bì không chữ.
 
 ---
 
-## A2. 全量节拍解析与顺序保持（不筛掉剧情）
+## A2. Phân tích đầy đủ các nhịp truyện và giữ nguyên thứ tự (không loại bỏ tình tiết)
 
-A2 的目标不是“挑几个关键点”，而是把原剧情拆成**完整、连续、可计时的叙事节拍**。五类关键节拍只做标记，不作为删减门槛。
+Mục tiêu của A2 không phải “chọn vài điểm quan trọng” mà là chia câu chuyện gốc thành **các nhịp tự sự đầy đủ, liên tục và có thể tính thời lượng**. Năm loại nhịp quan trọng chỉ dùng để đánh dấu, không dùng làm tiêu chí cắt bỏ.
 
-### A2.1 原子节拍：全部保留，并建立“源剧情账本”
+### A2.1 Nhịp nguyên tử: giữ tất cả và lập “sổ cái tình tiết nguồn”
 
-先按原文顺序拆出原子节拍，常见类型包括：
+Trước tiên chia thành các nhịp nguyên tử theo đúng thứ tự nguyên tác, gồm những loại thường gặp:
 
-| 原子节拍 | 定义 | 示例 |
+| Nhịp nguyên tử | Định nghĩa | Ví dụ |
 |---|---|---|
-| **对白** | 角色实际说出的完整一句或一组连续句 | 问、答、打断、补充 |
-| **动作** | 会改变位置/物件/身体状态的动作 | 拿起、放下、起身、走到门口 |
-| **反应** | 因上一事件产生、但不一定说话的反馈 | 停杯、后躲、看手腕、沉默 |
-| **信息** | 观众/角色获得新事实 | 看见某物、认出产品、发现伤口 |
-| **过渡/留白** | 用户原文明确要求的空间、时间或情绪过渡 | 空镜、环境音、停顿、场景衔接 |
+| **Lời thoại** | Một câu hoàn chỉnh hoặc chuỗi câu liên tiếp nhân vật thực sự nói | Hỏi, đáp, ngắt lời, bổ sung |
+| **Hành động** | Hành động làm thay đổi vị trí, đồ vật hoặc trạng thái cơ thể | Nhấc lên, đặt xuống, đứng dậy, đi đến cửa |
+| **Phản ứng** | Đáp lại một sự kiện trước đó, có thể không cần lời nói | Dừng chiếc cốc, né lùi, nhìn cổ tay, im lặng |
+| **Thông tin** | Khán giả/nhân vật tiếp nhận một sự thật mới | Nhìn thấy vật nào đó, nhận ra sản phẩm, phát hiện vết thương |
+| **Chuyển tiếp/khoảng lặng** | Chuyển đổi không gian, thời gian hoặc cảm xúc được người dùng yêu cầu rõ trong nguyên tác | Khung hình không người, tiếng môi trường, khoảng dừng, nối cảnh |
 
-**所有原子节拍都要登记。** 不属于“高潮/转折”的普通动作也不能因此消失。
+**Phải ghi nhận tất cả nhịp nguyên tử.** Hành động bình thường dù không thuộc “cao trào/cú ngoặt” cũng không được mất đi.
 
-内部给每个源节拍编号 `E01 / E02 / E03 ...`，至少记录：
-- 原文事件是谁做 / 谁说；
-- 动作或对白是什么；
-- 作用对象 / 道具是什么；
-- 与前后事件的原始顺序；
-- 用户是否明确给了时间、位置、数量、左右手、道具来源等事实。
+Đánh số nội bộ cho từng nhịp nguồn `E01 / E02 / E03 ...`, ít nhất ghi:
+- Ai thực hiện sự kiện / ai nói trong nguyên tác;
+- Hành động hoặc lời thoại cụ thể;
+- Đối tượng/đạo cụ bị tác động;
+- Thứ tự gốc so với sự kiện trước và sau;
+- Người dùng có cung cấp rõ các dữ kiện về thời gian, vị trí, số lượng, tay trái/phải, nguồn gốc đạo cụ, v.v. hay không.
 
-后续每个 Timeline 中**会改变剧情状态的句子**都必须能映射回一个 `E##`。允许没有 `E##` 的内容仅限：摄影、构图、光线可见结果、已有动作直接对应的物理细节/拟音，以及不改变剧情事实的执行性描述。
+Trong mọi Timeline tiếp theo, **mỗi câu làm thay đổi trạng thái cốt truyện** phải ánh xạ được về một `E##`. Nội dung không có `E##` chỉ được phép là chi tiết quay phim, bố cục, kết quả ánh sáng có thể nhìn thấy, chi tiết vật lý/tiếng động trực tiếp của hành động đã có hoặc mô tả thực thi không thay đổi sự thật cốt truyện.
 
-**若某句话会改变人物、道具、位置、数量、关系、信息或因果，却找不到对应源节拍 → 视为 AI 新增剧情，必须删除。**
+**Nếu một câu làm thay đổi nhân vật, đạo cụ, vị trí, số lượng, quan hệ, thông tin hoặc nhân quả nhưng không tìm được nhịp nguồn tương ứng → xem là tình tiết do AI tự thêm và phải xóa.**
 
-### A2.2 五类关键标签：只标重要性，不改顺序
+### A2.2 Năm nhãn quan trọng: chỉ đánh dấu mức độ quan trọng, không đổi thứ tự
 
-在原子节拍上额外打标签：
-- **转折点**：关系 / 权力 / 信息发生反转
-- **情绪峰值**：本段/本场最强情绪泄露
-- **信息增量点**：新信息改变理解
-- **决策点**：角色做出选择并承担后果
-- **沉默点**：铺垫后的有效留白
+Gắn thêm nhãn cho các nhịp nguyên tử:
+- **Điểm ngoặt:** quan hệ / quyền lực / thông tin đảo chiều.
+- **Đỉnh cảm xúc:** cảm xúc bộc lộ mạnh nhất trong đoạn/cảnh.
+- **Điểm thông tin mới:** dữ kiện mới làm thay đổi cách hiểu.
+- **Điểm quyết định:** nhân vật lựa chọn và chịu hậu quả.
+- **Điểm im lặng:** khoảng lặng có dụng ý sau phần dẫn dắt.
 
-**硬规则：**
-- 标签可以重叠，一个节拍可同时属于多类。
-- 没有任何关键标签的节拍仍然保留。
-- **严禁“按情绪曲线排序剧情”。** 情绪曲线只能按原剧情时间顺序标注：低 → 压力 → 峰值 → 释放；它是分析图，不是重新剪辑指令。
+**Quy tắc bắt buộc:**
+- Nhãn có thể chồng lấp; một nhịp thuộc nhiều loại cùng lúc.
+- Nhịp không có nhãn quan trọng nào vẫn phải giữ.
+- **Nghiêm cấm “sắp lại tình tiết theo đường cong cảm xúc”.** Đường cong cảm xúc chỉ được ghi chú theo thời gian nguyên tác: thấp → căng thẳng → đỉnh điểm → giải tỏa; đây là sơ đồ phân tích, không phải lệnh dựng lại thứ tự câu chuyện.
 
-### A2.3 每个节拍先做时间预算
+### A2.3 Lập ngân sách thời gian cho từng nhịp trước
 
-对每个原子节拍估算最低自然时长：
+Ước tính thời lượng tự nhiên tối thiểu của mỗi nhịp nguyên tử:
 
-`节拍最低时长 = 自然对白时间 + 必要停顿 + 必须串行完成的动作/反应时间`
+`Thời lượng tối thiểu của nhịp = thời gian thoại tự nhiên + khoảng dừng cần thiết + thời gian hành động/phản ứng bắt buộc diễn ra tuần tự`
 
-注意：
-- 能自然同时发生的“说话 + 小动作”可以重叠计时；
-- 必须先后发生的因果动作必须相加；
-- 长对白不能按“长句固定 3–3.5s”粗暴处理；要按实际文本长度、停顿、语气估算自然朗读时间；
-- 不确定时宁可留出约 10%–20% 呼吸余量，也不要靠异常快语速硬塞；
-- 关键停顿、反应、转身、走位不能被对白完全吞掉。
+Lưu ý:
+- “Nói + cử động nhỏ” có thể tính chồng thời gian nếu tự nhiên diễn ra đồng thời;
+- Các hành động nhân quả bắt buộc nối tiếp phải cộng thời lượng;
+- Không xử lý thô lời thoại dài bằng quy tắc “câu dài cố định 3–3,5s”; phải ước tính thời gian đọc tự nhiên dựa trên độ dài văn bản thực, khoảng ngắt và ngữ điệu;
+- Nếu không chắc, nên dành khoảng 10%–20% thời gian thở thay vì ép thoại vào nhịp nói nhanh bất thường;
+- Các khoảng dừng, phản ứng, quay người, di chuyển vị trí quan trọng không được lời thoại chiếm hết thời gian.
 
-### A2.4 节拍 → 镜头 → 生成段
+### A2.4 Nhịp truyện → góc máy → đoạn tạo
 
-只合并**时间上相邻**的节拍，不跨越中间剧情拼接。**合段只改变承载方式，不改变任何 `E##` 的内容、执行者、对象、顺序或数量。一个源节拍可以跨多个镜头表现，但不能被改写成另一个事件。**
+Chỉ ghép các nhịp **liền kề theo thời gian**, không nhảy qua tình tiết ở giữa để ghép. **Ghép đoạn chỉ thay đổi cách chứa nội dung, không thay nội dung, người thực hiện, đối tượng, thứ tự hoặc số lượng của bất kỳ `E##` nào. Một nhịp nguồn có thể được thể hiện qua nhiều góc máy nhưng không được viết lại thành sự kiện khác.**
 
-一段可以容纳多个节拍，但“1–4 个节拍”仅是经验参考，不是硬上限。是否继续合并，以以下条件为准：
-1. 合并后总时长 ≤ 模型单段上限；
-2. 所有对白都能以自然语速说完；
-3. 关键因果动作有完整过程；
-4. 至少留得下必要反应与呼吸；
-5. 不因塞得过满导致每 1–2 秒就强制切镜；
-6. 段末可以形成清晰、可在下一段重新声明的状态。
+Một đoạn có thể chứa nhiều nhịp nhưng “1–4 nhịp” chỉ là kinh nghiệm tham khảo, không phải giới hạn cứng. Quyết định có ghép tiếp hay không theo các điều kiện:
+1. Tổng thời lượng sau khi ghép ≤ giới hạn mỗi đoạn của mô hình;
+2. Tất cả lời thoại có thể nói hết với tốc độ tự nhiên;
+3. Hành động nhân quả quan trọng có quá trình hoàn chỉnh;
+4. Ít nhất còn đủ thời gian cho phản ứng và nhịp thở cần thiết;
+5. Không nhồi đến mức phải cắt góc máy mỗi 1–2 giây;
+6. Cuối đoạn có trạng thái rõ ràng, có thể được khai báo lại ở đoạn kế tiếp.
 
-出现以下任一情况，应主动开新段，即使理论上还能塞：
-- 对白已经接近时间预算上限；
-- 同段需要过多彼此竞争的动作/反应；
-- 情绪或目标发生明确阶段切换；
-- 场景/时间发生切换；
-- 继续合并会破坏段间可独立生成性；
-- 需要异常语速、瞬移动作或省略反应才能塞下。
+Khi gặp bất kỳ trường hợp nào sau đây, chủ động mở đoạn mới dù về lý thuyết vẫn còn chỗ:
+- Lời thoại đã gần chạm ngân sách thời gian;
+- Trong cùng đoạn có quá nhiều hành động/phản ứng cạnh tranh;
+- Cảm xúc hoặc mục tiêu chuyển giai đoạn rõ rệt;
+- Bối cảnh hoặc thời gian thay đổi;
+- Ghép thêm sẽ làm mất khả năng tạo độc lập của từng đoạn;
+- Phải nói nhanh bất thường, dịch chuyển tức thời hoặc bỏ phản ứng mới nhét vừa.
 
-### A2.5 长剧情的分批方式
+### A2.5 Cách chia lô câu chuyện dài
 
-**先完成全片段规划，再分批交付。**
+**Hoàn tất kế hoạch toàn bộ các đoạn phim trước, sau đó mới chia lô bàn giao.**
 
-例如一集 180s：
-- Seedance 2.0 理论最少 12 段，但实际可因对白密度变成 13、14、15……段；
-- 全片段号先固定为 G01、G02、G03……；
-- 然后按单批最多 6 段交付：Batch 1 = G01–G06，Batch 2 = G07–G12，Batch 3 = 剩余段；
-- Seedance 2.5 同理，单批最多 3 段。
+Ví dụ một tập dài 180s:
+- Seedance 2.0 có số đoạn tối thiểu lý thuyết là 12 nhưng thực tế có thể thành 13, 14, 15… tùy mật độ thoại;
+- Trước tiên cố định số thứ tự toàn phim là G01, G02, G03…;
+- Sau đó bàn giao tối đa 6 đoạn mỗi lô: Batch 1 = G01–G06, Batch 2 = G07–G12, Batch 3 = các đoạn còn lại;
+- Seedance 2.5 làm tương tự, tối đa 3 đoạn mỗi lô.
 
-**批次边界只影响一次输出多少段，不改变全片顺序、段号和连续性。**
+**Ranh giới giữa các lô chỉ ảnh hưởng số đoạn bàn giao trong một lần, không thay thứ tự toàn phim, số thứ tự đoạn hoặc tính liên tục.**
 
-### A2.6 兜底
+### A2.6 Phương án dự phòng
 
-如果剧情没有明显转折/峰值，也不要强行制造五类关键点。按原文顺序，以“一个可完整执行的动作/对白/反应单元”为节拍继续规划即可。
+Nếu câu chuyện không có điểm ngoặt hoặc đỉnh cảm xúc rõ ràng, không được cố tạo ra năm loại điểm quan trọng. Chỉ cần tiếp tục lên kế hoạch đúng thứ tự nguyên tác, lấy “một đơn vị hành động/lời thoại/phản ứng có thể thực hiện trọn vẹn” làm một nhịp.
 
 ---
 
-## A3. 分段与时长预算
+## A3. Chia đoạn và lập ngân sách thời lượng
 
-### A3.0 先区分“理论最少段数”和“实际段数”
+### A3.0 Phân biệt “số đoạn tối thiểu lý thuyết” và “số đoạn thực tế” trước
 
-**单段硬上限：**
-- Seedance 2.0：每段 ≤ 15s
-- Seedance 2.5：每段 ≤ 30s
+**Giới hạn cứng của mỗi đoạn:**
+- Seedance 2.0: mỗi đoạn ≤ 15s.
+- Seedance 2.5: mỗi đoạn ≤ 30s.
 
-当用户给出严格总时长时，可先算理论最少段数：
+Khi người dùng đặt tổng thời lượng nghiêm ngặt, có thể tính số đoạn tối thiểu lý thuyết trước:
 
 ```text
-理论最少段数 = ⌈总时长 / 单段上限⌉
+Số đoạn tối thiểu lý thuyết = ⌈tổng thời lượng / giới hạn mỗi đoạn⌉
 ```
 
-这个公式只回答“至少需要几段”，**不等于实际必须只做这么多段**。
+Công thức này chỉ trả lời “cần ít nhất bao nhiêu đoạn”, **không có nghĩa thực tế bắt buộc chỉ được làm đúng số đó**.
 
-示例：55s / Seedance 2.0：
-- 理论最少 = 4 段；
-- 若对白/动作很轻，可以做 15 + 15 + 15 + 10；
-- 若剧情密度高，也可以做 12 + 11 + 11 + 11 + 10 = 55s；
-- 只要每段 ≤ 15s、总和符合用户总时长、剧情完整即可。
+Ví dụ: 55s / Seedance 2.0:
+- Tối thiểu lý thuyết = 4 đoạn;
+- Nếu lời thoại/hành động ít, có thể chia 15 + 15 + 15 + 10;
+- Nếu tình tiết dày, cũng có thể chia 12 + 11 + 11 + 11 + 10 = 55s;
+- Miễn mỗi đoạn ≤ 15s, tổng phù hợp thời lượng người dùng yêu cầu và cốt truyện được giữ đầy đủ.
 
-**原则：在“不过密”和“不碎片化”之间取平衡，而不是追求最少段数。**
+**Nguyên tắc: cân bằng giữa “không quá dày” và “không quá vụn”, thay vì theo đuổi số đoạn ít nhất.**
 
-### A3.1 实际段数的确定顺序
+### A3.1 Trình tự xác định số đoạn thực tế
 
-按以下顺序决定：
-1. 先完成 A2 的全量节拍与最低时长预算；
-2. 从前往后合并相邻节拍；
-3. 每接近单段上限时，检查对白、动作、反应是否仍自然；
-4. 若不自然，提前截断并开新段；
-5. 得到**全片实际段数**；
-6. 最后再按 A3.4 分 Batch。
+Quyết định theo thứ tự:
+1. Hoàn tất các nhịp đầy đủ và ngân sách thời lượng tối thiểu của A2 trước;
+2. Ghép các nhịp liền kề từ đầu đến cuối;
+3. Mỗi khi gần chạm giới hạn đoạn, kiểm tra lời thoại, hành động và phản ứng còn tự nhiên không;
+4. Nếu không còn tự nhiên, kết thúc sớm và mở đoạn mới;
+5. Xác định **số đoạn thực tế của toàn phim**;
+6. Cuối cùng chia Batch theo A3.4.
 
-不要先决定“必须 4 段”，再倒逼剧情塞进 4 段。
+Không quyết trước “phải có 4 đoạn” rồi ép nội dung nhét vào 4 đoạn.
 
-### A3.2 对白时长检查（硬门槛）
+### A3.2 Kiểm tra thời lượng lời thoại (điều kiện cứng)
 
-每句对白必须在对应镜头/时间窗内真实说得完。
+Mỗi câu thoại phải thực sự nói hết được trong góc máy/khoảng thời gian tương ứng.
 
-执行方式：
-- 先按自然口语模拟朗读时间；
-- 再加入剧本明确要求的停顿、结巴、喘息、欲言又止；
-- 如果说话时还有可并行的小动作，可重叠；
-- 如果动作必须等台词前/后完成，则单独占时；
-- **禁止用异常快语速解决时长不够；**
-- **禁止因为时长不够删词、改词、吞句尾。**
+Cách thực hiện:
+- Đầu tiên ước tính thời gian đọc theo giọng nói tự nhiên;
+- Sau đó cộng các khoảng dừng, nói lắp, thở gấp, ngập ngừng đã được kịch bản yêu cầu rõ;
+- Nếu trong lúc nói có cử động nhỏ diễn ra đồng thời, có thể tính trùng thời gian;
+- Nếu hành động phải hoàn tất trước/sau lời thoại, nó chiếm thời gian riêng;
+- **Cấm giải quyết thiếu thời lượng bằng tốc độ nói nhanh bất thường;**
+- **Cấm xóa từ, đổi từ hoặc nuốt cuối câu vì không đủ thời lượng.**
 
-若用户给出的“严格总时长”与“全部原文台词 + 必须动作”的最低自然时长互相冲突：
-- 优先压缩**AI 自己添加的**空镜、无信息停顿、冗余运镜；用户原文明确要求的空镜、停顿、留白不得压缩或删除；
-- 仍不够时，在全片总览明确标注“时长约束冲突”；
-- 不擅自删台词或改剧情来假装满足。
+Nếu “tổng thời lượng nghiêm ngặt” người dùng đưa ra mâu thuẫn với thời lượng tự nhiên tối thiểu của “toàn bộ lời thoại gốc + hành động bắt buộc”:
+- Ưu tiên rút ngắn khung hình trống, khoảng dừng không thêm thông tin và chuyển động camera dư thừa **do AI tự thêm**; các khung hình trống, khoảng dừng và khoảng lặng được người dùng nêu rõ trong nguyên tác không được rút ngắn hoặc xóa;
+- Nếu vẫn không đủ, đánh dấu rõ “Xung đột giới hạn thời lượng” trong tổng quan toàn phim;
+- Không tự xóa thoại hoặc sửa cốt truyện để giả vờ đáp ứng.
 
-### A3.3 时间轴写法
+### A3.3 Cách ghi timeline
 
-- 每段时间码从 `00:00` 重新开始，便于直接单独投喂模型；
-- 全片总览另写该段对应的**全局时间范围**；
-- 段内动作时间码不得互相矛盾；
-- 并行动作可以重叠时间窗，但要明确“同时”；
-- 串行动作必须前后衔接，不能靠同一秒完成多个不可能同时完成的动作。
+- Mốc thời gian của từng đoạn bắt đầu lại từ `00:00` để có thể đưa riêng vào mô hình;
+- Tổng quan toàn phim phải ghi thêm **khoảng thời gian toàn cục** tương ứng với mỗi đoạn;
+- Các mốc thời gian hành động trong cùng đoạn không được mâu thuẫn;
+- Hành động song song có thể trùng khoảng thời gian nhưng phải ghi rõ “đồng thời”;
+- Hành động tuần tự phải tiếp nối trước/sau, không ép nhiều hành động không thể diễn ra đồng thời vào cùng một giây.
 
-### A3.4 长剧情与单批容量
+### A3.4 Câu chuyện dài và giới hạn mỗi lô
 
-**单批交付上限（容量限制，不是全片上限）：**
-- Seedance 2.0：单批最多 6 段
-- Seedance 2.5：单批最多 3 段
+**Giới hạn bàn giao mỗi lô (giới hạn dung lượng, không phải giới hạn toàn phim):**
+- Seedance 2.0: tối đa 6 đoạn/lô;
+- Seedance 2.5: tối đa 3 đoạn/lô.
 
-超过时：
-- 全片段号保持连续；
-- 仅拆成多个 Batch；
-- 不重新计算前面段号；
-- 不把未交付内容称为“被切掉”，统一称“下一批待交付段”。
+Nếu vượt giới hạn:
+- Giữ số thứ tự đoạn liên tục trên toàn phim;
+- Chỉ chia thành nhiều Batch;
+- Không đánh lại số thứ tự các đoạn trước;
+- Không gọi phần chưa bàn giao là “bị cắt bỏ”, thống nhất gọi là “những đoạn chờ bàn giao ở lô tiếp theo”.
 
-2–3 分钟剧情完全允许存在 2、3、4 个甚至更多批次。
+Một câu chuyện 2–3 phút hoàn toàn có thể chia thành 2, 3, 4 lô hoặc nhiều hơn.
 
-### A3.5 单段镜头密度（推荐，不是硬上限）
+### A3.5 Mật độ góc máy trong mỗi đoạn (khuyến nghị, không phải giới hạn cứng)
 
-- Seedance 2.0：通常 1–2 个主要镜头；内容极轻时可 3 个，但避免碎剪
-- Seedance 2.5：通常 2–4 个主要镜头
+- Seedance 2.0: thường 1–2 góc máy chính; khi nội dung rất nhẹ có thể 3, nhưng tránh dựng vụn;
+- Seedance 2.5: thường 2–4 góc máy chính.
 
-如果一段为了装下剧情需要持续高频 HARD CUT，优先拆段，而不是继续塞镜头。
+Nếu để chứa hết tình tiết trong một đoạn phải liên tục HARD CUT với tần suất cao, ưu tiên chia đoạn thay vì nhồi thêm góc máy.
 
-### A3.6 通用禁止与文字规则
+### A3.6 Các điều cấm chung và quy tắc chữ
 
-默认禁止：
-- 不叠化、不闪白、不甩镜、不做无剧情依据的速度变化；
-- 不新增用户未提供的 VO、旁白、台词；
-- 不自动添加 BGM、情绪提示音；
-- 不增加新角色、新道具、新剧情动作；
-- **不生成后期字幕、标题、说明卡、UI 叠字、水印或其他额外屏幕文字。**
+Mặc định cấm:
+- Không chuyển cảnh chồng mờ, chớp trắng, lia máy giật hoặc thay đổi tốc độ không có căn cứ tình tiết;
+- Không thêm VO, lời dẫn hoặc lời thoại người dùng chưa cung cấp;
+- Không tự thêm BGM hoặc âm thanh hiệu ứng nhấn cảm xúc;
+- Không thêm nhân vật, đạo cụ hoặc hành động tình tiết mới;
+- **Không tạo phụ đề hậu kỳ, tiêu đề, thẻ giải thích, chữ giao diện đè lên, watermark hoặc chữ màn hình bổ sung khác.**
 
-但场景内已有的实体文字 / 产品包装文字按 A1.3：
-- 有参考资产时保持参考外观，不新增、不改写、不重绘；
-- 不把“包装必须出现”误写成“要求 AI 生成清晰准确文字”。
+Với chữ thực đã có trong cảnh/chữ trên bao bì sản phẩm, áp dụng A1.3:
+- Nếu có tài nguyên tham chiếu, giữ nguyên hình thức tham chiếu; không thêm, viết lại hoặc vẽ lại chữ;
+- Không hiểu sai “bao bì phải xuất hiện” thành “buộc AI tạo chữ rõ ràng và chính xác”.
 
 ---
 
-## A4. 资产与出镜状态规划（按时间轴写）
+## A4. Lập kế hoạch tài nguyên và trạng thái xuất hiện trong hình (theo timeline)
 
-A4 是所有模型共用的**内部规划规则**。角色如果在同一段不同时间块/镜头里的出镜状态不同，必须按时间轴分别登记，不能只写一个模糊总状态。
+A4 là **quy tắc lập kế hoạch nội bộ** dùng chung cho mọi mô hình. Nếu một nhân vật có trạng thái xuất hiện khác nhau ở các khối thời gian/góc máy trong cùng một đoạn, phải ghi riêng theo timeline, không chỉ ghi một trạng thái chung mơ hồ.
 
-**A4 补充 · 外观与光线缺失时的设计提案**
+**Bổ sung A4 · Đề xuất thiết kế khi thiếu ngoại hình và ánh sáng**
 
-当剧本 / 用户未提供某角色外观，或某场景光线与环境基调缺失，但本集画面确实需要时：
-- 允许按 Toonflow 的视觉设计 / 色彩用光方法（visualDesign / colorAndLight）推导「设计提案」，填入本段身份 + 外观锚点或场景光线；
-- 所有提案一律标注「设计提案」，不视为剧情事实；不因此新增剧情、道具来源、角色关系或世界规则；
-- 若不影响本段生成，则保持原文抽象层级，不强行补设计（遵循 A0.1.5）。
+Khi kịch bản/người dùng chưa cung cấp ngoại hình một nhân vật hoặc ánh sáng và sắc thái môi trường một bối cảnh, nhưng hình ảnh của tập này thật sự cần:
+- Được phép suy ra một “đề xuất thiết kế” theo phương pháp thiết kế hình ảnh / màu sắc và ánh sáng Toonflow (visualDesign / colorAndLight), điền vào các đặc điểm nhận diện và ngoại hình hoặc ánh sáng bối cảnh của đoạn;
+- Mọi đề xuất đều phải ghi rõ “đề xuất thiết kế”, không xem là sự thật cốt truyện; không vì thế thêm tình tiết, nguồn gốc đạo cụ, quan hệ nhân vật hoặc quy tắc thế giới;
+- Nếu không ảnh hưởng đến việc tạo đoạn này, giữ nguyên mức độ trừu tượng của nguyên tác, không ép bổ sung thiết kế (theo A0.1.5).
 
-**最终输出映射：**
-- Seedance 2.0：仍在每段正文前显式输出“资产标识”。
-- Seedance 2.5：不额外输出重复的“资产标识”大块；A4 信息分别映射进 `Reference binding`、`Immutable locks`、`Timeline` 与 `Preserve`。只有用户明确要求单列资产清单时才额外输出。
+**Ánh xạ vào đầu ra cuối:**
+- Seedance 2.0: vẫn xuất riêng mục “Nhận diện tài nguyên” trước nội dung của mỗi đoạn.
+- Seedance 2.5: không xuất thêm một khối “Nhận diện tài nguyên” trùng lặp; ánh xạ thông tin A4 vào các trường `Reference binding`, `Immutable locks`, `Timeline` và `Preserve`. Chỉ xuất thêm danh sách tài nguyên riêng khi người dùng yêu cầu rõ.
 
-内部规划可使用下列格式：
+Để lập kế hoạch nội bộ có thể dùng định dạng sau:
 
 ```text
-## 资产标识
+## Nhận diện tài nguyên
 
-### 涉及角色
+### Nhân vật liên quan
 
-角色A｜出镜状态总览
-- 时间块 / 镜头 1｜00:00–00:XX｜仅手部 / 实际出镜 / 完全画外……｜说话 / 不说话
-- 时间块 / 镜头 2｜00:XX–00:XX｜……
+Nhân vật A｜Tổng quan trạng thái xuất hiện
+- Khối thời gian / Góc máy 1｜00:00–00:XX｜Chỉ tay / Xuất hiện trong hình / Hoàn toàn ngoài khung…｜Có thoại / Không thoại
+- Khối thời gian / Góc máy 2｜00:XX–00:XX｜…
 
-身份 + 外观锚点：只引用用户已给定的信息。
-世界坐标：只写源剧情已确定或生成所必需的中性空间关系。
-画面坐标：按当前机位描述，不改变世界位置事实。
-特殊状态：只登记源剧情已有的脏污 / 伤势 / 湿度 / 持物等状态。
-本段重点表演：把已有剧情动作写得可见，不新增动作。
-同期台词严格保持原文：
+Danh tính + đặc điểm ngoại hình: chỉ dùng thông tin người dùng đã cung cấp.
+Tọa độ thế giới: chỉ ghi quan hệ không gian đã được nguyên tác xác định hoặc tọa độ trung tính bắt buộc để tạo.
+Tọa độ khung hình: mô tả theo vị trí camera hiện tại, không thay đổi sự thật về vị trí thế giới.
+Trạng thái đặc biệt: chỉ ghi các trạng thái bẩn / bị thương / ẩm ướt / cầm đồ, v.v. đã có trong nguyên tác.
+Diễn xuất trọng tâm của đoạn: làm cho hành động đã có nhìn thấy được, không thêm hành động.
+Giữ nguyên chính xác lời thoại đồng bộ theo nguyên tác:
 「……」
 
-角色B｜出镜状态总览
-- 时间块 / 镜头 1｜00:00–00:XX｜完全画外｜仅同期对白
-- 时间块 / 镜头 2｜00:XX–00:XX｜实际出镜｜不说话
+Nhân vật B｜Tổng quan trạng thái xuất hiện
+- Khối thời gian / Góc máy 1｜00:00–00:XX｜Hoàn toàn ngoài khung｜Chỉ có lời thoại đồng bộ
+- Khối thời gian / Góc máy 2｜00:XX–00:XX｜Xuất hiện trong hình｜Không thoại
 ……
 
-### 涉及场景
-场景A｜时间
-（场景锚点 + 摄影机位置/朝向/高度 + 前中后景 + 空间关系）
+### Bối cảnh liên quan
+Bối cảnh A｜Thời gian
+(Đặc điểm cố định của bối cảnh + vị trí/hướng/độ cao camera + tiền/trung/hậu cảnh + quan hệ không gian)
 
-### 关键道具
-道具A
-（源剧情给定的段首状态 + 源剧情已有的时间轴动作 + 段末状态 + 文字/包装处理方式；不追溯未说明的来源）
+### Đạo cụ quan trọng
+Đạo cụ A
+(Trạng thái đầu đoạn do nguyên tác cung cấp + hành động trên timeline đã có trong nguyên tác + trạng thái cuối đoạn + cách xử lý chữ/bao bì; không truy ngược nguồn gốc chưa được nêu)
 ```
 
-### A4.1 角色出镜状态词表
+### A4.1 Bảng thuật ngữ trạng thái xuất hiện của nhân vật
 
-按每个镜头实际可见范围选用：
-- 实际出镜并说话
-- 实际出镜但不说话
-- 仅面部局部出镜
-- 仅手部出镜
-- 仅肩后出镜
-- 仅背影出镜
-- 仅脚部出镜
-- 完全画外｜仅同期对白
-- 完全画外｜无声音
+Chọn theo vùng thực sự nhìn thấy trong mỗi góc máy:
+- Xuất hiện trong hình và đang nói;
+- Xuất hiện trong hình nhưng không nói;
+- Chỉ một phần khuôn mặt xuất hiện;
+- Chỉ bàn tay xuất hiện;
+- Chỉ xuất hiện phía sau vai;
+- Chỉ thấy lưng;
+- Chỉ thấy bàn chân;
+- Hoàn toàn ngoài khung｜Chỉ có lời thoại đồng bộ;
+- Hoàn toàn ngoài khung｜Không có tiếng.
 
-**同一角色一段内有两种以上状态 → 必须列时间轴。**
+**Nếu cùng một nhân vật có từ hai trạng thái trở lên trong cùng đoạn → bắt buộc liệt kê theo timeline.**
 
-### A4.2 角色条目必含 6 类信息
-1. 身份 + 外观锚点
-2. 每镜出镜状态时间轴
-3. 世界坐标 + 画面坐标
-4. 特殊状态（本段会变化的：脏污 / 伤口 / 湿度 / 情绪外显等）
-5. 本段重点表演 + 3–5 条可见表演要求
-6. 同期台词原文（若有）
+### A4.2 Mục nhân vật bắt buộc chứa sáu loại thông tin
+1. Danh tính + đặc điểm ngoại hình;
+2. Timeline trạng thái xuất hiện theo từng góc máy;
+3. Tọa độ thế giới + tọa độ khung hình;
+4. Trạng thái đặc biệt (những thứ thay đổi trong đoạn: bẩn / vết thương / độ ẩm / cảm xúc biểu lộ, v.v.);
+5. Diễn xuất trọng tâm + 3–5 yêu cầu diễn xuất nhìn thấy được;
+6. Lời thoại đồng bộ nguyên văn (nếu có).
 
-### A4.3 场景条目必含 4 类信息
-1. 场景锚点
-2. 摄影机位置 + 朝向 + 高度
-3. 前景 / 中景 / 后景
-4. 人物/地标空间关系与轴线
+### A4.3 Mục bối cảnh bắt buộc chứa bốn loại thông tin
+1. Đặc điểm cố định của bối cảnh;
+2. Vị trí + hướng + độ cao camera;
+3. Tiền cảnh / trung cảnh / hậu cảnh;
+4. Quan hệ không gian và trục giữa nhân vật/địa vật.
 
-### A4.4 道具条目必含 4 类信息
-1. 段首绝对位置 / 使用者 / 状态
-2. 本段时间轴动作（谁、何时、怎么动）
-3. 段末状态
-4. 禁止项；若有包装文字，注明按 A1.3“保持参考资产，不新增/改写/重绘文字”
+### A4.4 Mục đạo cụ bắt buộc chứa bốn loại thông tin
+1. Vị trí tuyệt đối / người sử dụng / trạng thái đầu đoạn;
+2. Hành động trên timeline của đoạn này (ai, khi nào, di chuyển thế nào);
+3. Trạng thái cuối đoạn;
+4. Những điều cấm; nếu có chữ bao bì, ghi rõ theo A1.3 “Giữ nguyên tài nguyên tham chiếu, không thêm/viết lại/vẽ lại chữ”.
 
-### A4.5 禁止
-- 不复制整套角色档案，只保留本段需要的锚点
-- 不写未出现的资产
-- 不把资产标识写成重复一遍完整剧情
-- 不用“本段实际出镜并说话（但镜头 1 又画外）”这种互相冲突的总括写法
-- 不要求 AI 凭空生成精确包装文字来替代参考资产
-
----
-
-## A5. 站位：世界坐标 + 画面坐标（双层 · 自包含）
-
-**核心前提：每一段生成时，模型看不到任何上一段画面，也不依赖上一段尾帧参考。**
-
-### A5.1 每段必须自包含的 5 块信息
-
-1. **世界坐标 · 轴线与地标**：角色相对门、桌、窗、走廊等真实位置；与机位无关。
-2. **画面坐标 · 当前镜头中的左右/前后/遮挡**：随当前机位重新声明。
-3. **光源方向 · 世界层 + 画面层**：只在同一连续光照条件下继承。
-4. **道具绝对位置与状态**：含本段移动路径。
-5. **本段结束状态**：下一段必须把它重写成“绝对初始状态”，而不是写“延续上一段”。
-
-### A5.2 连续场景的状态链
-
-同一地点、同一连续时间内：
-
-`上一段结束状态 → 下一段重新写成绝对初始状态 → 本段动作 → 本段结束状态`
-
-继承内容包括：
-- 角色实际世界位置与身体朝向
-- 道具位置、持有者、数量、液面、污渍/损耗
-- 伤势、服装、湿度、血迹、烟尘等持续状态
-- 主光方向、色温和环境条件
-
-### A5.3 人物移动只服从源剧情，不为连续性补动作
-
-禁止的是 AI 自己制造无依据的位置变化，也禁止为了“解释位置变化”反过来补剧情。
-
-- 原文明确写“起身走到门口” → 必须保留起身、行走、到达的过程，不能瞬移。
-- 原文下一节拍直接写“角色已经站在门口”，但没有写如何过去 → 把“站在门口”作为该节拍的既定初始状态，允许通过 HARD CUT / 新段进入；**不得自行补“起身、走过去”。**
-- 原文明确写两人换位 → 按原文过程执行；原文没写换位 → 不得为了构图让二人交换世界位置。
-- 画面左右可以因合法换机位而变化，但世界位置不得无源变化。
-
-### A5.4 轴线规则
-
-- 同一连续对话默认维持既有 180° 轴线；
-- 若用户明确要求反打/越轴，或剧情需要改变轴线，应通过中性机位、过轴移动或建立镜头让空间变化可理解；
-- 禁止无提示的跳轴；
-- **“不越轴”不等于摄影机永远不能换位置。**
-
-### A5.5 换场 / 时间跳跃时重新锚定
-
-当场景、时间、天气或主要光源发生明确变化：
-- 新场景重新建立世界坐标、画面坐标、轴线与光线；
-- 不强行继承上一场机位或光线方向；
-- 角色服装、伤势、随身道具等是否继承，按剧情时间连续性决定。
-
-这样可以支持 2–3 分钟甚至更长的多场景剧情，而不会把第一场的站位规则锁死到整集。
+### A4.5 Những điều cấm
+- Không sao chép cả hồ sơ nhân vật; chỉ giữ đặc điểm cần thiết cho đoạn này;
+- Không liệt kê tài nguyên không xuất hiện;
+- Không biến phần nhận diện tài nguyên thành bản chép lại toàn bộ tình tiết;
+- Không viết tổng quát mâu thuẫn như “nhân vật xuất hiện và nói trong đoạn này (nhưng lại ngoài khung ở góc máy 1)”;
+- Không yêu cầu AI tự tạo chữ bao bì chính xác để thay tài nguyên tham chiếu.
 
 ---
 
-## A6. 表演层
+## A5. Vị trí nhân vật: tọa độ thế giới + tọa độ khung hình (hai lớp · tự chứa đầy đủ)
 
-### A6.1 情绪 = 行为的副产品
-不写“他很难过”，写他**在做什么**。情绪从动作的微小偏差里泄露。
+**Tiền đề cốt lõi: khi tạo từng đoạn, mô hình không nhìn thấy khung hình của bất kỳ đoạn trước nào và không phụ thuộc vào tham chiếu khung hình cuối của đoạn trước.**
 
-### A6.2 目标指向对象
-只有当用户原剧情已经能明确看出角色目标时，才把它整理为可执行目标，并指向具体的人 / 物 / 任务。**不得为了表演完整性自行推断角色动机、隐藏目的或关系意图。**
+### A5.1 Năm nhóm thông tin bắt buộc tự chứa trong từng đoạn
 
-### A6.3 状态优先，但关键因果动作必须保留过程
-关键因果动作（拿取 / 放下 / 倒液体 / 开门 / 换手 / 坐下 / 起身 / 走位）不能瞬移。
+1. **Tọa độ thế giới · trục và địa vật:** vị trí thực của nhân vật so với cửa, bàn, cửa sổ, hành lang, v.v.; độc lập với vị trí camera.
+2. **Tọa độ khung hình · trái/phải, trước/sau, che khuất trong góc máy hiện tại:** khai báo lại cho từng vị trí camera.
+3. **Hướng nguồn sáng · lớp thế giới + lớp khung hình:** chỉ kế thừa khi điều kiện chiếu sáng liên tục như nhau.
+4. **Vị trí và trạng thái tuyệt đối của đạo cụ:** gồm cả quỹ đạo di chuyển trong đoạn.
+5. **Trạng thái kết thúc đoạn:** đoạn tiếp theo phải viết lại thành “trạng thái khởi đầu tuyệt đối”, không ghi “tiếp nối đoạn trước”.
 
-### A6.4 微表情必须有源剧情依据 + trigger
-只有源剧情已经存在对应反应/情绪外显时，才允许写微表情，并写成 `[已有反应的可见微表情] + [原文触发条件]`。**不得因为镜头近就自行添加皱眉、抿嘴、脸红、吞咽、苦笑等新反应。**
+### A5.2 Chuỗi trạng thái của cảnh liên tục
 
-### A6.5 mask + crack（仅源剧情支持时）
-- **mask**：只整理用户已经给出的表面状态，不自行赋予角色“伪装”。
-- **crack**：只把用户已有反应具体化为一个可见破绽，不新增反应。
-- 同一镜头不要连续堆多个 crack；源剧情没有 crack 时可以完全不用。
+Trong cùng địa điểm và dòng thời gian liên tục:
 
-### A6.6 表演通道适配（必写）
+`Trạng thái cuối đoạn trước → Viết lại thành trạng thái khởi đầu tuyệt đối của đoạn sau → Hành động trong đoạn → Trạng thái cuối đoạn`
 
-| 镜头可见 | 主表演通道 |
+Nội dung cần kế thừa gồm:
+- Vị trí thực của nhân vật trong thế giới và hướng cơ thể;
+- Vị trí đạo cụ, người giữ, số lượng, mực chất lỏng, vết bẩn/hao mòn;
+- Các trạng thái kéo dài như thương tích, trang phục, độ ẩm, máu, khói bụi;
+- Hướng ánh sáng chính, nhiệt độ màu và điều kiện môi trường.
+
+### A5.3 Di chuyển nhân vật chỉ theo nguyên tác, không thêm hành động để nối cảnh
+
+Cấm AI tự tạo thay đổi vị trí không có căn cứ, đồng thời cấm thêm tình tiết chỉ để “giải thích việc đổi vị trí”.
+
+- Nguyên tác ghi rõ “đứng dậy đi đến cửa” → bắt buộc giữ cả quá trình đứng dậy, đi và đến nơi, không dịch chuyển tức thời.
+- Nhịp tiếp theo của nguyên tác chỉ ghi “nhân vật đã đứng ở cửa” mà không nói nhân vật đến đó thế nào → coi “đứng ở cửa” là trạng thái khởi đầu đã xác định của nhịp đó; được phép dùng HARD CUT / đoạn mới để bắt đầu; **không tự thêm “đứng dậy, đi đến”.**
+- Nếu nguyên tác ghi rõ hai người đổi chỗ → thực hiện theo quá trình đã viết; nếu không ghi đổi chỗ → không được hoán đổi vị trí thế giới của hai người chỉ để đẹp bố cục.
+- Trái/phải trong khung hình có thể thay đổi do chuyển vị trí camera hợp lệ, nhưng vị trí thế giới không được tự thay đổi vô cớ.
+
+### A5.4 Quy tắc trục
+
+- Trong cùng cuộc đối thoại liên tục, mặc định giữ trục 180° đã có;
+- Nếu người dùng yêu cầu rõ góc phản hồi/đổi qua trục, hoặc cốt truyện cần đổi trục, phải dùng góc máy trung tính, chuyển động vượt trục hoặc góc máy thiết lập để người xem hiểu sự thay đổi không gian;
+- Cấm nhảy trục không báo trước;
+- **“Không vượt trục” không có nghĩa camera không bao giờ được đổi vị trí.**
+
+### A5.5 Xác lập lại mốc khi đổi cảnh hoặc nhảy thời gian
+
+Khi bối cảnh, thời gian, thời tiết hoặc nguồn sáng chính thay đổi rõ ràng:
+- Xác lập lại tọa độ thế giới, tọa độ khung hình, trục và ánh sáng cho cảnh mới;
+- Không ép kế thừa vị trí camera hoặc hướng ánh sáng của cảnh trước;
+- Quyết định có kế thừa trang phục, thương tích, đạo cụ mang theo, v.v. của nhân vật hay không theo tính liên tục thời gian trong cốt truyện.
+
+Như vậy có thể hỗ trợ chuyện nhiều bối cảnh kéo dài 2–3 phút hoặc hơn mà không khóa cứng quy tắc vị trí của cảnh đầu cho cả tập.
+
+---
+
+## A6. Lớp diễn xuất
+
+### A6.1 Cảm xúc = kết quả phụ của hành vi
+Không viết “anh ấy rất buồn”, hãy viết anh ấy **đang làm gì**. Cảm xúc được bộc lộ qua những sai lệch rất nhỏ trong hành động.
+
+### A6.2 Mục tiêu hướng đến đối tượng cụ thể
+Chỉ khi nguyên tác của người dùng đã cho thấy rõ mục tiêu của nhân vật mới chuyển nó thành mục tiêu có thể thực hiện và hướng đến người / vật / nhiệm vụ cụ thể. **Không tự suy ra động cơ, mục đích bí mật hoặc ý đồ quan hệ của nhân vật chỉ để diễn xuất đầy đủ hơn.**
+
+### A6.3 Ưu tiên trạng thái, nhưng hành động nhân quả quan trọng phải giữ quá trình
+Các hành động nhân quả quan trọng (cầm lấy / đặt xuống / đổ chất lỏng / mở cửa / đổi tay / ngồi xuống / đứng dậy / di chuyển vị trí) không được xảy ra kiểu dịch chuyển tức thời.
+
+### A6.4 Vi biểu cảm phải có căn cứ nguyên tác + trigger
+Chỉ khi nguyên tác đã có phản ứng/biểu lộ cảm xúc tương ứng mới được mô tả vi biểu cảm dưới dạng `[Vi biểu cảm nhìn thấy được của phản ứng đã có] + [Điều kiện kích hoạt trong nguyên tác]`. **Không được tự thêm phản ứng như nhíu mày, mím môi, đỏ mặt, nuốt nước bọt, cười gượng, v.v. chỉ vì khung hình cận.**
+
+### A6.5 mask + crack (chỉ khi nguyên tác hỗ trợ)
+- **mask:** chỉ tổ chức lại trạng thái bề ngoài mà người dùng đã cho, không tự gán cho nhân vật sự “che giấu”.
+- **crack:** chỉ cụ thể hóa phản ứng đã có thành một dấu hiệu lộ ra có thể nhìn thấy, không thêm phản ứng mới.
+- Không xếp liên tục nhiều crack trong cùng góc máy; nếu nguyên tác không có crack thì có thể hoàn toàn không dùng.
+
+### A6.6 Chọn kênh diễn xuất theo phần cơ thể nhìn thấy (bắt buộc ghi)
+
+| Phần nhìn thấy trong góc máy | Kênh diễn xuất chính |
 |---|---|
-| 脸部可见 | 眼神 + 面部极小变化 |
-| 仅手可见 | 握力 + 动作节拍 + 触碰 |
-| 背影可见 | 重心 + 肩颈 + 呼吸 |
-| 脚部可见 | 步态 + 重量转移 |
-| 全身远景 | 姿态 + 空间占据 |
+| Thấy khuôn mặt | Ánh mắt + thay đổi rất nhỏ trên mặt |
+| Chỉ thấy tay | Lực nắm + nhịp cử động + chạm |
+| Thấy lưng | Trọng tâm + vai/cổ + hơi thở |
+| Thấy bàn chân | Dáng đi + chuyển trọng lượng |
+| Toàn thân ở cảnh xa | Tư thế + cách chiếm lĩnh không gian |
 
-**只写本镜头实际能看见的表演通道。**
+**Chỉ mô tả kênh diễn xuất thực sự nhìn thấy trong góc máy này.**
 
-### A6.7 反应与台词的相对时机
-反应可以在对方台词结束前开始，但必须有明确触发词/触发动作；不要机械规定“所有反应都等台词说完”或“所有反应都提前”。
+### A6.7 Thời điểm phản ứng so với lời thoại
+Phản ứng có thể bắt đầu trước khi đối phương nói xong, nhưng phải có từ ngữ/hành động kích hoạt rõ ràng; không máy móc quy định “mọi phản ứng đều phải đợi hết thoại” hoặc “mọi phản ứng đều phải đến sớm”.
 
-### A6.8 克制型爆发
-强情绪可以对**AI 自己添加的表演装饰**做减法，例如少一个额外皱眉、少一次多余叹气；**不得删除、替换或延后用户原剧情动作/对白/反应。** 可以用更轻的幅度、更短的表演事件表达克制，但剧情事件本身必须原样存在。
+### A6.8 Bùng nổ cảm xúc theo lối tiết chế
+Với cảm xúc mạnh, được phép bớt những **chi tiết diễn xuất trang trí do AI tự thêm**, ví dụ bỏ một lần nhíu mày bổ sung hoặc một tiếng thở dài dư thừa; **không được xóa, thay thế hoặc lùi thời điểm hành động/lời thoại/phản ứng trong nguyên tác của người dùng.** Có thể dùng biên độ nhẹ hơn và diễn xuất ngắn hơn để biểu đạt sự tiết chế, nhưng sự kiện cốt truyện phải giữ nguyên.
 
-### A6.9 微表情事件数（上限参考，不是最低配额）
-- ≤15s 段：通常不超过 1–2 个源剧情已有的微反应
-- 16–30s 段：通常不超过 2–3 个源剧情已有的微反应
+### A6.9 Số sự kiện vi biểu cảm (tham khảo mức tối đa, không phải chỉ tiêu tối thiểu)
+- Đoạn ≤15s: thường không quá 1–2 vi phản ứng đã có trong nguyên tác;
+- Đoạn 16–30s: thường không quá 2–3 vi phản ứng đã có trong nguyên tác.
 
-**0 个完全允许。不得为了达到数量而新增微表情。** 若镜头只见手/背影，则不要硬写面部微表情。
+**Hoàn toàn được phép có 0. Không thêm vi biểu cảm để đạt số lượng.** Nếu góc máy chỉ thấy tay/lưng, không cố viết vi biểu cảm trên mặt.
 
 ---
 
-## A7. 运镜与段间衔接
+## A7. Chuyển động camera và nối giữa các đoạn
 
-### A7.1 情绪曲线
+### A7.1 Đường cong cảm xúc
 
 ```text
-低 ──→ 中 ──→ 高 ──→ 释放
-起      压力     峰值     落地
+Thấp ──→ Trung bình ──→ Cao ──→ Giải tỏa
+Mở đầu      Áp lực         Đỉnh điểm    Hạ xuống
 ```
 
-情绪曲线按原剧情时间顺序记录，不能拿来重排剧情。
+Đường cong cảm xúc được ghi theo trình tự thời gian của nguyên tác, không được dùng để sắp lại tình tiết.
 
-### A7.2 情绪位置 → 运镜
-峰值可分为内心、信息反转、外部动作三类；运镜必须服从用户指定风格，不能因为“峰值”自动推近或自动大特写。
+### A7.2 Vị trí cảm xúc → chuyển động camera
+Đỉnh cảm xúc có thể chia thành ba loại: nội tâm, đảo chiều thông tin và hành động bên ngoài. Chuyển động camera phải tuân theo phong cách người dùng chỉ định; không tự động đẩy máy tới gần hoặc dùng đặc tả chỉ vì có “đỉnh cảm xúc”.
 
-### A7.3 段间衔接规则（独立生成优先）
+### A7.3 Quy tắc nối giữa các đoạn (ưu tiên tạo độc lập)
 
-**判断范围：只看“段 N 的末镜”与“段 N+1 的首镜”。**
+**Phạm vi đánh giá: chỉ xét “góc máy cuối của đoạn N” và “góc máy đầu của đoạn N+1”.**
 
-镜头属性分三类：
-- **拍摄主体**：双人 / 单人 / 局部 / 空镜 / 群体
-- **景别**：全景 / 中景 / 近景 / 特写 / 大特写
-- **角度**：正面 / 侧面 / 背面 / 过肩 / 俯视 / 仰视
+Thuộc tính góc máy chia thành ba loại:
+- **Chủ thể quay:** hai người / một người / một bộ phận / khung hình không người / nhóm người;
+- **Cỡ cảnh:** toàn cảnh / trung cảnh / cận cảnh / đặc tả / siêu đặc tả;
+- **Góc nhìn:** chính diện / bên hông / phía sau / qua vai / nhìn từ trên xuống / nhìn từ dưới lên.
 
-为避免两个独立生成段在剪辑点看起来像错误续帧，段间衔接默认至少满足一项：
-1. 拍摄主体类型不同；
-2. 景别差 ≥ 2 档；
-3. 拍摄角度差 ≥ 90°。
+Để tránh hai đoạn tạo độc lập trông như khung hình nối sai tại điểm cắt, mặc định phần nối phải đáp ứng ít nhất một điều kiện:
+1. Loại chủ thể quay khác nhau;
+2. Cỡ cảnh khác ít nhất 2 cấp;
+3. Góc quay khác ít nhất 90°.
 
-三项都不满足时，只允许调整下一段首镜的**摄影主体/景别/角度/构图**，不得改变该首镜对应的源剧情事件、人物位置事实、动作、道具或对白。
+Nếu cả ba điều kiện đều không đạt, chỉ được điều chỉnh **chủ thể quay/cỡ cảnh/góc quay/bố cục** của góc máy đầu đoạn sau, không được sửa sự kiện nguồn, vị trí thực của nhân vật, hành động, đạo cụ hay lời thoại tương ứng với góc máy đó.
 
-**推荐：**
-- 双人中景 → 单人/局部特写
-- 双人中景 → 空镜
-- 单人中景 → 双人中景
-- 局部特写 → 双人中景
-- 空镜 → 双人中景
-- 单人侧面中景 → 单人正面特写
+**Khuyến nghị:**
+- Trung cảnh hai người → đặc tả một người/một bộ phận;
+- Trung cảnh hai người → khung hình không người;
+- Trung cảnh một người → trung cảnh hai người;
+- Đặc tả một bộ phận → trung cảnh hai người;
+- Khung hình không người → trung cảnh hai người;
+- Trung cảnh nghiêng một người → đặc tả chính diện một người.
 
-**高风险：**
-- 同一主体 + 同一景别 + 近似角度直接跨段
-- 同一手部动作在两个独立生成段之间硬接
+**Rủi ro cao:**
+- Cùng chủ thể + cùng cỡ cảnh + góc nhìn gần giống nhau nhưng cắt thẳng sang đoạn khác;
+- Nối cứng cùng một động tác tay giữa hai đoạn tạo độc lập.
 
-注意：不存在“局部 → 局部一律禁止”这类与上面三条件冲突的第二套规则。若主体/景别/角度已经形成足够差异，可用；但仍要保证连续性易读。
+Lưu ý: không có hệ quy tắc thứ hai như “cấm mọi trường hợp bộ phận → bộ phận” mâu thuẫn với ba điều kiện trên. Nếu chủ thể/cỡ cảnh/góc nhìn đã có đủ khác biệt thì được dùng, nhưng vẫn phải bảo đảm người xem dễ hiểu tính liên tục.
 
-### A7.4 动作连续剪辑
+### A7.4 Dựng nối hành động
 
-同一个未完成动作的 match-on-action **优先只放在同一生成段内**：
-- 镜头 A 尾帧动作进行中；
-- HARD CUT；
-- 镜头 B 首帧继续完成。
+Với cùng một hành động chưa hoàn tất, kỹ thuật match-on-action **ưu tiên chỉ thực hiện trong cùng một đoạn tạo**:
+- Khung cuối của góc máy A: hành động vẫn đang diễn ra;
+- HARD CUT;
+- Khung đầu góc máy B: tiếp tục và hoàn thành hành động.
 
-跨生成段时，优先让上一段完成动作，下一段从“动作完成后的稳定状态”重新开始，以减少模型间不连续。
+Khi nối giữa các đoạn tạo, ưu tiên cho hành động hoàn tất trong đoạn trước và bắt đầu đoạn sau từ “trạng thái ổn định sau khi hành động đã xong” để giảm sai lệch liên tục giữa các lần tạo.
 
-### A7.5 风格路由表
+### A7.5 Bảng định tuyến phong cách
 
-| 风格 | 运镜 | 表演 | 光线 | 声音 |
+| Phong cách | Chuyển động camera | Diễn xuất | Ánh sáng | Âm thanh |
 |---|---|---|---|---|
-| **克制型** | 固定为主 / 峰值也可不动 | 情绪从动作偏差泄露 | 自然光 / 低反差 | 环境音主导 |
-| **悬疑型** | 稳定机位为主 / 必要时突然反打 | 信息差核心 / 反应可迟半拍 | 硬阴影 / 侧逆光 | 静默可比音乐更有效 |
-| **喜剧型** | 固定机位 / 全景定格常有效 | 角色认真演、反差产生喜感 | 均匀正常光 | 环境音主导 |
+| **Tiết chế** | Chủ yếu máy cố định / có thể đứng yên cả ở đỉnh cảm xúc | Cảm xúc lộ ra qua sai lệch nhỏ của hành động | Ánh sáng tự nhiên / độ tương phản thấp | Âm thanh môi trường chủ đạo |
+| **Bí ẩn, hồi hộp** | Chủ yếu góc máy ổn định / bất ngờ đổi góc ngược khi cần | Trọng tâm là chênh lệch thông tin / phản ứng có thể chậm nửa nhịp | Bóng đổ rõ / ánh sáng ngược bên | Im lặng đôi khi hiệu quả hơn nhạc |
+| **Hài hước** | Máy cố định / dừng khung hình toàn cảnh thường hiệu quả | Nhân vật diễn nghiêm túc, sự tương phản tạo tiếng cười | Ánh sáng thường, đồng đều | Âm thanh môi trường chủ đạo |
 
-用户已有明确风格时，以用户风格为最高优先级。
-
----
-
-## A8. 跨段连续性检查（先判定关联，再校验）
-
-A7.3 是**段间镜头类型切换的唯一规则来源**；A8 只负责人物、道具、环境和持续状态的连续性。**不能把所有相邻生成段都强行串成同一个连续空间。先判断两段是否真的有连续关系，再决定要继承什么。**
-
-### A8.1 先判定相邻段的连续性关系
-
-对每一个 `段 N 末态 → 段 N+1 初态`，内部只标记以下三类之一：
-
-1. **连续关联**：同一地点、同一连续时间，或源剧情明确是“继续 / 随后 / 承接 / 同一轮对话 / 同一动作链”，下一段初态依赖上一段末态。
-2. **局部状态关联**：场景或时间已变化，但源剧情明确要求某些持续状态继续存在，例如同一件随身道具、服装破损、伤势、湿度、污渍、产品剩余量等。此时只继承这些持续状态，**不强行继承上一场的人物位置、机位或画面左右**。
-3. **无连续关联 / 重新锚定**：场景、时间或叙事单元已经切换，且下一段不依赖上一段的人物位置或道具末态。此时只检查本段自身的起态、动作与末态是否合理；人物位置、机位、光线按本段重新建立。
-
-判定依据只来自用户最新明确指令、源剧本和已确认状态。**不得为了“让它连得上”自行制造关联。**若源剧情直接给出下一段新的既定状态但没有过渡过程，按 A0.1.4 把该状态当作新的初态，可用 HARD CUT / 新时间块进入，不补移动或交接前史。
-
-### A8.2 人物位置关系校验（连续关联段强制）
-
-对每个实际存在连续关联的人物，内部维护一条简洁状态链：
-
-`段首绝对位置/姿态 → 源剧情动作 → 段末绝对位置/姿态 → 下一段绝对初始位置/姿态`
-
-至少核对：
-1. **世界位置**：相对门、桌、窗、走廊、车辆、固定家具等地标的位置是否一致；
-2. **人物相对关系**：谁在谁的哪一侧、前后距离、是否隔着桌/门/柜台等关系是否无因改变；
-3. **身体状态**：站 / 坐 / 蹲 / 躺、身体朝向、面向对象是否连续；
-4. **手部占用**：若人物正在持有关键道具，哪只手/双手是否仍被该动作占用；源文未锁左右手且镜头无需时不要强行指定，但一旦为执行已经明确，就不能在相关镜头里无过程换手；
-5. **出镜与画外**：画面裁切或换机位可以让人物从画内变成画外，但这不等于人物在世界空间中消失或换位；
-6. **移动依据**：位置发生变化时，必须能对应源剧情 `E##` 中已有的移动/起身/落座/转身等事件，或源剧情直接给出的新初态；没有依据就不能靠镜头切换让人物瞬移。
-
-**画面左/右可以因合法换机位而改变，世界位置不能因此改变。**反打时先检查世界坐标，再重算画面坐标；禁止为了保持“永远画面左/右”而偷偷搬人物。
-
-### A8.3 道具状态链校验（段内 + 连续跨段强制）
-
-对剧情关键道具、商品和会参与动作的小物件，内部维护：
-
-`持有人 / 使用手（若已明确） / 绝对位置 / 可见或被遮挡 / 数量 / 开合状态 / 内容物或液面 / 污渍湿度损耗 / 本段动作 / 段末状态`
-
-硬规则：
-- 一个人在连续镜头里本来拿着一支笔，且没有源剧情中的“放下 / 递出 / 收起 / 掉落 / 离开画面”等事件，下一时刻**不能凭空没了**；
-- 若下一镜裁掉了手或道具、被身体/家具遮挡，允许“暂时不可见”，但它的世界状态仍然保持，**不可把“没拍到”理解成“道具消失”**；
-- 若持物的同一只手在下一镜仍清楚可见，而没有状态变化事件，则该道具应继续在手中；
-- 已放下的道具不能无过程回到手里，已经交给 B 的道具不能下一镜又同时出现在 A 手中；
-- 数量、大小、形态、颜色、开合方式、液面、损耗和污渍不能无因复制、恢复或改变；
-- 道具进入或离开画面边缘不等于道具状态变化，除非源剧情确实发生了移动。
-
-### A8.4 场景与物理环境连续性
-
-仅在“连续关联”或“局部状态关联”时检查：
-- 门窗开合、椅子/餐具/家具已发生的移动；
-- 地面水迹、污渍、破损、烟雾、食物剩余量等持续状态；
-- 主光方向、时间、天气以及实际光源开关；
-- 镜子、玻璃、反射面中不应出现与当前人物/道具状态矛盾的额外复制；
-- 角色与固定环境不能发生无依据穿模、穿墙或越过封闭障碍。
-
-### A8.5 跨段修正边界
-
-发现连续性问题时，只允许：
-- 修正世界坐标/画面坐标的文字冲突；
-- 修正出镜/遮挡描述；
-- 修正关键道具的持有、可见性和状态锁；
-- 调整镜头承载、景别或切点，使已有动作更容易完整呈现；
-- 必要时在**已有 `E##` 边界**重新分镜/分段。
-
-**禁止为了修连续性新增“把笔放下 / 又拿起来 / 走到另一边 / 重新拿一件”等用户没有写的桥接动作。**若冲突来自源剧情自身，按 A0.1.6 标记“源文本冲突”，不擅自修成另一个故事。
-
-**不要写“同上”“延续上一段站位”。需要继承的下一段必须把继承结果重新写成绝对初始状态；无连续关系的段则只检查本段自身。**
+Nếu người dùng đã chỉ định rõ phong cách, phong cách của họ có ưu tiên cao nhất.
 
 ---
 
-## A9. 分段提示词模板（按模型路由）
+## A8. Kiểm tra tính liên tục giữa các đoạn (xác định liên hệ trước rồi mới kiểm tra)
 
-A9 只定义**最终交付外壳**，不改变 A2–A8 的任何执行逻辑。
+A7.3 là **nguồn quy tắc duy nhất cho việc chuyển loại góc máy giữa các đoạn**; A8 chỉ phụ trách tính liên tục của nhân vật, đạo cụ, môi trường và các trạng thái kéo dài. **Không ép mọi đoạn tạo nằm cạnh nhau thành cùng một không gian liên tục. Trước tiên xác định hai đoạn có liên hệ liên tục thực sự hay không, rồi mới quyết định phải kế thừa gì.**
 
-- Seedance 2.0 → 使用 A9.1
-- Seedance 2.5 → 使用 A9.2
+### A8.1 Xác định quan hệ liên tục giữa hai đoạn liền kề trước
 
-如果 A9 的表达方式与 A2–A8、A11–A12 的执行规则发生冲突，以执行规则为准。
+Với mỗi cặp `Trạng thái cuối đoạn N → Trạng thái đầu đoạn N+1`, chỉ đánh dấu nội bộ một trong ba loại:
 
-### A9.1 Seedance 2.0 分段提示词模板（资产标识 + 正式提示词）
+1. **Liên hệ liên tục:** cùng địa điểm, cùng thời gian liên tục, hoặc nguyên tác nêu rõ “tiếp tục / ngay sau đó / nối tiếp / cùng lượt đối thoại / cùng chuỗi hành động”; trạng thái đầu đoạn sau phụ thuộc trạng thái cuối đoạn trước.
+2. **Liên hệ trạng thái cục bộ:** bối cảnh hoặc thời gian đã thay đổi nhưng nguyên tác yêu cầu rõ một số trạng thái kéo dài vẫn tồn tại, ví dụ cùng món đạo cụ mang theo, quần áo rách, thương tích, độ ẩm, vết bẩn, lượng sản phẩm còn lại. Khi đó chỉ kế thừa những trạng thái kéo dài này, **không ép kế thừa vị trí nhân vật, vị trí camera hay trái/phải trong khung hình của cảnh trước**.
+3. **Không liên hệ liên tục / xác lập mốc mới:** bối cảnh, thời gian hoặc đơn vị tự sự đã chuyển và đoạn sau không phụ thuộc vị trí nhân vật hay trạng thái đạo cụ cuối đoạn trước. Khi đó chỉ kiểm tra trạng thái đầu, hành động và trạng thái cuối của chính đoạn này có hợp lý không; dựng lại vị trí nhân vật, camera và ánh sáng theo đoạn hiện tại.
+
+Chỉ được căn cứ vào chỉ thị rõ ràng gần nhất của người dùng, kịch bản nguồn và trạng thái đã xác nhận. **Không tự tạo quan hệ chỉ để “làm cho chúng nối được với nhau”.** Nếu nguyên tác trực tiếp đưa ra trạng thái mới đã xác định ở đoạn sau mà không mô tả quá trình chuyển tiếp, theo A0.1.4 coi đó là trạng thái đầu mới; có thể vào bằng HARD CUT/khối thời gian mới, không tự thêm lịch sử di chuyển hoặc bàn giao.
+
+### A8.2 Kiểm tra quan hệ vị trí nhân vật (bắt buộc với các đoạn liên tục)
+
+Với mỗi nhân vật thực sự có liên hệ liên tục, duy trì nội bộ một chuỗi trạng thái ngắn gọn:
+
+`Vị trí/tư thế tuyệt đối đầu đoạn → Hành động nguyên tác → Vị trí/tư thế tuyệt đối cuối đoạn → Vị trí/tư thế tuyệt đối đầu đoạn sau`
+
+Ít nhất phải đối chiếu:
+1. **Vị trí thế giới:** vị trí so với cửa, bàn, cửa sổ, hành lang, phương tiện, đồ nội thất cố định, v.v. có nhất quán không;
+2. **Quan hệ tương đối giữa nhân vật:** ai đứng bên nào của ai, khoảng cách trước/sau, có ngăn cách bởi bàn/cửa/quầy, v.v. có tự thay đổi không;
+3. **Trạng thái cơ thể:** đứng / ngồi / ngồi xổm / nằm, hướng cơ thể và đối tượng hướng đến có liên tục không;
+4. **Tay đang sử dụng:** nếu nhân vật đang cầm đạo cụ quan trọng, tay nào/hai tay còn đang bận với hành động đó không. Nếu nguyên tác chưa khóa trái/phải và góc máy không cần, không được ép chỉ định; nhưng một khi đã xác định để thực hiện, không được tự đổi tay trong các góc máy liên quan mà thiếu quá trình;
+5. **Trong/ngoài khung:** cắt khuôn hình hoặc đổi camera có thể khiến nhân vật từ trong hình thành ngoài hình, nhưng không có nghĩa nhân vật biến mất hoặc đổi vị trí trong không gian thế giới;
+6. **Căn cứ di chuyển:** khi vị trí thay đổi phải ánh xạ được với sự kiện di chuyển/đứng dậy/ngồi xuống/quay người đã có trong `E##` nguồn, hoặc trạng thái đầu mới được nguyên tác cung cấp trực tiếp. Không có căn cứ thì không được dùng cắt góc máy để nhân vật dịch chuyển tức thời.
+
+**Trái/phải trong khung hình có thể đổi do thay camera hợp lệ, nhưng vị trí thế giới không được thay đổi vì thế.** Khi quay góc ngược, kiểm tra tọa độ thế giới trước rồi mới tính lại tọa độ khung hình; không lén di chuyển nhân vật để họ “luôn ở bên trái/phải hình”.
+
+### A8.3 Kiểm tra chuỗi trạng thái đạo cụ (bắt buộc trong đoạn và giữa các đoạn liên tục)
+
+Với đạo cụ quan trọng, sản phẩm và đồ vật nhỏ tham gia hành động, duy trì nội bộ:
+
+`Người giữ / Tay sử dụng (nếu đã xác định) / Vị trí tuyệt đối / Nhìn thấy hay bị che / Số lượng / Trạng thái mở-đóng / Nội dung hoặc mức chất lỏng / Vết bẩn, độ ẩm, hao mòn / Hành động của đoạn / Trạng thái cuối đoạn`
+
+Quy tắc cứng:
+- Nếu một người đang cầm bút trong các góc máy liên tục và nguyên tác không có sự kiện “đặt xuống / đưa đi / cất / đánh rơi / rời khung hình”, cây bút **không được tự biến mất** ở thời điểm sau;
+- Nếu góc máy sau cắt mất tay/đạo cụ hoặc bị cơ thể/đồ nội thất che, có thể “tạm thời không nhìn thấy” nhưng trạng thái thế giới vẫn phải giữ, **không được hiểu “không quay thấy” là “đạo cụ biến mất”**;
+- Nếu bàn tay đang cầm đạo cụ vẫn nhìn thấy rõ ở góc máy sau mà không có sự kiện đổi trạng thái, đạo cụ phải tiếp tục nằm trong tay đó;
+- Đạo cụ đã đặt xuống không tự quay lại tay khi không có quá trình, đạo cụ đã đưa cho B không được đồng thời xuất hiện trong tay A ở góc máy sau;
+- Số lượng, kích thước, hình dáng, màu sắc, cách đóng/mở, mức chất lỏng, hao mòn và vết bẩn không được tự sao chép, phục hồi hoặc thay đổi vô cớ;
+- Đạo cụ đi vào/ra mép khung hình không có nghĩa trạng thái đạo cụ thay đổi, trừ khi nguyên tác thực sự có di chuyển.
+
+### A8.4 Tính liên tục của bối cảnh và môi trường vật lý
+
+Chỉ kiểm tra khi có “liên hệ liên tục” hoặc “liên hệ trạng thái cục bộ”:
+- Trạng thái mở/đóng cửa, cửa sổ và những thay đổi vị trí đã xảy ra của ghế/bát đĩa/đồ nội thất;
+- Các trạng thái kéo dài như vệt nước trên sàn, vết bẩn, hư hỏng, khói, lượng thức ăn còn lại;
+- Hướng ánh sáng chính, thời gian, thời tiết và trạng thái bật/tắt nguồn sáng thực;
+- Không được có bản sao phản chiếu bổ sung trong gương, kính hoặc mặt phản xạ mâu thuẫn với trạng thái hiện tại của nhân vật/đạo cụ;
+- Nhân vật và môi trường cố định không được xuyên vật thể, xuyên tường hoặc vượt qua chướng ngại đóng kín khi thiếu căn cứ.
+
+### A8.5 Ranh giới sửa lỗi giữa các đoạn
+
+Khi phát hiện lỗi liên tục, chỉ được:
+- Sửa mâu thuẫn bằng chữ giữa tọa độ thế giới và khung hình;
+- Sửa mô tả trong/ngoài khung và che khuất;
+- Sửa việc cầm giữ, khả năng nhìn thấy và khóa trạng thái của đạo cụ quan trọng;
+- Điều chỉnh góc máy chứa hành động, cỡ cảnh hoặc điểm cắt để thể hiện trọn vẹn hành động đã có;
+- Nếu cần, chia lại góc máy/đoạn tại **ranh giới `E##` đã có**.
+
+**Cấm thêm hành động nối “đặt bút xuống / nhặt bút lên lại / đi sang bên kia / lấy thêm một món mới”, v.v. mà người dùng chưa viết chỉ để sửa tính liên tục.** Nếu mâu thuẫn vốn có trong nguyên tác, ghi “Mâu thuẫn văn bản nguồn” theo A0.1.6, không tự sửa thành câu chuyện khác.
+
+**Không viết “như trên”, “tiếp tục vị trí của đoạn trước”.** Đoạn sau cần kế thừa phải ghi lại kết quả kế thừa thành trạng thái đầu tuyệt đối; nếu các đoạn không có quan hệ liên tục thì chỉ kiểm tra chính đoạn đó.
+
+---
+
+## A9. Mẫu prompt từng đoạn (theo mô hình)
+
+A9 chỉ quy định **khung định dạng bàn giao cuối**, không thay đổi bất kỳ logic thực thi nào của A2–A8.
+
+- Seedance 2.0 → dùng A9.1;
+- Seedance 2.5 → dùng A9.2.
+
+Nếu cách thể hiện của A9 mâu thuẫn với quy tắc thực thi A2–A8 hoặc A11–A12, ưu tiên quy tắc thực thi.
+
+### A9.1 Mẫu prompt từng đoạn Seedance 2.0 (nhận diện tài nguyên + prompt chính thức)
 
 ```text
 ═══════════════════════════════════════════
-G0N｜Batch X / 段 N ｜目标模型：Seedance 2.0 ｜本段时长：Xs ｜全局时间：MM:SS–MM:SS
+G0N｜Batch X / Đoạn N ｜Mô hình mục tiêu: Seedance 2.0 ｜Thời lượng đoạn: Xs ｜Thời gian toàn phim: MM:SS–MM:SS
 ═══════════════════════════════════════════
 
-## 资产标识
+## Nhận diện tài nguyên
 
-### 涉及角色
-角色名｜出镜状态总览
-- 镜头 N-1｜00:00–00:XX｜仅手部 / 实际出镜 / 完全画外……｜说话 / 不说话
-- 镜头 N-2｜00:XX–00:XX｜……
-（身份 + 外观锚点 + 世界坐标 + 画面坐标 + 特殊状态 + 本段重点表演 + 表演要求 + 同期台词原文）
+### Nhân vật liên quan
+Tên nhân vật｜Tổng quan trạng thái xuất hiện
+- Góc máy N-1｜00:00–00:XX｜Chỉ thấy tay / Xuất hiện trong hình / Hoàn toàn ngoài khung…｜Có thoại / Không thoại
+- Góc máy N-2｜00:XX–00:XX｜…
+(Danh tính + đặc điểm ngoại hình + tọa độ thế giới + tọa độ khung hình + trạng thái đặc biệt + diễn xuất trọng tâm đoạn + yêu cầu diễn xuất + lời thoại đồng bộ nguyên văn)
 
-### 涉及场景
-场景名｜时间
-（场景锚点 + 摄影机位置朝向高度 + 前中后景 + 空间关系）
+### Bối cảnh liên quan
+Tên bối cảnh｜Thời gian
+(Đặc điểm cố định của bối cảnh + vị trí/hướng/độ cao camera + tiền/trung/hậu cảnh + quan hệ không gian)
 
-### 关键道具
-道具名
-（段首绝对位置 + 时间轴动作 + 段末状态 + 禁止项；包装文字按 A1.3）
+### Đạo cụ quan trọng
+Tên đạo cụ
+(Vị trí tuyệt đối đầu đoạn + hành động timeline + trạng thái cuối đoạn + điều cấm; chữ bao bì theo A1.3)
 
 ─────────────────────────────────────────
-【正式提示词】
+【Prompt chính thức】
 
-生成一段总时长严格为 Xs 的真人电影短片。
-（画面风格 / 摄影机总述 / 光源总述）
+Tạo một đoạn phim người thật có tổng thời lượng chính xác Xs.
+(Phong cách hình ảnh / mô tả tổng quát camera / mô tả tổng quát nguồn sáng)
 
-## 人物空间关系
-（世界坐标 + 画面坐标 · 双层；禁止只写“延续上一段”）
+## Quan hệ không gian giữa các nhân vật
+(Tọa độ thế giới + tọa độ khung hình · hai lớp; cấm chỉ viết “tiếp nối đoạn trước”)
 
-## 镜头 N-1｜00:00–00:XX｜XXs｜主体 + 景别 + 角度
-摄影机与构图：……
-首帧锁定：……
-动作时间轴：……
-表演：……
-物理：……
+## Góc máy N-1｜00:00–00:XX｜XXs｜Chủ thể + cỡ cảnh + góc nhìn
+Camera và bố cục: …
+Khóa khung hình đầu: …
+Timeline hành động: …
+Diễn xuất: …
+Vật lý: …
 
 ## 00:XX｜HARD CUT
 
-## 镜头 N-2｜00:XX–00:XX｜XXs｜主体 + 景别 + 角度
+## Góc máy N-2｜00:XX–00:XX｜XXs｜Chủ thể + cỡ cảnh + góc nhìn
 ……
 
-## 光线
-（主光源世界方向 + 画面方向 + 曝光逻辑 + 与前段/前镜的连续性）
+## Ánh sáng
+(Hướng nguồn sáng chính trong thế giới + hướng trong khung hình + logic phơi sáng + tính liên tục so với đoạn/góc máy trước)
 
-## 声音
-（真实环境音 + 同期对白原文；是否有 BGM 服从用户要求）
+## Âm thanh
+(Âm thanh môi trường thực + lời thoại đồng bộ nguyên văn; có BGM hay không theo yêu cầu người dùng)
 
-## 正向锁
-（人物绝对位置 / 道具持有 / 视线 / 连续状态 / 本镜不该出现的人物）
+## Khóa điều kiện bắt buộc
+(Vị trí tuyệt đối nhân vật / đạo cụ đang cầm / hướng nhìn / trạng thái liên tục / nhân vật không được xuất hiện trong góc máy này)
 
-## 文字锁
-无字幕、无额外屏幕文字、无后期叠字；实体包装/招牌文字仅保持参考资产，不新增、不改写、不重绘。
+## Khóa chữ
+Không phụ đề, không chữ màn hình bổ sung, không lớp chữ hậu kỳ; chỉ giữ nguyên chữ thật trên bao bì/biển hiệu từ tài nguyên tham chiếu, không thêm, sửa hoặc vẽ lại.
 ```
 
-### A9.2 Seedance 2.5 分段提示词模板（Objective 架构）
+### A9.2 Mẫu prompt từng đoạn Seedance 2.5 (cấu trúc Objective)
 
-Seedance 2.5 的最终交付采用更紧凑、可直接投喂的结构。**不要在每段前再重复一整套 A4 资产标识。** A4 的信息必须已经被压入 `Reference binding`、`Immutable locks`、`Timeline`、`Preserve`。
+Đầu ra cuối cho Seedance 2.5 sử dụng cấu trúc gọn hơn, có thể đưa trực tiếp vào mô hình. **Không lặp lại toàn bộ mục nhận diện tài nguyên A4 trước mỗi đoạn.** Thông tin A4 phải được đưa vào `Reference binding`, `Immutable locks`, `Timeline` và `Preserve`.
 
-#### A9.2.0 最终格式硬门（强制）
+#### A9.2.0 Điều kiện cứng về định dạng cuối (bắt buộc)
 
-当目标模型为 **Seedance 2.5** 时，最终交付只能使用本节 A9.2 的字段结构。除段头信息外，允许的顶层字段仅为：
+Khi mô hình đích là **Seedance 2.5**, đầu ra cuối chỉ được dùng cấu trúc trường A9.2 trong mục này. Ngoài thông tin đầu đoạn, chỉ các trường cấp cao nhất sau được phép:
 - `Objective`
-- `Reference binding`（仅存在真实参考资产时出现；没有真实参考时整节省略）
+- `Reference binding` (chỉ xuất hiện khi có tài nguyên tham chiếu thật; nếu không có thì bỏ cả mục)
 - `Immutable locks`
 - `Target duration`
 - `Timeline`
@@ -862,488 +863,488 @@ Seedance 2.5 的最终交付采用更紧凑、可直接投喂的结构。**不�
 - `Preserve`
 - `Avoid`
 
-**禁止把任何中间规划稿、其他模型模板或非 A9.2 外壳直接作为 2.5 最终交付。** 除段头信息与上方白名单字段外，2.5 最终正文不得出现任何其他顶层字段、编号式分镜章节或额外分析块。
+**Cấm lấy bản kế hoạch trung gian, mẫu của mô hình khác hoặc khung ngoài A9.2 làm bản bàn giao cuối cho 2.5.** Ngoài phần đầu đoạn và các trường trong danh sách cho phép ở trên, nội dung cuối 2.5 không được có trường cấp cao nhất khác, chương storyboard đánh số hoặc khối phân tích bổ sung.
 
-2.5 最终 `Timeline` 必须按 A9.2.1 使用 `【0:00-0:XX】` 时间块 + 连续自然语言。镜头变化如确有需要，只能嵌在对应时间块的自然语言中，不得另立镜头编号体系作为主结构。
+`Timeline` cuối của 2.5 bắt buộc dùng khối thời gian `【0:00-0:XX】` + văn xuôi tự nhiên liên tục theo A9.2.1. Nếu thật sự cần đổi góc máy, chỉ lồng thay đổi đó vào câu văn của khối thời gian tương ứng, không lập hệ thống góc máy đánh số riêng làm cấu trúc chính.
 
-如果内部草稿或上游输入采用其他结构，必须只把它当作**源材料**而非最终模板：先按 A0–A8/A11 解析，再在交付前重排进 A9.2 白名单字段。只要最终正文出现白名单之外的顶层结构，即判定为格式失败，**不得交付，必须在本轮直接改写为 A9.2**。
+Nếu bản nháp nội bộ hoặc đầu vào từ bước trước dùng cấu trúc khác, chỉ coi nó là **tư liệu nguồn**, không phải mẫu cuối. Phải phân tích theo A0–A8/A11 trước, rồi chuyển thành các trường A9.2 được phép trước khi bàn giao. Chỉ cần nội dung cuối có cấu trúc cấp cao nhất nằm ngoài danh sách cho phép thì coi là lỗi định dạng, **không được bàn giao và phải sửa trực tiếp thành A9.2 trong cùng lượt**.
 
 ```text
 ═══════════════════════════════════════════
-G0N｜Batch X / 段 N ｜目标模型：Seedance 2.5 ｜本段时长：Xs ｜全局时间：MM:SS–MM:SS
+G0N｜Batch X / Đoạn N ｜Mô hình mục tiêu: Seedance 2.5 ｜Thời lượng đoạn: Xs ｜Thời gian toàn phim: MM:SS–MM:SS
 ═══════════════════════════════════════════
 
 Objective:
-用 1–2 句说明：本段在整集中的位置、时长/画幅/总体质感，以及这一段要完成的核心戏剧目标。不要复述完整 Timeline。
+Dùng 1–2 câu nêu vị trí của đoạn trong toàn tập, thời lượng/tỷ lệ khung hình/chất lượng hình ảnh tổng thể và mục tiêu kịch tính chính cần đạt. Không kể lại toàn bộ Timeline.
 
 Reference binding:
-- 自动读取并分析本段剧情、镜头、动作与画面内容，从中提取本段实际涉及且需要调用的参考资产，包括角色图、场景图、商品图、道具图、站位图等。
-- 对提取出的资产进行简单标识，说明该资产对应的对象或用途即可，例如：“男主角色参考”“客栈场景参考”“产品包装参考”“红绳道具参考”。
-- 凡用户已经提供、且本段实际需要使用的真实参考图片或资产句柄，必须逐一列出，并原样保留其节点 ID、资产句柄或其他引用标识，不得改写、缩写或重新编号。
-- 同一参考资产即使在上一段已经使用，只要本段仍然涉及，就必须在本段重新提取并列出；禁止写“同上”“沿用上一段参考”等省略表达。
-- 只提取本段实际涉及的资产，不要把未出现在本段剧情或画面中的资产机械加入。
-- 无需详细解释每张参考图“控制什么 / 不控制什么”，仅做简洁、明确的资产身份标识即可。
-- 如果本段没有任何真实参考图片、节点 ID 或资产句柄，则整节可省略。
-- 严禁根据剧情自行编造 {{node/image-...}}、资产编号、引用标签或不存在的参考素材。
+- Tự động đọc và phân tích tình tiết, góc máy, hành động và nội dung hình ảnh của đoạn, rồi trích xuất những tài nguyên tham chiếu thực sự liên quan và cần gọi trong đoạn, gồm ảnh nhân vật, bối cảnh, sản phẩm, đạo cụ, sơ đồ vị trí, v.v.
+- Gắn nhãn ngắn gọn cho từng tài nguyên được trích, chỉ cần nói nó tương ứng với ai, vật gì hoặc công dụng nào, ví dụ: “Tham chiếu nhân vật nam chính”, “Tham chiếu bối cảnh quán trọ”, “Tham chiếu bao bì sản phẩm”, “Tham chiếu đạo cụ dây đỏ”.
+- Phải liệt kê riêng từng ảnh tham chiếu thực/mã tài nguyên người dùng đã cung cấp và đoạn này thật sự cần; giữ nguyên ID node, mã tài nguyên hoặc nhãn tham chiếu, không sửa, viết tắt hoặc đánh số lại.
+- Nếu cùng tài nguyên tham chiếu đã dùng ở đoạn trước mà đoạn này vẫn cần, bắt buộc trích lại và liệt kê trong đoạn này; cấm viết tắt kiểu “như trên”, “dùng tham chiếu đoạn trước”.
+- Chỉ trích tài nguyên thực sự liên quan đoạn này; không máy móc thêm tài nguyên không xuất hiện trong tình tiết hoặc khung hình của đoạn.
+- Không cần giải thích dài về từng ảnh “kiểm soát gì/không kiểm soát gì”, chỉ cần nhãn danh tính ngắn gọn, rõ ràng.
+- Nếu đoạn không có ảnh tham chiếu, ID node hoặc mã tài nguyên thực, có thể bỏ toàn bộ mục này.
+- Nghiêm cấm tự bịa {{node/image-...}}, mã tài nguyên, nhãn tham chiếu hoặc tư liệu không tồn tại dựa trên tình tiết.
 
 Immutable locks:
-- 只写会直接影响生成稳定性的不可变条件：角色身份/服装、关键世界位置与左右关系、连续场景的光线逻辑、关键道具状态、商品结构、对白原文与口型、必要的画外锁定等。
-- 不把整段剧情重新抄一遍。
-- 连续场景跨段时，把上一段结束状态改写成本段的绝对初始状态，不写“延续上一段”。
+- Chỉ ghi những điều kiện bất biến ảnh hưởng trực tiếp đến ổn định khi tạo: danh tính/trang phục nhân vật, vị trí thế giới quan trọng và quan hệ trái/phải, logic ánh sáng của các cảnh liên tục, trạng thái đạo cụ quan trọng, cấu trúc sản phẩm, lời thoại gốc và khẩu hình, khóa nhân vật ngoài khung khi cần, v.v.
+- Không chép lại toàn bộ tình tiết của đoạn.
+- Khi cảnh liên tục qua các đoạn, viết lại trạng thái cuối đoạn trước thành trạng thái đầu tuyệt đối của đoạn này; không viết “tiếp nối đoạn trước”.
 
 Target duration: X seconds
 
 Timeline:
-【0:00-0:XX】用一段连续中文自然描述这一时间块真正看见的画面：必要的场景/站位、当前出镜状态、景别或切镜、动作先后、关键表演反应、同期对白、关键道具变化与必要物理细节。像成片描述一样写，不拆成“摄影机 / 动作 / 表演 / 台词 / 物理”等子标题。
+【0:00-0:XX】Dùng một đoạn văn tiếng Việt tự nhiên, liên tục mô tả những gì thực sự nhìn thấy trong khối thời gian: bối cảnh/vị trí cần thiết, trạng thái xuất hiện hiện tại, cỡ cảnh hoặc điểm cắt, thứ tự hành động, phản ứng diễn xuất quan trọng, lời thoại đồng bộ, thay đổi đạo cụ quan trọng và chi tiết vật lý cần thiết. Viết như mô tả phim thành phẩm, không chia thành các đề mục “Camera / Hành động / Diễn xuất / Lời thoại / Vật lý”.
 
-【0:XX-0:XX】继续用一段连续自然语言描述后续画面。
+【0:XX-0:XX】Tiếp tục mô tả hình ảnh kế tiếp bằng một đoạn văn tự nhiên liên tục.
 
-【0:XX-0:XX】按剧情需要继续；时间块数量不固定。
+【0:XX-0:XX】Tiếp tục theo nhu cầu tình tiết; số khối thời gian không cố định.
 
 Visual direction:
-用 1 个紧凑自然段概括整体摄影质感、光线、色温、景深、人物/商品视觉关系和必要物理质感。只写真正影响这一段的视觉要求。
+Dùng một đoạn văn gọn để tóm tắt chất lượng hình ảnh quay phim, ánh sáng, nhiệt độ màu, độ sâu trường ảnh, quan hệ hình ảnh giữa nhân vật/sản phẩm và cảm giác vật lý cần thiết. Chỉ ghi những yêu cầu hình ảnh thực sự ảnh hưởng đoạn này.
 
 Audio direction:
-- 物理拟音 / 环境音：……
-- 对白人声：……
-- 用户明确要求配乐时才写配乐；用户未要求时默认“无背景音乐，仅保留真实同期声与环境音”。
+- Tiếng động vật lý / âm thanh môi trường: …
+- Giọng nói trong lời thoại: …
+- Chỉ thêm nhạc khi người dùng yêu cầu rõ; nếu không, mặc định “Không nhạc nền, chỉ giữ âm thanh thu đồng bộ thực tế và tiếng môi trường”.
 
 Preserve:
-用一行或一个短自然段列出必须保留的角色造型、场景锚点、商品结构、关键道具状态、空间关系或动作逻辑。
+Dùng một dòng hoặc đoạn văn ngắn liệt kê kiểu dáng nhân vật, đặc điểm cố định bối cảnh, cấu trúc sản phẩm, trạng thái đạo cụ quan trọng, quan hệ không gian hoặc logic hành động bắt buộc giữ.
 
 Avoid:
-用一行或一个短自然段列出最容易出错且与本段直接相关的问题；不要堆一长串泛化负面词。
+Dùng một dòng hoặc đoạn văn ngắn nêu những lỗi dễ gặp nhất và liên quan trực tiếp đến đoạn hiện tại; không chất một danh sách dài các từ phủ định chung chung.
 ```
 
-#### A9.2.1 Timeline 写法（强制）
+#### A9.2.1 Cách viết Timeline (bắt buộc)
 
-`Timeline` 必须参考用户常用的 Seedance 2.5 成品提示词风格：**时间块 + 连续自然语言画面描述**。
+`Timeline` bắt buộc theo phong cách prompt thành phẩm Seedance 2.5 mà người dùng thường dùng: **khối thời gian + mô tả hình ảnh bằng văn xuôi tự nhiên liên tục**.
 
-正确示意：
+Ví dụ đúng:
 
 ```text
 Timeline:
 
 【0:00-0:06】
-在源剧情已经明确的场景中，角色A执行 E01 的原始动作。镜头按需要从建立镜头切到角色A中景；若角色B在该节拍按原文保持画外，就明确写“角色B保持画外”。只补充能直接看见的姿态、接触、物理反馈，不新增拿取、开盖、走位等源剧情没有的事件。
+Trong bối cảnh đã được xác định rõ ở nguyên tác, nhân vật A thực hiện hành động gốc E01. Camera có thể chuyển từ góc toàn thiết lập sang trung cảnh nhân vật A nếu cần. Nếu theo nguyên tác nhân vật B vẫn ngoài khung ở nhịp này, ghi rõ “Nhân vật B vẫn ngoài khung”. Chỉ bổ sung tư thế, sự tiếp xúc và phản hồi vật lý nhìn thấy trực tiếp; không thêm sự kiện cầm lấy, mở nắp, di chuyển vị trí, v.v. mà nguyên tác không có.
 
 【0:06-0:12】
-承接 E02–E03。角色A按原文说出台词，角色B按原文做出既有反应。可以把已有反应写成具体可见动作，但不能把“反应”扩写成新的剧情行为。必要时切近景或局部特写，剧情事件顺序不变。
+Tiếp nối E02–E03. Nhân vật A nói nguyên văn lời thoại, nhân vật B phản ứng đúng như nguyên tác. Có thể diễn đạt phản ứng đã có thành hành động cụ thể nhìn thấy được, nhưng không được mở rộng “phản ứng” thành hành vi tình tiết mới. Có thể chuyển sang cận cảnh hoặc đặc tả một bộ phận khi cần, giữ nguyên thứ tự sự kiện.
 
 【0:12-0:18】
-承接 E04。若本时间块首帧源剧情已经规定某道具在角色手中，就直接从该状态开始，不追溯或补写道具是如何被拿到手里的。镜头只负责呈现，不负责补前史。
+Tiếp nối E04. Nếu nguyên tác quy định đạo cụ đã nằm trong tay nhân vật ở khung đầu của khối thời gian này, hãy bắt đầu trực tiếp từ trạng thái đó; không truy ngược hoặc bổ sung quá trình đạo cụ được lấy vào tay. Góc máy chỉ có nhiệm vụ thể hiện, không bổ sung lịch sử.
 ```
 
-**执行要求：**
-- 每个时间块通常 1 个自然段，信息够用即可。
-- 时间块数量根据剧情自然决定，不固定为 3 或 4 块。
-- 可以直接写“切男主近景 / 切手部特写 / 回双人中景”，不必额外建立镜头编号。
-- 只写对当前时间块有实际影响的站位、左右、画外状态与连续性，不机械重复 `Immutable locks`。
-- 角色不应出现时，简短写“女主保持画外，不自动补入镜头”即可。
-- 台词直接嵌在对应动作发生的位置，不在 Timeline 后再次重复一遍。
-- 物理细节只写和当前动作直接相关的，如液体晃动、衣料接触、道具表面湿润、物体重量、碰撞反馈。
-- 每个时间块优先保持一个清晰动作链，不为追求信息完整而把每秒塞满。
-- **描述重点是“这一刻成片实际看见什么”，不是重新解释规则。**
-- Timeline 中每一个会改变人物/道具/位置/数量/关系/信息的动作，都必须来自 A2 的源节拍 `E##`。
-- 不为了“更顺”“更完整”“更有因果”补源剧情没有的拿取、开合、抽取、递交、起身、走位、回头、使用次数、道具消耗等行为。
-- 若源剧情从一个既定状态直接开始，就直接写该状态；不要追问或补拍它之前怎么发生。
-- 原文使用“父母 / 家长 / 成人 / 某人”等泛称时，Timeline 保持同样泛称，除非用户最新明确指令已经指定具体人物。
+**Yêu cầu thực thi:**
+- Mỗi khối thời gian thường dùng một đoạn văn tự nhiên, vừa đủ thông tin.
+- Số khối thời gian tùy tình tiết, không cố định ba hay bốn khối.
+- Có thể viết trực tiếp “chuyển cận cảnh nam chính / chuyển đặc tả tay / trở về trung cảnh hai người”, không cần đánh số góc máy riêng.
+- Chỉ ghi vị trí, trái/phải, trạng thái ngoài khung và tính liên tục thực sự ảnh hưởng đến khối hiện tại, không máy móc lặp lại `Immutable locks`.
+- Khi nhân vật không được xuất hiện, chỉ cần viết ngắn “Nữ chính vẫn ngoài khung, không tự thêm vào hình”.
+- Lời thoại được chèn trực tiếp tại nơi hành động tương ứng diễn ra, không lặp lại sau Timeline.
+- Chỉ ghi chi tiết vật lý liên quan trực tiếp đến hành động hiện tại, ví dụ chất lỏng sóng sánh, vải chạm nhau, bề mặt đạo cụ ẩm ướt, trọng lượng vật thể, phản hồi va chạm.
+- Ưu tiên chuỗi hành động rõ ràng trong mỗi khối, không nhồi thông tin vào từng giây chỉ để đủ mọi chi tiết.
+- **Trọng tâm mô tả là “thành phẩm thực sự cho thấy gì vào thời điểm này”, không phải giải thích lại quy tắc.**
+- Mọi hành động trong Timeline làm thay đổi nhân vật/đạo cụ/vị trí/số lượng/quan hệ/thông tin đều phải xuất phát từ nhịp nguồn `E##` ở A2.
+- Không thêm hành vi cầm lấy, đóng mở, rút ra, trao cho, đứng dậy, di chuyển, quay đầu, số lần sử dụng hoặc hao hụt đạo cụ không có trong nguyên tác chỉ vì muốn “mượt hơn”, “đầy đủ hơn” hoặc “có nhân quả hơn”.
+- Nếu nguyên tác bắt đầu trực tiếp ở một trạng thái đã xác định, ghi trạng thái đó ngay; không tự hỏi hoặc dựng thêm diễn biến trước đó.
+- Nếu nguyên tác dùng các cách gọi chung như “cha mẹ / phụ huynh / người lớn / ai đó”, Timeline phải giữ cùng mức khái quát, trừ khi chỉ thị rõ ràng gần nhất của người dùng đã chỉ định người cụ thể.
 
-#### A9.2.2 Reference binding（2.5 真实参考资产硬规则）
+#### A9.2.2 Reference binding (quy tắc cứng về tài nguyên tham chiếu thật cho 2.5)
 
-- 自动读取本段剧情、镜头、动作与画面内容，只提取**本段实际涉及且需要调用**的真实角色图、场景图、商品图、道具图、站位图、动作图等参考资产。
-- 只引用用户真实提供的参考节点、图片标签或资产句柄，并**原样保留完整节点 / 句柄**；禁止改名、缩写、重新编号或根据剧情编造不存在的引用。
-- 每个真实参考单独列一行，采用“**真实节点 / 句柄：简洁资产标识**”写法；标识只说明它对应的对象或用途，例如“男主角色参考”“客栈场景参考”“产品包装参考”“红绳道具参考”。
-- 不要求逐张展开“控制什么 / 不控制什么”的长说明；但内部仍须遵守用户明确用途，不得让角色图越权改变站位、让站位图覆盖人物身份、让场景图额外带入人物或道具。
-- 用户明确说“仅位置参考 / 仅服装参考 / 仅产品参考”等时，简洁标识中必须保留用途限定，例如“仅站位参考”“仅服装参考”。
-- **每段自包含**：上一段已经使用过的参考，本段仍需要时必须再次列出；禁止写“同上”“沿用上一段参考”。
-- 只列本段实际需要的资产，不把全集参考库机械塞进每一段。
-- 没有真实参考时，省略整个 `Reference binding`；禁止伪造 `{{Ref}}`、`{{node/image-...}}`、资产编号或不存在的资产名。
+- Tự động đọc tình tiết, góc máy, hành động và nội dung hình của đoạn; chỉ trích các tài nguyên tham chiếu thật **thực sự liên quan và cần dùng trong đoạn này** như ảnh nhân vật, bối cảnh, sản phẩm, đạo cụ, vị trí, hành động, v.v.
+- Chỉ dùng node tham chiếu, nhãn ảnh hoặc mã tài nguyên người dùng thực sự cung cấp, **giữ nguyên đầy đủ node/mã đó**; không đổi tên, viết tắt, đánh số lại hoặc bịa tham chiếu không tồn tại dựa trên tình tiết.
+- Liệt kê mỗi tham chiếu thực trên một dòng theo dạng **“Node thực / mã tài nguyên: nhãn nhận diện ngắn”**; nhãn chỉ nêu đối tượng hoặc công dụng, ví dụ “Tham chiếu nam chính”, “Tham chiếu bối cảnh quán trọ”, “Tham chiếu bao bì sản phẩm”, “Tham chiếu đạo cụ dây đỏ”.
+- Không cần giải thích dài cho từng ảnh “kiểm soát gì/không kiểm soát gì”, nhưng nội bộ phải tuân theo mục đích người dùng đã nêu; ảnh nhân vật không được tự thay đổi vị trí, ảnh vị trí không được ghi đè danh tính, ảnh bối cảnh không được kéo thêm nhân vật hoặc đạo cụ vào.
+- Nếu người dùng nói rõ “chỉ tham chiếu vị trí / chỉ trang phục / chỉ sản phẩm”, phải giữ giới hạn mục đích trong nhãn ngắn, ví dụ “Chỉ tham chiếu vị trí đứng”, “Chỉ tham chiếu trang phục”.
+- **Mỗi đoạn tự chứa đầy đủ:** nếu đoạn trước đã dùng tham chiếu nhưng đoạn này vẫn cần thì phải liệt kê lại; cấm viết “như trên”, “dùng tham chiếu đoạn trước”.
+- Chỉ liệt kê tài nguyên thực sự cần trong đoạn, không đưa cả thư viện tham chiếu của tập vào mọi đoạn.
+- Khi không có tham chiếu thực, bỏ toàn bộ `Reference binding`; cấm giả mạo `{{Ref}}`, `{{node/image-...}}`, số tài nguyên hoặc tên tài nguyên không tồn tại.
 
 #### A9.2.3 Immutable locks
 
-只保留**不可漂移**的信息，例如：
-- 男主白衣、女主红衣；
-- 女主在桌南侧/画面左，男主在桌北侧/画面右；
-- 商品蓝色翻盖结构；
-- 某角色在某时间块保持画外；
-- 原文对白不改词、不吞字；
-- 连续场景灯光方向与道具状态不重置。
+Chỉ giữ những thông tin **không được trôi lệch**, ví dụ:
+- Nam chính mặc trắng, nữ chính mặc đỏ;
+- Nữ chính ở phía nam bàn/bên trái hình, nam chính ở phía bắc bàn/bên phải hình;
+- Sản phẩm có cấu trúc nắp bật màu xanh dương;
+- Một nhân vật ở ngoài khung trong một khối thời gian cụ thể;
+- Lời thoại nguyên văn không đổi từ hoặc nuốt chữ;
+- Hướng sáng và trạng thái đạo cụ của cảnh liên tục không đặt lại từ đầu.
 
-不要把所有动作都写成 lock；会在 Timeline 内发生变化的动作应留在 Timeline。
+Không biến mọi hành động thành điều kiện khóa; những hành động thay đổi theo thời gian phải được giữ trong Timeline.
 
 #### A9.2.4 Audio direction
 
-- 用户明确要求 BGM / 配乐 → 按用户要求写。
-- 用户未要求 → 默认无 BGM、无情绪提示音，只保留真实环境音、物理拟音与同期对白。
-- 不因示例里曾出现配乐，就把配乐变成 2.5 的默认行为。
+- Nếu người dùng yêu cầu rõ BGM/nhạc nền → viết theo yêu cầu.
+- Nếu không yêu cầu → mặc định không BGM, không âm thanh nhấn cảm xúc; chỉ giữ tiếng môi trường thật, tiếng động vật lý và lời thoại đồng bộ.
+- Không coi nhạc nền là hành vi mặc định của 2.5 chỉ vì ví dụ nào đó từng có nhạc.
 
 #### A9.2.5 Preserve / Avoid
 
-`Preserve` 与 `Avoid` 必须服务当前段执行：
-- `Preserve` 写真正不能漂移的造型、空间、商品、道具、动作逻辑；
-- `Avoid` 写当前段最可能发生的生成错误；
-- 两者都保持短，不写几十个泛化标签。
+`Preserve` và `Avoid` phải phục vụ thực thi đoạn hiện tại:
+- `Preserve` ghi hình dáng, không gian, sản phẩm, đạo cụ và logic hành động thực sự không được trôi lệch;
+- `Avoid` ghi lỗi tạo dễ xảy ra nhất ở đoạn hiện tại;
+- Cả hai đều ngắn gọn, không ghi hàng chục nhãn chung chung.
 
 ---
 
-## A10. 全片输出结构
+## A10. Cấu trúc đầu ra của toàn phim
 
-长剧情必须同时区分“全片规划”和“当前批次交付”。全片总览继续用中文；每个生成段的正文则按目标模型路由到 A9.1 或 A9.2。
+Với câu chuyện dài, phải phân biệt kế hoạch toàn phim và đợt bàn giao hiện tại. Tổng quan toàn phim dùng tiếng Việt; nội dung từng đoạn tạo theo A9.1 hoặc A9.2 của mô hình mục tiêu.
 
 ```text
 ═══════════════════════════════════════════
-全片总览
+Tổng quan toàn phim
 ═══════════════════════════════════════════
-· 目标模型：Seedance 2.X
-· 用户目标总时长：（严格 / 参考 / 未指定）
-· 单段硬上限：15s / 30s
-· 理论最少段数：⌈总时长 / 单段上限⌉（仅下限）
-· 全片实际段数：X 段（按内容密度确定）
-· 全片段表：G01 … GXX（含每段时长 + 全局时间范围 + 核心节拍）
-· 批次方案：Batch 1 = G01–G0X；Batch 2 = ……
-· 当前输出批次：Batch X
-· 下一批待交付段：GXX–GXX（如无则写“无”）
-· 资产总表
-· 参考图片总表（仅 2.5 且用户实际提供参考图时）：原样列出每个图片节点 / 资产句柄 + 用途；用于全片规划，不替代各段自己的 Reference binding
-· 场景/时间变化表
-· 各连续场景世界轴线
-· 按原时间顺序的情绪曲线
-· 关键节拍标签
-· 风格
-· 运镜节奏图谱
-· 时长约束冲突（如无写“无”）
-· 源剧情保真状态：应为“通过”；如源文本自身有空缺/冲突，只标注问题，不自行补剧情
+· Mô hình mục tiêu: Seedance 2.X
+· Tổng thời lượng mong muốn: (bắt buộc / tham khảo / chưa chỉ định)
+· Giới hạn mỗi đoạn: 15s / 30s
+· Số đoạn tối thiểu lý thuyết: ⌈tổng thời lượng / giới hạn đoạn⌉ (chỉ là giới hạn dưới)
+· Số đoạn thực tế: X đoạn (dựa trên mật độ nội dung)
+· Danh sách đoạn: G01 … GXX (thời lượng + khoảng thời gian toàn phim + nhịp chính)
+· Chia đợt: Batch 1 = G01–G0X; Batch 2 = …
+· Đợt bàn giao hiện tại: Batch X
+· Đoạn của đợt tiếp theo: GXX–GXX (nếu không có, ghi “Không”)
+· Danh sách tài nguyên toàn phim
+· Danh sách ảnh tham chiếu (chỉ 2.5 và có ảnh thật): ghi nguyên nhãn node ảnh/tài nguyên và công dụng; chỉ phục vụ kế hoạch toàn phim, không thay Reference binding của từng đoạn
+· Bảng thay đổi bối cảnh và thời gian
+· Trục không gian của từng bối cảnh liên tục
+· Diễn tiến cảm xúc theo thời gian gốc
+· Nhãn nhịp truyện quan trọng
+· Phong cách
+· Nhịp chuyển động camera
+· Xung đột giới hạn thời lượng (nếu không có, ghi “Không”)
+· Bảo toàn truyện gốc: yêu cầu “Đạt”; nếu bản gốc có chỗ thiếu hoặc mâu thuẫn, chỉ đánh dấu vấn đề, không tự bổ sung cốt truyện
 
 ─────────────────────────────────────────
-若目标模型为 Seedance 2.0：
-[G01] 使用 A9.1“资产标识 + 正式提示词”
-[G02] 使用 A9.1
+Nếu mô hình mục tiêu là Seedance 2.0:
+[G01] Dùng A9.1 “Định danh tài nguyên + prompt chính thức”
+[G02] Dùng A9.1
 ……
 
-若目标模型为 Seedance 2.5：
-[G01] 直接使用 A9.2 Objective 架构，不再额外重复一整块资产标识
-[G02] 使用 A9.2
+Nếu mô hình mục tiêu là Seedance 2.5:
+[G01] Dùng trực tiếp cấu trúc Objective theo A9.2, không lặp cả khối định danh tài nguyên
+[G02] Dùng A9.2
 ……
 ─────────────────────────────────────────
 ```
 
-**长集规则：**即使当前只交付 Batch 1，也应先规划后续全局段以及当前批次在全片中的位置，避免每批重新切段导致前后逻辑漂移。
+**Quy tắc cho tập dài:** ngay cả khi lượt hiện tại chỉ bàn giao Batch 1, vẫn phải lên kế hoạch các đoạn toàn cục tiếp theo và vị trí lô hiện tại trong toàn phim trước, tránh việc chia đoạn lại ở mỗi lô khiến logic trước/sau bị trôi lệch.
 
-**2.5 简洁性规则：**全片总览负责解释“为什么这样分”；单段提示词负责“这一段具体怎么生成”。不要把总览内容重复塞进每一个 2.5 `Objective` 或 `Timeline`。
-
----
-
-## A11. 结构校验（A12 前的唯一结构修正阶段）
-
-A11 负责“能不能生成、剧情有没有被挤坏”的结构问题；A12 只做文字和表现层抛光。
-
-### A11.1 校验清单
-- [ ] 已建立 `E01 / E02 / E03...` 源剧情账本，并以用户最新明确指令 / 原始剧情为事实源？
-- [ ] 最终 Timeline 中每个改变剧情状态的事件都能映射到某个 `E##`，没有无来源的新动作？
-- [ ] 没有新增、删除、替换、改归属或改顺序任何用户剧情事件？
-- [ ] 没有把“父母 / 家长 / 成人”等模糊角色擅自具体化为爸爸/妈妈/第二人？
-- [ ] 没有为了连续性追溯道具来源、补开盖/抽取/拿取/走位等前史？
-- [ ] 已按原文顺序登记全部原子节拍，没有只保留五类关键点？
-- [ ] 情绪曲线没有被用于重排剧情？
-- [ ] 理论最少段数只作为下限，没有强迫实际段数等于它？
-- [ ] 每段 ≤ 模型单段硬上限？
-- [ ] 全片各段时长总和符合用户严格总时长；若无法同时满足，是否显式标注冲突？
-- [ ] 所有对白在所属时间窗内可按自然语速完整说完？
-- [ ] 串行动作、反应与必要停顿有真实时间，不靠瞬移或异常快语速？
-- [ ] 长剧情是否先有完整全片段表，再按 Batch 容量交付？
-- [ ] A4 角色出镜状态是否按时间轴规划，且与最终正文一致？
-- [ ] 是否已对每一个相邻生成段判定“连续关联 / 局部状态关联 / 无连续关联”，没有把无关段强行继承？
-- [ ] 所有连续关联段的人物世界位置、相对关系、姿态、朝向和手部占用是否能从上一段末态无矛盾地进入下一段初态？
-- [ ] 所有关键道具是否完成“持有人 / 位置 / 数量 / 状态 / 可见性”链条检查，没有无来源的消失、复制、换手、恢复或瞬移？
-- [ ] 场景内已改变的门窗、家具、污渍、液面、破损、天气和光源状态是否在相关段中合理继承？
-- [ ] 是否已做生成稳定性预检，避免把高风险人体/手部/道具交互、复杂运镜、遮挡和多重参考冲突同时塞进一个镜头？
-- [ ] 若目标模型为 2.0，是否使用 A9.1“资产标识 + 正式提示词”？
-- [ ] 若目标模型为 2.5，是否使用 A9.2 的 `Objective / Reference binding / Immutable locks / Target duration / Timeline / Visual direction / Audio direction / Preserve / Avoid` 架构？
-- [ ] 若目标模型为 2.5，最终正文是否通过 A9.2.0 格式硬门：除段头与 A9.2 白名单字段外，没有任何其他顶层结构或额外分析块？
-- [ ] 若目标模型为 2.5，`Timeline` 是否只用时间块 + 连续自然语言，没有另立镜头编号体系作为主组织结构？
-- [ ] 若用户提供了参考图片，2.5 每个相关段是否都在自己的 `Reference binding` 中原样列出了需要的真实图片节点 / 资产句柄？
-- [ ] `Reference binding` 是否只列本段真实需要的参考资产，并采用“真实节点 / 句柄 + 简洁资产标识”；用户明确的“仅站位 / 仅服装 / 仅产品”等用途限定是否保留？
-- [ ] 是否避免用“同上 / 沿用上一段参考图”代替本段重新绑定？
-- [ ] 2.5 `Timeline` 是否为“时间块 + 连续自然语言”，没有退化成一堆摄影机/动作/表演小标题？
-- [ ] 2.5 是否避免把 A4 资产清单整块重复输出，而是把必要信息压进对应字段？
-- [ ] 每段都是自包含世界坐标 + 画面坐标，而非“同上/延续上一段”？
-- [ ] 连续场景状态继承、换场重新锚定是否正确？
-- [ ] 段间衔接满足 A7.3？
-- [ ] 动作连续剪辑是否尽量留在同一生成段？
-- [ ] 对白原文照抄？
-- [ ] 后期字幕/叠字是否没有交给生成模型？实体资产文字是否按 A1.3 处理？
-- [ ] 无参考库时若生成参考图，是否只作 Reference binding 使用、外观标为设计提案、且未越权控制站位/光线/剧情？（A1.2 情况二补充）
-
-### A11.2 有限修正机制（防止死循环）
-
-第一次检查后若发现问题：
-1. 把所有失败项一次性汇总；
-2. **只做一轮集中结构修正**；结构修正只允许调整分段边界、镜头承载、时间预算、摄影表达和锁定信息，**不得修改任何 `E##` 的事件内容、执行者、对象、数量、顺序或台词**；
-3. 修正后只重新核对受影响项和它们的直接连续性；
-4. 然后进入 A11.3 剧情保真审计与 A11.4 生成稳定性预检；全部通过后进入 A12。
-
-**禁止 A11 ↔ A12 来回递归。**
-
-若一轮集中修正后仍存在“用户要求彼此不可同时满足”的硬冲突（例如严格 30s 但原文对白自然朗读已超过 30s），保留用户原文并在“全片总览｜时长约束冲突”中明确说明，不继续无限重算。
-
-### A11.3 剧情保真审计（进入 A12 前必做）
-
-做一次单向比对，不向用户展示内部账本：
-
-1. 从源剧情账本按顺序读取 `E01 → E02 → ...`；
-2. 确认每个 `E##` 都在最终某个生成段中出现，且执行者 / 对象 / 台词 / 顺序没有变化；
-3. 反向扫描最终 Timeline 中所有会改变世界状态的动作；若找不到源 `E##`，删除该 AI 新增动作；
-4. 摄影、构图、景别、对焦、已有动作的直接物理结果与拟音可以无 `E##`，但不得产生新的剧情事实；
-5. 若删除 AI 新增动作后出现“状态从哪里来的”疑问，按 A0.1.4 处理：直接把用户给出的状态作为该节拍初始状态，不补前史；
-6. 若源文本自身存在缺口或矛盾，保留缺口/矛盾并在全片总览标注，不自行编桥。
-
-**审计目标不是让剧情更顺，而是确认最终提示词与用户剧情是同一件事。**
-
-### A11.4 生成稳定性预检（降低画面崩坏概率 · 强制）
-
-本节只降低生成风险，**不能承诺模型输出绝对不崩**。目标是提前消除最容易导致人物变形、手部错误、道具消失/复制、画面结构融化和身份漂移的提示词负担；不得以“稳定”为理由删剧情或改事件。
-
-#### A11.4.1 高风险触发项
-
-任一镜头出现以下情况时，标记为高风险并主动降复杂度：
-- 3 个及以上主体同时大幅移动、互相遮挡或发生接触；
-- 双手/多人同时操作小道具、交接、系扣、倒液体、擦拭等精细接触，同时还要求复杂运镜；
-- 人物快速转身、蹲起、落地、穿脱、多人换位等大幅身体动作与近景手部细节同时发生；
-- 镜子、玻璃、强反射、透明容器、多个影子等容易复制人物/肢体/道具的构图；
-- 产品包装、小字、手指、液体或机械结构既要近距离准确，又要高速移动/旋转；
-- 同一镜头同时要求极浅景深、强遮挡、快速运镜、精细接触和多角色表演；
-- 本段引用过多参考图，且多张图对同一角色、服装、场景结构或产品形态存在潜在冲突；
-- 提示词自身存在互斥要求，例如“人物完全固定”同时“快速换位”，“手始终握笔”同时“同镜空手完成另一动作”。
-
-#### A11.4.2 降风险顺序
-
-遇到高风险时，按以下顺序处理，直到提示词不再过载：
-1. **删掉无关控制，不删剧情。** 删除不影响本镜的镜头术语、泛化负面词、无关材质细节和无用参考；只保留当前镜真正需要的锁。
-2. **摄影机先简化。** 精细手部/道具接触时优先固定或单一平稳运动；不在同一时刻叠加推拉、环绕、快摇、强移焦。
-3. **让关键接触完整可见。** 交接、拿取、擦拭、开合等动作，选择能同时看见相关手部和道具的景别，避免在最关键接触点被画框边缘、身体或前景完全遮住。
-4. **降低景深冲突。** 关键手部、道具与接触面必须都可辨时，不使用会把其中一方完全虚化的极浅景深。
-5. **复杂动作与复杂摄影不要抢同一时刻。** 若源剧情允许拆镜，就在已有 `E##` 边界把不同复杂交互分镜承载；若源剧情明确要求同时发生，则保持同时，但降低摄影机运动、背景动态与无关表演复杂度。
-6. **参考图只留本段真正需要的。** 同一对象多张参考若用途不同，明确各自范围；互相冲突时按 A1.2.1 处理，不让模型自行融合。
-7. **对高风险段增加定向 Avoid，而不是全片堆负面词。** 可按本镜实际风险加入：不出现额外手臂/手指、肢体融合、脸部身份漂移、道具复制/消失、物件穿手/穿桌、人体穿模、几何融化、镜像多出人物等；无此风险则不机械添加。
-8. **仍然过载时才重分镜/重分段。** 只能使用已有源节拍边界，不删、不新增、不改顺序、不改变同时发生关系。
-
-#### A11.4.3 稳定性通过标准
-
-进入 A12 前确认：
-- 每镜有清楚的主要观看任务；
-- 人物数量、肢体接触、道具数量和动作因果可被当前景别完整看清；
-- 摄影机没有互相矛盾的运动命令；
-- 不存在会诱发重复主体的无必要镜像/反射要求；
-- Reference binding 不互相争夺同一维度；
-- 关键人物身份、服装、商品结构和关键道具都已在适当字段锁定；
-- 高风险段的 `Avoid` 只针对真实风险，不是几十项泛化负面词。
+**Quy tắc ngắn gọn của 2.5:** tổng quan toàn phim giải thích “vì sao chia như vậy”; prompt từng đoạn giải thích “đoạn này cụ thể được tạo thế nào”. Không nhồi lặp lại nội dung tổng quan vào từng `Objective` hoặc `Timeline` của 2.5.
 
 ---
 
-## A12. 交付前优化（最终抛光 · 单次执行）
+## A11. Kiểm tra cấu trúc (giai đoạn sửa cấu trúc duy nhất trước A12)
 
-**A12 只执行一次。** 它不是第二轮分镜，也不负责重新算段数、重切节拍或回滚 A11。
+A11 phụ trách các vấn đề cấu trúc như “có tạo được không, tình tiết có bị ép méo không”; A12 chỉ trau chuốt câu chữ và cách thể hiện.
 
-优化不是重写，而是在既有结构上检查 A12.1–A12.18 的表现与可执行性。发现普通表达问题直接修；发现结构级硬冲突按 A12.19 处理，不递归返回。
+### A11.1 Danh sách kiểm tra
+- [ ] Đã lập sổ cái các nhịp nguồn `E01 / E02 / E03...` và dùng chỉ thị rõ gần nhất / câu chuyện gốc của người dùng làm nguồn sự thật?
+- [ ] Mọi sự kiện thay đổi trạng thái cốt truyện trong Timeline cuối đều ánh xạ được với một `E##` và không có hành động mới vô căn cứ?
+- [ ] Không tự thêm, xóa, thay thế, đổi người thực hiện/đối tượng hoặc đảo thứ tự bất kỳ sự kiện nào của người dùng?
+- [ ] Không tự cụ thể hóa nhân vật mơ hồ như “cha mẹ / phụ huynh / người lớn” thành bố/mẹ/người thứ hai?
+- [ ] Không truy ngược nguồn gốc đạo cụ hoặc thêm quá trình mở nắp/rút/lấy/di chuyển chỉ để nối mạch liên tục?
+- [ ] Đã ghi đủ nhịp nguyên tử theo thứ tự nguyên tác, không chỉ giữ năm loại nhịp quan trọng?
+- [ ] Không dùng đường cong cảm xúc để sắp lại tình tiết?
+- [ ] Chỉ coi số đoạn tối thiểu lý thuyết là giới hạn dưới, không buộc số đoạn thực tế phải bằng nó?
+- [ ] Thời lượng mỗi đoạn ≤ giới hạn cứng của mô hình?
+- [ ] Tổng thời lượng các đoạn đáp ứng tổng thời lượng nghiêm ngặt của người dùng; nếu không thể đáp ứng đồng thời, đã đánh dấu rõ xung đột?
+- [ ] Mọi câu thoại đều có thể nói hết bằng tốc độ tự nhiên trong khoảng thời gian của nó?
+- [ ] Hành động tuần tự, phản ứng và khoảng dừng cần thiết đều có thời gian thực tế, không dựa vào dịch chuyển tức thời hoặc tốc độ nói nhanh bất thường?
+- [ ] Với câu chuyện dài, đã lập bảng đoạn đầy đủ cho toàn phim trước rồi mới chia lô theo dung lượng Batch?
+- [ ] Trạng thái xuất hiện của nhân vật A4 đã được lên kế hoạch theo timeline và nhất quán với nội dung cuối?
+- [ ] Đã xác định “liên hệ liên tục / liên hệ trạng thái cục bộ / không liên hệ liên tục” cho mỗi cặp đoạn tạo liền kề, không ép kế thừa giữa các đoạn không liên quan?
+- [ ] Trong các đoạn liên tục, vị trí thế giới, quan hệ tương đối, tư thế, hướng cơ thể và tay đang sử dụng của nhân vật có thể chuyển từ trạng thái cuối đoạn trước đến đầu đoạn sau mà không mâu thuẫn?
+- [ ] Đã kiểm tra chuỗi “người giữ / vị trí / số lượng / trạng thái / khả năng nhìn thấy” của mọi đạo cụ quan trọng; không có việc biến mất, sao chép, đổi tay, phục hồi hoặc dịch chuyển tức thời vô căn cứ?
+- [ ] Trạng thái cửa, cửa sổ, đồ nội thất, vết bẩn, mực chất lỏng, hư hỏng, thời tiết và nguồn sáng đã thay đổi trong cảnh có được kế thừa hợp lý ở các đoạn liên quan?
+- [ ] Đã kiểm tra trước độ ổn định khi tạo để tránh nhồi tương tác cơ thể/tay/đạo cụ rủi ro cao, camera phức tạp, che khuất và tham chiếu mâu thuẫn vào cùng góc máy?
+- [ ] Nếu mô hình đích là 2.0, đã dùng A9.1 “Nhận diện tài nguyên + prompt chính thức”?
+- [ ] Nếu mô hình đích là 2.5, đã dùng cấu trúc `Objective / Reference binding / Immutable locks / Target duration / Timeline / Visual direction / Audio direction / Preserve / Avoid` của A9.2?
+- [ ] Nếu mô hình đích là 2.5, nội dung cuối đã qua điều kiện cứng A9.2.0: ngoài đầu đoạn và các trường được phép của A9.2, không có cấu trúc cấp cao nhất hoặc khối phân tích thêm nào?
+- [ ] Nếu mô hình đích là 2.5, `Timeline` chỉ dùng các khối thời gian + văn xuôi tự nhiên liên tục, không lập hệ thống góc máy đánh số khác làm cấu trúc chính?
+- [ ] Nếu người dùng cung cấp ảnh tham chiếu, từng đoạn liên quan của 2.5 đã liệt kê nguyên dạng node ảnh/mã tài nguyên thực cần dùng trong `Reference binding` của chính đoạn đó?
+- [ ] `Reference binding` chỉ chứa tài nguyên tham chiếu thực cần dùng trong đoạn, theo dạng “node thực / mã tài nguyên + nhãn ngắn”; đã giữ giới hạn mục đích như “chỉ vị trí / chỉ trang phục / chỉ sản phẩm” của người dùng?
+- [ ] Không dùng “như trên / dùng ảnh tham chiếu đoạn trước” thay cho việc liên kết lại ở đoạn này?
+- [ ] `Timeline` của 2.5 vẫn là “khối thời gian + văn xuôi tự nhiên liên tục”, không thoái thành một đống đề mục camera/hành động/diễn xuất?
+- [ ] 2.5 không xuất lặp nguyên khối danh sách tài nguyên A4, mà đưa thông tin cần thiết vào các trường tương ứng?
+- [ ] Mỗi đoạn đều tự chứa tọa độ thế giới + tọa độ khung hình, không ghi “như trên/tiếp nối đoạn trước”?
+- [ ] Đã kế thừa đúng trạng thái của cảnh liên tục và xác lập lại mốc khi đổi cảnh?
+- [ ] Cách nối đoạn đáp ứng A7.3?
+- [ ] Dựng nối hành động được giữ trong cùng đoạn tạo khi có thể?
+- [ ] Lời thoại được chép nguyên văn?
+- [ ] Không giao phụ đề/chữ đè hậu kỳ cho mô hình tạo? Chữ trên tài nguyên thật được xử lý theo A1.3?
+- [ ] Nếu chưa có thư viện tham chiếu nhưng có tạo ảnh tham chiếu, ảnh đó chỉ dùng cho Reference binding, ngoại hình được ghi là đề xuất thiết kế và không vượt quyền kiểm soát vị trí/ánh sáng/tình tiết? (Bổ sung trường hợp hai ở A1.2)
 
-### A12.1 首帧锁定
-对每个镜头的首帧，按“适用项”写清：
-- 本镜是否有人物；若无人，明确“空镜，无人物”
-- 人物站 / 坐 / 蹲 / 躺
-- 角色画面左右
-- 人物相对距离
-- 身体朝向
-- 视线初始落点（源剧情有明确关注对象时照写；没有时只用不承载新信息的中性落点，不推断新兴趣/敌意/暧昧）
-- 手里拿什么
-- 关键道具摆在哪里
-- 摄影机距离和高度
-- 前景 / 中景 / 后景
+### A11.2 Cơ chế sửa có giới hạn (tránh lặp vô hạn)
 
-不适用的项不要硬编。
+Nếu kiểm tra lần đầu phát hiện vấn đề:
+1. Tổng hợp tất cả mục không đạt trong một lần;
+2. **Chỉ thực hiện một lượt sửa cấu trúc tập trung**; việc sửa chỉ được điều chỉnh ranh giới đoạn, cách các góc máy chứa nội dung, ngân sách thời gian, cách thể hiện bằng camera và thông tin khóa, **không được sửa nội dung sự kiện, người thực hiện, đối tượng, số lượng, thứ tự hoặc lời thoại của bất kỳ `E##` nào**;
+3. Sau khi sửa, chỉ kiểm tra lại các mục bị ảnh hưởng và tính liên tục trực tiếp của chúng;
+4. Sau đó thực hiện kiểm toán trung thành cốt truyện A11.3 và tiền kiểm ổn định khi tạo A11.4; chỉ khi tất cả đạt mới vào A12.
 
-### A12.2 出镜锁定按镜头执行
-以 A4 的内部时间轴状态规划为准；2.5 即使不单列资产标识，也必须在 Timeline / Immutable locks 中体现同样的出镜约束。
+**Cấm quay đi quay lại đệ quy giữa A11 ↔ A12.**
 
-本镜不该出现的角色，显式写：
-- 完全不出镜；
-- 不出现脸 / 身体 / 肩膀 / 手 / 倒影 / 影子 / 焦外人形（按需要选择）；
-- 若仅画外同期对白，要明确“只有声音”。
+Nếu sau một lượt sửa tập trung vẫn có xung đột cứng do “các yêu cầu của người dùng không thể đồng thời đáp ứng” (ví dụ bắt buộc đúng 30s nhưng đọc tự nhiên thoại gốc đã quá 30s), giữ nguyên nguyên tác và nêu rõ trong “Tổng quan toàn phim｜Xung đột giới hạn thời lượng”, không tính đi tính lại vô hạn.
 
-特别是主观镜头、局部镜头、肩后镜头、单人镜头，避免模型自动补出另一个角色。
+### A11.3 Kiểm toán trung thành cốt truyện (bắt buộc trước A12)
 
-### A12.3 光学：写可见结果，不依赖镜头型号
+Đối chiếu một chiều đúng một lần; không đưa sổ cái nội bộ cho người dùng:
+
+1. Đọc sổ cái nhịp nguồn theo thứ tự `E01 → E02 → ...`;
+2. Xác nhận mỗi `E##` đều xuất hiện trong một đoạn tạo của bản cuối, người thực hiện / đối tượng / lời thoại / thứ tự không thay đổi;
+3. Quét ngược tất cả hành động làm thay đổi trạng thái thế giới trong Timeline cuối; nếu không tìm được `E##` nguồn, xóa hành động do AI tự thêm;
+4. Quay phim, bố cục, cỡ cảnh, lấy nét, kết quả vật lý trực tiếp và tiếng động của hành động đã có có thể không cần `E##`, nhưng không được tạo sự thật cốt truyện mới;
+5. Nếu xóa hành động do AI thêm khiến nảy sinh câu hỏi “trạng thái này từ đâu ra”, xử lý theo A0.1.4: coi trạng thái người dùng đã cung cấp trực tiếp là trạng thái đầu của nhịp đó, không thêm lịch sử;
+6. Nếu văn bản nguồn tự có khoảng trống hoặc mâu thuẫn, giữ nguyên và đánh dấu trong tổng quan toàn phim, không tự viết nối.
+
+**Mục tiêu kiểm toán không phải làm câu chuyện trôi chảy hơn, mà là bảo đảm prompt cuối và cốt truyện của người dùng vẫn là cùng một câu chuyện.**
+
+### A11.4 Tiền kiểm độ ổn định khi tạo (giảm nguy cơ hình ảnh lỗi · bắt buộc)
+
+Mục này chỉ giảm rủi ro tạo, **không được hứa mô hình chắc chắn không sinh hình lỗi**. Mục tiêu là giảm trước độ phức tạp prompt dễ gây biến dạng nhân vật, lỗi bàn tay, đạo cụ biến mất/nhân đôi, cấu trúc hình ảnh bị chảy méo và trôi danh tính. Không được xóa tình tiết hoặc sửa sự kiện vì lý do “ổn định”.
+
+#### A11.4.1 Các yếu tố kích hoạt rủi ro cao
+
+Khi bất kỳ góc máy nào có các tình huống dưới đây, đánh dấu rủi ro cao và chủ động giảm độ phức tạp:
+- Có từ ba chủ thể trở lên đồng thời di chuyển mạnh, che khuất nhau hoặc tiếp xúc;
+- Hai tay/nhiều người đồng thời thao tác đạo cụ nhỏ như trao tay, cài cúc, rót chất lỏng, lau, v.v. và còn đòi hỏi chuyển động camera phức tạp;
+- Chuyển động cơ thể lớn như quay người nhanh, ngồi xổm rồi đứng lên, tiếp đất, mặc/cởi đồ, nhiều người đổi vị trí diễn ra đồng thời với chi tiết bàn tay ở cận cảnh;
+- Bố cục có gương, kính, phản xạ mạnh, bình chứa trong suốt, nhiều bóng đổ, dễ làm nhân đôi nhân vật/chi/đạo cụ;
+- Bao bì sản phẩm, chữ nhỏ, ngón tay, chất lỏng hoặc cấu trúc cơ khí vừa phải chính xác ở cự ly gần vừa di chuyển/xoay tốc độ cao;
+- Một góc máy đồng thời yêu cầu độ sâu trường ảnh cực nông, che khuất mạnh, camera nhanh, tiếp xúc tinh vi và diễn xuất nhiều nhân vật;
+- Đoạn có quá nhiều ảnh tham chiếu, trong đó các ảnh có thể mâu thuẫn về cùng nhân vật, trang phục, cấu trúc bối cảnh hoặc hình dáng sản phẩm;
+- Bản thân prompt có yêu cầu loại trừ nhau, ví dụ “nhân vật cố định hoàn toàn” đồng thời “đổi vị trí nhanh”, hoặc “tay luôn nắm bút” đồng thời “cùng góc máy dùng tay trống thực hiện hành động khác”.
+
+#### A11.4.2 Trình tự giảm rủi ro
+
+Khi gặp rủi ro cao, xử lý theo thứ tự sau cho đến khi prompt không còn quá tải:
+1. **Bỏ yêu cầu điều khiển không liên quan, không bỏ tình tiết.** Xóa thuật ngữ camera không ảnh hưởng góc máy này, từ phủ định chung chung, chi tiết vật liệu không liên quan và tham chiếu vô ích; chỉ giữ các điều kiện khóa thật sự cần.
+2. **Đơn giản hóa camera trước.** Khi có tiếp xúc tinh tế giữa tay/đạo cụ, ưu tiên máy cố định hoặc một chuyển động êm duy nhất; không chồng cùng lúc đẩy/kéo, xoay quanh, lia nhanh và đổi nét mạnh.
+3. **Làm cho tiếp xúc quan trọng nhìn thấy đầy đủ.** Với hành động bàn giao, cầm lấy, lau, đóng mở, chọn cỡ cảnh thấy rõ cả tay và đạo cụ liên quan; tránh để điểm tiếp xúc quan trọng nhất bị mép hình, cơ thể hoặc tiền cảnh che hoàn toàn.
+4. **Giảm xung đột độ sâu trường ảnh.** Khi phải phân biệt rõ tay, đạo cụ và bề mặt tiếp xúc, không dùng độ sâu trường ảnh quá nông làm một trong các đối tượng bị mờ hoàn toàn.
+5. **Đừng để hành động phức tạp và quay phim phức tạp cạnh tranh cùng thời điểm.** Nếu nguyên tác cho phép tách góc máy, phân bổ tương tác phức tạp tại các ranh giới `E##` đã có. Nếu nguyên tác yêu cầu đồng thời, giữ nguyên đồng thời nhưng giảm độ phức tạp chuyển động camera, nền động và diễn xuất không liên quan.
+6. **Chỉ giữ ảnh tham chiếu thật sự cần cho đoạn.** Nếu nhiều ảnh cùng đối tượng nhưng mục đích khác nhau, xác định rõ phạm vi từng ảnh; khi mâu thuẫn xử lý theo A1.2.1, không để mô hình tự trộn.
+7. **Thêm Avoid có mục tiêu cho đoạn rủi ro cao, không chất từ phủ định trên cả phim.** Theo rủi ro thực tế có thể ghi: không thêm tay/ngón tay thừa, dính chi, trôi danh tính khuôn mặt, đạo cụ nhân đôi/biến mất, vật thể xuyên tay/xuyên bàn, cơ thể xuyên vật, hình học chảy méo, nhân vật thừa trong gương, v.v. Không có rủi ro thì không máy móc thêm.
+8. **Chỉ khi vẫn quá tải mới chia lại góc máy/đoạn.** Chỉ dùng ranh giới nhịp nguồn đã có; không xóa, thêm, đảo thứ tự hoặc thay đổi quan hệ đồng thời.
+
+#### A11.4.3 Tiêu chuẩn đạt kiểm tra ổn định
+
+Trước khi vào A12, xác nhận:
+- Mỗi góc máy có nhiệm vụ xem chính rõ ràng;
+- Số nhân vật, tiếp xúc cơ thể, số đạo cụ và quan hệ nhân quả hành động đều có thể nhìn rõ đầy đủ bằng cỡ cảnh hiện tại;
+- Camera không có lệnh chuyển động mâu thuẫn nhau;
+- Không có yêu cầu gương/phản xạ không cần thiết dễ gây nhân đôi chủ thể;
+- Các Reference binding không cạnh tranh kiểm soát cùng một khía cạnh;
+- Danh tính, trang phục nhân vật quan trọng, cấu trúc sản phẩm và đạo cụ chính đã được khóa ở các trường phù hợp;
+- `Avoid` của đoạn rủi ro cao chỉ nhắm tới rủi ro thực, không phải hàng chục từ phủ định chung chung.
+
+---
+
+## A12. Tối ưu trước bàn giao (trau chuốt cuối · chỉ thực hiện một lần)
+
+**A12 chỉ thực hiện một lần.** Đây không phải lượt dựng storyboard thứ hai, không dùng để tính lại số đoạn, chia lại nhịp hoặc quay về A11.
+
+Tối ưu không phải viết lại, mà là kiểm tra cách thể hiện và khả năng thực thi của A12.1–A12.18 trên cấu trúc đã có. Lỗi diễn đạt thông thường thì sửa trực tiếp; xung đột cứng cấp cấu trúc xử lý theo A12.19, không quay lui đệ quy.
+
+### A12.1 Khóa khung hình đầu tiên
+Với khung hình đầu của mỗi góc máy, ghi rõ những mục áp dụng:
+- Góc máy này có nhân vật hay không; nếu không, ghi rõ “khung hình không người, không có nhân vật”;
+- Nhân vật đứng / ngồi / ngồi xổm / nằm;
+- Vị trí trái/phải của nhân vật trong khung hình;
+- Khoảng cách tương đối giữa các nhân vật;
+- Hướng cơ thể;
+- Điểm nhìn ban đầu (nếu nguyên tác chỉ định rõ đối tượng đang chú ý thì ghi đúng; nếu không, chỉ dùng điểm nhìn trung tính không mang thông tin mới, không suy ra mối quan tâm/sự thù địch/tình ý mới);
+- Đang cầm vật gì trong tay;
+- Đạo cụ quan trọng được đặt ở đâu;
+- Khoảng cách và độ cao camera;
+- Tiền cảnh / trung cảnh / hậu cảnh.
+
+Không tự bịa những mục không áp dụng.
+
+### A12.2 Khóa trạng thái xuất hiện theo từng góc máy
+Lấy kế hoạch trạng thái theo timeline nội bộ của A4 làm chuẩn. Với 2.5, dù không xuất riêng phần nhận diện tài nguyên, vẫn phải thể hiện các ràng buộc xuất hiện tương tự trong Timeline / Immutable locks.
+
+Với nhân vật không được xuất hiện trong góc máy này, phải ghi rõ:
+- Hoàn toàn không xuất hiện trong khung hình;
+- Không xuất hiện khuôn mặt / cơ thể / vai / tay / hình phản chiếu / bóng đổ / bóng người ngoài vùng nét (chọn tùy nhu cầu);
+- Nếu chỉ có lời thoại đồng bộ từ ngoài khung, phải ghi rõ “chỉ có tiếng nói”.
+
+Đặc biệt với góc nhìn chủ quan, góc quay một bộ phận, góc qua vai và góc chỉ có một người, phải tránh việc mô hình tự thêm nhân vật khác.
+
+### A12.3 Quang học: mô tả kết quả nhìn thấy, không phụ thuộc mã ống kính
 - ❌ “85mm f/1.4”
-- ✅ “短焦肖像感视角，面部透视自然，背景轻度虚化”
+- ✅ “Góc nhìn mang cảm giác chân dung với tiêu cự ngắn, phối cảnh khuôn mặt tự nhiên, nền hơi mờ”
 
-镜头型号可以辅助，但重点是最终画面结果。
+Mã ống kính có thể bổ trợ, nhưng trọng tâm là kết quả hình ảnh cuối cùng.
 
-### A12.4 摄影机矛盾检查
-每镜只保留一个主要摄影机运动逻辑。
-- ❌ “镜头完全固定，同时缓慢横移”
-- ✅ “摄影机固定，仅做一次极慢移焦”
+### A12.4 Kiểm tra mâu thuẫn chuyển động camera
+Mỗi góc máy chỉ giữ một logic chuyển động camera chính.
+- ❌ “Camera hoàn toàn cố định, đồng thời từ từ di chuyển ngang”
+- ✅ “Camera cố định, chỉ chuyển nét cực chậm một lần”
 
-### A12.5 回避摄影（仅适用于克制/含蓄风格）
-用户风格属于克制、含蓄时，可优先：
-- 手部特写 / 杯子 / 红绳 / 地板边缘
-- 肩后 / 柱子遮挡 / 虚焦前景
-- 双人中景 / 固定远景
+### A12.5 Cách quay gián tiếp (chỉ áp dụng cho phong cách tiết chế/kín đáo)
+Khi phong cách của người dùng mang tính tiết chế, kín đáo, có thể ưu tiên:
+- Đặc tả bàn tay / chiếc cốc / dây đỏ / mép sàn;
+- Góc qua vai / cột che khuất / tiền cảnh ngoài nét;
+- Trung cảnh hai người / viễn cảnh cố định.
 
-不要把这条强行应用到动作片、强喜剧、产品实验等其他风格。
+Không áp dụng ép buộc quy tắc này cho phim hành động, hài đậm, thử nghiệm sản phẩm hoặc phong cách khác.
 
-### A12.6 表演：行为而非抽象情绪
-- ❌ “他很难过”
-- ✅ “他原本正在举杯，动作停约 0.4 秒，随后继续喝”
+### A12.6 Diễn xuất: mô tả hành vi thay vì cảm xúc trừu tượng
+- ❌ “Anh ấy rất buồn”
+- ✅ “Anh ấy đang nâng cốc thì dừng động tác khoảng 0,4 giây, sau đó tiếp tục uống”
 
-优先把**源剧情已经存在的反应**写成可见动作。视线停顿 / 手指收紧 / 杯子停顿 / 嘴唇张开又合上 / 呼吸变化 / 重心变化只能在与源剧情反应一致时使用，不能作为 AI 自行添加的新表演事件。
+Ưu tiên chuyển **phản ứng đã tồn tại trong cốt truyện nguồn** thành hành động có thể nhìn thấy. Chỉ dùng việc dừng ánh mắt / siết ngón tay / khựng cốc / hé rồi khép môi / đổi nhịp thở / chuyển trọng tâm nếu phù hợp với phản ứng gốc; không dùng chúng làm sự kiện diễn xuất mới do AI tự thêm.
 
-### A12.7 微表情密度
-每角色每镜通常 0–2 个明确微表情事件。镜头看不到脸时，不写脸部反应。
+### A12.7 Mật độ vi biểu cảm
+Mỗi nhân vật trong mỗi góc máy thường có 0–2 sự kiện vi biểu cảm rõ ràng. Khi góc máy không thấy mặt thì không mô tả phản ứng trên mặt.
 
-### A12.8 眼神目标具体化
-只有源剧情已经写明角色在看某人/某物/某方向，才把目标写具体。若原文没有关注对象，不得自行选择一个具有剧情含义的目标。
+### A12.8 Cụ thể hóa đối tượng nhìn
+Chỉ khi nguyên tác đã ghi rõ nhân vật đang nhìn người/vật/hướng nào mới cụ thể hóa mục tiêu. Nếu nguyên tác không nêu đối tượng chú ý, không được tự chọn đối tượng mang ý nghĩa tình tiết.
 
-自然行为顺序可写成“眼睛先动 → 头部后跟”，但只用于表现原文已有的看向动作，不新增一次看向。
+Có thể mô tả trình tự tự nhiên “mắt chuyển trước → đầu quay theo sau”, nhưng chỉ để thể hiện hành động nhìn đã có trong nguyên tác, không thêm một lần nhìn mới.
 
-### A12.9 双人动作避免机械同步
-若源剧情本身包含两个可并行、但未锁定精确同步的已有动作，可以在不改变事件顺序与因果的前提下做轻微节奏错开。**不得为了“自然”给任一角色新增动作、延后关键事件或改变原本明确的同时发生关系。**
+### A12.9 Tránh đồng bộ máy móc giữa hành động của hai người
+Nếu nguyên tác có hai hành động vốn có thể diễn ra song song nhưng chưa yêu cầu đồng bộ chính xác, có thể lệch nhịp nhẹ với điều kiện không thay đổi thứ tự và quan hệ nhân quả của sự kiện. **Không được thêm hành động cho bất kỳ nhân vật nào, trì hoãn sự kiện quan trọng hoặc thay quan hệ đồng thời đã được nêu rõ chỉ để “tự nhiên” hơn.**
 
-### A12.10 动作因果链
-优先把**已有源节拍**组织成清楚的因果链；如果用户原文确实包含多个动作，就全部保留，只在镜头承载上分配，不得为了“每镜一个核心动作”删掉任何源事件。AI 自己添加的装饰动作应删除。
+### A12.10 Chuỗi nhân quả hành động
+Ưu tiên sắp xếp **các nhịp nguồn đã tồn tại** thành chuỗi nhân quả rõ ràng. Nếu nguyên tác của người dùng thực sự có nhiều hành động, phải giữ tất cả và chỉ phân bổ giữa các góc máy; không được xóa sự kiện nguồn chỉ vì “mỗi góc máy một hành động chính”. Phải xóa những hành động trang trí do AI tự thêm.
 
-### A12.11 道具连续性（段内 + 相关跨段）
+### A12.11 Tính liên tục của đạo cụ (trong đoạn và giữa các đoạn liên quan)
 
-对每个关键道具至少检查：**持有人、使用手（若已明确）、绝对位置、可见/遮挡状态、数量、朝向、开合、液面/内容物、损耗、污渍/湿度、段末去向**。
+Với mỗi đạo cụ quan trọng, ít nhất phải kiểm tra: **người giữ, tay đang sử dụng (nếu đã xác định), vị trí tuyệt đối, trạng thái nhìn thấy/bị che, số lượng, hướng, trạng thái mở/đóng, mực chất lỏng/nội dung bên trong, hao mòn, vết bẩn/độ ẩm và vị trí cuối đoạn**.
 
-- 段内按“初态 → 源剧情动作 → 末态”逐时间块扫描；连续关联段再按 A8.3 比较上一段末态与下一段初态。
-- 一支笔若仍由人物握持，且没有源 `E##` 对应的放下、递交、收起或掉落，下一时刻不能凭空消失。
-- 下一镜因裁切或遮挡没有拍到道具，不等于道具已经消失；世界状态继续保留。
-- 若同一只手仍清楚可见而道具无来源地没了，视为连续性失败；若手和道具都在画外，只记录“仍由该人物持有/仍处于原位置”，不要凭空改变状态。
-- 已放下的道具不能无过程回手；已经交给 B 的物件不能同时又出现在 A 手里；数量不能无因增减。
-- 源文未指定左右手且镜头不需要时不强行锁手；一旦提示词为执行明确了某只手，则相关连续镜头中不得无过程换手。
+- Trong đoạn, quét từng khối thời gian theo “trạng thái đầu → hành động nguyên tác → trạng thái cuối”. Với các đoạn liên tục liên quan, đối chiếu trạng thái cuối đoạn trước và đầu đoạn sau theo A8.3.
+- Nếu một cây bút vẫn đang được nhân vật cầm và không có hành động đặt xuống, trao đi, cất hoặc đánh rơi tương ứng với `E##` nguồn, nó không được tự biến mất ở thời điểm tiếp theo.
+- Góc máy sau không thấy đạo cụ vì bị cắt khỏi hình hoặc che khuất không có nghĩa đạo cụ đã biến mất; trạng thái thế giới vẫn được giữ.
+- Nếu cùng bàn tay còn nhìn thấy rõ nhưng đạo cụ lại mất không có căn cứ, đó là lỗi liên tục; nếu cả tay và đạo cụ đều ngoài khung, chỉ ghi “nhân vật đó vẫn đang giữ/vật vẫn ở vị trí cũ”, không tự thay đổi trạng thái.
+- Đạo cụ đã đặt xuống không thể tự quay lại tay; vật đã trao cho B không thể đồng thời xuất hiện trở lại trong tay A; số lượng không được tự tăng giảm.
+- Nếu nguyên tác chưa nêu tay trái/phải và góc máy không cần, không ép khóa tay; một khi prompt đã xác định một tay để thực thi thì không được đổi tay vô cớ giữa các góc máy liên tục liên quan.
 
-禁止无因恢复或重置：喝过的杯子突然满、擦开的污渍突然复原、打开的门无动作闭合、破损道具自动完好、已消耗物件恢复数量。
+Cấm phục hồi hoặc đặt lại trạng thái không có nguyên nhân: chiếc cốc đã uống bỗng đầy lại, vết bẩn đã lau tự trở lại, cửa đang mở tự đóng không có hành động, đạo cụ hỏng tự nguyên vẹn hoặc số lượng vật đã tiêu hao tự phục hồi.
 
-### A12.12 物理真实性
-重点检查液体惯性、衣料褶皱、手与道具接触、物体重量、桌面震动、碰撞反馈、玻璃折射/反射等。
+### A12.12 Tính chân thực vật lý
+Tập trung kiểm tra quán tính chất lỏng, nếp gấp vải, tiếp xúc giữa tay và đạo cụ, trọng lượng vật thể, rung động mặt bàn, phản hồi va chạm, khúc xạ/phản xạ của kính, v.v.
 
-### A12.13 光线一致性
-同一连续场景保持主光方向、色温与曝光逻辑。换场/时间跳跃则按 A5.5 重新建立，不强行继承。
+### A12.13 Tính nhất quán ánh sáng
+Trong cùng cảnh liên tục, giữ nguyên hướng ánh sáng chính, nhiệt độ màu và logic phơi sáng. Khi chuyển cảnh hoặc nhảy thời gian, thiết lập lại theo A5.5, không ép kế thừa.
 
-禁止仅因剧情重要就突然加轮廓光、增强眼神光或改变曝光，除非用户风格明确要求。
+Cấm đột ngột thêm ánh sáng viền, tăng ánh sáng bắt mắt hoặc đổi phơi sáng chỉ vì tình tiết quan trọng, trừ khi phong cách người dùng đã yêu cầu rõ.
 
-### A12.14 声音
-默认只保留真实同期对白和环境/动作声。BGM、配乐、情绪音效是否存在，以用户要求为准；用户未要求则不自动添加，默认无背景音乐。
+### A12.14 Âm thanh
+Mặc định chỉ giữ lời thoại đồng bộ thực tế và âm thanh môi trường/hành động. Có dùng BGM, nhạc nền hoặc hiệu ứng nhấn cảm xúc hay không phải theo yêu cầu người dùng; nếu không yêu cầu thì không tự thêm, mặc định không có nhạc nền.
 
-### A12.15 对白原文 + 时长
-用户提供对白必须：
-- 原文照抄
-- 不改词 / 不换句式 / 不加语气词 / 不重复 / 不即兴
+### A12.15 Lời thoại nguyên văn + thời lượng
+Lời thoại người dùng cung cấp phải:
+- Chép nguyên văn;
+- Không đổi từ / đổi cấu trúc câu / thêm từ cảm thán / lặp lại / ứng khẩu.
 
-A12 **不得**通过“加快语速”解决对白塞不下的问题；这类问题应已在 A11 处理。A12 只微调不改变结构的停顿措辞说明。
+A12 **không được** giải quyết thoại không đủ thời gian bằng cách “nói nhanh hơn”; vấn đề như vậy phải được xử lý ở A11. A12 chỉ tinh chỉnh cách mô tả khoảng dừng mà không thay đổi cấu trúc.
 
-### A12.16 正向锁优先
-优先写可执行状态：
-- “角色 A 本镜始终位于画面左侧”
-- “杯子由角色 A 右手持有”
-- “角色 B 本镜完全画外”
+### A12.16 Ưu tiên khóa điều kiện khẳng định
+Ưu tiên ghi trạng thái có thể thực hiện:
+- “Nhân vật A luôn ở bên trái khung hình trong góc máy này”;
+- “Chiếc cốc được nhân vật A cầm bằng tay phải”;
+- “Nhân vật B hoàn toàn ngoài khung trong góc máy này”.
 
-再补必要禁止项。
+Sau đó mới thêm những điều cấm cần thiết.
 
-### A12.17 文字锁
-默认写：
-- 无字幕
-- 无额外屏幕文字
-- 无后期标题/说明卡/UI 叠字/水印
+### A12.17 Khóa chữ trên hình
+Mặc định ghi:
+- Không phụ đề;
+- Không chữ màn hình bổ sung;
+- Không tiêu đề/thẻ giải thích/chữ UI chồng lên hình/watermark ở hậu kỳ.
 
-若镜头含产品包装、招牌、书信等实体资产文字：
-- 有参考图 → 保持参考资产，不新增、不改写、不重绘文字；
-- 不要求模型额外生成“清晰准确的新文字”；
-- 用户明确要求可读文字时才逐字锁定。
+Nếu góc máy có chữ trên tài nguyên vật lý như bao bì sản phẩm, biển hiệu, thư từ:
+- Có ảnh tham chiếu → giữ nguyên tài nguyên tham chiếu, không thêm, viết lại hoặc vẽ lại chữ;
+- Không yêu cầu mô hình tạo thêm “chữ mới rõ và chính xác”;
+- Chỉ khóa chính xác từng chữ nếu người dùng yêu cầu rõ chữ phải đọc được.
 
-### A12.17.1 参考图片绑定完整性（Seedance 2.5）
-当用户提供参考图片时，A12 只检查绑定是否完整、用途是否清楚，不得在优化阶段更换、删除、合并或自行新增参考图。
+### A12.17.1 Tính đầy đủ của liên kết ảnh tham chiếu (Seedance 2.5)
+Khi người dùng cung cấp ảnh tham chiếu, A12 chỉ kiểm tra đã liên kết đủ và xác định rõ mục đích hay chưa; không được thay, xóa, ghép hoặc tự bổ sung ảnh tham chiếu trong giai đoạn tối ưu.
 
-- 每个相关段都必须保留该段需要的真实参考节点 / 资产句柄；
-- 不得因“上一段已经绑定”而从下一段删除；
-- 不得把“仅站位参考”扩大为人物外观参考；
-- 不得把角色参考图中的背景、陌生人物或额外道具带入剧情；
-- 不得把商品参考图里的复杂文字改写成新的包装文案。
+- Mỗi đoạn liên quan phải giữ node tham chiếu thực/mã tài nguyên mà đoạn đó cần;
+- Không xóa tham chiếu khỏi đoạn sau chỉ vì “đã liên kết ở đoạn trước”;
+- Không mở rộng “chỉ tham chiếu vị trí” thành tham chiếu ngoại hình nhân vật;
+- Không đưa phông nền, người lạ hoặc đạo cụ bổ sung từ ảnh tham chiếu nhân vật vào cốt truyện;
+- Không viết lại phần chữ phức tạp trong ảnh tham chiếu sản phẩm thành nội dung bao bì mới.
 
-### A12.18 统一限制按需添加
-可按当前项目选用：
-- 不增加人物 / 道具 / 对白 / 剧情动作
-- 不无故越轴 / 不无过程交换人物位置
-- 不做 MV 式快剪
-- 不做无风格依据的广告式补光 / 磨皮
-- 不夸张景深 / 不使用不自然慢动作
+### A12.18 Chỉ thêm các giới hạn chung khi cần
+Có thể chọn theo dự án hiện tại:
+- Không thêm nhân vật / đạo cụ / lời thoại / hành động cốt truyện;
+- Không tự ý vượt trục / không hoán đổi vị trí nhân vật khi thiếu quá trình;
+- Không dựng cắt nhanh kiểu MV;
+- Không thêm ánh sáng phụ kiểu quảng cáo / làm mịn da khi không có căn cứ phong cách;
+- Không phóng đại độ sâu trường ảnh / không dùng quay chậm thiếu tự nhiên.
 
-**不要机械粘贴与当前镜头无关的限制。**
+**Không máy móc dán các giới hạn không liên quan góc máy hiện tại.**
 
-### A12.18.1 最终连续性与穿帮风险审计（交付前强制）
+### A12.18.1 Kiểm toán cuối về tính liên tục và nguy cơ lỗi hình (bắt buộc trước bàn giao)
 
-A12 完成文字抛光后、最终输出前，再做一次**单向审计**，不返回 A11、不触发第二轮 A12：
+A12 sau khi trau chuốt câu chữ, trước khi xuất bản cuối, phải thực hiện thêm một lần **kiểm toán một chiều**, không quay về A11 hoặc kích hoạt lượt A12 thứ hai:
 
-1. **建立每段起态 / 末态快照**：人物世界位置、姿态、朝向、出镜状态、手部占用；关键道具持有人/位置/数量/状态；场景门窗/家具/污渍/光源等持续状态。
-2. **只比较 A8 判定为“连续关联 / 局部状态关联”的段对**。无连续关系的相邻段不强行比较人物位置，只检查本段自身是否合理。
-3. **人物穿帮检查**：无来源瞬移、无来源换边、无过程站↔坐、同一人物在同一世界位置被重复成两人、画内/画外与机位描述互相矛盾。
-4. **道具穿帮检查**：无来源消失、复制、换手、回手、数量变化、开合重置、液面/污渍/破损恢复；特别检查“上一秒还拿着，下一秒同一只手清楚可见却空了”的情况。
-5. **空间穿帮检查**：固定家具移位、门窗状态跳变、人物穿墙/穿桌、物件穿手、角色与桌椅尺度突变、反射/镜像中多出不存在的人物或道具。
-6. **生成崩坏风险检查**：高风险镜头是否已经按 A11.4 降低运镜、遮挡、景深、并发接触与参考冲突；是否针对本镜真实风险加入必要的定向 Avoid。
-7. **剧情保真复核**：所有修正只能改变摄影表达、锁定信息、遮挡/可见性描述和镜头承载；不能新增“放下笔”“重新拿笔”“走回原位”等桥接动作来掩盖穿帮。
+1. **Lập bản chụp trạng thái đầu/cuối mỗi đoạn:** vị trí thế giới, tư thế, hướng, trạng thái xuất hiện và tay đang sử dụng của nhân vật; người giữ/vị trí/số lượng/trạng thái đạo cụ quan trọng; trạng thái liên tục của cửa, cửa sổ, đồ nội thất, vết bẩn, nguồn sáng trong bối cảnh.
+2. **Chỉ so sánh những cặp đoạn A8 xác định là “liên hệ liên tục / liên hệ trạng thái cục bộ”.** Không ép so sánh vị trí nhân vật giữa các đoạn liền kề không có liên hệ liên tục; chỉ kiểm tra tính hợp lý của bản thân đoạn đó.
+3. **Kiểm tra lỗi hình nhân vật:** dịch chuyển tức thời vô căn cứ, đổi bên vô căn cứ, đứng ↔ ngồi không có quá trình, nhân đôi cùng nhân vật thành hai người tại một vị trí thế giới, mâu thuẫn giữa mô tả trong/ngoài khung và vị trí camera.
+4. **Kiểm tra lỗi đạo cụ:** biến mất, nhân đôi, đổi tay, quay trở lại tay, thay đổi số lượng, đặt lại trạng thái mở/đóng, phục hồi mực chất lỏng/vết bẩn/hư hỏng khi thiếu căn cứ; đặc biệt kiểm tra “giây trước còn cầm, giây sau cùng bàn tay vẫn nhìn rõ nhưng trống không”.
+5. **Kiểm tra lỗi không gian:** đồ nội thất cố định tự dịch chuyển, cửa/cửa sổ nhảy trạng thái, nhân vật xuyên tường/xuyên bàn, đồ vật xuyên tay, tỷ lệ nhân vật với bàn ghế đột ngột thay đổi, phản chiếu/gương có thêm nhân vật hoặc đạo cụ không tồn tại.
+6. **Kiểm tra nguy cơ hình ảnh bị lỗi khi tạo:** các góc máy rủi ro cao đã giảm chuyển động camera, che khuất, độ sâu trường ảnh, tiếp xúc đồng thời và xung đột tham chiếu theo A11.4 chưa; đã thêm Avoid nhắm đúng rủi ro thực tế của góc máy chưa.
+7. **Rà soát trung thành cốt truyện:** mọi chỉnh sửa chỉ được thay đổi cách thể hiện bằng camera, thông tin khóa, mô tả che khuất/nhìn thấy và cách góc máy chứa nội dung; không thêm hành động nối như “đặt bút xuống”, “nhặt bút lên lần nữa”, “đi về vị trí cũ” để che giấu lỗi hình.
 
-若发现的是 AI 草稿自身矛盾，直接在本次 A12 中修正成与已确认状态一致；若发现源剧情本身矛盾，保留原文并在全片总览标注“源文本冲突”。
+Nếu mâu thuẫn nằm trong bản nháp do AI tạo, sửa trực tiếp trong A12 lần này để khớp trạng thái đã xác nhận. Nếu mâu thuẫn vốn nằm trong cốt truyện nguồn, giữ nguyên nguyên tác và đánh dấu “Mâu thuẫn văn bản nguồn” trong tổng quan toàn phim.
 
-**本节是提示词侧的穿帮风险审计，不等于真实生成视频已经无穿帮。真实视频是否出现多手多指、肢体融合、人物变脸、道具闪现/消失、穿模、镜像错误等，必须在媒体实际可读取时另做结果验收。**
+**Mục này chỉ kiểm toán nguy cơ lỗi hình ở phía prompt, không có nghĩa video thực sự được tạo đã hết lỗi.** Các lỗi trong video thật như thừa tay/ngón tay, dính chi, đổi khuôn mặt, đạo cụ chớp xuất hiện/biến mất, xuyên vật thể, phản chiếu sai, v.v. bắt buộc nghiệm thu riêng khi có thể đọc phương tiện thực tế.
 
-### A12.19 优化边界与终止条件（防死循环）
+### A12.19 Giới hạn tối ưu và điều kiện kết thúc (tránh lặp vô hạn)
 
-A12 不允许改变：
-- 用户原文台词
-- **任何源剧情 `E##` 的动作、反应、事件数量、执行者、承受者、道具、信息与因果关系**
-- **用户原文中的模糊身份层级（如“父母/家长/成人”不得擅自具体化）**
-- 剧情核心意图
-- 已在 A11 确认的节拍顺序
-- 全片实际段数 / 各段时长
-- 全局段号 / Batch 规划
-- 关键资产身份
-- 已确认的世界坐标逻辑
+A12 không được thay đổi:
+- Lời thoại nguyên văn người dùng;
+- **Hành động, phản ứng, số lượng sự kiện, người thực hiện, người chịu tác động, đạo cụ, thông tin và quan hệ nhân quả của bất kỳ nhịp nguồn `E##` nào**;
+- **Mức độ mơ hồ về danh tính trong nguyên tác của người dùng (ví dụ không tự cụ thể hóa “cha mẹ/phụ huynh/người lớn”)**;
+- Ý đồ cốt lõi của câu chuyện;
+- Thứ tự nhịp đã được xác nhận trong A11;
+- Số đoạn thực tế toàn phim / thời lượng mỗi đoạn;
+- Số thứ tự đoạn toàn cục / kế hoạch Batch;
+- Danh tính các tài nguyên quan trọng;
+- Logic tọa độ thế giới đã xác nhận.
 
-A12 只允许：
-- 把描述写得更具体可执行
-- 补齐首帧/出镜锁
-- 减少过度表演
-- 补物理、光线、声音与连续性表述
-- 清理互相矛盾的措辞
+A12 chỉ được phép:
+- Viết mô tả cụ thể và dễ thực hiện hơn;
+- Bổ sung đầy đủ khóa khung hình đầu/trạng thái xuất hiện;
+- Giảm diễn xuất quá mức;
+- Bổ sung mô tả vật lý, ánh sáng, âm thanh và tính liên tục;
+- Sửa câu chữ mâu thuẫn nhau.
 
-**冲突来源区分：**
-- 若冲突是 AI 草稿自己造成的表述错误（如同一镜同时写左手/右手持杯）→ 在 A12 直接修成与 A11 已确认状态一致；
-- 若冲突来自用户源剧本本身（如同一时刻明确写了两个互斥位置）→ 不擅自改剧情，在全片总览标注“源文本冲突”。
+**Phân biệt nguồn mâu thuẫn:**
+- Nếu mâu thuẫn do lỗi diễn đạt trong bản nháp AI (ví dụ cùng góc máy nói nhân vật cầm cốc bằng cả tay trái và tay phải như những điều loại trừ nhau) → sửa trực tiếp trong A12 cho khớp trạng thái đã xác nhận ở A11;
+- Nếu mâu thuẫn vốn có trong kịch bản nguồn của người dùng (ví dụ cùng một thời điểm ghi rõ hai vị trí loại trừ nhau) → không tự sửa tình tiết, ghi “Mâu thuẫn văn bản nguồn” trong tổng quan toàn phim.
 
-**终止规则：**A12 完成一次后只做最终勾选，不再返回 A11，不再触发第二次 A12。
+**Quy tắc kết thúc:** Sau khi hoàn tất A12 một lần, chỉ thực hiện danh sách kiểm tra cuối; không quay lại A11 hoặc chạy A12 lần thứ hai.
 
-最终勾选：
-- [ ] 所有源剧情 `E##` 均出现且顺序、执行者、对象、台词未改变
-- [ ] Timeline 中不存在无源 `E##` 的新增剧情动作
-- [ ] 没有补前史、补道具来源、擅自具体化模糊角色
-- [ ] 首帧适用项齐全
-- [ ] 每镜出镜状态与 A4 一致
-- [ ] 无摄影机矛盾
-- [ ] 表演可见且不过载
-- [ ] 眼神目标具体
-- [ ] 道具 / 物理 / 光线连续
-- [ ] 所有相邻段已按 A8 判定关联类型；有连续关系的段人物位置/姿态/朝向一致，无关系的段没有被错误强锁
-- [ ] 关键道具不存在无来源的消失、复制、换手、回手、数量变化或状态重置；画面裁切/遮挡没有被误判成世界状态变化
-- [ ] 已完成空间/门窗/家具/反射/镜像/穿模等穿帮风险审计
-- [ ] 高风险镜头已通过 A11.4 生成稳定性预检并做定向降复杂度
-- [ ] 对白原文无改动
-- [ ] 无 AI 新增字幕/叠字
-- [ ] 实体文字按参考资产处理
-- [ ] 无结构回滚 / 无循环
-- [ ] 若目标模型为 2.5，最终交付只包含 A9.2 允许字段，且不存在任何旧式三段壳、2.0 外壳或镜头编号主结构
-- [ ] 生成参考图（若有）只用于 Reference binding，外观标为设计提案，未越权引入站位/光线/剧情（A1.2 情况二补充）
+Danh sách kiểm tra cuối:
+- [ ] Mọi nhịp nguồn `E##` đều xuất hiện và giữ nguyên thứ tự, người thực hiện, đối tượng, lời thoại;
+- [ ] Timeline không có hành động tình tiết mới thiếu `E##` nguồn;
+- [ ] Không tự thêm quá khứ, nguồn gốc đạo cụ hoặc cụ thể hóa nhân vật mơ hồ;
+- [ ] Đã điền đầy đủ những điều kiện khung hình đầu có thể áp dụng;
+- [ ] Trạng thái xuất hiện trong từng góc máy nhất quán với A4;
+- [ ] Không có lệnh camera mâu thuẫn;
+- [ ] Diễn xuất nhìn thấy được và không quá tải;
+- [ ] Đối tượng nhìn cụ thể;
+- [ ] Đạo cụ / vật lý / ánh sáng liên tục;
+- [ ] Đã xác định loại liên hệ của mọi cặp đoạn liền kề theo A8; trong các đoạn liên tục, vị trí/tư thế/hướng nhân vật nhất quán, các đoạn không liên hệ không bị khóa nhầm;
+- [ ] Đạo cụ quan trọng không tự biến mất, nhân đôi, đổi tay, quay lại tay, đổi số lượng hoặc đặt lại trạng thái thiếu căn cứ; việc cắt khuôn hình/che khuất không bị hiểu sai là thay đổi trạng thái thế giới;
+- [ ] Đã kiểm toán nguy cơ lỗi hình về không gian/cửa, cửa sổ/đồ nội thất/phản xạ/gương/xuyên vật thể;
+- [ ] Các góc máy rủi ro cao đã vượt qua tiền kiểm ổn định A11.4 và được giảm độ phức tạp đúng mục tiêu;
+- [ ] Lời thoại nguyên văn không thay đổi;
+- [ ] AI không thêm phụ đề/chữ đè;
+- [ ] Chữ trên vật thể thật được xử lý theo tài nguyên tham chiếu;
+- [ ] Không quay lui cấu trúc / không lặp vô hạn;
+- [ ] Nếu mô hình đích là 2.5, bản bàn giao cuối chỉ có các trường A9.2 cho phép, không có khung ba phần cũ, khung 2.0 hoặc cấu trúc chính đánh số góc máy;
+- [ ] Ảnh tham chiếu được tạo (nếu có) chỉ dùng cho Reference binding, ngoại hình được ghi là đề xuất thiết kế, không vượt quyền bổ sung vị trí/ánh sáng/tình tiết (bổ sung trường hợp hai A1.2).
 
-**勾选完成 → 输出最终版。**
+**Hoàn tất danh sách kiểm tra → xuất phiên bản cuối cùng.**
 
 ---
 
@@ -1351,56 +1352,56 @@ A12 只允许：
 
 ---
 
-## 在画布上推进
+## Tiến hành trên Canvas
 
-实际制作默认在当前画布呈现，但**Seedance 路由优先于画布发现与配置**：若已有可执行剧本/时间轴且当前目标是视频制作、生成、继续或修订，必须先按本文件 PART A 完成对应 Seedance 提示词规划/定稿，再进入[画布执行](references/canvasExecution.md)按需读取画布概览、目标节点、局部连接、模型配置、端口和节点函数。不得因为需要 `getConfig`、选择分辨率/画幅/模式或宿主弹出配置询问而跳过 PART A。只有尚未进入视频制作阶段时，才按普通流程先发现画布。“先完成剧本和资产方案”只限制阶段，仍使用文本节点，不触发媒体生成；仅当用户明确要对话文字、咨询或不要操作画布时省略节点操作。工作区采用宿主当前项目；未打开画布时说明具体条件，继续可完成的文字部分。
+Sản xuất thực tế mặc định được thể hiện trên Canvas hiện tại, nhưng **tuyến Seedance có ưu tiên trước bước khám phá và cấu hình Canvas**. Nếu đã có kịch bản/timeline có thể thực thi và mục tiêu hiện tại là sản xuất, tạo, tiếp tục hoặc sửa video, trước tiên phải hoàn tất kế hoạch và chốt prompt Seedance tương ứng theo PART A trong tệp này. Sau đó mới vào [Thực thi Canvas](references/canvasExecution.md) để đọc tổng quan Canvas, node đích, kết nối cục bộ, cấu hình mô hình, cổng và hàm node khi cần. Không bỏ qua PART A chỉ vì cần `getConfig`, chọn độ phân giải/tỷ lệ khung hình/chế độ hoặc ứng dụng hiển thị câu hỏi cấu hình. Chỉ khi chưa bước vào giai đoạn sản xuất video mới khám phá Canvas trước theo quy trình thường. “Hoàn tất kịch bản và phương án tài nguyên trước” chỉ giới hạn giai đoạn: vẫn dùng node văn bản, không kích hoạt tạo phương tiện. Chỉ bỏ thao tác node khi người dùng yêu cầu rõ chỉ trả lời văn bản, tư vấn hoặc không thao tác Canvas. Không gian làm việc sử dụng dự án hiện tại của ứng dụng. Nếu Canvas chưa mở, nêu điều kiện cụ thể và tiếp tục phần văn bản có thể hoàn tất.
 
-| 到达阶段 | 当前成果 | 需要读取 |
+| Giai đoạn đã đến | Sản phẩm hiện tại | Cần đọc |
 |---|---|---|
-| 1. 内容与范围 | 原文或剧本文本节点；必要的制作简报 | [输入与剧本](references/sourceAndScript.md) |
-| 2. 资产 | 当前范围的角色、场景、道具清单及实际采用图片 | [资产制作](references/assets.md) |
-| 3. Seedance 提示词 | 覆盖本次剧情的全片规划、分段与正式提示词；**只执行本文件内嵌 PART A**（2.0 走 A9.1、2.5 走 A9.2），本阶段不读取 storyboard 或 methods | **仅本文件内嵌 PART A** |
-| 4. 生成与采用 | 当前片段生成节点、真实输出、反馈与采用记录 | [画布执行](references/canvasExecution.md)、[状态与交付](references/stateAndDelivery.md) |
-| 5. 交付或继续 | 有效剧本、素材和片段索引，实际完成范围与下一步 | [状态与交付](references/stateAndDelivery.md) |
+| 1. Nội dung và phạm vi | Node văn bản nguyên tác hoặc kịch bản; bản tóm tắt yêu cầu sản xuất cần thiết | [Đầu vào và kịch bản](references/sourceAndScript.md) |
+| 2. Tài nguyên | Danh sách nhân vật, bối cảnh, đạo cụ trong phạm vi hiện tại và ảnh thực tế được chọn | [Tạo tài nguyên](references/assets.md) |
+| 3. Prompt Seedance | Kế hoạch toàn phim, chia đoạn và prompt chính thức bao phủ tình tiết của lượt này; **chỉ thực thi PART A tích hợp trong tệp này** (2.0 theo A9.1, 2.5 theo A9.2), không đọc storyboard hoặc methods trong giai đoạn này | **Chỉ PART A tích hợp trong tệp này** |
+| 4. Tạo và chọn | Node tạo cho đoạn hiện tại, đầu ra thực, phản hồi và bản ghi lựa chọn | [Thực thi Canvas](references/canvasExecution.md), [Trạng thái và bàn giao](references/stateAndDelivery.md) |
+| 5. Bàn giao hoặc tiếp tục | Chỉ mục kịch bản, tư liệu và đoạn hợp lệ, phạm vi thực sự hoàn thành và bước tiếp theo | [Trạng thái và bàn giao](references/stateAndDelivery.md) |
 
-只创建当前已到达阶段需要的节点。一个剧情片段可以有多个镜头，默认对应一份完整提示词、一个视频生成节点；不默认给每个镜头先生成关键帧。连线传递实际素材，不代表审批或自动调度。
+Chỉ tạo các node cần cho giai đoạn hiện tại đã đến. Một đoạn tình tiết có thể chứa nhiều góc máy và mặc định tương ứng một prompt hoàn chỉnh cùng một node tạo video. Không mặc định tạo khung hình chính trước cho mỗi góc máy. Kết nối chỉ truyền tư liệu thực, không đại diện cho phê duyệt hoặc lập lịch tự động.
 
-剧情制作中的正式资产依据本次已确认的完整剧本；单独设计角色、场景或道具时，以用户确认的设计需求和已有素材为依据，不要求补写剧本。用户同时要求剧本与资产方案时，可同轮提取资产清单和设计草案，标明所依赖的待确认剧本，不把草案当作生成授权。角色不必先有完整生平，只有声音的角色不生成无用途肖像。风格、表演、动作和连续性直接落实到制作资料与镜头，不强制各写独立报告；没有打斗、特殊道具等需求时不造空文档。
+Tài nguyên chính thức trong sản xuất cốt truyện phải dựa trên kịch bản hoàn chỉnh đã xác nhận của lượt này. Khi thiết kế riêng nhân vật, bối cảnh hoặc đạo cụ, căn cứ vào yêu cầu thiết kế người dùng đã xác nhận và tư liệu có sẵn, không yêu cầu viết bổ sung kịch bản. Nếu người dùng yêu cầu đồng thời kịch bản và phương án tài nguyên, có thể trích danh sách tài nguyên và bản nháp thiết kế trong cùng lượt, ghi rõ chúng phụ thuộc kịch bản đang chờ xác nhận; không coi bản nháp là quyền tạo. Nhân vật không cần có tiểu sử đầy đủ trước; nhân vật chỉ có tiếng nói không cần tạo chân dung vô dụng. Đưa phong cách, diễn xuất, hành động và tính liên tục trực tiếp vào tư liệu sản xuất và góc máy, không bắt buộc viết báo cáo riêng cho từng loại. Không tạo tài liệu rỗng khi không có nhu cầu đánh nhau, đạo cụ đặc biệt, v.v.
 
-## 按当前创作问题读取方法
+## Đọc phương pháp theo vấn đề sáng tạo hiện tại
 
-执行规则决定怎样在 Toonflow 保存、生成和继续；以下方法**只用于 Seedance 提示词阶段之前的创作/改编/资产设计，或 Seedance 成品之后的媒体执行**。进入 Seedance 提示词硬隔离后，不读取本节任何创作方法；提示词定稿前后不得让这些方法覆盖 PART A。
+Quy tắc thực thi quyết định cách lưu, tạo và tiếp tục trong Toonflow. Các phương pháp bên dưới **chỉ dùng cho sáng tác/chuyển thể/thiết kế tài nguyên trước giai đoạn prompt Seedance hoặc thực thi phương tiện sau khi prompt Seedance đã hoàn tất**. Sau khi bước vào cách ly nghiêm ngặt của prompt Seedance, không đọc phương pháp sáng tạo nào trong mục này. Không để những phương pháp đó ghi đè PART A trước hoặc sau khi prompt được chốt.
 
-| 正在解决的问题 | 阅读方法 | 将判断落实到哪里 |
+| Vấn đề đang giải quyết | Phương pháp cần đọc | Nơi ghi nhận kết quả đánh giá |
 |---|---|---|
-| 把已确认剧本拆成 Seedance 2.0/2.5 分段提示词（节拍、时长、站位、表演、运镜、连续性、模板） | **本文件内嵌「SEEDANCE EPISODE DIRECTOR · PART A」** | 分段规划、每段正式提示词（A9.1/A9.2）、剧情保真锁 |
-| 创意、人物驱动、因果、大纲或续作 | [故事开发](references/methods/storyDevelopment.md) | 行动命题、事件链、选择与结果 |
-| 小说视听化、场景、心理、对白与时长 | [剧本改编](references/methods/screenAdaptation.md) | 场次、完整行动和声音、改编提案与估时 |
-| 外观、空间、道具结构及持续状态 | [视觉设计](references/methods/visualDesign.md) | 资产锚点、空间母版与变体 |
-| 风格、材质本色、受光与调色 | [色彩与用光](references/methods/colorAndLight.md) | 共享视觉依据、场景光线和片段约束 |
-| 非定稿阶段的剧情创作/改编 | 仅使用上面的故事开发与剧本改编方法 | 形成可确认的剧本；一旦定稿并进入 Seedance，立即停止使用这些方法 |
-| Seedance 成品提示词之后的媒体执行与验收 | [画布执行](references/canvasExecution.md)、[状态与交付](references/stateAndDelivery.md) | 只执行已定稿 prompt、连接真实参考、核验真实结果；不得另写提示词规则 |
+| Chuyển kịch bản đã xác nhận thành prompt từng đoạn Seedance 2.0/2.5 (nhịp, thời lượng, vị trí, diễn xuất, camera, tính liên tục, mẫu) | **“SEEDANCE EPISODE DIRECTOR · PART A” tích hợp trong tệp này** | Kế hoạch chia đoạn, prompt chính thức từng đoạn (A9.1/A9.2), khóa trung thành cốt truyện |
+| Ý tưởng, động lực nhân vật, nhân quả, đề cương hoặc tiếp tục câu chuyện | [Phát triển câu chuyện](references/methods/storyDevelopment.md) | Mệnh đề hành động, chuỗi sự kiện, lựa chọn và kết quả |
+| Chuyển tiểu thuyết thành nghe nhìn, bối cảnh, tâm lý, lời thoại và thời lượng | [Chuyển thể kịch bản](references/methods/screenAdaptation.md) | Các cảnh, hành động và âm thanh đầy đủ, phương án chuyển thể và ước tính thời lượng |
+| Ngoại hình, không gian, cấu trúc đạo cụ và trạng thái kéo dài | [Thiết kế hình ảnh](references/methods/visualDesign.md) | Đặc điểm tài nguyên, mẫu không gian và biến thể |
+| Phong cách, màu gốc của vật liệu, ánh sáng chiếu và chỉnh màu | [Màu sắc và ánh sáng](references/methods/colorAndLight.md) | Cơ sở thị giác dùng chung, ánh sáng bối cảnh và ràng buộc đoạn phim |
+| Sáng tác/chuyển thể cốt truyện trước khi chốt | Chỉ dùng phương pháp phát triển câu chuyện và chuyển thể kịch bản ở trên | Hình thành kịch bản có thể xác nhận; ngay khi chốt và bước vào Seedance, ngừng áp dụng các phương pháp này |
+| Thực thi và nghiệm thu phương tiện sau prompt Seedance hoàn chỉnh | [Thực thi Canvas](references/canvasExecution.md), [Trạng thái và bàn giao](references/stateAndDelivery.md) | Chỉ thực thi prompt đã chốt, kết nối tham chiếu thực, kiểm tra đầu ra thực; không viết thêm quy tắc prompt khác |
 
-这些方法的结论只进入**Seedance 之前**的剧本/资产设计成果；进入 Seedance 提示词硬隔离后，任何方法结论都不能直接写入或改写最终 prompt，必须由 PART A 从已确认输入重新处理。方法示例、类型节奏和风格候选不能自动变成本项目事实。
+Kết luận từ các phương pháp này chỉ được đưa vào sản phẩm kịch bản/thiết kế tài nguyên **trước Seedance**. Sau khi bước vào cách ly nghiêm ngặt của prompt Seedance, không được trực tiếp ghi hoặc sửa prompt cuối bằng bất kỳ kết luận phương pháp nào; PART A phải xử lý lại từ đầu vào đã xác nhận. Ví dụ phương pháp, nhịp thể loại và phương án phong cách không được tự trở thành sự thật của dự án.
 
-仅当交接与合并的成本低于独立分析工作量时，可用 `subAgent` 分担**Seedance 之前**的长篇原文事实提取或资料整理。**Seedance 提示词硬隔离阶段禁止让 subAgent 独立起草、重写或优化分段 prompt**；A0–A12 必须由同一主执行链统一完成，避免子任务带入第二套镜头/表演/连续性规则。
+Chỉ khi chi phí bàn giao và ghép kết quả thấp hơn khối lượng phân tích riêng lẻ mới được dùng `subAgent` để phân chia việc trích xuất sự thật từ nguyên tác dài hoặc sắp xếp tư liệu **trước Seedance**. **Trong giai đoạn cách ly nghiêm ngặt của prompt Seedance, cấm để subAgent tự soạn, viết lại hoặc tối ưu prompt chia đoạn**; A0–A12 phải được hoàn thành thống nhất bởi cùng một luồng thực thi chính, tránh đưa hệ quy tắc thứ hai về góc máy/diễn xuất/tính liên tục từ tác vụ con.
 
-少量文字、资产盘点、连线和布局直接完成，不安排固定岗位或额外审查轮次。分工限于独立的内容处理，不改变后续确认、生成和采用流程；依赖前段真实结果的后段生成仍等待该结果。
+Với lượng văn bản nhỏ, kiểm kê tài nguyên, nối node và bố trí, hãy làm trực tiếp, không phân vai cố định hay thêm vòng rà soát. Việc chia công chỉ giới hạn ở xử lý nội dung độc lập, không thay đổi quy trình xác nhận, tạo và lựa chọn sau này. Đoạn tạo tiếp theo phụ thuộc kết quả thực của đoạn trước vẫn phải chờ kết quả đó.
 
-## 确认与执行
+## Xác nhận và thực thi
 
-- 展示实质阶段成果并确认是否调整；用户已经明确批准的内容和连续制作范围直接沿用。不把每个工具调用、内部分析或无需求的子步骤变成提问。
-- 内容确认、消耗算力授权、结果采用分别记录。生成前展示可审阅的具体方案：对象与数量、模型、完整提示词、实际参考、规格及执行次数。对用户统一称“消耗算力”，无法查询时写“算力消耗未知”。
-- 通过宿主 `askUser` 或明确回复取得授权。已批准的同一具体方案或批次不逐节点重复问；新增数量、改变实际方案或额外重试时核对授权是否覆盖。普通“继续”、沉默和表单失败不构成新生成授权。
-- Seedance 目标模型只按 PART A A0 判定；**未指定时必须先用一次简短提问确认 2.0 或 2.5。** 这个问题属于 Seedance A0，不属于画布配置，且不得解除路由锁存。画布层仅在目标模型确认并进入 PART A 后，通过实时配置核实该模型/模式是否实际可执行。节点默认值、宿主默认值、配置表单、历史配置或用户对分辨率/画幅等配置的回答，都不得反向覆盖或解除 A0 的模型路由；配置问答结束后继续当前 Seedance 执行态。
-- 有对白不等于必须有外部音色样本。提示词内的声音写法只服从 PART A；实际执行时仅通过[画布执行](references/canvasExecution.md)核对模型是否支持原生声音与真实音频输入，不得据此改写 PART A 的对白/声音规则。
+- Trình bày sản phẩm thực chất của giai đoạn và hỏi có cần điều chỉnh không; giữ nguyên nội dung và phạm vi sản xuất liên tục người dùng đã phê duyệt rõ. Không biến mỗi lần gọi công cụ, phân tích nội bộ hoặc bước con không cần thiết thành câu hỏi.
+- Ghi riêng việc xác nhận nội dung, quyền tiêu tốn tài nguyên tính toán và lựa chọn kết quả. Trước khi tạo, trình bày phương án cụ thể có thể xem xét: đối tượng và số lượng, mô hình, prompt đầy đủ, tham chiếu thực, thông số và số lần thực thi. Dùng thống nhất cụm từ “tiêu tốn tài nguyên tính toán” khi nói với người dùng; nếu không tra được thì ghi “Chưa biết mức tiêu tốn tài nguyên tính toán”.
+- Xin phép qua `askUser` của ứng dụng hoặc phản hồi xác nhận rõ ràng. Không hỏi lại từng node cho cùng phương án/lô cụ thể đã phê duyệt; nếu thêm số lượng, đổi phương án thực tế hoặc thử lại bổ sung thì kiểm tra phạm vi quyền có bao gồm không. Lệnh “tiếp tục” thông thường, im lặng và biểu mẫu thất bại không tạo thành quyền mới để bắt đầu tạo.
+- Mô hình đích Seedance chỉ được xác định theo PART A A0; **nếu chưa chỉ định, bắt buộc hỏi ngắn một lần xác nhận 2.0 hoặc 2.5 trước**. Câu hỏi này thuộc A0 của Seedance, không phải cấu hình Canvas, và không được gỡ khóa tuyến. Chỉ sau khi mô hình đã xác nhận và đã vào PART A, lớp Canvas mới được dùng cấu hình thời gian thực kiểm tra mô hình/chế độ đó có thực sự thực thi được không. Giá trị mặc định node, mặc định ứng dụng, biểu mẫu cấu hình, cấu hình lịch sử hoặc câu trả lời về độ phân giải/tỷ lệ khung hình không được ghi đè hoặc gỡ tuyến mô hình A0; khi kết thúc hỏi đáp cấu hình phải tiếp tục cùng trạng thái thực thi Seedance.
+- Có lời thoại không đồng nghĩa bắt buộc có mẫu giọng từ bên ngoài. Cách viết âm thanh trong prompt chỉ tuân theo PART A; khi thực thi thực tế chỉ dùng [Thực thi Canvas](references/canvasExecution.md) để kiểm tra mô hình có hỗ trợ âm thanh gốc và đầu vào âm thanh thực hay không, không vì đó mà sửa quy tắc thoại/âm thanh của PART A.
 
-## 完成与恢复的底线
+## Nguyên tắc tối thiểu để hoàn tất và khôi phục
 
-文本节点正文通过节点函数保存，文件路径从实际 `data.textPath` 读取。跨轮制作使用一个简洁状态记录和一个总览节点；沿用现有台账，不因缺固定模板要求重做。
+Nội dung của node văn bản được lưu bằng hàm node; đường dẫn tệp đọc từ `data.textPath` thực tế. Sản xuất qua nhiều lượt dùng một bản ghi trạng thái gọn và một node tổng quan. Kế thừa sổ theo dõi hiện có, không yêu cầu làm lại chỉ vì thiếu mẫu cố định.
 
-待确认或已采用文本需要固定版本依据，生成需保留本次提示词、参数、参考和旧输出。确认后再次核对实际节点，防止用户在等待期间的修改被当作已批准；已采用素材优先固定在素材节点，修订另建候选。具体做法见[状态与交付](references/stateAndDelivery.md)。
+Văn bản chờ xác nhận hoặc đã được chọn cần có căn cứ phiên bản cố định; khi tạo phải giữ prompt, tham số, tham chiếu và đầu ra cũ của lượt này. Sau khi xác nhận phải kiểm tra lại node thực tế để tránh coi chỉnh sửa người dùng thực hiện trong thời gian chờ là nội dung đã phê duyệt. Tư liệu đã chọn ưu tiên cố định ở node tư liệu; bản sửa tạo phương án ứng viên riêng. Xem cách làm cụ thể tại [Trạng thái và bàn giao](references/stateAndDelivery.md).
 
-当前原生媒体节点返回 `generating` 只表示开始，不能宣称完成。若本轮没有真实状态或等待工具，完成本轮已授权且无依赖的启动与文字工作后，登记并告知用户完成后回复，再回读对应节点；不编造自动唤醒或后台轮询。连续片段的后段生成需等前段采用并取得真实交界状态，文字规划可先列预期状态；无依赖的资产或片段可按已明确授权的批次安排。
+Nếu node phương tiện gốc trả về `generating` thì chỉ có nghĩa tác vụ đã bắt đầu, không được tuyên bố hoàn thành. Nếu lượt này không có công cụ đọc trạng thái thực tế hoặc chờ kết quả, sau khi làm xong các thao tác khởi chạy và văn bản đã được phép, không có phụ thuộc, hãy ghi nhận và đề nghị người dùng phản hồi khi hoàn tất rồi đọc lại node tương ứng. Không bịa cơ chế tự đánh thức hay thăm dò nền. Việc tạo đoạn sau trong chuỗi liên tục phải chờ đoạn trước được chọn và có trạng thái ranh giới thực; kế hoạch văn bản có thể liệt kê trạng thái dự kiến trước. Tài nguyên hoặc đoạn độc lập có thể được lên lịch theo lô đã được cấp phép rõ.
 
-视频路径不代表 Agent 看过视频。只按实际媒体读取能力核验，能力不足时由用户预览并报告问题、交界状态与采用决定，明确 Agent 未核验的部分。交付区分已生成片段、用户采用片段、已合成成片与已归集副本；没有对应工具就如实交付现有成果及缺项。
+Có đường dẫn video không có nghĩa Agent đã xem video. Chỉ kiểm tra theo khả năng đọc phương tiện thực tế; nếu không đủ khả năng, để người dùng xem trước và báo vấn đề, trạng thái nối cảnh cùng quyết định lựa chọn, đồng thời nêu rõ phần Agent chưa kiểm tra. Khi bàn giao, phân biệt đoạn đã tạo, đoạn người dùng đã chọn, phim hoàn chỉnh đã ghép và bản sao đã tập hợp. Nếu thiếu công cụ tương ứng thì bàn giao trung thực những gì đã có và các phần còn thiếu.

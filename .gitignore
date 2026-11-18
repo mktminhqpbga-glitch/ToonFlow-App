@@ -7,11 +7,6 @@ dist/
 .playwright-mcp/
 playwright-report/
 test-results/
-/packages/startup/assets/macX64/
-/packages/startup/assets/macArm64/
-/apps/updateServer/public/
-/apps/updateServer/releases/
-/.hutch/
 /.cottontail-tmp/
 coverage/
 *.tsbuildinfo
@@ -22,7 +17,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-/apps/updateServer/build/
 .vscode
 *.p12
 *.pfx
@@ -31,4 +25,25 @@ Thumbs.db
 *.keychain-db
 .tmp/
 
-/apps/web/public/chromeCompanion.zip
+# MacFlow local service credentials and runtime state. Never publish these.
+**/.ai-bridge-token
+**/bridge-token
+**/api-key
+**/.ai-bridge-data/
+**/ai-bridge-runtime/
+**/.runtime/
+**/.venv/
+**/__pycache__/
+**/*.pid
+**/credentials.json
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+**/*.db-wal
+**/*.db-shm
+
+# Local-only tools and large downloaded executables.
+/sourceManifest.json
+/downloadGuide.md
+/services/geminiWebToApi/toolchain/
+/services/geminiWebToApi/geminiWebServer

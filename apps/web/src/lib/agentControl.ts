@@ -18,5 +18,5 @@ export async function stopAgent(directory: string, runIds: string[]) {
     signal: AbortSignal.timeout(10000),
   });
   const result = await response.json().catch(() => null);
-  if (!response.ok || result?.code !== 200) throw new Error(result?.message || "停止生成失败，请重试");
+  if (!response.ok || result?.code !== 200) throw new Error(result?.message || "Không thể dừng tạo nội dung, vui lòng thử lại");
 }

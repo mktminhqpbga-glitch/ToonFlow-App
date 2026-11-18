@@ -23,7 +23,7 @@ try {
   for await (const chunk of process.stdin) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     messageBytes += buffer.byteLength;
-    if (messageBytes > maxMessageBytes) throw new Error("沙盒请求不能超过 32 MiB");
+    if (messageBytes > maxMessageBytes) throw new Error("Yêu cầu sandbox không được vượt quá 32 MiB");
     chunks.push(buffer);
   }
   const request = JSON.parse(Buffer.concat(chunks).toString("utf8")) as SandboxProcessRequest;
@@ -32,7 +32,7 @@ try {
   for (const [path, content] of Object.entries(request.files)) {
     const buffer = Buffer.from(content, "base64");
     inputBytes += buffer.byteLength;
-    if (inputBytes > maxFileBytes) throw new Error("沙盒导入文件总大小不能超过 16 MiB");
+    if (inputBytes > maxFileBytes) throw new Error("Tổng dung lượng tệp nhập vào sandbox không được vượt quá 16 MiB");
     initialFiles[path] = buffer;
   }
   const bash = new Bash({
@@ -65,10 +65,10 @@ try {
     let outputBytes = 0;
     for (const path of request.exports) {
       const source = `/workspace/${path}`;
-      if (!(await bash.fs.stat(source)).isFile) throw new Error(`只能导出普通文件：${path}`);
+      if (!(await bash.fs.stat(source)).isFile) throw new Error(`Chỉ được xuất tệp thông thường: ${path}`);
       const content = await bash.fs.readFileBuffer(source);
       outputBytes += content.byteLength;
-      if (outputBytes > maxFileBytes) throw new Error("沙盒导出文件总大小不能超过 16 MiB");
+      if (outputBytes > maxFileBytes) throw new Error("Tổng dung lượng tệp xuất từ sandbox không được vượt quá 16 MiB");
       output.files.push({ path, content: Buffer.from(content).toString("base64") });
     }
   }

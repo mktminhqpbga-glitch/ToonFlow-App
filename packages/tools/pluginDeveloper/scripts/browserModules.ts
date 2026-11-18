@@ -53,7 +53,7 @@ export async function browserModules(optionalInputPaths: string[] = []): Promise
   const nodeLibraries = await Promise.all(["@form-create/element-ui", "vue-draggable-plus", "x-sender", "zod"]
     .map(name => readPackage(name, name === "zod" ? projectDirectory : sharedPackage.directory)));
   const browserPackages = [nodePackage, sharedPackage, toolPackage, asrPackage, ffmpegPackage, iconsPackage, filePackage, ...nodeLibraries];
-  const nodeConfig = createNodeConfig({ name: "browserModules", displayName: "开发模块", author: "", github: "" },
+  const nodeConfig = createNodeConfig({ name: "browserModules", displayName: "Module phát triển", author: "", github: "" },
     pathToFileURL(join(projectDirectory, "build.ts")).href, { syncToData: false });
   const nodeOutput = nodeConfig.build!.rolldownOptions!.output as { globals: Record<string, string> };
   const nodeGlobals = nodeOutput.globals;
@@ -84,12 +84,12 @@ export async function browserModules(optionalInputPaths: string[] = []): Promise
   entry(nodeEntries, ffmpegPackage, "./browser", ffmpegPackage.info.exports!["./browser"]!);
   entry(nodeEntries, ffmpegPackage, "./types", ffmpegPackage.info.exports!["./types"]!);
   const iconsSource = iconsPackage.info.module ?? iconsPackage.info.main;
-  if (!iconsSource) throw new Error("图标包缺少浏览器入口");
+  if (!iconsSource) throw new Error("Gói biểu tượng thiếu điểm vào cho trình duyệt");
   entry(nodeEntries, iconsPackage, ".", iconsSource);
   iconsPackage.exports["."].types = iconsPackage.info.types ?? iconsPackage.info.typings;
   for (const pkg of nodeLibraries) {
     const source = pkg.info.module ?? pkg.info.main;
-    if (!source) throw new Error(`浏览器依赖缺少入口：${pkg.info.name}`);
+    if (!source) throw new Error(`Phụ thuộc trình duyệt thiếu điểm vào: ${pkg.info.name}`);
     entry(nodeEntries, pkg, ".", source);
     pkg.exports["."].types = pkg.info.types ?? pkg.info.typings;
   }
@@ -150,21 +150,21 @@ export async function browserModules(optionalInputPaths: string[] = []): Promise
     }
     for (const item of output) {
       if (item.type === "asset") {
-        if (!styles.has(item.fileName)) throw new Error(`浏览器模块包含未内联的资源：${item.fileName}`);
+        if (!styles.has(item.fileName)) throw new Error(`Module trình duyệt chứa tài nguyên chưa nội tuyến: ${item.fileName}`);
         continue;
       }
       const metadata = (item as typeof item & { viteMetadata?: { importedCss: Set<string> } }).viteMetadata;
       for (const id of Object.keys(item.modules)) collectInputNotice(id);
       const imports = [...(metadata?.importedCss ?? [])].map(css => {
         const style = styles.get(css);
-        if (!style) throw new Error(`浏览器模块缺少样式：${css}`);
+        if (!style) throw new Error(`Module trình duyệt thiếu CSS: ${css}`);
         consumedStyles.add(css);
         const path = posix.relative(posix.dirname(item.fileName), style);
         return `import ${JSON.stringify(path.startsWith(".") ? path : `./${path}`)};`;
       });
       files[item.fileName] = encoder.encode(imports.join("\n") + "\n" + item.code);
     }
-    for (const css of styles.keys()) if (!consumedStyles.has(css)) throw new Error(`浏览器模块样式未关联到脚本：${css}`);
+    for (const css of styles.keys()) if (!consumedStyles.has(css)) throw new Error(`CSS của module trình duyệt chưa liên kết với script: ${css}`);
   }
 
   await compile(nodeEntries, Object.keys(nodeGlobals), "node");
@@ -180,7 +180,7 @@ export async function browserModules(optionalInputPaths: string[] = []): Promise
     minify: true,
     naming: { entry: "[name].js", chunk: "chunk[hash].js" },
   });
-  if (!backendResult.success) throw new AggregateError(backendResult.logs, "文件接口编译失败");
+  if (!backendResult.success) throw new AggregateError(backendResult.logs, "Biên dịch giao diện tệp thất bại");
   for (const output of backendResult.outputs) {
     files[`node_modules/${filePackage.info.name}/${output.path.replace(/^\.\//, "")}`] = new Uint8Array(await output.arrayBuffer());
   }

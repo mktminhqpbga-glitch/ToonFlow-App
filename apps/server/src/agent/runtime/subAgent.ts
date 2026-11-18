@@ -1,4 +1,3 @@
-import { getLocale } from "@/lib/i18n";
 import type { Usage } from "@earendil-works/pi-ai";
 import { createAgentSession, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import type { AgentSession, CreateAgentSessionOptions, ToolDefinition } from "@earendil-works/pi-coding-agent";
@@ -38,7 +37,7 @@ export async function runSubAgent(options: SubAgentModel & {
   onProgress?: (message: string) => void;
 }) {
   const { cwd, name, task, tools, instructions, signal = new AbortController().signal, history, inputRequired, onTool, onProgress, ...modelOptions } = options;
-  const result: SubAgentResult = { name, status: "running", result: "准备执行" };
+  const result: SubAgentResult = { name, status: "running", result: "Chuẩn bị thực hiện" };
   const usage = emptyUsage();
   let session: AgentSession | undefined;
   const abort = () => { void session?.abort(); };
@@ -53,7 +52,7 @@ export async function runSubAgent(options: SubAgentModel & {
         const toolSignal = args[2] ? AbortSignal.any([signal, args[2]]) : signal;
         toolSignal.throwIfAborted();
         // ACT: SDK 在整批工具结束后才停轮；提出问题后不再执行本批后续操作。
-        if (inputRequired?.()) throw new Error("任务正在等待调用方补充输入，不能继续执行工具");
+        if (inputRequired?.()) throw new Error("Tác vụ đang chờ bên giao việc bổ sung thông tin, không thể tiếp tục gọi công cụ");
         if (tool.name !== "askUser" || !onTool) return tool.execute(args[0], args[1], toolSignal, args[3], args[4]);
         // 子会话的模型调用 ID 可能重复，提问卡片与回答通道使用独立 ID。
         const id = crypto.randomUUID();
@@ -85,23 +84,23 @@ export async function runSubAgent(options: SubAgentModel & {
     session.agent.shouldStopAfterTurn = () => Boolean(inputRequired?.());
     session.subscribe(event => {
       if (signal.aborted) return;
-      if (event.type === "message_start" && event.message.role === "assistant") onProgress?.("正在处理");
-      if (event.type === "tool_execution_start") onProgress?.(`正在调用 ${event.toolName}`);
+      if (event.type === "message_start" && event.message.role === "assistant") onProgress?.("Đang xử lý");
+      if (event.type === "tool_execution_start") onProgress?.(`Đang gọi ${event.toolName}`);
     });
-    await session.prompt(`${getLocale() === "vi" ? "Bạn đang thực hiện một nhiệm vụ con được giao độc lập. Chỉ xử lý nhiệm vụ bên dưới, tuân thủ quyền đã cấp và quy tắc workspace trong hệ thống. Nếu thiếu thông tin hoặc quyền, hãy mô tả trở ngại và chuyển lại cho tác nhân gọi; nếu có requestInput thì dùng nó để chờ bổ sung. Khi kết thúc, tóm tắt kết quả, đường dẫn tương đối của các tệp thực sự đã sửa, bằng chứng kiểm tra và phần chưa hoàn thành. Ghi nội dung dài vào tệp workspace được phép." : "你正在执行委派的独立子任务。仅处理下述任务，遵守系统中的授权与工作区规则。缺少信息或授权时，说明阻碍并交回调用方；若提供 requestInput 则使用它等待补充。最终返回简明结论、实际修改的文件相对路径、验证情况与未完成项；长篇产物写入已授权的工作区文件。"}\n\n${JSON.stringify({ name, task })}`, { expandPromptTemplates: false });
+    await session.prompt(`Bạn đang thực hiện một tác vụ độc lập được giao. Chỉ xử lý tác vụ bên dưới và tuân thủ các quy tắc về quyền hạn và workspace trong hệ thống. Nếu thiếu thông tin hoặc chưa được cấp quyền, hãy nêu trở ngại và chuyển lại cho bên giao việc; nếu có requestInput, hãy dùng để chờ bổ sung. Kết thúc bằng kết luận ngắn gọn, đường dẫn tương đối của những tệp đã sửa thật, kết quả xác minh và việc còn dang dở; nội dung dài phải được ghi vào tệp trong workspace đã được cho phép.\n\n${JSON.stringify({ name, task })}`, { expandPromptTemplates: false });
     signal.throwIfAborted();
     const question = inputRequired?.();
     const reply = session.messages.findLast(message => message.role === "assistant");
-    if (!reply || reply.role !== "assistant") throw new Error("子任务没有返回回复");
-    if (reply.stopReason === "error" || reply.stopReason === "aborted") throw new Error(reply.errorMessage || "子任务执行失败");
+    if (!reply || reply.role !== "assistant") throw new Error("Tác vụ con không trả lời");
+    if (reply.stopReason === "error" || reply.stopReason === "aborted") throw new Error(reply.errorMessage || "Tác vụ con thực thi thất bại");
     const text = question ?? reply.content.filter(part => part.type === "text").map(part => part.text).join("\n").trim();
-    if (!text) throw new Error("子任务没有返回文本结果");
+    if (!text) throw new Error("Tác vụ con không trả về văn bản");
     result.status = question ? "inputRequired" : reply.stopReason === "length" || text.length > 16000 ? "limited" : "completed";
-    result.result = `${text.slice(0, 16000)}${text.length > 16000 ? "\n[结果过长，已截断；请读取工作区产物]" : ""}${reply.stopReason === "length" ? "\n[模型输出达到长度限制，任务可能未完成]" : ""}`.trim();
+    result.result = `${text.slice(0, 16000)}${text.length > 16000 ? "\n[Kết quả quá dài, đã cắt bớt; hãy đọc tệp kết quả trong workspace]" : ""}${reply.stopReason === "length" ? "\n[Đầu ra mô hình đạt giới hạn độ dài, tác vụ có thể chưa hoàn tất]" : ""}`.trim();
   } catch (error) {
     result.status = signal.aborted ? "cancelled" : "error";
     const reason = signal.aborted ? signal.reason : error;
-    result.result = reason instanceof Error ? reason.message : "子任务执行失败";
+    result.result = reason instanceof Error ? reason.message : "Tác vụ con thực thi thất bại";
   } finally {
     signal.removeEventListener("abort", abort);
     if (session) {

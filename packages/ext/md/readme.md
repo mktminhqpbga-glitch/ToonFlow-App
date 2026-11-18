@@ -1,11 +1,11 @@
-# Markdown 文档扩展
+# Tiện ích tài liệu Markdown
 
-支持 `.md`、`.markdown` 文件，扩展标识为 `ext-md`。
+Hỗ trợ các tệp `.md` và `.markdown`; ID tiện ích là `ext-md`.
 
-本包私有实现 Tiptap 3.31.3 编辑器，默认富文本，可切换原文。工具栏、查找、图片粘贴与拖入、相对图片和链接均由本包维护。Tiptap、marked、DOMPurify 通过脚手架 external 复用宿主依赖，不重复打包，也不共享编辑器组件。
+Gói này triển khai riêng trình soạn thảo Tiptap 3.31.3, mặc định ở chế độ văn bản có định dạng và có thể chuyển sang xem/chỉnh nguồn. Thanh công cụ, tìm kiếm, dán và kéo ảnh, liên kết tương đối tới ảnh và liên kết đều do gói quản lý. Tiptap, marked, DOMPurify được dùng chung từ host qua cơ chế external của scaffold; không đóng gói lặp lại hoặc dùng chung component trình soạn thảo.
 
-正文绑定 `context.text`，编辑时同步调用 `context.updateText`。自动保存、版本冲突、错误重试与标签关闭仍由文档宿主管理；本包不保留独立草稿或延迟提交。文件操作、链接打开、剪贴板、搜索定位及视图可见状态均使用宿主传入的能力。
+Nội dung được liên kết với `context.text`; khi chỉnh sửa sẽ gọi đồng bộ `context.updateText`. Tự lưu, xung đột phiên bản, thử lại khi lỗi và lưu trước khi đóng tab vẫn do host tài liệu quản lý; gói này không giữ bản nháp độc lập hoặc trì hoãn gửi thay đổi. Thao tác tệp, mở liên kết, bộ nhớ tạm, tìm và chuyển tới vị trí cùng trạng thái hiển thị đều dùng các khả năng do host truyền vào.
 
-构建产物包含扩展元数据、私有编辑器与样式；宿主在执行扩展前按需加载共享依赖。旧文档的下划线、高亮、上下标、段落对齐及复杂表格仍以混合 HTML 保存；仅打开文件或切换模式不会自动改写原文。
+Bản build chứa metadata tiện ích, trình soạn thảo riêng và CSS; host nạp phụ thuộc dùng chung khi cần trước lúc chạy tiện ích. Gạch chân, đánh dấu nổi bật, chỉ số trên/dưới, căn đoạn và bảng phức tạp trong tài liệu cũ vẫn được lưu dưới dạng HTML kết hợp; việc chỉ mở tệp hoặc đổi chế độ không tự viết lại nội dung nguồn.
 
-在仓库根目录安装依赖后，可在 `packages/ext/md` 目录运行 `bun run typecheck`；使用生产环境执行 `bun run build`，产物位于仓库根目录的 `build/ext/ext-md.umd.js`。开发构建或 watch 会同步产物到 `data/ext`。
+Sau khi cài phụ thuộc tại gốc repository, chạy `bun run typecheck` trong `packages/ext/md`; chạy `bun run build` ở môi trường production để tạo `build/ext/ext-md.umd.js`. Build development hoặc watch sẽ đồng bộ thành phẩm tới `data/ext`.

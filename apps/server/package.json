@@ -4,7 +4,6 @@
   "type": "module",
   "exports": {
     "./app": "./src/app.ts",
-    "./chromeBridge": "./src/utils/chromeBridge/manager.ts",
     "./multiTenant": "./src/utils/multiTenant/index.ts",
     "./remoteConnection": "./src/remoteConnection.ts",
     "./desktop": "./src/types/desktop.ts",
@@ -60,11 +59,13 @@
     "morgan": "^1.12.1",
     "undici": "8.9.0",
     "wavefile": "^11.0.0",
+    "ws": "^8.23.0",
     "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/morgan": "^1.9.10"
+    "@types/morgan": "^1.9.10",
+    "@types/ws": "^8.18.2"
   }
 }

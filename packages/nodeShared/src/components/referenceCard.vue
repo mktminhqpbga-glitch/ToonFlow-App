@@ -8,7 +8,7 @@
       :previewSrcList="[mediaSrc]"
       previewTeleported
       fit="cover"
-      :alt="`预览引用 ${index}`"
+      :alt="`Xem trước tham chiếu ${index}`"
       draggable="false"
       @click.stop
       @load="handleLoaded"
@@ -29,8 +29,8 @@
       class="removeButton nodrag nopan"
       :icon="IconX"
       circle
-      :aria-label="`删除引用 ${index}`"
-      title="删除引用"
+      :aria-label="`Xóa tham chiếu ${index}`"
+      title="Xóa tham chiếu"
       @pointerdown.stop
       @mousedown.stop
       @dblclick.stop
@@ -65,9 +65,9 @@ const itemIcon = computed(() => props.item.dataType === "IMAGE" ? IconPhoto : pr
 const title = computed(() => {
   const sourceName = props.item.dataType === "IMAGE" || props.item.dataType === "VIDEO" || props.item.dataType === "AUDIO"
     ? findNode<NodeData>(props.item.source)?.data.label?.trim() : "";
-  const content = props.item.value === undefined ? "暂无内容" : props.item.dataType === "STRING" ? props.item.value : props.item.dataType === "FILE" ? props.item.value.url.split(/[\\/]/).pop() || "文件" : props.item.dataType === "VIDEO" ? "视频" : props.item.dataType === "AUDIO" ? "音频" : "图片";
-  const status = previewError.value || (preparingPreview.value ? "正在生成兼容预览…" : "");
-  return `引用 ${props.index}：${sourceName ? `${sourceName}（${content}）` : content}${status ? `（${status}）` : ""}`;
+  const content = props.item.value === undefined ? "Chưa có nội dung" : props.item.dataType === "STRING" ? props.item.value : props.item.dataType === "FILE" ? props.item.value.url.split(/[\\/]/).pop() || "Tệp" : props.item.dataType === "VIDEO" ? "Video" : props.item.dataType === "AUDIO" ? "Âm thanh" : "Ảnh";
+  const status = previewError.value || (preparingPreview.value ? "Đang tạo bản xem trước tương thích…" : "");
+  return `Tham chiếu ${props.index}：${sourceName ? `${sourceName}（${content}）` : content}${status ? `（${status}）` : ""}`;
 });
 
 watch(media, () => {
@@ -77,7 +77,7 @@ watch(media, () => {
 });
 const { useFileUrl } = useNodeFiles();
 const previewUrl = useFileUrl(media, error => {
-  previewReadError.value = error instanceof Error ? error.message : "读取引用文件失败";
+  previewReadError.value = error instanceof Error ? error.message : "Không đọc được tệp tham chiếu";
 });
 const { src: mediaSrc, preparing: preparingPreview, error: mediaError, handleError, handleLoaded } = useMediaPreview(previewUrl, () => props.item.dataType === "VIDEO" ? "video" : "image");
 const previewError = computed(() => previewReadError.value || mediaError.value);

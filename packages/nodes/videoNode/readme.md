@@ -1,16 +1,16 @@
-# 视频节点
+# Node video
 
-导入、播放视频素材，并将视频或截取的画面用于后续制作。
+Nhập và phát video, rồi sử dụng video hoặc khung hình trích xuất cho các công đoạn tiếp theo.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 导入本地视频文件，单个文件不能为空且不超过 100 MB。
-- 输出当前视频素材，可连接支持视频输入的节点。
-- 截帧结果作为新的图片节点出现在画布中。
+- Nhập tệp video từ máy, không được rỗng và không quá 100 MB.
+- Xuất video hiện tại tới node hỗ trợ video đầu vào.
+- Kết quả trích khung xuất hiện trên Canvas thành node ảnh mới.
 
-## 使用方法
+## Cách sử dụng
 
-1. 点击上传按钮选择视频，使用播放器播放、暂停、拖动进度或调整音量。
-2. 将视频输出连接到需要参考视频的节点。
-3. 点击“截取视频帧”，选择当前帧、首帧或尾帧；此功能需要启用图片节点。
-4. 需要换视频时，将鼠标移到节点上，点击“替换视频”。
+1. Bấm nút tải lên để chọn video; dùng trình phát để phát, tạm dừng, tua hoặc chỉnh âm lượng.
+2. Nối cổng video đầu ra với node cần video tham chiếu.
+3. Bấm **Trích khung video**, chọn khung hiện tại, đầu hoặc cuối; cần bật node ảnh để dùng chức năng này.
+4. Muốn đổi video, đưa chuột lên node rồi bấm **Thay video**.

@@ -1,17 +1,17 @@
-# 提问器
+# Công cụ hỏi người dùng
 
-让 Agent 在需要补充信息或作出选择时，在对话中展示可填写的提问卡片。
+Cho phép Agent hiển thị thẻ câu hỏi có thể điền trong cuộc trò chuyện khi cần bổ sung thông tin hoặc chọn phương án.
 
-## 使用方式
+## Cách sử dụng
 
-打开项目后，直接告诉 Agent 需要确认的事项，例如：“开始制作前，先问我视频用途、风格和时长。”
-Agent 提问后，在卡片中填写内容并点击“提交回答”，也可以点击“跳过”。
+Mở dự án rồi nói với Agent điều bạn muốn xác nhận, ví dụ: “Trước khi sản xuất, hãy hỏi tôi mục đích video, phong cách và thời lượng”.
+Khi Agent hỏi, điền vào thẻ rồi bấm **Gửi câu trả lời**, hoặc chọn **Bỏ qua**.
 
-## 支持的功能
+## Tính năng
 
-- 单个问题支持文字回答、选项选择和补充说明，最多提供 8 个选项。
-- 多问题表单最多包含 12 项，支持文本、长文本、单选、多选、下拉选择、数字和开关。
-- 表单可按问题设置必填项；提交后，Agent 获取回答并继续处理任务。
-- 跳过整组提问会明确记录为“已跳过”，不代表同意或通过阶段确认。
+- Câu hỏi đơn hỗ trợ nhập chữ, chọn phương án và bổ sung ghi chú, tối đa 8 lựa chọn.
+- Biểu mẫu nhiều câu có tối đa 12 mục: văn bản, đoạn văn dài, chọn một/nhiều, danh sách thả xuống, số và công tắc.
+- Có thể đặt từng mục là bắt buộc; sau khi gửi, Agent nhận câu trả lời để tiếp tục công việc.
+- Bỏ qua cả nhóm được ghi nhận rõ là **Đã bỏ qua**, không có nghĩa đồng ý hoặc phê duyệt một giai đoạn.
 
-本工具没有配置项，无需单独填写 API Key。
+Công cụ không có cấu hình và không yêu cầu API Key riêng.

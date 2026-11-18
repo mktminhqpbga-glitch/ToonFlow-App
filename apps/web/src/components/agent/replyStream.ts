@@ -1,14 +1,15 @@
 import { reactive, type Ref } from "vue";
 import { throttle } from "lodash-es";
+import { t, translate } from "@toonflow/i18n/vue";
 import type { AgentEvent } from "@toonflow/server/agent/types";
 import type { AgentMessage, AgentMessagePart } from "./types";
 
 export async function* readAgentEvents<T extends { type: string; message?: unknown } = AgentEvent>(response: Response, signal: AbortSignal) {
   if (!response.ok) {
     const error = await response.json().catch(() => null);
-    throw Object.assign(new Error(error?.message || `请求失败（${response.status}）`), { terminal: true });
+    throw Object.assign(new Error(error?.message || t`请求失败（${response.status}）`), { terminal: true });
   }
-  if (!response.body) throw new Error("未收到响应流");
+  if (!response.body) throw new Error(translate("未收到响应流"));
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   const cancelReader = () => { void reader.cancel().catch(() => {}); };
   signal.addEventListener("abort", cancelReader, { once: true });
@@ -25,12 +26,12 @@ export async function* readAgentEvents<T extends { type: string; message?: unkno
       for (const line of lines) {
         if (!line.trim()) continue;
         const event = JSON.parse(line) as T;
-        if (event.type === "error") throw Object.assign(new Error(typeof event.message === "string" ? event.message : "请求失败"), { terminal: true });
+        if (event.type === "error") throw Object.assign(new Error(typeof event.message === "string" ? event.message : translate("请求失败")), { terminal: true });
         if (event.type === "done") return;
         yield event;
         signal.throwIfAborted();
       }
-      if (done) throw new Error("连接已中断，请重试");
+      if (done) throw new Error(translate("连接已中断，请重试"));
     }
   } finally {
     signal.removeEventListener("abort", cancelReader);
@@ -76,7 +77,7 @@ export function createReplyStream(reply: AgentMessage) {
     }
     if (event.type === "question") {
       const part = parts.find(part => part.type === "tool" && part.tool.id === event.toolCallId);
-      if (part?.type !== "tool") throw new Error("提问缺少对应的工具调用");
+      if (part?.type !== "tool") throw new Error(translate("提问缺少对应的工具调用"));
       part.tool.question = { callId: event.callId, title: event.title, question: event.question, options: event.options, fields: event.fields };
       return;
     }

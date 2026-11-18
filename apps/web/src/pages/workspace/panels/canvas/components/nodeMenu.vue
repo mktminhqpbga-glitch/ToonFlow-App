@@ -29,47 +29,47 @@
         ref="menuList"
         class="nodeMenu"
         @focus.self="menuLevel === 'nodes' && nodeMenuItemsRef?.focusFirst()"
-        :aria-label="menuLevel === 'selection' ? '选区操作' : menuLevel === 'arrange' ? '整理选中节点' : menuLevel === 'actions' ? '操作菜单' : '添加节点'">
+        :aria-label="menuLevel === 'selection' ? 'Thao tác vùng chọn' : menuLevel === 'arrange' ? 'Sắp xếp node đã chọn' : menuLevel === 'actions' ? 'Menu thao tác' : 'Thêm node'">
         <template v-if="menuLevel === 'selection'">
           <el-dropdown-item command="duplicateSelection" :icon="IconCopyPlus" :disabled="selectionBusy || deleting || !selectedNodes.length">
-            创建副本
+            Tạo bản sao
           </el-dropdown-item>
           <el-dropdown-item command="arrange" :icon="IconLayoutGrid" :disabled="!canArrangeSelection">
-            <span>整理选中节点</span>
+            <span>Sắp xếp node đã chọn</span>
             <icon-chevron-right class="nextIcon" :size="14" />
           </el-dropdown-item>
           <el-dropdown-item
             command="deleteSelection"
             :icon="IconTrash"
             :disabled="selectionBusy || deleting || !selectedNodes.some((node) => node.deletable !== false)">
-            {{ deleting ? "删除中…" : `删除选中节点（${selectedNodes.length}）` }}
+                {{ deleting ? "Đang xóa…" : `Xóa node đã chọn (${selectedNodes.length})` }}
           </el-dropdown-item>
         </template>
         <template v-else-if="menuLevel === 'arrange'">
-          <el-dropdown-item command="selection" :icon="IconChevronLeft">返回选区操作</el-dropdown-item>
+          <el-dropdown-item command="selection" :icon="IconChevronLeft">Quay lại thao tác vùng chọn</el-dropdown-item>
           <el-divider />
-          <el-dropdown-item command="horizontal" :icon="IconLayoutColumns" :disabled="!canArrangeSelection">水平排列</el-dropdown-item>
-          <el-dropdown-item command="vertical" :icon="IconLayoutRows" :disabled="!canArrangeSelection">垂直排列</el-dropdown-item>
-          <el-dropdown-item command="grid" :icon="IconLayoutGrid" :disabled="!canArrangeSelection">宫格排列</el-dropdown-item>
+          <el-dropdown-item command="horizontal" :icon="IconLayoutColumns" :disabled="!canArrangeSelection">Sắp xếp ngang</el-dropdown-item>
+          <el-dropdown-item command="vertical" :icon="IconLayoutRows" :disabled="!canArrangeSelection">Sắp xếp dọc</el-dropdown-item>
+          <el-dropdown-item command="grid" :icon="IconLayoutGrid" :disabled="!canArrangeSelection">Sắp xếp dạng lưới</el-dropdown-item>
         </template>
         <template v-else-if="menuLevel === 'actions'">
-          <el-dropdown-item command="upload" :icon="IconUpload" :disabled="!uploadFiles">上传</el-dropdown-item>
+        <el-dropdown-item command="upload" :icon="IconUpload" :disabled="!uploadFiles">Tải lên</el-dropdown-item>
           <el-dropdown-item command="nodes" :icon="IconPlus">
-            <span>添加节点</span>
+            <span>Thêm node</span>
             <icon-chevron-right class="nextIcon" :size="14" />
           </el-dropdown-item>
           <el-divider />
-          <el-dropdown-item command="undo" :icon="IconArrowBackUp" :disabled="!canUndo">撤销</el-dropdown-item>
-          <el-dropdown-item command="redo" :icon="IconArrowForwardUp" :disabled="!canRedo">重做</el-dropdown-item>
+        <el-dropdown-item command="undo" :icon="IconArrowBackUp" :disabled="!canUndo">Hoàn tác</el-dropdown-item>
+        <el-dropdown-item command="redo" :icon="IconArrowForwardUp" :disabled="!canRedo">Làm lại</el-dropdown-item>
           <el-divider />
           <el-dropdown-item command="paste" :icon="IconClipboard" :disabled="!pasteNode || pasting">
-            {{ pasting ? "粘贴中…" : "粘贴" }}
+            {{ pasting ? "Đang dán…" : "Dán" }}
           </el-dropdown-item>
         </template>
         <template v-else>
-          <el-dropdown-item v-if="!directNodes" command="actions" :icon="IconChevronLeft">返回操作菜单</el-dropdown-item>
-          <el-dropdown-item v-else disabled>添加节点</el-dropdown-item>
-          <el-dropdown-item v-if="!menuItems.length" disabled>{{ pendingHandle || pendingGroup.length ? "没有可连接的节点" : "没有可显示的节点" }}</el-dropdown-item>
+          <el-dropdown-item v-if="!directNodes" command="actions" :icon="IconChevronLeft">Quay lại menu thao tác</el-dropdown-item>
+          <el-dropdown-item v-else disabled>Thêm node</el-dropdown-item>
+          <el-dropdown-item v-if="!menuItems.length" disabled>{{ pendingHandle || pendingGroup.length ? "Không có node tương thích để kết nối" : "Không có node để hiển thị" }}</el-dropdown-item>
           <nodeMenuItems
             v-if="menuVisible"
             ref="nodeMenuItemsRef"
@@ -313,7 +313,7 @@ async function handleCommand(command: unknown) {
     try {
       await batchHistory(() => runCommand(command));
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "画布操作失败");
+      ElMessage.error(error instanceof Error ? error.message : "Thao tác Canvas thất bại");
     }
     return;
   }
@@ -375,7 +375,7 @@ async function runCommand(command: unknown) {
       flow.removeSelectedElements();
       flow.addSelectedNodes(group);
       flow.nodesSelectionActive.value = true;
-      ElMessage.warning("目标节点的接收规则不允许整组连接，请尝试分别连接。");
+      ElMessage.warning("Quy tắc nhận của node đích không cho phép kết nối cả nhóm; hãy kết nối từng node riêng.");
     }
     return;
   }
@@ -402,7 +402,7 @@ async function runCommand(command: unknown) {
         validateConnection(item, { sourceNode, targetNode, nodes: flow.getNodes.value, edges: flow.getEdges.value })
     );
   if (connection) flow.addEdges(connection);
-  else ElMessage.warning("节点已创建，但没有兼容的端口可连接。");
+  else ElMessage.warning("Đã tạo node nhưng không có cổng tương thích để kết nối.");
   clearConnection();
   menu.value?.handleClose();
 }
@@ -415,19 +415,19 @@ async function deleteSelection(selection = selectedNodes.value) {
   try {
     for (const node of nodes) {
       if (node.deletable === false || flow.findNode(node.id) !== node) continue;
-      if (flow.getNodes.value.some(item => item.parentNode === node.id && !nodeIds.has(item.id))) throw new Error("分组中存在不可删除的节点");
-      if (flow.getConnectedEdges(node.id).some((edge) => edge.deletable === false)) throw new Error("节点存在不可删除的连接");
+      if (flow.getNodes.value.some(item => item.parentNode === node.id && !nodeIds.has(item.id))) throw new Error("Nhóm có node không được phép xóa");
+      if (flow.getConnectedEdges(node.id).some((edge) => edge.deletable === false)) throw new Error("Node có dây nối không được phép xóa");
     }
     for (const node of nodes) {
       if (node.deletable === false || flow.findNode(node.id) !== node) continue;
       await useNodeEvent(node.id, flow).emit("delete");
-      if (flow.getNodes.value.some(item => item.parentNode === node.id)) throw new Error("分组内容已变化，请重新删除");
+      if (flow.getNodes.value.some(item => item.parentNode === node.id)) throw new Error("Nội dung nhóm đã thay đổi, hãy thử xóa lại");
       if (flow.findNode(node.id) === node) flow.removeNodes(node.id, true);
     }
     menu.value?.handleClose();
   } catch (error) {
     const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-    ElMessage.error(message || (error instanceof Error ? error.message : "删除选中节点失败"));
+    ElMessage.error(message || (error instanceof Error ? error.message : "Xóa node đã chọn thất bại"));
   } finally {
     selectedNodes.value = selectedNodes.value.filter((node) => flow.findNode(node.id) === node);
     deleting.value = false;

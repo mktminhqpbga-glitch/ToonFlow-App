@@ -19,9 +19,9 @@ const maxArtifactBytes = 20 * 1024 * 1024;
 
 async function readBounded(path: string, limit: number) {
   const info = await lstat(path);
-  if (!info.isFile() || info.size > limit) throw new Error(`文件必须是普通文件且不超过 ${limit} 字节：${path}`);
+  if (!info.isFile() || info.size > limit) throw new Error(`Tệp phải là tệp thường và không được vượt ${limit} byte: ${path}`);
   const bytes = await readFile(path);
-  if (bytes.byteLength > limit) throw new Error(`文件超过大小限制：${path}`);
+  if (bytes.byteLength > limit) throw new Error(`Tệp vượt giới hạn dung lượng: ${path}`);
   return bytes;
 }
 
@@ -33,23 +33,23 @@ export async function develop(directory: string, input: unknown, host: PluginDev
     return {
       type: request.type,
       instructions,
-      manifestExample: { type: request.type, name: request.type === "node" ? "customNode" : "customTool", displayName: "自定义插件", author: "", github: "", configRules: [] },
+      manifestExample: { type: request.type, name: request.type === "node" ? "customNode" : "customTool", displayName: "Plugin tùy chỉnh", author: "", github: "", configRules: [] },
       documentation: request.type === "node" ? nodeGuide : toolGuide,
     };
   }
   const { path: project } = await resolveWorkspacePath(directory, request.path!);
   const projectFile = async (path: string) => (await resolveWorkspacePath(project, path, true)).path;
-  if (project === directory || !(await lstat(project)).isDirectory()) throw Object.assign(new Error("请选择工作区内独立的插件项目目录"), { status: 400 });
+  if (project === directory || !(await lstat(project)).isDirectory()) throw Object.assign(new Error("Hãy chọn thư mục dự án plugin riêng bên trong workspace"), { status: 400 });
   const release = lockWorkspaceFiles([project]);
   const key = process.platform === "win32" ? project.toLowerCase() : project;
   try {
     if (request.action !== "build") {
       const receipt = receipts.get(key);
-      if (!receipt) throw new Error("该项目没有成功构建的产物，请先执行 build");
+      if (!receipt) throw new Error("Dự án chưa có bản build thành công; hãy chạy build trước");
       const { hash, ...metadata } = receipt;
       const artifact = await projectFile(join("build", metadata.fileName));
       const bytes = await readBounded(artifact, request.action === "upload" ? 10 * 1024 * 1024 : maxArtifactBytes);
-      if (createHash("sha256").update(bytes).digest("hex") !== hash) throw new Error("构建产物已被修改，请重新构建");
+      if (createHash("sha256").update(bytes).digest("hex") !== hash) throw new Error("Tệp đã build bị thay đổi; hãy build lại");
       signal?.throwIfAborted();
       const source = bytes.toString("utf8");
       if (request.action === "upload") return { ...metadata, source } satisfies PluginUploadDraft;
@@ -63,7 +63,7 @@ export async function develop(directory: string, input: unknown, host: PluginDev
     const manifest = parsed.data;
     const packageInfo = JSON.parse((await readBounded(await projectFile("package.json"), 64 * 1024)).toString("utf8"));
     const version = parsePluginVersion(packageInfo?.version);
-    if (!version || version.length > 100) throw new Error("package.json.version 必须是长度不超过 100 的完整 SemVer，例如 1.0.0");
+    if (!version || version.length > 100) throw new Error("package.json.version phải là SemVer đầy đủ, tối đa 100 ký tự, ví dụ 1.0.0");
     const sdkDirectory = await ensureBundledSdk(signal);
     const { fileName, bytes } = await compileProject(projectFile, manifest, version, sdkDirectory, signal);
     signal?.throwIfAborted();
@@ -87,8 +87,8 @@ async function compileProject(projectFile: (path: string) => Promise<string>, ma
     let entries = 0;
     async function copySource(path: string) {
       signal?.throwIfAborted();
-      if (++entries > 256) throw new Error("插件源码不能超过 256 个文件和目录");
-      if (["package.json", "tsconfig.json", "jsconfig.json", "node_modules"].includes(basename(path).toLowerCase())) throw new Error(`源码不支持嵌套依赖与编译配置：${path}`);
+      if (++entries > 256) throw new Error("Mã plugin không được vượt 256 tệp và thư mục");
+      if (["package.json", "tsconfig.json", "jsconfig.json", "node_modules"].includes(basename(path).toLowerCase())) throw new Error(`Mã nguồn không hỗ trợ phụ thuộc lồng nhau hoặc cấu hình biên dịch: ${path}`);
       const source = await projectFile(path);
       const info = await lstat(source);
       if (info.isDirectory()) {
@@ -116,7 +116,7 @@ async function compileProject(projectFile: (path: string) => Promise<string>, ma
       signal?.throwIfAborted();
       const fullDirectory = await ensureSdk(signal).catch(cause => {
         signal?.throwIfAborted();
-        throw new Error(`${(error as Error).message}\n完整 SDK 不可用：${cause instanceof Error ? cause.message : cause}`, { cause });
+        throw new Error(`${(error as Error).message}\nSDK đầy đủ không khả dụng: ${cause instanceof Error ? cause.message : cause}`, { cause });
       });
       const modules = join(sourceRoot, "node_modules");
       await unlink(modules);
@@ -140,7 +140,7 @@ function runBuild(sdkDirectory: string, request: { root: string; outDir: string;
     }, (error, stdout, stderr) => {
       if (signal?.aborted) reject(signal.reason);
       else if (error || inputError) {
-        const failure = new Error(`插件构建失败：${stderr.trim() || stdout.trim() || (error ?? inputError)!.message}`);
+        const failure = new Error(`Build plugin thất bại: ${stderr.trim() || stdout.trim() || (error ?? inputError)!.message}`);
         reject(error?.code === 75 ? Object.assign(failure, { code: "SDK_DEPENDENCY_MISSING" }) : failure);
       }
       else resolveBuild();

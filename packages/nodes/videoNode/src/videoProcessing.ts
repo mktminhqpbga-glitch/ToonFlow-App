@@ -10,7 +10,7 @@ export type VideoProcessingOptions = {
 
 function normalizePath(path: string) {
   if (!path || /[\x00-\x1f]/.test(path) || /^(?:[\\/]|[a-z][a-z\d+.-]*:)/i.test(path) || path.split(/[\\/]+/).includes("..")) {
-    throw new Error("视频处理必须使用工作区相对路径");
+    throw new Error("Xử lý video phải dùng đường dẫn tương đối trong không gian làm việc");
   }
   return path.split(/[\\/]+/).filter(part => part && part !== ".").join("/").toLowerCase();
 }
@@ -45,23 +45,23 @@ function runCommand(command: BrowserFfmpegCommand, signal?: AbortSignal) {
 export async function processVideo(ffmpeg: BrowserFfmpegFactory, source: string, options: VideoProcessingOptions, signal?: AbortSignal) {
   signal?.throwIfAborted();
   const sourcePath = normalizePath(source);
-  if (!["extractAudio", "separate", "trim"].includes(options.action)) throw new Error("未知的视频处理操作");
+  if (!["extractAudio", "separate", "trim"].includes(options.action)) throw new Error("Thao tác xử lý video không xác định");
   const needsAudio = options.action !== "trim";
   const needsVideo = options.action !== "extractAudio";
-  if (needsAudio && !options.audioPath) throw new Error("缺少音轨输出路径");
-  if (needsVideo && !options.videoPath) throw new Error("缺少视频输出路径");
+  if (needsAudio && !options.audioPath) throw new Error("Thiếu đường dẫn đầu ra âm thanh");
+  if (needsVideo && !options.videoPath) throw new Error("Thiếu đường dẫn đầu ra video");
   const outputs = [needsAudio ? options.audioPath : undefined, needsVideo ? options.videoPath : undefined].filter((path): path is string => !!path).map(normalizePath);
-  if (outputs.includes(sourcePath) || new Set(outputs).size !== outputs.length) throw new Error("输出文件不能覆盖原视频或彼此覆盖");
+  if (outputs.includes(sourcePath) || new Set(outputs).size !== outputs.length) throw new Error("Tệp đầu ra không được ghi đè video gốc hoặc ghi đè lẫn nhau");
 
   const media = await probeMedia(ffmpeg, source, signal);
   const video = media.streams.find(stream => stream.codec_type === "video" && !stream.disposition?.attached_pic);
-  if (!video) throw new Error("文件不包含视频画面");
+  if (!video) throw new Error("Tệp không có hình ảnh video");
   const duration = Number(media.format.duration ?? video.duration);
-  if (!Number.isFinite(duration) || duration <= 0) throw new Error("无法读取有效的视频时长");
-  if (needsAudio && !media.streams.some(stream => stream.codec_type === "audio")) throw new Error("该视频没有音轨");
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Không đọc được thời lượng video hợp lệ");
+  if (needsAudio && !media.streams.some(stream => stream.codec_type === "audio")) throw new Error("Video này không có âm thanh");
   if (options.action === "trim" && (!Number.isFinite(options.start) || !Number.isFinite(options.end)
     || options.start! < 0 || options.end! <= options.start! || options.end! > duration)) {
-    throw new Error("截取范围须满足 0 ≤ 开始时间 < 结束时间 ≤ 视频时长");
+    throw new Error("Khoảng cắt phải thỏa mãn 0 ≤ thời điểm bắt đầu < thời điểm kết thúc ≤ thời lượng video");
   }
 
   const command = ffmpeg(source);
@@ -82,6 +82,6 @@ export async function processVideo(ffmpeg: BrowserFfmpegFactory, source: string,
   const result = await probeMedia(ffmpeg, needsVideo ? options.videoPath! : options.audioPath!, signal);
   const resultVideo = result.streams.find(stream => stream.codec_type === "video");
   const resultDuration = Number(result.format.duration);
-  if (!Number.isFinite(resultDuration) || resultDuration <= 0 || (needsVideo && !resultVideo)) throw new Error("生成的媒体文件无效");
+  if (!Number.isFinite(resultDuration) || resultDuration <= 0 || (needsVideo && !resultVideo)) throw new Error("Tệp phương tiện được tạo không hợp lệ");
   return { duration: resultDuration, width: resultVideo?.width ?? video.width, height: resultVideo?.height ?? video.height };
 }

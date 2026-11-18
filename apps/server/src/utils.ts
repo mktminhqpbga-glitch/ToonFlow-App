@@ -1,3 +1,4 @@
+import * as aiChrome from "@/utils/aiChrome";
 import * as assets from "@/utils/assets";
 import * as browser from "@/utils/browser";
 import * as singleAgent from "@/utils/singleAgent";
@@ -39,6 +40,7 @@ import * as channel from "@/utils/channel";
 import * as multiTenant from "@/utils/multiTenant";
 
 export default {
+  aiChrome,
   assets,
   browser,
   singleAgent,

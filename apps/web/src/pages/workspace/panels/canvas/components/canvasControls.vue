@@ -11,72 +11,72 @@
   <panel class="canvasControlsPanel" position="bottom-left">
     <el-card class="canvasControlsCard" shadow="never" :bodyStyle="{ padding: '2px 4px' }">
       <div class="canvasControls">
-        <el-tooltip v-if="currentUser?.role !== 'user'" :showArrow="false" :content="assetsVisible ? '关闭素材库' : '打开素材库'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
+        <el-tooltip v-if="currentUser?.role !== 'user'" :showArrow="false" :content="assetsVisible ? 'Đóng thư viện tài nguyên' : 'Mở thư viện tài nguyên'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
           <el-button
             class="toolButton"
             text
             :type="assetsVisible ? 'primary' : 'default'"
             :aria-pressed="assetsVisible"
-            aria-label="素材库"
+            aria-label="Thư viện tài nguyên"
             @click="assetsVisible = !assetsVisible">
             <icon-folders :size="18" />
           </el-button>
         </el-tooltip>
         <!-- trigger 用 contextmenu 是为了让整理按钮只由 arrangeNodes 控制显隐，同时仍保留点击外部自动关闭 -->
-        <el-tooltip :showArrow="false" content="整理画布" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="undoPopoverVisible">
+        <el-tooltip :showArrow="false" content="Sắp xếp Canvas" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="undoPopoverVisible">
           <span class="toolTrigger">
             <el-popover trigger="contextmenu" placement="top-start" :width="180" v-model:visible="undoPopoverVisible">
               <template #reference>
-                <el-button class="toolButton" text :disabled="!canArrange" aria-label="整理画布" @click="arrangeNodes">
+                <el-button class="toolButton" text :disabled="!canArrange" aria-label="Sắp xếp Canvas" @click="arrangeNodes">
                   <icon-sitemap :size="18" />
                 </el-button>
               </template>
               <div class="zoomMenu">
-                <el-button class="zoomAction" style="width: 100%" text @click="undoArrange">撤销整理</el-button>
+                <el-button class="zoomAction" style="width: 100%" text @click="undoArrange">Hoàn tác sắp xếp</el-button>
               </div>
             </el-popover>
           </span>
         </el-tooltip>
-        <el-tooltip :showArrow="false" :content="showMap ? '隐藏地图' : '显示地图'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
+        <el-tooltip :showArrow="false" :content="showMap ? 'Ẩn bản đồ' : 'Hiện bản đồ'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
           <el-button
             class="toolButton"
             text
             :type="showMap ? 'primary' : 'default'"
             :aria-pressed="showMap"
-            aria-label="显示或隐藏地图"
+            aria-label="Hiện hoặc ẩn bản đồ"
             @click="showMap = !showMap">
             <icon-map :size="18" />
           </el-button>
         </el-tooltip>
-        <el-tooltip :showArrow="false" :content="snapEnabled ? '关闭网格吸附' : '开启网格吸附'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
+        <el-tooltip :showArrow="false" :content="snapEnabled ? 'Tắt căn vào lưới' : 'Bật căn vào lưới'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
           <el-button
             class="toolButton"
             text
             :type="snapEnabled ? 'primary' : 'default'"
             :aria-pressed="snapEnabled"
-            aria-label="网格吸附"
+            aria-label="Căn vào lưới"
             @click="snapEnabled = !snapEnabled">
             <icon-magnet :size="18" />
           </el-button>
         </el-tooltip>
-        <el-tooltip :showArrow="false" :content="showEdges ? '隐藏连线' : '显示连线'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
+        <el-tooltip :showArrow="false" :content="showEdges ? 'Ẩn dây nối' : 'Hiện dây nối'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
           <el-button
             class="toolButton"
             text
             :type="showEdges ? 'primary' : 'default'"
             :aria-pressed="showEdges"
-            aria-label="显示或隐藏连线"
+            aria-label="Hiện hoặc ẩn dây nối"
             @click="showEdges = !showEdges">
             <icon-arrow-guide :size="18" />
           </el-button>
         </el-tooltip>
-        <el-tooltip :showArrow="false" content="适应视图" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
-          <el-button class="toolButton" text aria-label="适应视图" @click="fitView({ duration: 250 })">
+        <el-tooltip :showArrow="false" content="Vừa khung nhìn" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
+          <el-button class="toolButton" text aria-label="Vừa khung nhìn" @click="fitView({ duration: 250 })">
             <icon-focus-centered :size="18" />
           </el-button>
         </el-tooltip>
         <el-tooltip :showArrow="false"
-          content="缩放菜单（滚轮调整缩放）"
+          content="Menu thu phóng (điều chỉnh bằng con lăn)"
           placement="top"
           :hideAfter="0"
           :enterable="false"
@@ -88,7 +88,7 @@
                 <el-button
                   class="toolButton"
                   text
-                  aria-label="缩放菜单"
+                  aria-label="Menu thu phóng"
                   @wheel.stop.prevent="$event.deltaY && applyZoom(Math.min(800, Math.max(20, zoomPercent - Math.sign($event.deltaY))))">
                   {{ zoomPercent }}%
                 </el-button>
@@ -100,13 +100,13 @@
                   :min="20"
                   :max="800"
                   :controls="false"
-                  aria-label="缩放百分比"
+                  aria-label="Phần trăm thu phóng"
                   @change="applyZoom">
                   <template #suffix>%</template>
                 </el-input-number>
-                <el-button class="zoomAction" text @click="zoomIn()">放大</el-button>
-                <el-button class="zoomAction" text @click="zoomOut()">缩小</el-button>
-                <el-button class="zoomAction" text @click="fitView({ duration: 250 })">适合屏幕</el-button>
+                <el-button class="zoomAction" text @click="zoomIn()">Phóng to</el-button>
+                <el-button class="zoomAction" text @click="zoomOut()">Thu nhỏ</el-button>
+                <el-button class="zoomAction" text @click="fitView({ duration: 250 })">Vừa màn hình</el-button>
               </div>
             </el-popover>
           </span>
@@ -114,8 +114,6 @@
       </div>
     </el-card>
   </panel>
-  <materialPresets v-model="materialPresetsVisible" :availableNodes="availableNodes" :createNode="createPresetNode" />
-  <characterStudio v-model="characterStudioVisible" :directory="directory" :addCharacter="addCharacterToCanvas" />
 </template>
 
 <script setup lang="ts">
@@ -123,8 +121,6 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Panel, useVueFlow, type XYPosition } from "@vue-flow/core";
 import { MiniMap } from "@vue-flow/minimap";
 import { IconMap, IconMagnet, IconFocusCentered } from "@tabler/icons-vue";
-import materialPresets from "./materialPresets.vue";
-import characterStudio, { type CharacterRecord } from "./characterStudio.vue";
 import { ElMessage } from "element-plus";
 import { currentUser } from "@/stores/multiTenant";
 import { arrangeCanvas } from "../arrangeCanvas";
@@ -132,17 +128,12 @@ import { arrangeCanvas } from "../arrangeCanvas";
 const props = defineProps<{
   canvasId: string;
   directory: string | undefined;
-  availableNodes: { type: string; label: string }[];
-  createPresetNode: (preset: { nodeType: string; title: string; prompt: string }) => Promise<boolean>;
-  addCharacterToCanvas: (character: CharacterRecord) => Promise<boolean>;
   batchHistory: (action: () => Promise<void>) => Promise<void>;
 }>();
 const snapEnabled = defineModel<boolean>("snapEnabled", { required: true });
 const showEdges = defineModel<boolean>("showEdges", { required: true });
 const assetsVisible = defineModel<boolean>("assetsVisible", { default: false });
 const showMap = ref(false);
-const materialPresetsVisible = ref(false);
-const characterStudioVisible = ref(false);
 const zoomMenuVisible = ref(false);
 const flow = useVueFlow();
 const { viewport, zoomTo, zoomIn, zoomOut, fitView, setCenter, getNodes, updateNode } = flow;
@@ -161,11 +152,7 @@ const canArrange = computed(() => {
     nodes.every((node) => node.dimensions.width > 0 && node.dimensions.height > 0)
   );
 });
-defineExpose({
-  arrangeNodes,
-  openMaterialPresets: () => { if (props.canvasId && props.directory) materialPresetsVisible.value = true; },
-  openCharacterStudio: () => { if (props.canvasId && props.directory) characterStudioVisible.value = true; },
-});
+defineExpose({ arrangeNodes });
 
 watch(
   () => [props.canvasId, props.directory],
@@ -173,8 +160,6 @@ watch(
     arrangeController?.abort();
     layoutSnapshot.value = undefined;
     undoPopoverVisible.value = false;
-    materialPresetsVisible.value = false;
-    characterStudioVisible.value = false;
   },
   { flush: "sync" }
 );
@@ -198,7 +183,7 @@ async function arrangeNodes() {
       undoPopoverVisible.value = true;
     });
   } catch (error) {
-    if (!controller.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "整理画布失败");
+    if (!controller.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Sắp xếp Canvas thất bại");
   } finally {
     arrangeController = undefined;
     arranging.value = false;
@@ -218,7 +203,7 @@ async function undoArrange() {
       undoPopoverVisible.value = false;
     });
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "撤销整理失败");
+    ElMessage.error(error instanceof Error ? error.message : "Hoàn tác sắp xếp thất bại");
   }
 }
 </script>

@@ -63,13 +63,13 @@ export function isBrowserAudioAsrSupported() {
 
 export function createBrowserAsr(options: BrowserAsrOptions = {}) {
   const recognitionConstructor = getRecognitionConstructor();
-  if (!recognitionConstructor) throw new DOMException("当前浏览器或 WebView 不支持原生语音识别", "NotSupportedError");
+  if (!recognitionConstructor) throw new DOMException("Trình duyệt hoặc WebView hiện tại không hỗ trợ nhận dạng giọng nói gốc", "NotSupportedError");
 
   const recognition = new recognitionConstructor();
   let state: BrowserAsrState = "idle";
   let cancelled = false;
 
-  recognition.lang = options.lang ?? "zh-CN";
+  recognition.lang = options.lang ?? "vi-VN";
   recognition.continuous = options.continuous ?? false;
   recognition.interimResults = options.interimResults ?? true;
   recognition.maxAlternatives = 1;
@@ -104,10 +104,10 @@ export function createBrowserAsr(options: BrowserAsrOptions = {}) {
       return state;
     },
     start(audioTrack?: MediaStreamTrack) {
-      if (state !== "idle") throw new DOMException("语音识别尚未结束或实例已销毁", "InvalidStateError");
-      if (audioTrack && !isBrowserAudioAsrSupported()) throw new DOMException("当前浏览器或 WebView 不支持音频轨道识别", "NotSupportedError");
+      if (state !== "idle") throw new DOMException("Nhận dạng giọng nói chưa kết thúc hoặc phiên đã bị hủy", "InvalidStateError");
+      if (audioTrack && !isBrowserAudioAsrSupported()) throw new DOMException("Trình duyệt hoặc WebView hiện tại không hỗ trợ nhận dạng từ kênh âm thanh", "NotSupportedError");
       if (audioTrack && (audioTrack.kind !== "audio" || audioTrack.readyState !== "live")) {
-        throw new DOMException("识别需要有效的音频轨道", "InvalidStateError");
+        throw new DOMException("Cần có kênh âm thanh hợp lệ để nhận dạng", "InvalidStateError");
       }
       cancelled = false;
       if (audioTrack) recognition.start(audioTrack);
@@ -140,10 +140,10 @@ export function createBrowserAsr(options: BrowserAsrOptions = {}) {
 }
 
 export function transcribeBrowserAudio(src: string, options: BrowserAudioAsrOptions = {}): Promise<string> {
-  if (typeof src !== "string" || !src.trim()) return Promise.reject(new TypeError("请提供有效的音频地址"));
-  if (options.signal?.aborted) return Promise.reject(new DOMException("音频转文字已取消", "AbortError"));
+  if (typeof src !== "string" || !src.trim()) return Promise.reject(new TypeError("Vui lòng cung cấp địa chỉ âm thanh hợp lệ"));
+  if (options.signal?.aborted) return Promise.reject(new DOMException("Đã hủy chuyển âm thanh thành văn bản", "AbortError"));
   if (!isBrowserAudioAsrSupported()) {
-    return Promise.reject(new DOMException("当前浏览器暂不支持音频转文本，可以换个浏览器再试。", "NotSupportedError"));
+    return Promise.reject(new DOMException("Trình duyệt hiện tại chưa hỗ trợ chuyển âm thanh thành văn bản; hãy thử trình duyệt khác.", "NotSupportedError"));
   }
 
   return new Promise((resolve, reject) => {
@@ -187,7 +187,7 @@ export function transcribeBrowserAudio(src: string, options: BrowserAudioAsrOpti
     }
 
     function cancel() {
-      finish(new DOMException("音频转文字已取消", "AbortError"));
+      finish(new DOMException("Đã hủy chuyển âm thanh thành văn bản", "AbortError"));
     }
 
     function setTimeoutError(message: string, duration = 30000) {
@@ -205,7 +205,7 @@ export function transcribeBrowserAudio(src: string, options: BrowserAudioAsrOpti
       // 音频只送入识别轨道，不连接扬声器，也不请求麦克风。
       source.connect(destination);
       const track = destination.stream.getAudioTracks()[0];
-      if (!track) throw new Error("无法创建音频识别轨道");
+      if (!track) throw new Error("Không thể tạo kênh nhận dạng âm thanh");
       asr = createBrowserAsr({
         lang: options.lang,
         continuous: true,
@@ -213,45 +213,45 @@ export function transcribeBrowserAudio(src: string, options: BrowserAudioAsrOpti
         onResult: (result) => { finalText = result.finalText; },
         onError: (error) => {
           const messages: Record<string, string> = {
-            network: "语音识别服务暂时连接不上，请稍后再试。原音频不受影响。",
-            "not-allowed": "浏览器暂未允许本次语音识别，可以检查站点权限后再试。",
-            "service-not-allowed": "当前浏览器暂时无法使用语音识别服务，可以稍后再试或换个浏览器。",
-            "audio-capture": "暂时无法读取音频，请重新选择音频后再试。",
-            "no-speech": "这段音频中没有识别到清晰的人声，可以换一段试试。",
-            "language-not-supported": "当前浏览器的识别服务暂不支持所选语言，可以换个浏览器再试。",
-            aborted: "本次识别已中断，可以重新试一次。",
+            network: "Tạm thời không thể kết nối dịch vụ nhận dạng giọng nói. Hãy thử lại sau; âm thanh gốc không bị ảnh hưởng.",
+            "not-allowed": "Trình duyệt chưa cho phép nhận dạng giọng nói; hãy kiểm tra quyền truy cập của trang rồi thử lại.",
+            "service-not-allowed": "Trình duyệt hiện không thể dùng dịch vụ nhận dạng giọng nói; hãy thử lại sau hoặc đổi trình duyệt.",
+            "audio-capture": "Tạm thời không thể đọc âm thanh; hãy chọn lại tệp rồi thử lại.",
+            "no-speech": "Không phát hiện giọng nói rõ ràng trong đoạn âm thanh này; hãy thử đoạn khác.",
+            "language-not-supported": "Dịch vụ nhận dạng của trình duyệt hiện không hỗ trợ ngôn ngữ đã chọn; hãy thử trình duyệt khác.",
+            aborted: "Lần nhận dạng này đã bị gián đoạn; có thể thử lại.",
           };
-          finish(new Error(messages[error.code] ?? "这次没能完成识别，请稍后再试。原音频不受影响。", { cause: error }));
+          finish(new Error(messages[error.code] ?? "Không thể hoàn tất lần nhận dạng này. Hãy thử lại sau; âm thanh gốc không bị ảnh hưởng.", { cause: error }));
         },
         onStateChange: (state) => {
           if (settled) return;
-          if (state === "listening") void audio!.play().catch(error => finish(new Error("音频暂时无法播放，请再点击一次“转文本”试试。", { cause: error })));
+          if (state === "listening") void audio!.play().catch(error => finish(new Error("Tạm thời không phát được âm thanh; hãy thử nhấn Chuyển thành văn bản thêm lần nữa.", { cause: error })));
           if (state !== "idle") return;
-          if (!playbackEnded) finish(new Error("这次识别提前结束了，可以重新试一次。原音频不受影响。"));
-          else if (!finalText.trim()) finish(new Error("这段音频中没有识别到文字，可以换一段人声清晰的音频试试。"));
+          if (!playbackEnded) finish(new Error("Lần nhận dạng này kết thúc sớm; có thể thử lại. Âm thanh gốc không bị ảnh hưởng."));
+          else if (!finalText.trim()) finish(new Error("Không nhận dạng được lời nói thành văn bản; hãy thử đoạn âm thanh có giọng nói rõ ràng hơn."));
           else finish();
         },
       });
       audio.onended = () => {
         if (settled) return;
         playbackEnded = true;
-        setTimeoutError("识别结果等得有点久，请稍后再试。原音频不受影响。", 15000);
+        setTimeoutError("Chờ kết quả nhận dạng quá lâu. Hãy thử lại sau; âm thanh gốc không bị ảnh hưởng.", 15000);
         try {
           asr!.stop();
         } catch (error) {
           finish(error);
         }
       };
-      audio.onerror = () => finish(new Error("暂时无法读取这段音频，请检查文件是否能正常播放，或换一段音频再试。", { cause: audio?.error }));
+      audio.onerror = () => finish(new Error("Tạm thời không thể đọc đoạn âm thanh này; hãy kiểm tra tệp có phát được không hoặc thử đoạn khác.", { cause: audio?.error }));
       audio.onplaying = audio.ontimeupdate = () => {
         if (settled || playbackEnded || audio!.currentTime <= lastCurrentTime) return;
         lastCurrentTime = audio!.currentTime;
-        setTimeoutError("音频读取等得有点久，请稍后再试。原音频不受影响。");
+        setTimeoutError("Đọc âm thanh mất quá nhiều thời gian. Hãy thử lại sau; âm thanh gốc không bị ảnh hưởng.");
       };
       options.signal?.addEventListener("abort", cancel, { once: true });
       window.addEventListener("pagehide", cancel, { once: true });
       audio.src = src;
-      setTimeoutError("语音识别暂时没有响应，请稍后再试。原音频不受影响。");
+      setTimeoutError("Dịch vụ nhận dạng giọng nói chưa phản hồi. Hãy thử lại sau; âm thanh gốc không bị ảnh hưởng.");
       void context.resume().then(() => {
         if (!settled) asr!.start(track);
       }).catch(finish);

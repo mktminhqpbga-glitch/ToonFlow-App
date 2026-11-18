@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" :title="`编辑技能 · ${skill.displayName}`" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody :beforeClose="close" @closed="emit('closed')">
+  <el-dialog v-model="visible" :title="`Chỉnh sửa kỹ năng · ${skill.displayName}`" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody :beforeClose="close" @closed="emit('closed')">
     <div class="skillEditor" :aria-busy="filesLoading || fileLoading">
       <el-alert v-if="filesError" :title="filesError" type="error" :closable="false" showIcon />
       <template v-else>
@@ -12,7 +12,7 @@
             :loading="creating"
             :disabled="saving || moving"
             @click="createFile">
-            新建文件
+            Tạo tệp mới
           </el-button>
           <el-tree
             :key="treeVersion"
@@ -42,7 +42,7 @@
         <div class="fileEditor">
           <el-alert v-if="fileError" :title="fileError" type="error" :closable="false" showIcon />
           <template v-else>
-            <el-text v-if="selectedPath === mainPath" size="small" type="info">name 为技能标识，不可修改</el-text>
+            <el-text v-if="selectedPath === mainPath" size="small" type="info">name là mã định danh kỹ năng, không thể chỉnh sửa</el-text>
             <el-input
               v-model="draft"
               class="sourceInput"
@@ -50,15 +50,15 @@
               :rows="20"
               resize="none"
               :disabled="fileLoading || saving"
-              :aria-label="`${selectedPath} 源码`"
+              :aria-label="`${selectedPath} Mã nguồn`"
               :spellcheck="false" />
           </template>
         </div>
       </template>
     </div>
     <template #footer>
-      <el-button :disabled="saving || moving || confirming" @click="close()">关闭</el-button>
-      <el-button type="primary" :loading="saving" :disabled="fileLoading || !!fileError || draft === original || confirming" @click="save">保存</el-button>
+      <el-button :disabled="saving || moving || confirming" @click="close()">Đóng</el-button>
+      <el-button type="primary" :loading="saving" :disabled="fileLoading || !!fileError || draft === original || confirming" @click="save">Lưu</el-button>
     </template>
   </el-dialog>
 </template>
@@ -130,14 +130,14 @@ async function loadFiles() {
   try {
     const { data } = await axios.get("/api/skills/list", { params: { name: skill.name }, headers, signal: controller.signal });
     if (data.code !== 200 || typeof data.data?.mainPath !== "string" || !Array.isArray(data.data.files) || !data.data.files.every((path: unknown) => typeof path === "string")) {
-      throw new Error(data.message || "技能文件列表格式错误");
+      throw new Error(data.message || "Định dạng danh sách tệp kỹ năng không hợp lệ");
     }
     mainPath.value = data.data.mainPath;
     files.value = data.data.files;
     treeVersion.value++;
     if (!selectedPath.value || !files.value.includes(selectedPath.value)) await selectFile(mainPath.value);
   } catch (error) {
-    if (!controller.signal.aborted) filesError.value = errorMessage(error, "读取技能文件列表失败，请重新打开重试");
+    if (!controller.signal.aborted) filesError.value = errorMessage(error, "Không đọc được danh sách tệp kỹ năng, hãy mở lại và thử tiếp");
   } finally {
     filesLoading.value = false;
   }
@@ -176,11 +176,11 @@ async function selectFile(path: string) {
       signal: requestController.signal,
     });
     if (requestController.signal.aborted || selectedPath.value !== path) return;
-    if (data.code !== 200 || typeof data.data?.content !== "string") throw new Error(data.message || "技能内容格式错误");
+    if (data.code !== 200 || typeof data.data?.content !== "string") throw new Error(data.message || "Nội dung kỹ năng có định dạng không hợp lệ");
     original.value = data.data.content;
     if (cached === undefined) draft.value = data.data.content;
   } catch (error) {
-    if (!requestController.signal.aborted && selectedPath.value === path) fileError.value = errorMessage(error, "读取文件失败，请重新选择重试");
+    if (!requestController.signal.aborted && selectedPath.value === path) fileError.value = errorMessage(error, "Không đọc được tệp, hãy chọn lại và thử tiếp");
   } finally {
     if (selectedPath.value === path) fileLoading.value = false;
   }
@@ -220,13 +220,13 @@ async function handleNodeDrop(draggingNode: { data: Record<string, unknown> }, d
     moving.value = true;
     try {
       const { data } = await axios.put("/api/skills/move", { name: skill.name, path: sourcePath, target: targetPath }, { headers });
-      if (data.code !== 200) throw new Error(data.message || "移动文件失败");
+      if (data.code !== 200) throw new Error(data.message || "Di chuyển tệp thất bại");
       if (drafts.has(sourcePath)) { drafts.set(targetPath, drafts.get(sourcePath)!); drafts.delete(sourcePath); }
       if (dirtyPaths.value.has(sourcePath)) { dirtyPaths.value.add(targetPath); dirtyPaths.value.delete(sourcePath); }
       if (selectedPath.value === sourcePath) selectedPath.value = targetPath;
       await loadFiles();
     } catch (error) {
-      ElMessage.error(errorMessage(error, "移动文件失败，请重试"));
+    ElMessage.error(errorMessage(error, "Di chuyển tệp thất bại, vui lòng thử lại"));
       treeVersion.value++;
     } finally {
       moving.value = false;
@@ -241,10 +241,10 @@ async function handleNodeDrop(draggingNode: { data: Record<string, unknown> }, d
   moving.value = true;
   try {
     const { data } = await axios.put("/api/skills/order", { name: skill.name, order: siblings }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "保存顺序失败");
+    if (data.code !== 200) throw new Error(data.message || "Lưu thứ tự thất bại");
     await loadFiles();
   } catch (error) {
-    ElMessage.error(errorMessage(error, "保存顺序失败，请重试"));
+    ElMessage.error(errorMessage(error, "Lưu thứ tự thất bại, vui lòng thử lại"));
     treeVersion.value++;
   } finally {
     moving.value = false;
@@ -256,12 +256,12 @@ async function createFile() {
   const directory = selectedPath.value.includes("/") ? selectedPath.value.slice(0, selectedPath.value.lastIndexOf("/")) : "";
   let fileName: string;
   try {
-    const { value } = await ElMessageBox.prompt(directory ? `新文件将创建在“${directory}”目录` : "新文件将创建在技能根目录", "新建文件", {
+    const { value } = await ElMessageBox.prompt(directory ? `Tệp mới sẽ được tạo trong “${directory}”` : "Tệp mới sẽ được tạo trong thư mục gốc kỹ năng", "Tạo tệp mới", {
       inputPattern: /^[^\\/]+$/,
-      inputValidator: value => !!value?.trim() || "请输入文件名称",
-      inputErrorMessage: "名称不能包含斜杠",
-      confirmButtonText: "创建",
-      cancelButtonText: "取消",
+      inputValidator: value => !!value?.trim() || "Hãy nhập tên tệp",
+      inputErrorMessage: "Tên không được chứa dấu gạch chéo",
+      confirmButtonText: "Tạo",
+      cancelButtonText: "Hủy",
     });
     fileName = value.trim();
   } catch { return; }
@@ -269,11 +269,11 @@ async function createFile() {
   creating.value = true;
   try {
     const { data } = await axios.post("/api/skills/create", { name: skill.name, path }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "创建文件失败");
+    if (data.code !== 200) throw new Error(data.message || "Tạo tệp thất bại");
     await loadFiles();
     await selectFile(path);
   } catch (error) {
-    ElMessage.error(errorMessage(error, "创建文件失败，请重试"));
+    ElMessage.error(errorMessage(error, "Tạo tệp thất bại, vui lòng thử lại"));
   } finally {
     creating.value = false;
   }
@@ -284,7 +284,7 @@ async function close(done?: () => void) {
   if (draft.value !== original.value || dirtyPaths.value.size) {
     confirming.value = true;
     try {
-      await ElMessageBox.confirm("修改尚未保存，确定放弃修改并关闭吗？", "未保存的修改", { confirmButtonText: "放弃修改", cancelButtonText: "继续编辑", type: "warning" });
+      await ElMessageBox.confirm("Các thay đổi chưa được lưu. Bạn có chắc muốn bỏ thay đổi và đóng?", "Thay đổi chưa lưu", { confirmButtonText: "Bỏ thay đổi", cancelButtonText: "Tiếp tục chỉnh sửa", type: "warning" });
     } catch { return; }
     finally { confirming.value = false; }
   }
@@ -299,14 +299,14 @@ async function save() {
   const content = draft.value;
   try {
     const { data } = await axios.put("/api/skills/save", { name: skill.name, ...(path === mainPath.value ? {} : { path }), content }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "保存文件失败");
+    if (data.code !== 200) throw new Error(data.message || "Lưu tệp thất bại");
     if (selectedPath.value === path) original.value = content;
     drafts.delete(path);
     dirtyPaths.value.delete(path);
     emit("saved");
-    ElMessage.success("已保存");
+    ElMessage.success("Đã lưu");
   } catch (error) {
-    ElMessage.error(errorMessage(error, "保存文件失败，请重试"));
+    ElMessage.error(errorMessage(error, "Lưu tệp thất bại, vui lòng thử lại"));
   } finally {
     saving.value = false;
   }

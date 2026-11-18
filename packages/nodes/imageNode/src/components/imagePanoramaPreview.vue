@@ -3,10 +3,10 @@
     <div class="previewWorkspace">
       <div class="stageColumn">
         <div class="stageHeader">
-          <span class="viewLabel">{{ showOriginal ? localized('原图对比', 'So sánh ảnh gốc') : activeCorrectionCount ? (vietnamese ? `Đã bật ${activeCorrectionCount} hiệu chỉnh` : `已启用 ${activeCorrectionCount} 项校正`) : localized('当前视角', 'Góc nhìn hiện tại') }}</span>
+          <span class="viewLabel">{{ showOriginal ? 'So sánh ảnh gốc' : activeCorrectionCount ? `Đã bật ${activeCorrectionCount} hiệu chỉnh` : 'Góc nhìn hiện tại' }}</span>
           <div class="viewActions">
-            <el-button size="small" :type="showOriginal ? 'primary' : 'default'" :plain="showOriginal" :disabled="busy || !ready" :aria-pressed="showOriginal" @click="showOriginal = !showOriginal">{{ showOriginal ? localized('返回校正', 'Quay lại hiệu chỉnh') : localized('对比原图', 'So sánh ảnh gốc') }}</el-button>
-            <el-button size="small" :type="showGrid ? 'primary' : 'default'" :plain="showGrid" :disabled="busy || !ready" :aria-pressed="showGrid" @click="showGrid = !showGrid">参考线</el-button>
+            <el-button size="small" :type="showOriginal ? 'primary' : 'default'" :plain="showOriginal" :disabled="busy || !ready" :aria-pressed="showOriginal" @click="showOriginal = !showOriginal">{{ showOriginal ? 'Trở về bản hiệu chỉnh' : 'So sánh ảnh gốc' }}</el-button>
+            <el-button size="small" :type="showGrid ? 'primary' : 'default'" :plain="showGrid" :disabled="busy || !ready" :aria-pressed="showGrid" @click="showGrid = !showGrid">Đường tham chiếu</el-button>
           </div>
         </div>
         <div class="stageShell">
@@ -16,7 +16,7 @@
             :class="{ dragging: !!drag }"
             tabindex="0"
             role="application"
-            :aria-label="(mode === 'sphere' ? localized('720°全景图', 'Ảnh toàn cảnh 720°') : localized('360°环绕图', 'Ảnh xoay vòng 360°')) + localized('预览，拖动或方向键旋转，滚轮或加减键缩放，Home 重置', ': kéo hoặc dùng phím mũi tên để xoay; cuộn hoặc +/- để thu phóng; Home để đặt lại')"
+            :aria-label="`Xem trước ${mode === 'sphere' ? 'ảnh toàn cảnh 720°' : 'ảnh bao quanh 360°'}; kéo hoặc dùng phím mũi tên để xoay, con lăn hoặc +/- để thu phóng, Home để đặt lại`"
             :aria-busy="loading || capturing"
             @pointerdown.prevent="startDrag"
             @pointermove="moveDrag"
@@ -27,61 +27,61 @@
             @wheel.prevent="zoomView">
             <canvas ref="canvas" aria-hidden="true" @webglcontextlost.prevent="loseContext" @webglcontextrestored="restoreContext" />
             <div v-if="showGrid && ready" class="referenceGrid" aria-hidden="true" />
-            <div v-if="loading || imageError || unavailable" class="stageStatus" role="status">{{ unavailable ? localized('当前设备无法显示全景预览，请重新打开后重试', 'Thiết bị không hiển thị được ảnh toàn cảnh; hãy mở lại và thử lần nữa') : imageError || localized('正在加载全景图…', 'Đang tải ảnh toàn cảnh…') }}</div>
-            <div v-else class="stageHint">{{ localized('拖动旋转 · 滚轮缩放 · 16:9 取景', 'Kéo để xoay · Cuộn để thu phóng · Khung hình 16:9') }}</div>
+            <div v-if="loading || imageError || unavailable" class="stageStatus" role="status">{{ unavailable ? 'Thiết bị hiện tại không hiển thị được ảnh toàn cảnh; hãy mở lại và thử lần nữa' : imageError || 'Đang tải ảnh toàn cảnh…' }}</div>
+            <div v-else class="stageHint">Kéo để xoay · Con lăn để thu phóng · Khung hình 16:9</div>
           </div>
         </div>
         <div class="viewControls">
-          <span class="viewAngles">水平 {{ Math.round(yaw) }}°<template v-if="mode === 'sphere'"> · 俯仰 {{ Math.round(pitch) }}°</template></span>
-          <div class="viewFov"><span>视野</span><el-slider v-model="fov" :min="minFov" :max="maxFov" :step="1" :disabled="busy || !ready" aria-label="全景视野" /><span>{{ Math.round(fov) }}°</span></div>
-          <el-button size="small" text :disabled="busy || !ready" @click="resetView">重置视角</el-button>
+          <span class="viewAngles">Góc ngang {{ Math.round(yaw) }}°<template v-if="mode === 'sphere'"> · Góc dọc {{ Math.round(pitch) }}°</template></span>
+          <div class="viewFov"><span>Trường nhìn</span><el-slider v-model="fov" :min="minFov" :max="maxFov" :step="1" :disabled="busy || !ready" aria-label="Trường nhìn toàn cảnh" /><span>{{ Math.round(fov) }}°</span></div>
+          <el-button size="small" text :disabled="busy || !ready" @click="resetView">Đặt lại góc nhìn</el-button>
         </div>
       </div>
-      <aside class="correctionPanel" aria-label="全景校正设置">
-        <div class="correctionHeader"><strong>画面校正</strong><el-button size="small" text :disabled="busy || !ready" @click="resetCorrections">全部重置</el-button></div>
-        <p class="panelHint">按需开启，可叠加使用</p>
+      <aside class="correctionPanel" aria-label="Cài đặt hiệu chỉnh toàn cảnh">
+        <div class="correctionHeader"><strong>Hiệu chỉnh hình ảnh</strong><el-button size="small" text :disabled="busy || !ready" @click="resetCorrections">Đặt lại tất cả</el-button></div>
+        <p class="panelHint">Bật khi cần, có thể kết hợp nhiều hiệu chỉnh</p>
         <div class="correctionScroll">
           <section class="correctionGroup" :class="{ enabled: lensEnabled }">
-            <div class="groupHeader"><strong>镜头畸变</strong><el-switch v-model="lensEnabled" size="small" :disabled="busy || !ready" aria-label="启用镜头畸变校正" /></div>
-            <p class="groupHint">修正画面向外鼓起或向内凹陷</p>
+            <div class="groupHeader"><strong>Méo ống kính</strong><el-switch v-model="lensEnabled" size="small" :disabled="busy || !ready" aria-label="Bật hiệu chỉnh méo ống kính" /></div>
+            <p class="groupHint">Sửa hình ảnh bị phồng ra hoặc lõm vào</p>
             <div v-if="lensEnabled" class="groupControls">
-              <el-select v-model="lensMode" size="small" :disabled="busy" aria-label="镜头畸变类型"><el-option label="桶形校正" value="barrel" /><el-option label="枕形校正" value="pincushion" /></el-select>
-              <div class="rangeControl"><div><span>校正强度</span><span>{{ lensStrength }}%</span></div><el-slider v-model="lensStrength" :min="0" :max="100" :step="1" :disabled="busy" aria-label="镜头畸变校正强度" /></div>
+              <el-select v-model="lensMode" size="small" :disabled="busy" aria-label="Loại méo ống kính"><el-option label="Hiệu chỉnh méo thùng" value="barrel" /><el-option label="Hiệu chỉnh méo gối" value="pincushion" /></el-select>
+              <div class="rangeControl"><div><span>Cường độ hiệu chỉnh</span><span>{{ lensStrength }}%</span></div><el-slider v-model="lensStrength" :min="0" :max="100" :step="1" :disabled="busy" aria-label="Cường độ hiệu chỉnh méo ống kính" /></div>
             </div>
           </section>
           <section class="correctionGroup" :class="{ enabled: perspectiveEnabled }">
-            <div class="groupHeader"><strong>透视与水平</strong><el-switch v-model="perspectiveEnabled" size="small" :disabled="busy || !ready" aria-label="启用透视与水平校正" /></div>
-            <p class="groupHint">调整建筑倾斜与画面歪斜</p>
+            <div class="groupHeader"><strong>Phối cảnh và cân bằng ngang</strong><el-switch v-model="perspectiveEnabled" size="small" :disabled="busy || !ready" aria-label="Bật hiệu chỉnh phối cảnh và cân bằng ngang" /></div>
+            <p class="groupHint">Chỉnh độ nghiêng của công trình và khung hình</p>
             <div v-if="perspectiveEnabled" class="groupControls">
-              <div class="rangeControl"><div><span>水平透视</span><span>{{ horizontalPerspective }}</span></div><el-slider v-model="horizontalPerspective" :min="-40" :max="40" :step="1" :disabled="busy" aria-label="水平透视校正" /></div>
-              <div class="rangeControl"><div><span>垂直透视</span><span>{{ verticalPerspective }}</span></div><el-slider v-model="verticalPerspective" :min="-40" :max="40" :step="1" :disabled="busy" aria-label="垂直透视校正" /></div>
-              <div class="rangeControl"><div><span>水平旋转</span><span>{{ levelRotation.toFixed(1) }}°</span></div><el-slider v-model="levelRotation" :min="-15" :max="15" :step="0.1" :disabled="busy" aria-label="水平旋转校正" /></div>
+              <div class="rangeControl"><div><span>Phối cảnh ngang</span><span>{{ horizontalPerspective }}</span></div><el-slider v-model="horizontalPerspective" :min="-40" :max="40" :step="1" :disabled="busy" aria-label="Hiệu chỉnh phối cảnh ngang" /></div>
+              <div class="rangeControl"><div><span>Phối cảnh dọc</span><span>{{ verticalPerspective }}</span></div><el-slider v-model="verticalPerspective" :min="-40" :max="40" :step="1" :disabled="busy" aria-label="Hiệu chỉnh phối cảnh dọc" /></div>
+              <div class="rangeControl"><div><span>Xoay cân bằng ngang</span><span>{{ levelRotation.toFixed(1) }}°</span></div><el-slider v-model="levelRotation" :min="-15" :max="15" :step="0.1" :disabled="busy" aria-label="Hiệu chỉnh xoay ngang" /></div>
             </div>
           </section>
           <section class="correctionGroup" :class="{ enabled: stretchEnabled }">
-            <div class="groupHeader"><strong>环绕拉伸</strong><el-switch v-model="stretchEnabled" size="small" :disabled="busy || !ready" aria-label="启用环绕拉伸校正" /></div>
-            <p class="groupHint">修正环绕图中物体的宽窄与高矮</p>
+            <div class="groupHeader"><strong>Kéo giãn ảnh bao quanh</strong><el-switch v-model="stretchEnabled" size="small" :disabled="busy || !ready" aria-label="Bật hiệu chỉnh kéo giãn ảnh bao quanh" /></div>
+            <p class="groupHint">Chỉnh chiều rộng và chiều cao của vật thể trong ảnh bao quanh</p>
             <div v-if="stretchEnabled" class="groupControls">
-              <div class="rangeControl"><div><span>水平拉伸</span><span>{{ horizontalStretch }}%</span></div><el-slider v-model="horizontalStretch" :min="-50" :max="50" :step="1" :disabled="busy" aria-label="环绕水平拉伸" /></div>
-              <div class="rangeControl"><div><span>垂直拉伸</span><span>{{ verticalStretch }}%</span></div><el-slider v-model="verticalStretch" :min="-50" :max="50" :step="1" :disabled="busy" aria-label="环绕垂直拉伸" /></div>
-              <div class="rangeControl"><div><span>中心方向</span><span>{{ stretchCenter }}°</span></div><el-slider v-model="stretchCenter" :min="0" :max="360" :step="1" :disabled="busy" aria-label="环绕拉伸中心方向" /></div>
+              <div class="rangeControl"><div><span>Kéo giãn ngang</span><span>{{ horizontalStretch }}%</span></div><el-slider v-model="horizontalStretch" :min="-50" :max="50" :step="1" :disabled="busy" aria-label="Kéo giãn ngang của ảnh bao quanh" /></div>
+              <div class="rangeControl"><div><span>Kéo giãn dọc</span><span>{{ verticalStretch }}%</span></div><el-slider v-model="verticalStretch" :min="-50" :max="50" :step="1" :disabled="busy" aria-label="Kéo giãn dọc của ảnh bao quanh" /></div>
+              <div class="rangeControl"><div><span>Hướng trung tâm</span><span>{{ stretchCenter }}°</span></div><el-slider v-model="stretchCenter" :min="0" :max="360" :step="1" :disabled="busy" aria-label="Hướng tâm kéo giãn ảnh bao quanh" /></div>
             </div>
           </section>
           <section class="correctionGroup" :class="{ enabled: horizonEnabled }">
-            <div class="groupHeader"><strong>地平线</strong><el-switch v-model="horizonEnabled" size="small" :disabled="busy || !ready" aria-label="启用地平线校正" /></div>
-            <p class="groupHint">调整地平线高低与环绕起伏</p>
+            <div class="groupHeader"><strong>Đường chân trời</strong><el-switch v-model="horizonEnabled" size="small" :disabled="busy || !ready" aria-label="Bật hiệu chỉnh đường chân trời" /></div>
+            <p class="groupHint">Chỉnh độ cao đường chân trời và độ gợn của ảnh bao quanh</p>
             <div v-if="horizonEnabled" class="groupControls">
-              <div class="rangeControl"><div><span>高度偏移</span><span>{{ horizonOffset }}%</span></div><el-slider v-model="horizonOffset" :min="-12" :max="12" :step="0.5" :disabled="busy" aria-label="地平线高度偏移" /></div>
-              <div class="rangeControl"><div><span>起伏修正</span><span>{{ waveAmplitude }}%</span></div><el-slider v-model="waveAmplitude" :min="-12" :max="12" :step="0.5" :disabled="busy" aria-label="地平线起伏修正" /></div>
-              <div class="rangeControl"><div><span>起伏方向</span><span>{{ wavePhase }}°</span></div><el-slider v-model="wavePhase" :min="0" :max="360" :step="1" :disabled="busy" aria-label="地平线起伏方向" /></div>
-              <div class="selectControl"><span>起伏次数</span><el-select v-model="waveCount" size="small" :disabled="busy" aria-label="地平线起伏次数"><el-option v-for="count in 4" :key="count" :label="`${count} 次`" :value="count" /></el-select></div>
+              <div class="rangeControl"><div><span>Độ lệch chiều cao</span><span>{{ horizonOffset }}%</span></div><el-slider v-model="horizonOffset" :min="-12" :max="12" :step="0.5" :disabled="busy" aria-label="Độ lệch chiều cao đường chân trời" /></div>
+              <div class="rangeControl"><div><span>Hiệu chỉnh độ gợn</span><span>{{ waveAmplitude }}%</span></div><el-slider v-model="waveAmplitude" :min="-12" :max="12" :step="0.5" :disabled="busy" aria-label="Hiệu chỉnh độ gợn đường chân trời" /></div>
+              <div class="rangeControl"><div><span>Hướng gợn</span><span>{{ wavePhase }}°</span></div><el-slider v-model="wavePhase" :min="0" :max="360" :step="1" :disabled="busy" aria-label="Hướng gợn đường chân trời" /></div>
+              <div class="selectControl"><span>Số lần gợn</span><el-select v-model="waveCount" size="small" :disabled="busy" aria-label="Số lần gợn đường chân trời"><el-option v-for="count in 4" :key="count" :label="`${count} lần`" :value="count" /></el-select></div>
             </div>
           </section>
           <section class="correctionGroup" :class="{ enabled: seamEnabled }">
-            <div class="groupHeader"><strong>首尾接缝</strong><el-switch v-model="seamEnabled" size="small" :disabled="busy || !ready" aria-label="启用首尾接缝校正" /></div>
-            <p class="groupHint">缓和首尾色差，建议小幅调整</p>
+            <div class="groupHeader"><strong>Mối nối đầu/cuối</strong><el-switch v-model="seamEnabled" size="small" :disabled="busy || !ready" aria-label="Bật hiệu chỉnh mối nối đầu cuối" /></div>
+            <p class="groupHint">Giảm chênh lệch màu ở hai đầu ảnh; nên chỉnh nhẹ</p>
             <div v-if="seamEnabled" class="groupControls">
-              <div class="rangeControl"><div><span>融合范围</span><span>{{ seamWidth }}%</span></div><el-slider v-model="seamWidth" :min="0.5" :max="8" :step="0.5" :disabled="busy" aria-label="首尾接缝融合范围" /></div>
+              <div class="rangeControl"><div><span>Vùng hòa trộn</span><span>{{ seamWidth }}%</span></div><el-slider v-model="seamWidth" :min="0.5" :max="8" :step="0.5" :disabled="busy" aria-label="Vùng hòa trộn mối nối đầu cuối" /></div>
             </div>
           </section>
         </div>
@@ -90,12 +90,12 @@
     <footer class="captureFooter">
       <div class="captureControls">
         <div class="captureOptions">
-          <label><span>截图</span><el-select v-model="captureCount" size="small" :disabled="busy" aria-label="截图方式"><el-option label="当前视角单张" :value="1" /><el-option label="四宫格" :value="4" /><el-option label="12 宫格" :value="12" /></el-select></label>
-          <label v-if="captureCount > 1"><span>输出</span><el-select v-model="captureLayout" size="small" :disabled="busy" aria-label="宫格输出方式"><el-option label="拼成一张" value="combined" /><el-option label="分散单图并成组" value="separate" /></el-select></label>
+          <label><span>Ảnh chụp</span><el-select v-model="captureCount" size="small" :disabled="busy" aria-label="Cách chụp ảnh"><el-option label="Một ảnh góc nhìn hiện tại" :value="1" /><el-option label="Lưới 4 ô" :value="4" /><el-option label="Lưới 12 ô" :value="12" /></el-select></label>
+          <label v-if="captureCount > 1"><span>Đầu ra</span><el-select v-model="captureLayout" size="small" :disabled="busy" aria-label="Cách xuất ảnh lưới"><el-option label="Ghép thành một ảnh" value="combined" /><el-option label="Ảnh riêng và gom nhóm" value="separate" /></el-select></label>
         </div>
-        <el-button type="primary" :loading="busy" :disabled="!ready" @click="capture">{{ disabled ? localized('正在保存…', 'Đang lưu…') : capturing ? localized('正在截图…', 'Đang chụp ảnh…') : localized('截图并添加节点', 'Chụp ảnh và tạo node') }}</el-button>
+        <el-button type="primary" :loading="busy" :disabled="!ready" @click="capture">{{ disabled ? 'Đang lưu…' : capturing ? 'Đang chụp ảnh…' : 'Chụp và thêm node' }}</el-button>
       </div>
-      <p class="captureHint">{{ captureCount === 1 ? localized('截取当前视角', 'Chụp góc nhìn hiện tại') : captureCount === 4 ? localized('每隔 90° 截取水平视角，排列为 2 × 2', 'Chụp mỗi 90° theo chiều ngang, bố trí 2 × 2') : mode === 'sphere' ? localized('上方、水平、下方各 4 个方向，排列为 4 × 3', 'Mỗi hướng trên, ngang, dưới gồm 4 ảnh, bố trí 4 × 3') : localized('每隔 30° 截取一张，排列为 4 × 3', 'Chụp mỗi 30°, bố trí 4 × 3') }} · {{ localized('每张 1280 × 720', 'Mỗi ảnh 1280 × 720') }} · {{ showOriginal ? localized('截图仍使用校正结果', 'Ảnh chụp vẫn dùng kết quả đã hiệu chỉnh') : localized('截图包含已启用的校正', 'Ảnh chụp bao gồm các hiệu chỉnh đang bật') }}</p>
+      <p class="captureHint">{{ captureCount === 1 ? 'Chụp góc nhìn hiện tại' : captureCount === 4 ? 'Chụp các hướng ngang cách nhau 90°, bố trí 2 × 2' : mode === 'sphere' ? 'Chụp bốn hướng ở mỗi tầng trên, ngang, dưới; bố trí 4 × 3' : 'Chụp mỗi 30°, bố trí 4 × 3' }} · Mỗi ảnh 1280 × 720 · {{ showOriginal ? 'Ảnh chụp vẫn dùng kết quả hiệu chỉnh' : 'Ảnh chụp gồm các hiệu chỉnh đã bật' }}</p>
       <p v-if="captureError" class="captureError" role="alert">{{ captureError }}</p>
     </footer>
   </section>
@@ -106,10 +106,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { ElButton, ElOption, ElSelect, ElSlider, ElSwitch } from "element-plus";
 import * as three from "three";
 import { getPanoramaViews, type PanoramaCapture, type PanoramaMode } from "../imagePanorama";
-import { useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 
-const vietnamese = useNodeVietnamese();
-const localized = (zh: string, vi: string) => vietnamese.value ? vi : zh;
 const props = defineProps<{ src: string; mode: PanoramaMode; disabled?: boolean }>();
 const emit = defineEmits<{ capture: [value: PanoramaCapture] }>();
 const viewport = ref<HTMLDivElement>();
@@ -320,7 +317,7 @@ function loadImage() {
   material.map = null;
   material.needsUpdate = true;
   mesh.visible = false;
-  imageError.value = props.src ? "" : localized("没有可预览的图片", "Không có ảnh để xem trước");
+  imageError.value = props.src ? "" : "Không có ảnh để xem trước";
   captureError.value = "";
   loading.value = !!props.src;
   scheduleRender();
@@ -332,7 +329,7 @@ function loadImage() {
     if (!Number.isFinite(ratio) || ratio <= 0) {
       loaded.dispose();
       loading.value = false;
-      imageError.value = localized("图片尺寸无效，无法预览全景图", "Kích thước ảnh không hợp lệ, không thể xem toàn cảnh");
+      imageError.value = "Kích thước ảnh không hợp lệ, không thể xem trước toàn cảnh";
       return;
     }
     imageRatio.value = ratio;
@@ -348,7 +345,7 @@ function loadImage() {
   }, undefined, () => {
     if (disposed || version !== imageVersion) return;
     loading.value = false;
-    imageError.value = localized("全景图加载失败，请检查图片后重新打开", "Không tải được ảnh toàn cảnh; hãy kiểm tra ảnh rồi mở lại");
+    imageError.value = "Không tải được ảnh toàn cảnh, hãy kiểm tra ảnh và mở lại";
   });
 }
 
@@ -439,14 +436,14 @@ async function capture() {
           const output = document.createElement("canvas");
           output.width = width * (combined ? columns : 1);
           output.height = height * (combined ? count / columns : 1);
-          outputs.push({ canvas: output, label: combined ? `${count}宫格全景截图` : view.label });
+          outputs.push({ canvas: output, label: combined ? `Ảnh toàn cảnh dạng lưới ${count} ô` : view.label });
         }
         const output = outputs[outputs.length - 1]!.canvas;
         const context = output.getContext("2d");
-        if (!context) throw new Error("无法创建截图画布");
+        if (!context) throw new Error("Không tạo được Canvas để chụp ảnh");
         setCamera(view.yaw, view.pitch);
         renderView(captureRenderer, true);
-        if (captureRenderer.getContext().isContextLost()) throw new Error("图形上下文已中断，请重新打开预览后再截图");
+        if (captureRenderer.getContext().isContextLost()) throw new Error("Ngữ cảnh đồ họa đã mất kết nối; hãy mở lại bản xem trước rồi chụp");
         context.drawImage(captureRenderer.domElement, combined ? index % columns * width : 0, combined ? Math.floor(index / columns) * height : 0, width, height);
       }
     } finally {
@@ -457,15 +454,15 @@ async function capture() {
     }
     const images: PanoramaCapture["images"] = [];
     for (const output of outputs) {
-      const blob = await new Promise<Blob>((resolve, reject) => output.canvas.toBlob(value => value ? resolve(value) : reject(new Error("截图编码失败，请重试")), "image/png"));
+      const blob = await new Promise<Blob>((resolve, reject) => output.canvas.toBlob(value => value ? resolve(value) : reject(new Error("Mã hóa ảnh chụp thất bại, hãy thử lại")), "image/png"));
       images.push({ blob, width: output.canvas.width, height: output.canvas.height, label: output.label });
       output.canvas.width = output.canvas.height = 1;
     }
     if (disposed) return;
-    if (version !== imageVersion || mode !== props.mode) throw new Error("图片已更新，请重新截图");
+    if (version !== imageVersion || mode !== props.mode) throw new Error("Ảnh đã cập nhật, hãy chụp lại");
     emit("capture", { images, columns, count });
   } catch (error) {
-    if (!disposed) captureError.value = error instanceof Error ? error.message : "截图失败，请重试";
+    if (!disposed) captureError.value = error instanceof Error ? error.message : "Chụp ảnh thất bại, hãy thử lại";
   } finally {
     for (const output of outputs) output.canvas.width = output.canvas.height = 1;
     capturing.value = false;

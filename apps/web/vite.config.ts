@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
-import { appVersion } from "../../appVersion";
+import { appVersion } from "../../appVersion.ts";
 import postcssConfig from "../../postcss.config.ts";
 import { i18nPlugin } from "@toonflow/i18n/vite";
 
@@ -32,7 +32,6 @@ export default defineConfig(({ command }) => ({
   },
   resolve: {
     alias: [
-      { find: "@toonflow/i18n/vue", replacement: fileURLToPath(new URL("../../packages/i18n/src/vue.ts", import.meta.url)) },
       { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
       { find: /^shiki$/, replacement: fileURLToPath(new URL("./src/lib/shiki.ts", import.meta.url)) },
     ],

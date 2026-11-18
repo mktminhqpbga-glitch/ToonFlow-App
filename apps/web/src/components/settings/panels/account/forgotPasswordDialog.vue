@@ -1,25 +1,25 @@
 <template>
-  <el-dialog v-model="visible" title="忘记密码" width="min(440px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose :closeOnClickModal="false">
+  <el-dialog v-model="visible" title="Quên mật khẩu" width="min(440px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose :closeOnClickModal="false">
     <el-form :id="formId" class="forgotPasswordForm" labelPosition="top" :disabled="submitting" @submit.prevent="submit">
-      <el-form-item label="手机号">
-        <el-input v-model="form.phone" autocomplete="tel" placeholder="请输入手机号" />
+      <el-form-item label="Số điện thoại">
+        <el-input v-model="form.phone" autocomplete="tel" placeholder="Nhập số điện thoại" />
       </el-form-item>
-      <el-form-item label="短信验证码">
+      <el-form-item label="Mã xác minh SMS">
         <div class="verificationRow">
-          <el-input v-model="form.verificationCode" autocomplete="one-time-code" placeholder="请输入短信验证码" />
+          <el-input v-model="form.verificationCode" autocomplete="one-time-code" placeholder="Nhập mã xác minh SMS" />
           <smsCodeButton :phone="form.phone" :disabled="submitting" :visible="visible" isForget />
         </div>
       </el-form-item>
-      <el-form-item label="新密码" :error="form.newPassword && form.newPassword.length < 6 ? '新密码至少 6 位' : ''">
-        <el-input v-model="form.newPassword" type="password" autocomplete="new-password" showPassword placeholder="请输入至少 6 位的新密码" />
+      <el-form-item label="Mật khẩu mới" :error="form.newPassword && form.newPassword.length < 6 ? 'Mật khẩu mới phải có ít nhất 6 ký tự' : ''">
+        <el-input v-model="form.newPassword" type="password" autocomplete="new-password" showPassword placeholder="Nhập mật khẩu mới có ít nhất 6 ký tự" />
       </el-form-item>
-      <el-form-item label="确认密码" :error="form.confirmPassword && form.confirmPassword !== form.newPassword ? '两次输入的密码不一致' : ''">
-        <el-input v-model="form.confirmPassword" type="password" autocomplete="new-password" showPassword placeholder="请再次输入新密码" />
+      <el-form-item label="Xác nhận mật khẩu" :error="form.confirmPassword && form.confirmPassword !== form.newPassword ? 'Mật khẩu nhập lại không khớp' : ''">
+        <el-input v-model="form.confirmPassword" type="password" autocomplete="new-password" showPassword placeholder="Nhập lại mật khẩu mới" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" nativeType="submit" :form="formId" :loading="submitting" :disabled="!ready">重置密码</el-button>
+      <el-button @click="visible = false">Hủy</el-button>
+      <el-button type="primary" nativeType="submit" :form="formId" :loading="submitting" :disabled="!ready">Đặt lại mật khẩu</el-button>
     </template>
   </el-dialog>
 </template>
@@ -55,11 +55,11 @@ async function submit() {
       },
     });
     if (request.signal.aborted) return;
-    ElMessage.success(message || "密码重置成功，请重新登录");
+    ElMessage.success(message || "Đã đặt lại mật khẩu, hãy đăng nhập lại");
     emit("reset", phone);
     visible.value = false;
   } catch (error) {
-    if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "重置密码失败");
+    if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Đặt lại mật khẩu thất bại");
   } finally {
     if (controller === request) submitting.value = false;
   }

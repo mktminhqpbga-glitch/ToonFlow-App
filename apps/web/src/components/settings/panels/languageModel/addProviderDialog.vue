@@ -1,7 +1,7 @@
 <template>
-  <el-dialog v-model="visible" title="添加供应商" width="min(860px, 94vw)" alignCenter appendToBody destroyOnClose :closeOnClickModal="false" :closeOnPressEscape="!saving" :showClose="!saving" @closed="resetForm">
+  <el-dialog v-model="visible" title="Thêm nhà cung cấp mô hình văn bản" width="min(860px, 94vw)" alignCenter appendToBody destroyOnClose :closeOnClickModal="false" :closeOnPressEscape="!saving" :showClose="!saving" @closed="resetForm">
     <div class="providerPicker">
-      <aside class="providerSidebar" aria-label="选择厂商">
+      <aside class="providerSidebar" aria-label="Chọn nhà cung cấp">
         <button
           v-for="item in languageProviders"
           :key="item.id"
@@ -22,12 +22,12 @@
             <el-tag v-if="activeProvider.version" size="small" type="info" effect="plain">v{{ activeProvider.version }}</el-tag>
           </div>
           <messageMarkdown v-if="providerReadme" class="providerReadme" :content="providerReadme" />
-          <el-divider v-if="providerReadme" contentPosition="left">连接配置</el-divider>
+          <el-divider v-if="providerReadme" contentPosition="left">Cấu hình kết nối</el-divider>
           <form-create v-model="formValues" v-model:api="formApi" :rule="providerRules" :option="formOptions" />
           <div class="modelHeader">
-            <el-text tag="strong">模型列表 <el-text type="info">{{ models.length }}</el-text></el-text>
-            <el-text v-if="fetching" type="info" size="small">正在获取…</el-text>
-            <el-button v-else-if="modelError" size="small" text :icon="IconRefresh" @click="modelRefresh++">重试</el-button>
+            <el-text tag="strong">Mô hình văn bản <el-text type="info">{{ models.length }}</el-text></el-text>
+            <el-text v-if="fetching" type="info" size="small">Đang lấy từ API…</el-text>
+            <el-button v-else-if="modelError" size="small" text :icon="IconRefresh" @click="modelRefresh++">Thử lại</el-button>
           </div>
           <el-alert v-if="modelError" :title="modelError" type="error" :closable="false" showIcon />
           <div v-else-if="models.length" class="modelList" :style="{ height: `${Math.min(280, models.length * 38 + 36)}px` }" aria-label="模型列表">
@@ -37,14 +37,15 @@
               </template>
             </el-auto-resizer>
           </div>
-          <el-text v-else-if="!fetching" type="info" size="small">{{ formValues.apiKey ? '未获取到模型' : '填写 API Key 后自动获取模型列表' }}</el-text>
+        <el-text v-else-if="!fetching" type="info" size="small">{{ formValues.apiKey ? 'API chưa trả về mô hình văn bản phù hợp.' : 'Nhập khóa kết nối để lấy danh sách mô hình.' }}</el-text>
+          <el-text v-if="selectedProvider === 'muse2Api' && models.length" type="info" size="small">Danh sách lấy từ Muse2API; chỉ gồm ID văn bản đã xác định, không có model ảnh/video. Chưa thực hiện yêu cầu AI thử.</el-text>
           <el-alert v-if="formError" :title="formError" type="error" :closable="false" showIcon />
         </section>
       </el-scrollbar>
     </div>
     <template #footer>
-      <el-button :disabled="saving" @click="visible = false">取消</el-button>
-      <el-button type="primary" :loading="saving" :disabled="!activeProvider || fetching || !!modelError" @click="addProvider">确定添加供应商</el-button>
+      <el-button :disabled="saving" @click="visible = false">Hủy</el-button>
+      <el-button type="primary" :loading="saving" :disabled="!activeProvider || fetching || !!modelError || !models.length" @click="addProvider">Thêm nhà cung cấp</el-button>
     </template>
   </el-dialog>
 </template>
@@ -54,11 +55,13 @@ import { computed, ref, shallowRef, watch } from "vue";
 import axios from "axios";
 import { IconRefresh } from "@tabler/icons-vue";
 import formCreate, { type Api, type Options } from "@toonflow/provider-web/formCreate";
+import { translateFormRules } from "@toonflow/i18n/vue";
 import { languageProviders } from "@toonflow/providers";
 import { modelIcon } from "@toonflow/model-icons";
 import messageMarkdown from "@/components/messageMarkdown.vue";
 import type { Column } from "element-plus";
-import { saveSettings, type CustomProviderModel } from "@/stores/settings";
+import { saveSettings, settings, type CustomProviderModel } from "@/stores/settings";
+import { museTextModels } from "./museCatalog";
 
 const visible = defineModel<boolean>({ default: false });
 const selectedProvider = ref<string>(languageProviders[0]?.id ?? "");
@@ -69,14 +72,17 @@ const fetching = ref(false);
 const modelError = ref("");
 const modelRefresh = ref(0);
 const modelColumns: Column[] = [
-  { key: "id", dataKey: "id", title: "模型 ID", width: 220, flexGrow: 1 },
-  { key: "label", dataKey: "label", title: "显示名称", width: 180, flexGrow: 1 },
+  { key: "id", dataKey: "id", title: "Mã mô hình", width: 220, flexGrow: 1 },
+  { key: "label", dataKey: "label", title: "Tên hiển thị", width: 180, flexGrow: 1 },
 ];
 const saving = ref(false);
 const formError = ref("");
 watch(selectedProvider, () => {
   formError.value = "";
-  formValues.value = {};
+  const config = (settings.value.mediaProviderConfigs as Record<string, Record<string, unknown>> | undefined)?.muse2Api;
+  formValues.value = selectedProvider.value === "muse2Api" && config && typeof config.apiKey === "string"
+    ? { apiUrl: typeof config.baseUrl === "string" ? config.baseUrl : "http://127.0.0.1:18610/v1", apiKey: config.apiKey }
+    : {};
 }, { flush: "sync" });
 const activeProvider = computed(() => languageProviders.find(provider => provider.id === selectedProvider.value));
 const providerReadme = computed(() => {
@@ -85,11 +91,11 @@ const providerReadme = computed(() => {
 });
 const formOptions = computed<Options>(() => ({ form: { labelPosition: "top", disabled: saving.value }, submitBtn: false, resetBtn: false }));
 const providerRules = computed(() =>
-  formCreate.copyRules(activeProvider.value?.rules ?? []),
+  translateFormRules(formCreate.copyRules(activeProvider.value?.rules ?? [])),
 );
 
 watch(
-  [visible, activeProvider, () => formValues.value.apiKey, modelRefresh],
+  [visible, activeProvider, () => formValues.value.apiKey, () => formValues.value.apiUrl, modelRefresh],
   ([isVisible, provider, key], _previous, onCleanup) => {
     models.value = [];
     modelError.value = "";
@@ -107,15 +113,25 @@ watch(
     const timer = setTimeout(async () => {
       try {
         const { data } = await axios.post("/api/providers/models", {
-          apiUrl: provider.apiUrl, protocol: provider.protocol, apiKey,
-        }, { signal: controller.signal, timeout: 35000 });
+          apiUrl: typeof formValues.value.apiUrl === "string" && formValues.value.apiUrl.trim() || provider.apiUrl,
+          protocol: provider.protocol, apiKey,
+        }, { signal: controller.signal, timeout: 35000, headers: { "x-toonflow-workspace": "1" } });
         if (controller.signal.aborted) return;
-        if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "获取模型列表失败");
-        models.value = data.data;
+        if (data.code !== 200 || !Array.isArray(data.data)) throw new Error(data.message || "Không lấy được danh sách mô hình.");
+        models.value = provider.id === "geminiWebToApi" ? data.data.filter((model: CustomProviderModel) =>
+          /^gemini-/i.test(model.id) && !/(?:^|-)(?:image|video|music|canvas|audio)(?:-|$)/i.test(model.id))
+          : provider.id === "muse2Api" ? museTextModels(data.data)
+          : provider.id === "gemini" ? data.data.map((model: CustomProviderModel) => ({ ...model, id: model.id.replace(/^models\//, "") }))
+            .filter((model: CustomProviderModel) => /^gemini-(?:\d+(?:\.\d+)?-(?:pro|flash)(?:-|$)|(?:pro|flash)-latest$)/.test(model.id)
+              && !/(?:^|-)(?:image|tts|live|audio|transcribe)(?:-|$)/.test(model.id))
+          : data.data;
+        if (provider.id === "muse2Api" && !models.value.length) throw new Error("Muse2API chưa liệt kê mô hình văn bản được hỗ trợ.");
       } catch (error) {
         if (!controller.signal.aborted) modelError.value = axios.isAxiosError(error)
-          ? error.response?.data?.message || "获取模型列表失败，请检查 API Key 后重试"
-          : error instanceof Error ? error.message : "获取模型列表失败";
+          ? error.response?.data?.message || (provider.id === "muse2Api"
+            ? "Không lấy được mô hình. Kiểm tra API Key và địa chỉ Muse2API."
+            : "Không lấy được mô hình. Kiểm tra API Key, địa chỉ API và kết nối mạng.")
+          : error instanceof Error ? error.message : "Không lấy được danh sách mô hình.";
       } finally {
         if (!controller.signal.aborted) fetching.value = false;
       }
@@ -136,13 +152,13 @@ function resetForm() {
 }
 
 async function addProvider() {
-  if (saving.value || fetching.value || modelError.value || !activeProvider.value || !formApi.value) return;
+  if (saving.value || fetching.value || modelError.value || !models.value.length || !activeProvider.value || !formApi.value) return;
   formError.value = "";
   const provider = activeProvider.value;
   const values = formApi.value.formData();
   const apiKey = typeof values.apiKey === "string" ? values.apiKey.trim() : "";
   if (!apiKey) {
-    formError.value = "请填写 API Key";
+    formError.value = "Hãy nhập API Key.";
     return;
   }
   saving.value = true;
@@ -152,21 +168,21 @@ async function addProvider() {
       label: provider.label,
       icon: provider.icon,
       apiKey,
-      apiUrl: "apiUrl" in provider ? provider.apiUrl : "",
+      apiUrl: typeof values.apiUrl === "string" ? values.apiUrl.trim() : "apiUrl" in provider ? provider.apiUrl : "",
       protocol: "protocol" in provider ? provider.protocol : "",
       models: models.value.map(model => ({ ...model })),
     };
     await saveSettings(settings => {
       const existing = settings.customProviders;
-      if (existing !== undefined && !Array.isArray(existing)) throw new Error("已保存的供应商配置格式不正确");
+      if (existing !== undefined && !Array.isArray(existing)) throw new Error("Cấu hình nhà cung cấp đã lưu không hợp lệ.");
       if (existing?.some(item => typeof item?.id === "string" && item.id.toLowerCase() === provider.id.toLowerCase())) {
-        throw new Error("此供应商已添加，请在供应商列表中编辑");
+        throw new Error("Nhà cung cấp đã được thêm. Hãy chỉnh sửa trong danh sách.");
       }
       return { customProviders: [...(existing ?? []), addedProvider] };
     });
     visible.value = false;
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : "保存失败，请重试；当前填写的内容已保留";
+    formError.value = error instanceof Error ? error.message : "Lưu thất bại, hãy thử lại.";
   } finally { saving.value = false; }
 }
 </script>

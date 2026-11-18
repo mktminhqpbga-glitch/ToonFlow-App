@@ -9,9 +9,9 @@ const rules = [
   {
     type: "input",
     field: "isOverseas" as const,
-    title: "请求地区",
+    title: "Khu vực yêu cầu",
     value: "1",
-    props: { placeholder: "1 为国内，2 为海外" },
+    props: { placeholder: "1 là Trung Quốc, 2 là quốc tế" },
   },
 ] as const;
 
@@ -39,7 +39,7 @@ type ReviewTaskData = {
 };
 
 function object(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("APIMart 响应格式错误");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Định dạng phản hồi APIMart không hợp lệ");
   return value as Record<string, unknown>;
 }
 
@@ -58,21 +58,21 @@ function videoPrompt(request: ReferencedVideoRequest, mode: VideoMode) {
   const isFrames = mode === "startEndRequired" || mode === "endFrameOptional" || mode === "startFrameOptional";
   return request.prompt.replace(/\{\{ref (\d+)\}\}/g, (marker, number: string) => {
     const reference = request.referenceOrder?.[Number(number) - 1];
-    if (!reference) throw new Error(`引用标记 ${marker} 缺少素材映射，请更新视频节点或提供 referenceOrder`);
+    if (!reference) throw new Error(`Dấu tham chiếu ${marker} thiếu ánh xạ tài nguyên; hãy cập nhật node video hoặc cung cấp referenceOrder`);
     if (reference.type === "text") return `参考 ${Number(number)}`;
     if (!model.includes("seedance") && !model.includes("doubao") && !model.startsWith("wan3.") && !model.startsWith("minimax-h3")) {
-      throw new Error(`当前模型尚不支持转换引用标记 ${marker}，请按供应商协议编写提示词`);
+      throw new Error(`Mô hình hiện tại chưa hỗ trợ chuyển đổi dấu tham chiếu ${marker}; hãy viết prompt theo giao thức nhà cung cấp`);
     }
     if (reference.type === "firstFrame" || reference.type === "lastFrame") {
-      if (!isFrames || !request[reference.type]) throw new Error(`引用标记 ${marker} 对应的首尾帧未提交`);
+      if (!isFrames || !request[reference.type]) throw new Error(`Dấu tham chiếu ${marker} chưa gửi đủ khung đầu/cuối tương ứng`);
       return reference.type === "firstFrame" ? "首帧" : "尾帧";
     }
-    if (!("index" in reference)) throw new Error(`引用标记 ${marker} 的素材类型无效`);
+    if (!("index" in reference)) throw new Error(`Dấu tham chiếu ${marker} có kiểu tài nguyên không hợp lệ`);
     const media = { image: request.images, video: request.videos, audio: request.audios };
     const frameImage = reference.type === "image" && isFrames && !request.firstFrame && !request.lastFrame;
     const included = Array.isArray(mode) || (reference.type === "image" && mode === "singleImage") || (frameImage && reference.index < 2);
     if (!included || !Number.isSafeInteger(reference.index) || reference.index < 0 || !media[reference.type]?.[reference.index]) {
-      throw new Error(`引用标记 ${marker} 对应的素材未提交，请重新选择引用`);
+      throw new Error(`Dấu tham chiếu ${marker} chưa gửi tài nguyên tương ứng; hãy chọn lại tham chiếu`);
     }
     if (frameImage) return reference.index === 0 ? "首帧" : "尾帧";
     // APIMart 与 MiniMax H3 API 示例均按媒体类型计数：视频与音频同传时仍引用 Audio 1。
@@ -120,9 +120,9 @@ async function uploadImage(context: ProviderContext, apiKey: string, baseUrl: st
     body,
     signal,
   });
-  if (!response.ok) throw new Error(`图片上传失败：HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Tải ảnh lên thất bại: HTTP  ${response.status}`);
   const result = object(await response.json());
-  if (typeof result.url !== "string" || !result.url) throw new Error("图片上传未返回地址");
+  if (typeof result.url !== "string" || !result.url) throw new Error("Tải ảnh lên không trả về địa chỉ");
   return result.url;
 }
 
@@ -134,17 +134,17 @@ async function reviewSeedanceAsset(context: ProviderContext, apiKey: string, bas
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      group: { name: `toonflow-seedance-group-${Date.now()}`, description: "ToonFlow自动创建的Seedance素材组" },
+      group: { name: `toonflow-seedance-group-${Date.now()}`, description: "Nhóm tài nguyên Seedance được ToonFlow tự động tạo" },
       project_name: "default",
       asset_type: "Image",
       assets: [{ url, name: `image_${Date.now()}` }],
     }),
     signal,
   });
-  if (!submitResponse.ok) throw new Error(`Seedance资产提交失败：HTTP ${submitResponse.status}`);
+  if (!submitResponse.ok) throw new Error(`Gửi tài nguyên Seedance thất bại: HTTP ${submitResponse.status}`);
   const submitResult = object(await submitResponse.json());
   const taskId = object(submitResult.data).id;
-  if (!taskId) throw new Error("Seedance资产提交未返回任务ID");
+  if (!taskId) throw new Error("Gửi tài nguyên Seedance không trả về ID tác vụ");
   await context.saveTaskData?.({ ...data, taskId: String(taskId) });
   return pollSeedanceAsset(context, apiKey, baseUrl, String(taskId), signal);
 }
@@ -155,18 +155,18 @@ async function pollSeedanceAsset(context: ProviderContext, apiKey: string, baseU
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       signal,
     });
-    if (!queryResponse.ok) throw new Error(`审核状态查询失败：HTTP ${queryResponse.status}`);
+    if (!queryResponse.ok) throw new Error(`Truy vấn trạng thái kiểm duyệt thất bại: HTTP  ${queryResponse.status}`);
     const queryData = object(await queryResponse.json());
     const taskData = object(queryData.data);
     const status = taskData.status;
-    if (status === "failed") throw Object.assign(new Error(context.tool.errorMessage(taskData) || "素材审核失败"), { code: "MEDIA_TASK_FAILED" });
+    if (status === "failed") throw Object.assign(new Error(context.tool.errorMessage(taskData) || "Kiểm duyệt tài nguyên thất bại"), { code: "MEDIA_TASK_FAILED" });
     if (status === "completed") {
       const result = object(taskData.result ?? {});
       const usableAssets = Array.isArray(result.usable_assets) ? result.usable_assets : [{ asset_url: result.asset_url }];
-      if (usableAssets.length !== 1 || Array.isArray(result.failed_assets) && result.failed_assets.length) throw new Error("素材审核未返回唯一通过的素材，已停止生成");
+      if (usableAssets.length !== 1 || Array.isArray(result.failed_assets) && result.failed_assets.length) throw new Error("Kiểm duyệt không trả về đúng một tài nguyên đạt yêu cầu; đã dừng tạo nội dung");
       const asset = object(usableAssets[0]);
       if (typeof asset.asset_url !== "string" || !asset.asset_url.startsWith("asset://") || asset.asset_url.length <= 8
-        || asset.status !== undefined && asset.status !== "Active") throw new Error("素材审核未返回有效素材地址，已停止生成");
+        || asset.status !== undefined && asset.status !== "Active") throw new Error("Kiểm duyệt không trả về địa chỉ tài nguyên hợp lệ; đã dừng tạo nội dung");
       return asset.asset_url;
     }
     await wait(signal, 3000);
@@ -179,14 +179,14 @@ async function pollTaskResult<T>(context: ProviderContext, baseUrl: string, apiK
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       signal,
     });
-    if (!response.ok) throw new Error(`轮询失败：HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Kiểm tra trạng thái thất bại: HTTP ${response.status}`);
     const result = object(await response.json());
     const data = object(result.data ?? {});
     const status = String(result.status ?? data.status ?? "").toLowerCase();
     if (status === "completed" || status === "success") return extract(data);
     if (status === "failed" || status === "failure") {
       const error = (data.error as { message?: unknown } | undefined)?.message;
-      throw Object.assign(new Error(context.tool.errorMessage?.(result) || (typeof error === "string" ? error : "生成失败")), { code: "MEDIA_TASK_FAILED" });
+      throw Object.assign(new Error(context.tool.errorMessage?.(result) || (typeof error === "string" ? error : "Tạo nội dung thất bại")), { code: "MEDIA_TASK_FAILED" });
     }
     await wait(signal, 3000);
   }
@@ -198,7 +198,7 @@ async function waitForMedia(context: ProviderContext, apiKey: string, data: Medi
     const items = result[data.mediaType === "image" ? "images" : "videos"];
     const item = Array.isArray(items) ? object(items[0]) : undefined;
     const url = item && Array.isArray(item.url) ? item.url[0] : undefined;
-    if (typeof url !== "string" || !url) throw new Error("未返回生成结果");
+    if (typeof url !== "string" || !url) throw new Error("Không nhận được kết quả tạo nội dung");
     return url;
   });
   return [{ mediaType: data.mediaType, type: "url", url }];
@@ -213,10 +213,10 @@ async function submitVideo(context: ProviderContext, apiKey: string, body: Provi
     body: JSON.stringify(body),
     signal,
   });
-  if (!response.ok) throw new Error(`请求失败：HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Yêu cầu thất bại: HTTP  ${response.status}`);
   const result = object(await response.json());
   const taskId = Array.isArray(result.data) ? object(result.data[0]).task_id : undefined;
-  if (!taskId) throw new Error("未返回任务ID");
+  if (!taskId) throw new Error("Không nhận được ID tác vụ");
   const task = { ...data, taskId: String(taskId) };
   await context.saveTaskData?.(task);
   return waitForMedia(context, apiKey, task, signal);
@@ -240,9 +240,9 @@ export default {
   icon: "data:image/webp;base64,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",
   version,
   readme: `## APIMart
-<svg aria-label="APIMart" role="img" viewBox="480 470 1100 1100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0; color: currentColor; width: 1.2rem; height: 1.2rem; display: inline-block; vertical-align: middle; margin-right: 6px;"><path d="M 508 528 L 509 1514 L 586 1514 L 588 1512 L 587 610 L 589 607 L 670 607 L 1022 1009 L 1027 1007 L 1388 607 L 1467 607 L 1469 609 L 1470 738 L 1469 1513 L 1551 1513 L 1551 528 L 1350 528 L 1026 901 L 841 687 L 707 528 Z" fill="currentColor"></path><path d="M 627 646 L 626 1513 L 699 1513 L 700 785 L 1008 1131 L 1025 1147 L 1359 781 L 1360 1513 L 1434 1514 L 1435 646 L 1394 647 L 1240 821 L 1024 1059 L 1009 1045 L 789 795 L 661 646 Z" fill="currentColor"></path><path d="M 732 872 L 732 1513 L 802 1514 L 805 1512 L 805 1052 L 808 1053 L 888 1145 L 1024 1293 L 1250 1047 L 1250 1513 L 1322 1514 L 1324 1512 L 1323 872 L 1304 890 L 1026 1196 L 1021 1195 Z" fill="currentColor"></path></svg>APIMart是专注AI图片/视频生成的低价API平台，GPT-Image-2低至$0.006/张，1美元可出图160+张。图片、视频一套异步API通吃，提交任务拿ID、回调取结果，跑批万张不超时、换模型不改代码。
+<svg aria-label="APIMart" role="img" viewBox="480 470 1100 1100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0; color: currentColor; width: 1.2rem; height: 1.2rem; display: inline-block; vertical-align: middle; margin-right: 6px;"><path d="M 508 528 L 509 1514 L 586 1514 L 588 1512 L 587 610 L 589 607 L 670 607 L 1022 1009 L 1027 1007 L 1388 607 L 1467 607 L 1469 609 L 1470 738 L 1469 1513 L 1551 1513 L 1551 528 L 1350 528 L 1026 901 L 841 687 L 707 528 Z" fill="currentColor"></path><path d="M 627 646 L 626 1513 L 699 1513 L 700 785 L 1008 1131 L 1025 1147 L 1359 781 L 1360 1513 L 1434 1514 L 1435 646 L 1394 647 L 1240 821 L 1024 1059 L 1009 1045 L 789 795 L 661 646 Z" fill="currentColor"></path><path d="M 732 872 L 732 1513 L 802 1514 L 805 1512 L 805 1052 L 808 1053 L 888 1145 L 1024 1293 L 1250 1047 L 1250 1513 L 1322 1514 L 1324 1512 L 1323 872 L 1304 890 L 1026 1196 L 1021 1195 Z" fill="currentColor"></path></svg>APIMart là nền tảng API tạo ảnh và video AI với giá giới thiệu thấp. GPT-Image-2 được quảng bá từ 0,006 USD/ảnh, khoảng hơn 160 ảnh cho 1 USD. API bất đồng bộ chung cho ảnh và video: gửi tác vụ để lấy ID, nhận kết quả qua callback; hỗ trợ chạy lô lớn và đổi mô hình mà không đổi mã tích hợp.
 
-🔗 通过此 [注册链接](https://go.apimart.ai/gh-toonflow-app) 注册即可开用。`,
+🔗 Sử dụng [liên kết đăng ký](https://go.apimart.ai/gh-toonflow-app) để đăng ký và bắt đầu sử dụng.`,
   rules,
   models: [
     {
@@ -319,15 +319,15 @@ export default {
       });
     };
     const media = request as ImageRequest & VideoRequest & AudioRequest;
-    const images = media.images ? await Promise.all(media.images.map((input, index) => adjust(input, `参考图 ${index + 1}`))) : undefined;
-    const mask = media.mask ? await adjust(media.mask, "蒙版") : undefined;
+    const images = media.images ? await Promise.all(media.images.map((input, index) => adjust(input, `Ảnh tham chiếu ${index + 1}`))) : undefined;
+    const mask = media.mask ? await adjust(media.mask, "Mặt nạ") : undefined;
     const firstFrame = media.firstFrame ? await adjust(media.firstFrame, "首帧") : undefined;
     const lastFrame = media.lastFrame ? await adjust(media.lastFrame, "尾帧") : undefined;
     return { ...request, ...(images ? { images } : {}), ...(mask ? { mask } : {}), ...(firstFrame ? { firstFrame } : {}), ...(lastFrame ? { lastFrame } : {}) };
   },
   async generateImage(request: ImageRequest): Promise<MediaAsset[]> {
     const apiKey = this.config.apiKey?.trim();
-    if (!apiKey) throw new Error("请填写 API Key");
+    if (!apiKey) throw new Error("Vui lòng nhập API Key");
     const baseUrl = getBaseUrl(this.config.isOverseas);
     const lowerName = request.model.toLowerCase();
     // ACT: 单次生成最多等待 10 分钟。
@@ -357,24 +357,24 @@ export default {
       }),
       signal,
     });
-    if (!response.ok) throw new Error(`请求失败：HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Yêu cầu thất bại: HTTP  ${response.status}`);
     const data = object(await response.json());
     const taskId = Array.isArray(data.data) ? object(data.data[0]).task_id : undefined;
-    if (!taskId) throw new Error("未返回任务ID");
+    if (!taskId) throw new Error("Không nhận được ID tác vụ");
     const task: MediaTaskData = { kind: "media", mediaType: "image", taskId: String(taskId), model: request.model, region: String(this.config.isOverseas) === "2" ? "2" : "1", deadline };
     await this.saveTaskData?.(task);
     return waitForMedia(this, apiKey, task, signal);
   },
   async generateVideo(request: ReferencedVideoRequest): Promise<MediaAsset[]> {
     const apiKey = this.config.apiKey?.trim();
-    if (!apiKey) throw new Error("请填写 API Key");
+    if (!apiKey) throw new Error("Vui lòng nhập API Key");
     const baseUrl = getBaseUrl(this.config.isOverseas);
     const lowerName = request.model.toLowerCase();
     const mode = request.mode ?? (request.firstFrame || request.lastFrame ? "startFrameOptional"
       : request.videos?.length || request.audios?.length ? [] : request.images?.length ? "singleImage" : "text");
     const prompt = videoPrompt(request, mode);
     if (Array.isArray(mode) && (lowerName.includes("doubao") || lowerName.includes("seedance")) && (request.images?.length ?? 0) > 20) {
-      throw new Error(`单次最多提交20个素材，当前提交了${request.images!.length}个`);
+      throw new Error(`Tối đa 20 tài nguyên mỗi lượt; hiện đã gửi ${request.images!.length} tài nguyên`);
     }
     // ACT: 单次生成最多等待 30 分钟。
     const deadline = Date.now() + 30 * 60_000;
@@ -445,35 +445,35 @@ export default {
     return submitVideo(this, apiKey, savedBody, task, signal);
   },
   async resumeTask(data: ProviderTaskData): Promise<MediaAsset[]> {
-    if (data.kind === "submitting") throw new Error("上次提交结果未知，不能自动重新提交，请先在供应商平台确认任务");
+    if (data.kind === "submitting") throw new Error("Không rõ kết quả lần gửi trước; không tự động gửi lại. Hãy xác nhận tác vụ trên nền tảng nhà cung cấp trước.");
     if ((data.kind !== "media" && data.kind !== "review") || (data.mediaType !== "image" && data.mediaType !== "video")
       || typeof data.taskId !== "string" || !data.taskId || typeof data.model !== "string" || !data.model
       || (data.region !== "1" && data.region !== "2") || typeof data.deadline !== "number" || !Number.isFinite(data.deadline)) {
-      throw new Error("APIMart 任务恢复数据无效");
+      throw new Error("Dữ liệu khôi phục tác vụ APIMart không hợp lệ");
     }
     const apiKey = this.config.apiKey?.trim();
-    if (!apiKey) throw new Error("请填写 API Key");
+    if (!apiKey) throw new Error("Vui lòng nhập API Key");
     const signal = AbortSignal.any([AbortSignal.timeout((data.mediaType === "image" ? 10 : 30) * 60_000), ...(this.signal ? [this.signal] : [])]);
     if (data.kind === "media") return waitForMedia(this, apiKey, data as MediaTaskData, signal);
     if (data.mediaType !== "video" || !data.body || typeof data.body !== "object" || Array.isArray(data.body)
       || data.body.model !== data.model || !Array.isArray(data.imageUrls) || !data.imageUrls.length || !data.imageUrls.every(url => typeof url === "string" && !!url)
       || !Array.isArray(data.reviewedUrls) || !data.reviewedUrls.every(url => typeof url === "string" && url.startsWith("asset://"))
       || data.reviewedUrls.length >= data.imageUrls.length) {
-      throw new Error("APIMart 素材审核恢复数据无效");
+      throw new Error("Dữ liệu khôi phục kiểm duyệt tài nguyên APIMart không hợp lệ");
     }
     return finishVideoReviews(this, apiKey, data as ReviewTaskData, signal);
   },
   async updateVendor(): Promise<string> {
     const apiKey = this.config.apiKey?.trim();
-    if (!apiKey) throw new Error("请填写 API Key");
+    if (!apiKey) throw new Error("Vui lòng nhập API Key");
     const baseUrl = getBaseUrl(this.config.isOverseas);
     const response = await this.tool.fetch(`${baseUrl}/vendor/downloadVendor`, {
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       signal: this.signal,
     });
-    if (!response.ok) throw new Error(`请求失败：HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Yêu cầu thất bại: HTTP  ${response.status}`);
     const { data } = object(await response.json());
-    if (typeof data !== "string") throw new Error("未返回更新内容");
+    if (typeof data !== "string") throw new Error("Không nhận được nội dung cập nhật");
     return data;
   },
 } satisfies ProviderDefinition<typeof rules>;

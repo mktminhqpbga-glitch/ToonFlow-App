@@ -1,11 +1,11 @@
 <template>
   <div class="thumbnailItem" :class="{ fileAttachment: !isMedia }">
     <template v-if="isText">
-      <button class="textAttachmentButton" type="button" :title="attachment.name" :aria-label="`预览 ${attachment.name}`" @click="textPreviewVisible = true">
+      <button class="textAttachmentButton" type="button" :title="attachment.name" :aria-label="`Xem trước ${attachment.name}`" @click="textPreviewVisible = true">
         <icon-file-text :size="18" />
         <span>{{ attachment.name }}</span>
       </button>
-      <el-button v-if="restorable" class="restoreAttachment" text size="small" :disabled="disabled" @click="emit('restore')">还原到输入框</el-button>
+      <el-button v-if="restorable" class="restoreAttachment" text size="small" :disabled="disabled" @click="emit('restore')">Khôi phục về ô nhập</el-button>
     </template>
     <el-image
       v-else-if="attachment.mimeType.startsWith('image/')"
@@ -16,29 +16,29 @@
       previewTeleported
       fit="cover"
       :alt="attachment.name"
-      :title="previewError || (preparingPreview ? '正在生成兼容预览…' : attachment.name)"
+      :title="previewError || (preparingPreview ? 'Đang tạo bản xem trước tương thích…' : attachment.name)"
       :aria-busy="preparingPreview"
       tabindex="0"
       role="button"
-      :aria-label="`预览 ${attachment.name}`"
+      :aria-label="`Xem trước ${attachment.name}`"
       @keydown.enter.prevent="imageRef?.showPreview()"
       @keydown.space.prevent="imageRef?.showPreview()"
       @load="handleLoaded"
       @error="handleError">
       <template #error><icon-photo :size="20" /></template>
     </el-image>
-    <button v-else-if="attachment.mimeType.startsWith('video/')" class="thumbnailButton" type="button" :title="previewError || (preparingPreview ? '正在生成兼容预览…' : attachment.name)" :aria-label="`预览 ${attachment.name}`" :aria-busy="preparingPreview" :disabled="!thumbnailUrl" @click="videoPreviewVisible = true">
+    <button v-else-if="attachment.mimeType.startsWith('video/')" class="thumbnailButton" type="button" :title="previewError || (preparingPreview ? 'Đang tạo bản xem trước tương thích…' : attachment.name)" :aria-label="`Xem trước ${attachment.name}`" :aria-busy="preparingPreview" :disabled="!thumbnailUrl" @click="videoPreviewVisible = true">
       <video v-if="mediaSrc && !preparingPreview && !previewError" :src="mediaSrc" preload="auto" muted playsinline aria-hidden="true" @loadeddata="handleLoaded" @error="handleError" />
       <icon-video class="videoIcon" :size="16" />
     </button>
     <div v-else class="fileAttachmentCard" :title="attachment.name"><icon-file-text :size="18" /><span>{{ attachment.name }}</span></div>
-    <el-button v-if="removable" class="removeAttachment" circle :disabled="disabled" :aria-label="`移除 ${attachment.name}`" title="移除附件" @click="emit('remove')"><icon-x :size="10" /></el-button>
+    <el-button v-if="removable" class="removeAttachment" circle :disabled="disabled" :aria-label="`Xóa ${attachment.name}`" title="Xóa tệp đính kèm" @click="emit('remove')"><icon-x :size="10" /></el-button>
     <el-dialog v-model="videoPreviewVisible" :title="attachment.name" width="min(800px, 90vw)" alignCenter appendToBody destroyOnClose>
-      <p v-if="preparingPreview || previewError" :role="previewError ? 'alert' : 'status'">{{ preparingPreview ? '正在生成兼容预览…' : previewError }}</p>
+      <p v-if="preparingPreview || previewError" :role="previewError ? 'alert' : 'status'">{{ preparingPreview ? 'Đang tạo bản xem trước tương thích…' : previewError }}</p>
       <video v-else-if="videoPreviewVisible && mediaSrc" class="videoPreview" :src="mediaSrc" controls playsinline preload="auto" @loadeddata="handleLoaded" @error="handleError" />
     </el-dialog>
     <el-dialog v-model="textPreviewVisible" :title="attachment.name" width="min(720px, 90vw)" alignCenter appendToBody destroyOnClose>
-      <p v-if="textLoading || textError" :role="textError ? 'alert' : 'status'">{{ textLoading ? '正在读取…' : textError }}</p>
+      <p v-if="textLoading || textError" :role="textError ? 'alert' : 'status'">{{ textLoading ? 'Đang đọc…' : textError }}</p>
       <pre v-else class="textPreview">{{ textContent }}</pre>
     </el-dialog>
   </div>
@@ -101,7 +101,7 @@ watch([textPreviewVisible, () => props.attachment, () => props.directory], async
     const text = await readTextAttachment(attachment, directory);
     if (!cancelled) textContent.value = text;
   } catch {
-    if (!cancelled) textError.value = "无法读取文本附件，请重试";
+    if (!cancelled) textError.value = "Không đọc được tệp văn bản đính kèm, vui lòng thử lại";
   } finally {
     if (!cancelled) textLoading.value = false;
   }

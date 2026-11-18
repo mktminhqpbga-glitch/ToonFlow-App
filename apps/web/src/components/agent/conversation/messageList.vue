@@ -1,25 +1,25 @@
 <template>
   <div class="messageViewport t-chat t-chat--normal">
-    <div ref="messageList" class="messageList t-chat__list" role="region" aria-label="对话消息" tabindex="0">
+    <div ref="messageList" class="messageList t-chat__list" role="region" aria-label="Tin nhắn hội thoại" tabindex="0">
       <chat-item v-if="!messages.length && !disabled" role="assistant" variant="text">
         <template #content>
-          <section class="welcomeMessage" aria-label="开始新对话">
+          <section class="welcomeMessage" aria-label="Bắt đầu cuộc trò chuyện mới">
             <div class="welcomeHeader">
               <span class="welcomeIcon" aria-hidden="true"><span class="welcomeLogo" :style="{ maskImage: `url(${logoUrl})` }" /></span>
               <div>
-                <p class="welcomeLabel">你好，我是 Toonflow 助手</p>
-                <h3>从一个想法开始</h3>
+                <p class="welcomeLabel">Xin chào, tôi là trợ lý Toonflow</p>
+                <h3>Bắt đầu từ một ý tưởng</h3>
               </div>
             </div>
-            <p class="welcomeDescription">聊聊你的故事、画面或镜头，让我们一起把想法落到画布上。</p>
+            <p class="welcomeDescription">Hãy kể về câu chuyện, hình ảnh hoặc cảnh quay bạn muốn tạo để cùng biến ý tưởng thành tác phẩm trên Canvas.</p>
             <div class="welcomeSuggestions">
-              <el-button v-for="item in welcomeSuggestions" :key="item.label" class="welcomeSuggestion" text bg :disabled="locked" :aria-label="`填入提示：${item.label}`" @click="emit('fillPrompt', item.prompt)">
+              <el-button v-for="item in welcomeSuggestions" :key="item.label" class="welcomeSuggestion" text bg :disabled="locked" :aria-label="`Điền gợi ý: ${item.label}`" @click="emit('fillPrompt', item.prompt)">
                 <component :is="item.icon" :size="19" aria-hidden="true" />
                 <span class="suggestionContent"><strong>{{ item.label }}</strong><span>{{ item.description }}</span></span>
                 <icon-arrow-up-right class="suggestionArrow" :size="15" aria-hidden="true" />
               </el-button>
             </div>
-            <p class="welcomeHint">点击填入提示，也可以直接输入，或添加图片、视频和文档。</p>
+            <p class="welcomeHint">Chọn một gợi ý hoặc nhập nội dung trực tiếp, hay thêm ảnh, video và tài liệu.</p>
           </section>
         </template>
       </chat-item>
@@ -37,17 +37,17 @@
           <chat-item :role="item.role" :variant="item.role === 'user' ? 'base' : 'text'" :textLoading="!!item.streaming && !compacting && !item.parts?.some(part => part.type === 'tool' || part.content)" animation="moving" @vue:updated="measureMessage($event.el?.parentElement ?? null)">
             <template #content>
               <div class="messageContent">
-                <span v-if="item.role === 'user' && item.delivery?.mode === 'steer'" class="steeringLabel" title="当前任务的补充引导，已完成的操作不会撤销"><icon-corner-down-right :size="14" aria-hidden="true" />引导</span>
-                <div v-if="item.report" class="reportHeader"><icon-users-group :size="14" />{{ item.report.name }} 上报</div>
-                <div v-if="item.agentMessage" class="reportHeader"><icon-users-group :size="14" />来自 {{ item.agentMessage.fromName }} 的消息</div>
+                <span v-if="item.role === 'user' && item.delivery?.mode === 'steer'" class="steeringLabel" title="Bổ sung hướng dẫn cho tác vụ hiện tại; các thao tác đã hoàn tất sẽ được giữ nguyên"><icon-corner-down-right :size="14" aria-hidden="true" />Hướng dẫn</span>
+                <div v-if="item.report" class="reportHeader"><icon-users-group :size="14" />{{ item.report.name }} - báo cáo</div>
+                <div v-if="item.agentMessage" class="reportHeader"><icon-users-group :size="14" />Từ {{ item.agentMessage.fromName }} - tin nhắn</div>
                 <template v-for="part in item.parts" :key="part.id">
                   <chat-reasoning v-if="part.type === 'thinking' && part.content" class="messageReasoning" :collapsed="part.collapsed ?? true" expandIconPlacement="left" @update:collapsed="part.collapsed = $event">
                     <template #expandIcon><component :is="(part.collapsed ?? true) ? IconChevronRight : IconChevronDown" :size="14" aria-hidden="true" /></template>
                     <template #header>
                       <span class="reasoningHeader">
                         <icon-atom :size="14" />
-                        <span>思考</span>
-                        <span v-if="part.duration !== undefined" class="thinkingDuration">{{ part.duration.toFixed(1) }} 秒</span>
+                        <span>Đang suy nghĩ</span>
+                        <span v-if="part.duration !== undefined" class="thinkingDuration">{{ part.duration.toFixed(1) }} giây</span>
                       </span>
                     </template>
                     <messageMarkdown v-if="!(part.collapsed ?? true)" :content="part.content" :streaming="!!item.streaming" :directory="directory" />
@@ -63,23 +63,23 @@
           </chat-item>
           <div v-if="!item.streaming" class="messageActions">
             <template v-if="editingId === item.id">
-              <el-button text size="small" :disabled="busy || deletingId !== undefined || voiceActive" @click="emit('cancelEdit')"><icon-x :size="14" />取消</el-button>
-              <span class="editingHint">正在下方编辑</span>
+              <el-button text size="small" :disabled="busy || deletingId !== undefined || voiceActive" @click="emit('cancelEdit')"><icon-x :size="14" />Hủy</el-button>
+              <span class="editingHint">Đang chỉnh sửa bên dưới</span>
             </template>
             <template v-else>
-              <el-button v-if="item.content" class="messageAction" text circle aria-label="复制消息" title="复制消息" @click="emit('copy', mentionPlainText(item.content, item.mentions))"><icon-copy :size="14" /></el-button>
+              <el-button v-if="item.content" class="messageAction" text circle aria-label="Sao chép tin nhắn" title="Sao chép tin nhắn" @click="emit('copy', mentionPlainText(item.content, item.mentions))"><icon-copy :size="14" /></el-button>
               <template v-if="item.role === 'user'">
-                <el-button class="messageAction" text circle :disabled="locked || remoteRunning" aria-label="编辑消息" title="编辑消息" @click="emit('edit', item)"><icon-pencil :size="14" /></el-button>
+                <el-button class="messageAction" text circle :disabled="locked || remoteRunning" aria-label="Sửa tin nhắn" title="Sửa tin nhắn" @click="emit('edit', item)"><icon-pencil :size="14" /></el-button>
               </template>
-              <el-button v-if="!item.report && !item.agentMessage" class="messageAction" text circle :loading="branchingId === item.id" :disabled="locked || remoteRunning || !(item.entryId || item.replyTo)" aria-label="从此消息创建分支" title="从此消息创建分支" @click="emit('branch', item)"><icon-arrow-fork v-if="branchingId !== item.id" :size="14" style="transform: rotate(90deg)" aria-hidden="true" /></el-button>
-              <el-button v-if="!item.report && !item.agentMessage" class="messageAction" text circle :loading="deletingId === item.id" :disabled="locked || remoteRunning" aria-label="删除消息" title="删除消息" @click="emit('delete', item)"><icon-trash v-if="deletingId !== item.id" :size="14" /></el-button>
+              <el-button v-if="!item.report && !item.agentMessage" class="messageAction" text circle :loading="branchingId === item.id" :disabled="locked || remoteRunning || !(item.entryId || item.replyTo)" aria-label="Tạo nhánh từ tin nhắn này" title="Tạo nhánh từ tin nhắn này" @click="emit('branch', item)"><icon-arrow-fork v-if="branchingId !== item.id" :size="14" style="transform: rotate(90deg)" aria-hidden="true" /></el-button>
+              <el-button v-if="!item.report && !item.agentMessage" class="messageAction" text circle :loading="deletingId === item.id" :disabled="locked || remoteRunning" aria-label="Xóa tin nhắn" title="Xóa tin nhắn" @click="emit('delete', item)"><icon-trash v-if="deletingId !== item.id" :size="14" /></el-button>
             </template>
           </div>
           <browserPanel v-if="browserMessages.tools.has(item.id)" class="browserPreview" :tools="browserMessages.tools.get(item.id)!" :directory="directory" :active="active" :live="item.id === browserMessages.liveMessageId" />
         </div>
       </div>
     </div>
-    <el-button v-if="messages.length && !atLatestMessage" class="scrollBottom" circle aria-label="回到最新消息" title="回到最新消息" @click="messageVirtualizer.scrollToEnd()"><icon-arrow-down :size="18" /></el-button>
+    <el-button v-if="messages.length && !atLatestMessage" class="scrollBottom" circle aria-label="Quay lại tin nhắn mới nhất" title="Quay lại tin nhắn mới nhất" @click="messageVirtualizer.scrollToEnd()"><icon-arrow-down :size="18" /></el-button>
   </div>
 </template>
 
@@ -209,9 +209,9 @@ watch([() => props.active, messageList], async ([active, element]) => {
   messageListInitialized = true;
 }, { immediate: true, flush: "post" });
 const welcomeSuggestions = [
-  { label: "搭建创作画布", description: "把创意串成清晰的节点流程", icon: IconVector, prompt: "帮我搭建一个创作画布，先和我确认需要的节点与流程。" },
-  { label: "梳理故事分镜", description: "拆解故事，安排画面与镜头", icon: IconMovie, prompt: "帮我把故事整理成分镜，先和我确认故事内容、时长和画面风格。" },
-  { label: "生成图片素材", description: "为角色和场景寻找视觉方向", icon: IconPhoto, prompt: "帮我生成图片素材，先和我确认画面内容、风格和使用的模型。" },
+  { label: "Xây dựng Canvas sáng tạo", description: "Biến ý tưởng thành quy trình node rõ ràng", icon: IconVector, prompt: "Hãy giúp tôi xây dựng Canvas sáng tạo. Trước tiên, hãy xác nhận các node và quy trình cần dùng." },
+  { label: "Sắp xếp phân cảnh câu chuyện", description: "Chia nhỏ câu chuyện và bố trí khung hình, góc quay", icon: IconMovie, prompt: "Hãy giúp tôi chuyển câu chuyện thành các phân cảnh. Trước tiên, hãy xác nhận nội dung, thời lượng và phong cách hình ảnh." },
+  { label: "Tạo tài nguyên ảnh", description: "Định hướng hình ảnh cho nhân vật và bối cảnh", icon: IconPhoto, prompt: "Hãy giúp tôi tạo tài nguyên ảnh. Trước tiên, hãy xác nhận nội dung hình ảnh, phong cách và mô hình sẽ sử dụng." },
 ];
 </script>
 

@@ -1,16 +1,16 @@
 <template>
   <el-form class="importForm" labelPosition="top" :disabled="importing" @submit.prevent="importServers">
-    <el-form-item :label="mode === 'json' ? '配置文件' : 'DXT 包'">
+    <el-form-item :label="mode === 'json' ? 'Tệp cấu hình' : 'Gói DXT'">
       <div class="fileSource">
         <input ref="fileInput" type="file" :accept="mode === 'json' ? '.json' : '.dxt,.mcpb'" hidden @change="selectFile" />
-        <el-input :modelValue="fileName" :prefixIcon="mode === 'json' ? IconFileCode : IconPackage" placeholder="尚未选择文件" readonly aria-label="已选择的 MCP 文件" />
-        <el-button :icon="IconFolderOpen" :loading="reading" @click="fileInput?.click()">选择文件</el-button>
+        <el-input :modelValue="fileName" :prefixIcon="mode === 'json' ? IconFileCode : IconPackage" placeholder="Chưa chọn tệp" readonly aria-label="Tệp MCP đã chọn" />
+      <el-button :icon="IconFolderOpen" :loading="reading" @click="fileInput?.click()">Chọn tệp</el-button>
       </div>
     </el-form-item>
     <template v-if="mode === 'json'">
-      <el-form-item label="JSON 配置">
+      <el-form-item label="Cấu hình JSON">
         <el-input v-model="source" class="sourceInput" type="textarea" :rows="10" resize="none" :disabled="reading" :maxlength="1024 * 1024" autocomplete="off" spellcheck="false" dir="ltr" />
-        <el-text class="fieldHint" size="small" type="info">支持 mcpServers 批量配置、带 name 的单个配置或配置数组，导入后新增服务。</el-text>
+        <el-text class="fieldHint" size="small" type="info">Hỗ trợ cấu hình hàng loạt mcpServers, một cấu hình có tên name hoặc mảng cấu hình; dịch vụ được thêm sau khi nhập.</el-text>
       </el-form-item>
     </template>
     <template v-else-if="packageInfo">
@@ -34,7 +34,7 @@
           spellcheck="false"
           :aria-label="field.title" />
         <el-text v-if="field.description" class="fieldHint" size="small" type="info">{{ field.description }}</el-text>
-        <el-text v-if="field.multiple" class="fieldHint" size="small" type="info">每行一个路径。</el-text>
+        <el-text v-if="field.multiple" class="fieldHint" size="small" type="info">Mỗi dòng một đường dẫn.</el-text>
       </el-form-item>
     </template>
     <el-alert v-if="error" class="importError" :title="error" type="error" :closable="false" showIcon />
@@ -106,21 +106,21 @@ async function selectFile(event: Event) {
   reading.value = true;
   try {
     const maxBytes = (mode === "json" ? 1 : 50) * 1024 * 1024;
-    if (!file.size || file.size > maxBytes) throw new Error(`请选择非空且不超过 ${mode === "json" ? 1 : 50} MB 的文件`);
+    if (!file.size || file.size > maxBytes) throw new Error(`Hãy chọn tệp không rỗng và không vượt quá ${mode === "json" ? 1 : 50} MB `);
     if (mode === "json") {
-      if (!/\.json$/i.test(file.name)) throw new Error("请选择 .json 配置文件");
+      if (!/\.json$/i.test(file.name)) throw new Error("Hãy chọn tệp cấu hình .json");
       const content = await file.text();
       if (!currentController.signal.aborted) source.value = content;
       return;
     }
-    if (!localSupported) throw new Error("当前平台不支持导入本地 MCP 包");
-    if (!/\.(dxt|mcpb)$/i.test(file.name)) throw new Error("请选择 .dxt 或 .mcpb 包");
+    if (!localSupported) throw new Error("Nền tảng hiện tại không hỗ trợ nhập gói MCP cục bộ");
+    if (!/\.(dxt|mcpb)$/i.test(file.name)) throw new Error("Hãy chọn gói .dxt hoặc .mcpb");
     const content = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       fileReader = reader;
       reader.onload = () => resolve((reader.result as string).split(",", 2)[1]!);
       reader.onerror = () => reject(reader.error);
-      reader.onabort = () => reject(new DOMException("文件读取已取消", "AbortError"));
+      reader.onabort = () => reject(new DOMException("Đã hủy đọc tệp", "AbortError"));
       reader.readAsDataURL(file);
     });
     if (currentController.signal.aborted) return;
@@ -129,9 +129,9 @@ async function selectFile(event: Event) {
       "/api/mcp/servers/inspectDxt", payload, { headers: requestHeaders, signal: currentController.signal }
     );
     if (currentController.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "读取 DXT 包失败");
+    if (data.code !== 200) throw new Error(data.message || "Đọc gói DXT thất bại");
     if (!data.data || typeof data.data.name !== "string" || typeof data.data.version !== "string" || !Array.isArray(data.data.userConfig)) {
-      throw new Error("DXT 包信息格式错误");
+      throw new Error("Thông tin gói DXT có định dạng không hợp lệ");
     }
     packageInfo.value = data.data;
     packagePayload.value = payload;
@@ -154,7 +154,7 @@ function readUserConfig() {
       : field.type === "number" ? field.numberValue
       : field.multiple ? field.textValue.split(/\r?\n/).filter(line => line.trim()) : field.textValue;
     const missing = value === undefined || value === "" || (Array.isArray(value) && !value.length);
-    if (missing && field.required) throw new Error(`请填写${field.title}`);
+    if (missing && field.required) throw new Error(`Hãy nhập ${field.title}`);
     return value === undefined ? [] : [[field.key, value]];
   }));
 }
@@ -170,7 +170,7 @@ async function importServers() {
       `/api/mcp/servers/${mode === "json" ? "importJson" : "importDxt"}`, payload, { headers: requestHeaders, signal: controller.signal }
     );
     if (controller.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "导入 MCP 失败");
+    if (data.code !== 200) throw new Error(data.message || "Nhập MCP thất bại");
     const count = mode === "json" && Array.isArray(data.data?.servers) ? data.data.servers.length : 1;
     emit("saved", count);
   } catch (cause) {

@@ -4,52 +4,52 @@
     <div v-else-if="status?.configured" class="configuredSettings">
       <div class="enabledRow">
         <div class="settingInfo">
-          <label for="configuredMultiTenantEnabled">开启多租户</label>
+          <label for="configuredMultiTenantEnabled">Bật chế độ đa thuê bao</label>
           <el-tag :type="status.enabled ? 'primary' : 'info'" size="small" effect="light">{{ status.enabled ? translate("已开启") : translate("未开启") }}</el-tag>
         </div>
-        <el-switch id="configuredMultiTenantEnabled" :modelValue="status.enabled" :loading="saving" :disabled="saving || credentialsVisible" aria-label="开启多租户" @change="changeEnabled" />
+        <el-switch id="configuredMultiTenantEnabled" :modelValue="status.enabled" :loading="saving" :disabled="saving || credentialsVisible" aria-label="Bật chế độ đa thuê bao" @change="changeEnabled" />
       </div>
       <div class="formActions">
-        <el-button type="primary" :disabled="saving || credentialsVisible" @click="openAdmin">进入超管后台</el-button>
+        <el-button type="primary" :disabled="saving || credentialsVisible" @click="openAdmin">Mở trang quản trị cấp cao</el-button>
       </div>
     </div>
     <el-form v-else-if="status?.canSetup" class="setupForm" labelPosition="top" :disabled="saving" @submit.prevent="save">
       <fieldset class="credentialsGroup">
-        <legend>超级管理员</legend>
-        <el-form-item class="accountField" label="超级管理员账号" for="setupAdminUserName" :error="userNameError" required>
+        <legend>Quản trị viên cấp cao</legend>
+        <el-form-item class="accountField" label="Tài khoản quản trị viên cấp cao" for="setupAdminUserName" :error="userNameError" required>
           <el-input id="setupAdminUserName" ref="userNameInput" v-model="userName" autocomplete="username" :maxlength="64" />
         </el-form-item>
-        <el-form-item label="超级管理员密码" for="setupAdminPassword" :error="passwordError" required>
+        <el-form-item label="Mật khẩu quản trị viên cấp cao" for="setupAdminPassword" :error="passwordError" required>
           <el-input id="setupAdminPassword" ref="passwordInput" v-model="password" type="password" showPassword autocomplete="new-password" :minlength="8" :maxlength="128" />
         </el-form-item>
-        <el-form-item label="确认密码" for="setupAdminPasswordConfirm" :error="confirmationError" required>
+        <el-form-item label="Xác nhận mật khẩu" for="setupAdminPasswordConfirm" :error="confirmationError" required>
           <el-input id="setupAdminPasswordConfirm" ref="confirmationInput" v-model="passwordConfirm" type="password" showPassword autocomplete="new-password" :minlength="8" :maxlength="128" />
         </el-form-item>
       </fieldset>
       <div class="enabledRow">
-        <label for="setupMultiTenantEnabled">开启多租户</label>
-        <el-switch id="setupMultiTenantEnabled" v-model="enabled" aria-label="开启多租户" />
+        <label for="setupMultiTenantEnabled">Bật chế độ đa thuê bao</label>
+        <el-switch id="setupMultiTenantEnabled" v-model="enabled" aria-label="Bật chế độ đa thuê bao" />
       </div>
       <div class="formActions">
-        <el-button type="primary" nativeType="submit" :loading="saving" :disabled="saving">保存</el-button>
+        <el-button type="primary" nativeType="submit" :loading="saving" :disabled="saving">Lưu</el-button>
       </div>
     </el-form>
-    <el-alert v-else-if="status" title="请在服务端本机设置超级管理员账号和密码" type="error" :closable="false" showIcon />
+    <el-alert v-else-if="status" title="Hãy thiết lập tài khoản và mật khẩu quản trị viên cấp cao trực tiếp trên máy chủ" type="error" :closable="false" showIcon />
     <el-alert v-if="requestError" :title="requestError" type="error" :closable="false" showIcon />
-    <el-button v-if="!loading && !status" class="retryButton" @click="loadStatus">重新读取</el-button>
-    <el-dialog v-model="credentialsVisible" class="credentialsDialog" title="验证超级管理员" width="min(420px, calc(100vw - 32px))" alignCenter appendToBody :closeOnClickModal="false" :closeOnPressEscape="!saving" :showClose="!saving" @closed="clearCredentials">
+    <el-button v-if="!loading && !status" class="retryButton" @click="loadStatus">Đọc lại</el-button>
+    <el-dialog v-model="credentialsVisible" class="credentialsDialog" title="Xác minh quản trị viên cấp cao" width="min(420px, calc(100vw - 32px))" alignCenter appendToBody :closeOnClickModal="false" :closeOnPressEscape="!saving" :showClose="!saving" @closed="clearCredentials">
       <el-form id="multiTenantCredentialsForm" class="credentialsForm" labelPosition="top" :disabled="saving" @submit.prevent="confirmEnabled">
-        <el-form-item label="超级管理员账号" for="verifyAdminUserName" :error="userNameError" required>
+        <el-form-item label="Tài khoản quản trị viên cấp cao" for="verifyAdminUserName" :error="userNameError" required>
           <el-input id="verifyAdminUserName" ref="userNameInput" v-model="userName" autocomplete="username" :maxlength="64" />
         </el-form-item>
-        <el-form-item label="超级管理员密码" for="verifyAdminPassword" :error="passwordError" required>
+        <el-form-item label="Mật khẩu quản trị viên cấp cao" for="verifyAdminPassword" :error="passwordError" required>
           <el-input id="verifyAdminPassword" ref="passwordInput" v-model="password" type="password" showPassword autocomplete="current-password" :minlength="8" :maxlength="128" />
         </el-form-item>
         <el-alert v-if="credentialsError" :title="credentialsError" type="error" :closable="false" showIcon />
       </el-form>
       <template #footer>
-        <el-button :disabled="saving" @click="credentialsVisible = false">取消</el-button>
-        <el-button type="primary" nativeType="submit" form="multiTenantCredentialsForm" :loading="saving" :disabled="saving">确认</el-button>
+        <el-button :disabled="saving" @click="credentialsVisible = false">Hủy</el-button>
+        <el-button type="primary" nativeType="submit" form="multiTenantCredentialsForm" :loading="saving" :disabled="saving">Xác nhận</el-button>
       </template>
     </el-dialog>
   </div>

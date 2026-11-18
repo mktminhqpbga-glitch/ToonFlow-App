@@ -27,7 +27,7 @@ export async function setExtensionAssociation(suffix: string, id?: string) {
     const extensions = await listExtensions();
     if (!extensions.some(extension => extension.id === id && extension.enabled && !extension.loadError
       && (suffix === "canvasNode" ? extension.resourceKind === "canvasNode" : extension.resourceKind === "file" && extension.extensions.includes(suffix)))) {
-      throw new Error("所选扩展未启用或不支持此文件类型");
+      throw new Error("Tiện ích đã chọn chưa được bật hoặc không hỗ trợ loại tệp này");
     }
   }
   await saveSettings(current => {
@@ -75,30 +75,30 @@ function loadExtension(extension: InstalledExtension) {
   if (!request) {
     // 同一 ID 的脚本依次执行，避免旧网络请求最后到达时覆盖新版全局导出和样式。
     request = (scriptQueues.get(extension.id) ?? Promise.resolve()).catch(() => {}).then(async () => {
-      if (requestedRevision !== revision) throw new Error("文件扩展已更新，请重新打开");
+      if (requestedRevision !== revision) throw new Error("Tiện ích tệp đã được cập nhật; hãy mở lại");
       const url = new URL(extension.url, window.location.href);
       if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/ext/")) {
-        throw new Error("扩展脚本地址无效");
+        throw new Error("Địa chỉ script tiện ích không hợp lệ");
       }
       url.searchParams.set("revision", `${extension.revision ?? extension.version}-${requestedRevision}`);
       const response = await fetch(url.href);
-      if (!response.ok) throw new Error(`扩展加载失败：${extension.displayName}（HTTP ${response.status}）`);
+      if (!response.ok) throw new Error(`Tải tiện ích thất bại: ${extension.displayName}（HTTP ${response.status}）`);
       const code = await response.text();
       if (code.includes("toonflowTiptapHost")) await import("@/lib/tiptapHost");
-      if (requestedRevision !== revision) throw new Error("文件扩展已更新，请重新打开");
+      if (requestedRevision !== revision) throw new Error("Tiện ích tệp đã được cập nhật; hãy mở lại");
       return new Promise<ExtDefinition>((resolve, reject) => {
         const script = document.createElement("script");
         script.src = url.href;
         script.onload = () => {
           script.remove();
           try {
-            if (requestedRevision !== revision) throw new Error("文件扩展已更新，请重新打开");
+            if (requestedRevision !== revision) throw new Error("Tiện ích tệp đã được cập nhật; hãy mở lại");
             const definition = host.toonflowExts?.[extension.id];
-            if (!definition || definition.id !== extension.id) throw new Error("扩展没有导出对应组件");
+            if (!definition || definition.id !== extension.id) throw new Error("Tiện ích không xuất component tương ứng");
             resolve(defineExt(definition));
           } catch (error) { reject(error); }
         };
-        script.onerror = () => { script.remove(); reject(new Error(`扩展加载失败：${extension.displayName}`)); };
+        script.onerror = () => { script.remove(); reject(new Error(`Tải tiện ích thất bại: ${extension.displayName}`)); };
         delete host.toonflowExts?.[extension.id];
         document.head.append(script);
       });
@@ -171,6 +171,6 @@ import.meta.hot?.dispose(() => {
 
 export async function resolveExtension(resource: ExtResource, id: string): Promise<ExtDefinition> {
   const extension = (await extensionCandidates(resource)).find(extension => extension.id === id);
-  if (!extension) throw new Error(`尚未启用支持此文件的扩展，请到插件市场安装或启用：${resource.label}`);
+  if (!extension) throw new Error(`Chưa bật tiện ích hỗ trợ tệp này; hãy cài hoặc bật từ chợ plugin: ${resource.label}`);
   return defineExt({ ...extension, load: async () => (await loadExtension(extension)).load() });
 }

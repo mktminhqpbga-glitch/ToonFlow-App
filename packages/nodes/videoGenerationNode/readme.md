@@ -1,19 +1,19 @@
-# 视频生成节点
+# Node tạo video
 
-根据提示词和参考素材生成视频，支持所选模型提供的文生视频、单图、首尾帧或混合参考模式。
+Tạo video từ prompt và tư liệu tham chiếu. Hỗ trợ các chế độ mà mô hình hiện tại cung cấp: văn bản thành video, một ảnh, khung đầu/cuối hoặc tham chiếu kết hợp.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 输入支持文本、图片、视频和音频，实际可用的素材组合取决于模型与生成模式。
-- 输出生成的视频；播放器还能将当前帧、首帧或尾帧截取为图片节点。
+- Hỗ trợ văn bản, ảnh, video và âm thanh đầu vào; tổ hợp tham chiếu khả dụng phụ thuộc vào mô hình và chế độ tạo.
+- Xuất video đã tạo; trình phát còn có thể trích khung hiện tại, đầu hoặc cuối thành node ảnh.
 
-## 使用方法
+## Cách sử dụng
 
-1. 选中节点，选择视频模型；没有模型时先在设置中添加视频模型。
-2. 输入动作、运镜和声音要求，按需连接参考素材并调整引用顺序。
-3. 打开生成设置，选择模式、时长、分辨率和画面比例；模型允许时可切换“生成音频”。
-4. 使用首尾帧模式时，图片按引用顺序分配；“首帧可选”模式仅有一张图片时，该图片作为尾帧。
-5. 点击“生成视频”，需要中止时点击“停止生成”。
-6. 完成后可播放、拖动进度、调整音量，或从上方下载和全屏预览。
+1. Chọn node và mô hình video. Nếu chưa có, thêm mô hình video trong Cài đặt.
+2. Nhập yêu cầu về hành động, chuyển động camera và âm thanh; nối tư liệu tham chiếu, chỉnh thứ tự khi cần.
+3. Mở cài đặt tạo để chọn chế độ, thời lượng, độ phân giải và tỉ lệ khung hình; nếu mô hình hỗ trợ có thể bật/tắt **Tạo âm thanh**.
+4. Trong chế độ khung đầu/cuối, ảnh được phân bổ theo thứ tự tham chiếu. Với chế độ khung đầu tùy chọn, nếu chỉ có một ảnh thì ảnh đó được dùng làm khung cuối.
+5. Bấm **Tạo video**; cần ngắt thì bấm **Dừng tạo**.
+6. Khi hoàn tất, có thể phát, tua, chỉnh âm lượng, tải xuống hoặc xem toàn màn hình.
 
-截帧需要启用图片节点。时长与分辨率选项随模型变化，通用画面比例的实际支持范围由供应商决定。
+Để trích khung hình cần bật node ảnh. Tùy chọn thời lượng và độ phân giải thay đổi theo mô hình; nhà cung cấp quyết định tỉ lệ khung hình thực sự hỗ trợ.

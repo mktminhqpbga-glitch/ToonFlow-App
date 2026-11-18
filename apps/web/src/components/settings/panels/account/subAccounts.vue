@@ -1,46 +1,46 @@
 <template>
-  <section class="subAccountsPanel" aria-label="凭证" :aria-busy="loading">
+  <section class="subAccountsPanel" aria-label="Chứng thực" :aria-busy="loading">
     <div class="accountsToolbar">
       <el-form class="searchForm" :disabled="mutationBusy" @submit.prevent="submitSearch">
-        <el-input v-model="search" class="credentialSearch" type="password" showPassword :prefixIcon="IconSearch" autocomplete="off" placeholder="搜索凭证" aria-label="搜索凭证" :maxlength="1000" clearable @clear="clearSearch" />
-        <el-button nativeType="submit" :disabled="listLoading">查询</el-button>
-        <el-button :disabled="listLoading || (!search && !activeSearch)" @click="clearSearch">清除</el-button>
+        <el-input v-model="search" class="credentialSearch" type="password" showPassword :prefixIcon="IconSearch" autocomplete="off" placeholder="Tìm chứng thực" aria-label="Tìm chứng thực" :maxlength="1000" clearable @clear="clearSearch" />
+        <el-button nativeType="submit" :disabled="listLoading">Tra cứu</el-button>
+        <el-button :disabled="listLoading || (!search && !activeSearch)" @click="clearSearch">Xóa bộ lọc</el-button>
       </el-form>
-      <el-button type="primary" :icon="IconPlus" :disabled="mutationBusy" @click="createVisible = true">新增凭证</el-button>
+      <el-button type="primary" :icon="IconPlus" :disabled="mutationBusy" @click="createVisible = true">Tạo chứng thực</el-button>
     </div>
     <el-alert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" showIcon>
-      <el-button size="small" @click="refresh">重试</el-button>
+      <el-button size="small" @click="refresh">Thử lại</el-button>
     </el-alert>
     <div v-loading="listLoading" class="accountsList">
       <el-table :data="accounts" rowKey="id" emptyText="">
-        <el-table-column label="凭证名称" minWidth="155">
+        <el-table-column label="Tên chứng thực" minWidth="155">
           <template #default="{ row }">
             <div class="accountIdentity"><strong>{{ row.name }}</strong><time>{{ formatTime(row.createdAt) }}</time></div>
           </template>
         </el-table-column>
-        <el-table-column label="凭证" minWidth="230">
+        <el-table-column label="Chứng thực" minWidth="230">
           <template #default="{ row }">
             <div class="credentialCell">
               <code>{{ shownCredentials.has(row.id) ? row.credential : '••••••••••••' }}</code>
               <div class="credentialActions">
-                <el-button link :icon="shownCredentials.has(row.id) ? IconEyeOff : IconEye" :aria-label="`${shownCredentials.has(row.id) ? '隐藏' : '显示'} ${row.name} 的凭证`" @click="toggleCredential(row.id)" />
-                <el-button link :icon="IconCopy" :aria-label="`复制 ${row.name} 的凭证`" @click="copyCredential(row as SubAccount)" />
+                <el-button link :icon="shownCredentials.has(row.id) ? IconEyeOff : IconEye" :aria-label="`${shownCredentials.has(row.id) ? 'Ẩn' : 'Hiện'} ${row.name}  - chứng thực`" @click="toggleCredential(row.id)" />
+                <el-button link :icon="IconCopy" :aria-label="`Sao chép ${row.name}  - chứng thực`" @click="copyCredential(row as SubAccount)" />
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="可用额度" minWidth="110">
-          <template #default="{ row }">{{ row.quotaType === 0 ? '不限额' : formatMoney(row.balance) }}</template>
+        <el-table-column label="Hạn mức khả dụng" minWidth="110">
+          <template #default="{ row }">{{ row.quotaType === 0 ? 'Không giới hạn' : formatMoney(row.balance) }}</template>
         </el-table-column>
-        <el-table-column label="有效期" minWidth="155">
+        <el-table-column label="Thời hạn hiệu lực" minWidth="155">
           <template #default="{ row }">{{ expirationLabel(row as SubAccount) }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="85">
+        <el-table-column label="Trạng thái" width="85">
           <template #default="{ row }"><el-tag :type="row.state === 1 ? 'success' : 'info'" size="small">{{ stateLabel(row.state) }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="70" align="right">
+        <el-table-column label="Thao tác" width="70" align="right">
           <template #default="{ row }">
-            <el-button link type="danger" :loading="deletingId === row.id" :disabled="mutationBusy" :aria-label="`删除凭证 ${row.name}`" @click="removeAccount(row as SubAccount)">删除</el-button>
+            <el-button link type="danger" :loading="deletingId === row.id" :disabled="mutationBusy" :aria-label="`Xóa chứng thực ${row.name}`" @click="removeAccount(row as SubAccount)">Xóa</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -59,30 +59,30 @@
       @update:currentPage="changePage"
       @update:pageSize="changePageSize" />
 
-    <el-dialog v-model="createVisible" title="新增凭证" width="min(480px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose :closeOnClickModal="!creating" :closeOnPressEscape="!creating" :showClose="!creating">
+    <el-dialog v-model="createVisible" title="Tạo chứng thực" width="min(480px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose :closeOnClickModal="!creating" :closeOnPressEscape="!creating" :showClose="!creating">
       <div class="createContent">
         <el-form :id="createFormId" class="createForm" labelPosition="top" :disabled="creating" @submit.prevent="createAccount">
-          <el-form-item label="凭证名称">
-            <el-input v-model="createForm.name" :maxlength="200" autocomplete="off" placeholder="请输入凭证名称" />
+          <el-form-item label="Tên chứng thực">
+            <el-input v-model="createForm.name" :maxlength="200" autocomplete="off" placeholder="Nhập tên chứng thực" />
           </el-form-item>
-          <el-form-item label="额度设置">
-            <el-segmented v-model="createForm.quotaType" class="formSwitch" :options="quotaOptions" block aria-label="额度设置" />
+          <el-form-item label="Cài đặt hạn mức">
+            <el-segmented v-model="createForm.quotaType" class="formSwitch" :options="quotaOptions" block aria-label="Cài đặt hạn mức" />
           </el-form-item>
-          <el-form-item v-if="createForm.quotaType === 1" label="可用额度（元）">
-            <el-input-number v-model="createForm.balance" :min="0" :controls="false" placeholder="请输入可用额度" />
+          <el-form-item v-if="createForm.quotaType === 1" label="Hạn mức khả dụng (CNY)">
+            <el-input-number v-model="createForm.balance" :min="0" :controls="false" placeholder="Nhập hạn mức khả dụng" />
           </el-form-item>
-          <el-form-item label="有效期">
-            <el-segmented v-model="createForm.expirationType" class="formSwitch" :options="expirationOptions" block aria-label="有效期设置" />
+          <el-form-item label="Thời hạn hiệu lực">
+            <el-segmented v-model="createForm.expirationType" class="formSwitch" :options="expirationOptions" block aria-label="Cài đặt hiệu lực" />
           </el-form-item>
-          <el-form-item v-if="createForm.expirationType === 1" label="到期时间" :error="expirationError">
-            <el-date-picker v-model="createForm.expirationDate" type="datetime" format="YYYY-MM-DD HH:mm:ss" :disabledDate="disabledDate" placeholder="请选择到期时间" />
+          <el-form-item v-if="createForm.expirationType === 1" label="Thời điểm hết hạn" :error="expirationError">
+            <el-date-picker v-model="createForm.expirationDate" type="datetime" format="YYYY-MM-DD HH:mm:ss" :disabledDate="disabledDate" placeholder="Hãy chọn thời điểm hết hạn" />
           </el-form-item>
         </el-form>
         <el-alert v-if="createError" :title="createError" type="error" :closable="false" showIcon />
       </div>
       <template #footer>
-        <el-button :disabled="creating" @click="createVisible = false">取消</el-button>
-        <el-button type="primary" nativeType="submit" :form="createFormId" :loading="creating" :disabled="!createReady">创建</el-button>
+        <el-button :disabled="creating" @click="createVisible = false">Hủy</el-button>
+        <el-button type="primary" nativeType="submit" :form="createFormId" :loading="creating" :disabled="!createReady">Tạo</el-button>
       </template>
     </el-dialog>
   </section>
@@ -117,8 +117,8 @@ const createFormId = useId();
 const createForm = reactive<{ name: string; quotaType: 0 | 1; expirationType: 0 | 1; balance: number | undefined; expirationDate: Date | null }>({
   name: "", quotaType: 0, expirationType: 0, balance: undefined, expirationDate: null,
 });
-const quotaOptions = [{ label: "不限额", value: 0 }, { label: "限额", value: 1 }];
-const expirationOptions = [{ label: "永久有效", value: 0 }, { label: "指定到期时间", value: 1 }];
+const quotaOptions = [{ label: "Không giới hạn", value: 0 }, { label: "Có hạn mức", value: 1 }];
+const expirationOptions = [{ label: "Không giới hạn thời hạn", value: 0 }, { label: "Chọn thời điểm hết hạn", value: 1 }];
 const expirationError = computed(() => createForm.expirationType === 1 && createForm.expirationDate
   && (!Number.isFinite(createForm.expirationDate.getTime()) || createForm.expirationDate.getTime() <= Date.now()) ? translate("请选择未来的到期时间") : "");
 const createReady = computed(() => !!createForm.name.trim() && !creating.value
@@ -164,9 +164,9 @@ async function copyCredential(account: SubAccount) {
   if (!props.visible || !token) return;
   try {
     await writeClipboardText(account.credential);
-    if (props.visible && props.token === token) ElMessage.success("凭证已复制");
+    if (props.visible && props.token === token) ElMessage.success("Đã sao chép chứng thực");
   } catch {
-    if (props.visible && props.token === token) ElMessage.error("复制凭证失败");
+    if (props.visible && props.token === token) ElMessage.error("Sao chép chứng thực thất bại");
   }
 }
 
@@ -231,7 +231,7 @@ async function createAccount() {
   if (!props.visible || !token || !createVisible.value || mutationBusy.value || !createReady.value) return;
   const expiresAt = createForm.expirationDate?.getTime();
   if (createForm.expirationType === 1 && (!expiresAt || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now())) {
-    createError.value = "请选择未来的到期时间";
+    createError.value = "Hãy chọn thời điểm hết hạn trong tương lai";
     return;
   }
   const data: CreateSubAccountParams = {
@@ -246,7 +246,7 @@ async function createAccount() {
   try {
     await http<null>({ method: "POST", url: "/api/channel/subAccounts/create", data, signal: request.signal, headers: { Authorization: `Bearer ${token}` } });
     if (request.signal.aborted || props.token !== token) return;
-    ElMessage.success("凭证已创建");
+    ElMessage.success("Đã tạo chứng thực");
     createVisible.value = false;
     search.value = "";
     activeSearch.value = "";
@@ -267,14 +267,14 @@ async function removeAccount(account: SubAccount) {
   deleteConfirmation = request;
   deletingId.value = account.id;
   try {
-    await ElMessageBox.confirm(`删除凭证“${account.name}”后，该凭证将无法继续使用。`, "删除凭证", {
-      confirmButtonText: "删除", cancelButtonText: "取消", type: "warning",
+    await ElMessageBox.confirm(`Xóa chứng thực “${account.name}” sẽ khiến chứng thực này không thể sử dụng nữa.`, "Xóa chứng thực", {
+      confirmButtonText: "Xóa", cancelButtonText: "Hủy", type: "warning",
     });
     if (deleteConfirmation === request) deleteConfirmation = undefined;
     if (request.signal.aborted || props.token !== token || !props.visible) return;
     await http<null>({ method: "POST", url: "/api/channel/subAccounts/remove", data: { id: account.id }, signal: request.signal, headers: { Authorization: `Bearer ${token}` } });
     if (request.signal.aborted || props.token !== token) return;
-    ElMessage.success("凭证已删除");
+    ElMessage.success("Đã xóa chứng thực");
     page.value = Math.min(page.value, Math.max(1, Math.ceil(Math.max(0, total.value - 1) / pageSize.value)));
     await refresh();
   } catch (error) {

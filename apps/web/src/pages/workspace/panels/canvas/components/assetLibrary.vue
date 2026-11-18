@@ -1,11 +1,12 @@
 <template>
   <assetBrowser v-if="visible && expanded" v-model:folder="folder" v-model:searchQuery="searchQuery" v-model:newFolderName="newFolderName" :entries="entries" :loading="loading" :uploading="uploading" :newFolderParent="newFolderParent" :folderSaving="folderSaving" :mediaKind="mediaKind" :assetUrl="assetUrl" :canSelect="canSelect" :selecting="selecting" @select="emit('select', $event)" @upload="fileInput?.click()" @startFolder="startFolder" @saveFolder="saveFolder" @cancelFolder="cancelFolder" @preview="openPreview" @menu="openItemMenu" @drag="startAssetDrag" />
-  <el-card v-else-if="visible" class="assetLibrary" shadow="never" :bodyStyle="{ padding: '8px' }" role="region" aria-label="素材库" @dblclick.stop>
+  <el-card v-else-if="visible" class="assetLibrary" shadow="never" :bodyStyle="{ padding: '8px' }" role="region" aria-label="Thư viện tài nguyên" @dblclick.stop>
     <div class="libraryToolbar">
-      <el-input v-model="searchQuery" class="searchInput" :prefixIcon="IconSearch" placeholder="搜索素材" aria-label="搜索素材" clearable @keydown.esc.stop="searchQuery = ''" />
-      <el-button class="toolbarButton" text :icon="IconUpload" title="本地上传" aria-label="本地上传" :loading="uploading" :disabled="loading || newFolderParent !== undefined" @click="fileInput?.click()" />
-      <el-button class="toolbarButton" text :icon="IconFolderPlus" title="新建文件夹" aria-label="新建文件夹" :disabled="newFolderParent !== undefined" @click="startFolder" />
-      <el-button class="toolbarButton" text :icon="IconX" title="关闭素材库" aria-label="关闭素材库" @click="visible = false" />
+      <el-input v-model="searchQuery" class="searchInput" :prefixIcon="IconSearch" placeholder="Tìm tài nguyên" aria-label="Tìm tài nguyên" clearable @keydown.esc.stop="searchQuery = ''" />
+      <el-button class="toolbarButton" type="primary" plain title="Mở thư viện prompt tạo ảnh" @click="promptLibraryVisible = true">Thư viện prompt</el-button>
+      <el-button class="toolbarButton" text :icon="IconUpload" title="Tải lên từ máy" aria-label="Tải lên từ máy" :loading="uploading" :disabled="loading || newFolderParent !== undefined" @click="fileInput?.click()" />
+      <el-button class="toolbarButton" text :icon="IconFolderPlus" title="Thư mục mới" aria-label="Thư mục mới" :disabled="newFolderParent !== undefined" @click="startFolder" />
+      <el-button class="toolbarButton" text :icon="IconX" title="Đóng thư viện tài nguyên" aria-label="Đóng thư viện tài nguyên" @click="visible = false" />
     </div>
     <el-scrollbar class="libraryScroll" maxHeight="min(440px, calc(100dvh - 198px))">
       <el-tree ref="assetTree" class="assetTree" :data="displayEntries" nodeKey="path" :props="{ label: 'name' }" :icon="IconChevronRight" :currentNodeKey="folder === '.' ? undefined : folder" :filterNodeMethod="filterEntry" defaultExpandAll highlightCurrent emptyText="" @nodeClick="selectFolder">
@@ -18,10 +19,10 @@
               <icon-music v-if="mediaKind(data) === 'audio'" :size="18" />
               <icon-file v-else :size="18" />
             </span>
-            <el-input v-if="data.draft" ref="folderInput" v-model="newFolderName" class="folderNameInput" size="small" aria-label="文件夹名称" :disabled="folderSaving" @click.stop @keydown.stop @keydown.enter.prevent="saveFolder" @keydown.esc.prevent="cancelFolder" @blur="saveFolder" />
+            <el-input v-if="data.draft" ref="folderInput" v-model="newFolderName" class="folderNameInput" size="small" aria-label="Tên thư mục" :disabled="folderSaving" @click.stop @keydown.stop @keydown.enter.prevent="saveFolder" @keydown.esc.prevent="cancelFolder" @blur="saveFolder" />
             <span v-else class="assetName">{{ data.name }}</span>
-            <el-button v-if="mediaKind(data)" class="moreButton" text :icon="IconEye" :aria-label="'预览 ' + data.name" title="预览（也可双击素材）" @click.stop="openPreview(data)" />
-            <el-button v-if="!data.draft" class="moreButton" text :icon="IconDots" :aria-label="'更多 ' + data.name" title="更多" @click.stop="openItemMenu($event, data)" />
+            <el-button v-if="mediaKind(data)" class="moreButton" text :icon="IconEye" :aria-label="'Xem trước ' + data.name" title="Xem trước (cũng có thể nhấp đúp tài nguyên)" @click.stop="openPreview(data)" />
+            <el-button v-if="!data.draft" class="moreButton" text :icon="IconDots" :aria-label="'Tùy chọn ' + data.name" title="Thêm" @click.stop="openItemMenu($event, data)" />
           </div>
         </template>
       </el-tree>
@@ -29,15 +30,17 @@
     <div v-if="previewAsset?.kind === 'audio'" class="audioPreview">
       <div class="audioHeader">
         <span :title="previewAsset.name">{{ previewAsset.name }}</span>
-        <el-button text :icon="IconX" aria-label="关闭音频预览" @click="previewAsset = undefined" />
+        <el-button text :icon="IconX" aria-label="Đóng xem trước âm thanh" @click="previewAsset = undefined" />
       </div>
       <el-alert v-if="previewError" :title="previewError" type="error" :closable="false" showIcon />
       <audio v-else :src="mediaSrc" :aria-label="previewAsset.name" controls preload="auto" @loadeddata="handleLoaded" @error="handleError" />
-      <p v-if="preparing" role="status">正在生成兼容预览…</p>
+      <p v-if="preparing" role="status">Đang tạo bản xem trước tương thích…</p>
     </div>
   </el-card>
 
-  <input ref="fileInput" type="file" multiple hidden aria-label="选择本地素材" :disabled="uploading" @change="uploadFiles" />
+  <input ref="fileInput" type="file" multiple hidden aria-label="Chọn tài nguyên từ máy" :disabled="uploading" @change="uploadFiles" />
+  <div v-if="visible && expanded" class="promptLibraryEntry"><el-button type="primary" plain @click="promptLibraryVisible = true">Thư viện prompt tạo ảnh</el-button></div>
+  <PromptLibraryDialog v-model="promptLibraryVisible" />
   <assetMenu v-if="visible" ref="assetMenuRef" :entries="entries" @changed="refreshAssets" />
 
   <el-image-viewer v-if="previewAsset?.kind === 'image'" :urlList="[mediaSrc]" teleported @error="handleError" @close="previewAsset = undefined" />
@@ -46,7 +49,7 @@
     <div v-if="previewAsset?.kind === 'video'" class="assetPreview">
       <el-alert v-if="previewError" :title="previewError" type="error" :closable="false" showIcon />
       <video v-else class="previewVideo" :src="mediaSrc" :aria-label="previewAsset.name" controls playsinline preload="auto" @loadeddata="handleLoaded" @error="handleError" />
-      <p v-if="preparing" role="status">正在生成兼容预览…</p>
+      <p v-if="preparing" role="status">Đang tạo bản xem trước tương thích…</p>
     </div>
   </el-dialog>
 
@@ -54,24 +57,24 @@
     <div v-if="previewAsset?.kind === 'audio'" class="assetPreview">
       <el-alert v-if="previewError" :title="previewError" type="error" :closable="false" showIcon />
       <audio v-else class="previewAudio" :src="mediaSrc" :aria-label="previewAsset.name" controls preload="auto" @loadeddata="handleLoaded" @error="handleError" />
-      <p v-if="preparing" role="status">正在生成兼容预览…</p>
+      <p v-if="preparing" role="status">Đang tạo bản xem trước tương thích…</p>
     </div>
   </el-dialog>
 
-  <el-dialog v-model="saveVisible" title="保存到素材库" width="460px" alignCenter appendToBody :closeOnClickModal="false" @opened="assetNameInput?.select()">
+  <el-dialog v-model="saveVisible" title="Lưu vào thư viện tài nguyên" width="460px" alignCenter appendToBody :closeOnClickModal="false" @opened="assetNameInput?.select()">
     <el-form class="saveForm" labelPosition="top" @submit.prevent="saveAsset">
-      <el-form-item label="素材名称">
-        <el-input ref="assetNameInput" v-model="assetName" aria-label="素材名称" placeholder="输入完整文件名" :disabled="saving" @keydown.enter.prevent="saveAsset" />
+      <el-form-item label="Tên tài nguyên">
+        <el-input ref="assetNameInput" v-model="assetName" aria-label="Tên tài nguyên" placeholder="Nhập tên tệp đầy đủ" :disabled="saving" @keydown.enter.prevent="saveAsset" />
       </el-form-item>
-      <el-form-item v-if="outputs.length > 1" label="节点输出">
-        <el-select v-model="selectedOutput" aria-label="节点输出" :disabled="saving">
+      <el-form-item v-if="outputs.length > 1" label="Đầu ra node">
+        <el-select v-model="selectedOutput" aria-label="Đầu ra node" :disabled="saving">
           <el-option v-for="(item, index) in outputs" :key="index" :label="item.label" :value="index" />
         </el-select>
       </el-form-item>
       <div class="saveLocation">
         <div class="locationHeader">
-          <span>保存位置</span>
-          <el-button text :icon="IconFolderPlus" :disabled="saving || saveFolderName !== undefined" @click="startSaveFolder">新建文件夹</el-button>
+          <span>Vị trí lưu</span>
+          <el-button text :icon="IconFolderPlus" :disabled="saving || saveFolderName !== undefined" @click="startSaveFolder">Thư mục mới</el-button>
         </div>
         <div class="locationPath" :title="saveLocationLabel">{{ saveLocationLabel }}</div>
         <el-scrollbar class="saveFolderScroll" maxHeight="220px">
@@ -82,20 +85,21 @@
           </el-tree>
         </el-scrollbar>
         <div v-if="saveFolderName !== undefined" class="createFolderRow">
-          <el-input ref="saveFolderInput" v-model="saveFolderName" aria-label="新文件夹名称" :disabled="folderSaving" @keydown.enter.prevent="createFolder" @keydown.esc.stop="saveFolderName = undefined" />
-          <el-button :loading="folderSaving" :disabled="!saveFolderName.trim()" @click="createFolder">创建</el-button>
-          <el-button text :disabled="folderSaving" @click="saveFolderName = undefined">取消</el-button>
+          <el-input ref="saveFolderInput" v-model="saveFolderName" aria-label="Tên thư mục mới" :disabled="folderSaving" @keydown.enter.prevent="createFolder" @keydown.esc.stop="saveFolderName = undefined" />
+                  <el-button :loading="folderSaving" :disabled="!saveFolderName.trim()" @click="createFolder">Tạo</el-button>
+                  <el-button text :disabled="folderSaving" @click="saveFolderName = undefined">Hủy</el-button>
         </div>
       </div>
     </el-form>
     <template #footer>
-      <el-button :disabled="saving" @click="saveVisible = false">取消</el-button>
-      <el-button type="primary" :loading="saving" :disabled="!assetName.trim() || /[\\/]/.test(assetName) || saveFolderName !== undefined" @click="saveAsset">保存</el-button>
+      <el-button :disabled="saving" @click="saveVisible = false">Hủy</el-button>
+      <el-button type="primary" :loading="saving" :disabled="!assetName.trim() || /[\\/]/.test(assetName) || saveFolderName !== undefined" @click="saveAsset">Lưu</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
+import PromptLibraryDialog from "@/components/promptLibrary/PromptLibraryDialog.vue";
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import axios from "axios";
 import { t } from "@toonflow/i18n/vue";
@@ -117,6 +121,7 @@ type AssetOutput = { label: string; output: NodeOutput };
 const props = defineProps<{ directory?: string; expanded?: boolean; canSelect?: (entry: AssetEntry) => boolean; selecting?: boolean }>();
 const emit = defineEmits<{ select: [entry: AssetEntry] }>();
 const visible = defineModel<boolean>({ default: false });
+const promptLibraryVisible = ref(false);
 const saveVisible = ref(false);
 const saving = ref(false);
 const entries = ref<AssetEntry[]>([]);
@@ -129,7 +134,7 @@ const assetNameInput = ref<InputInstance>();
 const saveDirectory = ref(".");
 const saveFolderName = ref<string>();
 const saveFolderInput = ref<InputInstance>();
-const saveLocationLabel = computed(() => saveDirectory.value === "." ? "素材库" : `素材库 / ${saveDirectory.value.split("/").join(" / ")}`);
+const saveLocationLabel = computed(() => saveDirectory.value === "." ? "Thư viện tài nguyên" : `Thư viện tài nguyên / ${saveDirectory.value.split("/").join(" / ")}`);
 const searchQuery = ref("");
 const assetTree = ref<InstanceType<typeof ElTree>>();
 const folderInput = ref<InputInstance>();
@@ -178,7 +183,7 @@ async function refreshAssets(path?: string, target?: string) {
 const displayEntries = computed(() => {
   function withDraft(items: AssetEntry[], parent: string): AssetEntry[] {
     const children = items.map(item => item.children ? { ...item, children: withDraft(item.children, item.path) } : item);
-    if (newFolderParent.value === parent) children.push({ name: "新建文件夹", path: `${parent}/:newFolder`, type: "directory", draft: true });
+    if (newFolderParent.value === parent) children.push({ name: "Thư mục mới", path: `${parent}/:newFolder`, type: "directory", draft: true });
     return children;
   }
   return newFolderParent.value === undefined ? entries.value : withDraft(entries.value, ".");
@@ -193,7 +198,7 @@ watch(searchQuery, query => assetTree.value?.filter(query));
 async function startFolder() {
   searchQuery.value = "";
   newFolderParent.value = folder.value;
-  newFolderName.value = "新建文件夹";
+  newFolderName.value = "Thư mục mới";
   await nextTick();
   assetTree.value?.getNode(folder.value)?.expand();
   await nextTick();
@@ -256,7 +261,7 @@ async function loadEntries() {
 
 function showError(error: unknown, name?: string) {
   const message = axios.isAxiosError<{ message: string }>(error) ? error.response?.data.message || error.message : (error as Error).message;
-  ElMessage.error(name ? `${name}：${message}` : message);
+      ElMessage.error(name ? `${name}: ${message}` : message);
 }
 
 async function uploadFiles(event: Event) {
@@ -270,7 +275,7 @@ async function uploadFiles(event: Event) {
   try {
     for (const file of files) {
       try {
-        if (file.size > 100 * 1024 * 1024) throw new Error("素材文件不能超过 100 MB");
+        if (file.size > 100 * 1024 * 1024) throw new Error("Tệp tài nguyên không được vượt quá 100 MB");
         const path = directory === "." ? file.name : `${directory}/${file.name}`;
         await axios.put("/api/assets/save", file, { params: { path }, headers: { "Content-Type": "application/octet-stream" } });
         uploaded++;
@@ -302,7 +307,7 @@ function selectFolder(entry: AssetEntry) {
 }
 
 async function startSaveFolder() {
-  saveFolderName.value = "新建文件夹";
+  saveFolderName.value = "Thư mục mới";
   await nextTick();
   saveFolderInput.value?.select();
 }
@@ -324,7 +329,7 @@ async function createFolder() {
 }
 
 async function createAssetFolder(parent: string, name: string) {
-  if (/[\\/]/.test(name)) throw new Error("文件夹名称不能包含斜杠");
+  if (/[\\/]/.test(name)) throw new Error("Tên thư mục không được chứa dấu gạch chéo");
   const path = parent === "." ? name : `${parent}/${name}`;
   await axios.post("/api/assets/mkdir", { path });
   return path;
@@ -357,7 +362,7 @@ async function saveAsset() {
       : new Blob([String(output.value)]);
     await axios.put("/api/assets/save", content, { params: { path }, headers: { "Content-Type": "application/octet-stream" } });
     saveVisible.value = false;
-    ElMessage.success("已保存到素材库");
+    ElMessage.success("Đã lưu vào thư viện tài nguyên");
     await loadEntries();
   } catch (error) {
     showError(error);

@@ -1,22 +1,22 @@
 <template>
   <div v-loading="loading" class="deviceLink">
-    <section v-if="isRemoteConnection" class="remoteConnection" aria-label="当前连接设备">
+    <section v-if="isRemoteConnection" class="remoteConnection" aria-label="Thiết bị đang kết nối">
       <el-tag :type="mobileConnection.online === true ? mobileConnectionVersionWarning ? 'warning' : 'success' : mobileConnection.online === false ? 'danger' : 'info'">{{ mobileConnectionLabel }}</el-tag>
       <h3>{{ mobileConnection.name || 'Toonflow' }}</h3>
       <code>{{ mobileConnection.url }}</code>
-      <p class="description">当前使用这个设备的项目与配置。断开后恢复独立运行，才可以允许其他设备连接。</p>
+      <p class="description">Hiện đang sử dụng dự án và cấu hình của thiết bị này. Sau khi ngắt và trở lại chế độ độc lập, bạn mới có thể cho phép thiết bị khác kết nối.</p>
       <el-alert v-if="mobileConnectionVersionWarning" :title="mobileConnectionVersionWarning" type="warning" :closable="false" showIcon />
-      <el-button type="primary" :loading="saving" @click="disconnectRemote">断开并独立运行</el-button>
+      <el-button type="primary" :loading="saving" @click="disconnectRemote">Ngắt kết nối và chạy độc lập</el-button>
       <el-alert v-if="error" :title="error" type="error" :closable="false" showIcon />
     </section>
     <template v-else>
     <section class="settingSection" aria-labelledby="deviceLinkTitle">
       <div class="sectionHeader">
         <div class="settingInfo">
-          <h3 id="deviceLinkTitle">允许其他设备连接</h3>
-          <p class="description">其他电脑、安卓设备可使用这里的项目与配置。连接时请保持 Toonflow 运行。</p>
+          <h3 id="deviceLinkTitle">Cho phép thiết bị khác kết nối</h3>
+          <p class="description">Máy tính hoặc thiết bị Android khác có thể dùng dự án và cấu hình tại đây. Hãy giữ Toonflow đang chạy khi kết nối.</p>
         </div>
-        <el-switch :modelValue="form.enabled" :disabled="busy || !status" aria-label="允许其他设备连接" @change="value => saveConfig(value === true)" />
+        <el-switch :modelValue="form.enabled" :disabled="busy || !status" aria-label="Cho phép thiết bị khác kết nối" @change="value => saveConfig(value === true)" />
       </div>
     </section>
 
@@ -24,33 +24,33 @@
       <section class="settingSection pairingSection" :class="{ pairingUnavailable: !pairing }" aria-labelledby="pairingTitle">
         <div class="pairingIntro">
           <div class="sectionHeader">
-            <h3 id="pairingTitle">连接新设备</h3>
-            <el-button :icon="IconQrcode" :loading="generating" :disabled="busy || !pairingUrl" text @click="generatePairing">{{ pairing ? '刷新二维码' : pairedSuccessfully ? '连接另一个设备' : '生成二维码' }}</el-button>
+            <h3 id="pairingTitle">Kết nối thiết bị mới</h3>
+            <el-button :icon="IconQrcode" :loading="generating" :disabled="busy || !pairingUrl" text @click="generatePairing">{{ pairing ? 'Làm mới mã QR' : pairedSuccessfully ? 'Kết nối thiết bị khác' : 'Tạo mã QR' }}</el-button>
           </div>
-          <p v-if="addressMode === 'lan'" class="description">在同一 Wi-Fi 下，打开另一台设备的“设备互联”，扫码或手动输入。</p>
-          <p v-else class="description">打开另一台设备的“设备互联”，扫码或手动输入，即可通过公网连接。</p>
+          <p v-if="addressMode === 'lan'" class="description">Trên cùng mạng Wi-Fi, mở mục Liên kết thiết bị ở thiết bị khác rồi quét mã hoặc nhập thủ công.</p>
+          <p v-else class="description">Mở mục Liên kết thiết bị ở thiết bị khác, quét mã hoặc nhập thủ công để kết nối qua Internet.</p>
         </div>
         <div class="pairingPanel">
           <div v-if="pairing" class="pairingCode">
             <q-r-code :value="pairing.qrCode" :size="176" type="svg" color="#18181b" bgColor="#ffffff" />
           </div>
-          <p v-else-if="generating" class="description" role="status">正在准备二维码…</p>
+          <p v-else-if="generating" class="description" role="status">Đang chuẩn bị mã QR…</p>
           <el-alert v-else-if="pairingNotice" :title="pairingNotice" :type="pairedSuccessfully && pairedDevice?.online ? 'success' : 'info'" :closable="false" showIcon />
-          <el-alert v-else-if="!pairingUrl" :title="addressMode === 'lan' ? '没有找到可用的 Wi-Fi 地址，请检查电脑网络，或在高级选项中选择其他连接方式。' : '请在高级选项中填写并保存公网连接地址。'" type="warning" :closable="false" showIcon />
+          <el-alert v-else-if="!pairingUrl" :title="addressMode === 'lan' ? 'Không tìm thấy địa chỉ Wi-Fi khả dụng. Hãy kiểm tra kết nối máy tính hoặc chọn cách kết nối khác trong tùy chọn nâng cao.' : 'Hãy nhập và lưu địa chỉ kết nối công khai trong tùy chọn nâng cao.'" type="warning" :closable="false" showIcon />
         </div>
         <div v-if="pairing?.manualCode" class="manualConnection">
           <div class="manualField">
-            <span>连接地址</span>
+            <span>Địa chỉ kết nối</span>
             <div class="fieldValue">
               <code dir="ltr">{{ pairing.url }}</code>
-              <el-button type="primary" link aria-label="复制地址" @click="copyConnectionInfo(pairing.url)">复制</el-button>
+              <el-button type="primary" link aria-label="Sao chép địa chỉ" @click="copyConnectionInfo(pairing.url)">Sao chép</el-button>
             </div>
           </div>
           <div class="manualField">
-            <span>12 位配对码</span>
+            <span>Mã ghép nối 12 chữ số</span>
             <div class="fieldValue">
               <code class="manualCode" dir="ltr">{{ formattedManualCode }}</code>
-              <el-button type="primary" link aria-label="复制配对码" @click="copyConnectionInfo(formattedManualCode)">复制</el-button>
+              <el-button type="primary" link aria-label="Sao chép mã ghép nối" @click="copyConnectionInfo(formattedManualCode)">Sao chép</el-button>
             </div>
           </div>
         </div>
@@ -58,61 +58,61 @@
 
       <section class="settingSection devicePanel" aria-labelledby="linkedDevicesTitle">
         <div class="sectionHeader">
-          <h3 id="linkedDevicesTitle">设备连接状态</h3>
-          <el-button :icon="IconRefresh" :disabled="busy" text aria-label="刷新设备连接状态" @click="loadStatus(false, true)">刷新</el-button>
+          <h3 id="linkedDevicesTitle">Trạng thái kết nối thiết bị</h3>
+          <el-button :icon="IconRefresh" :disabled="busy" text aria-label="Làm mới trạng thái kết nối thiết bị" @click="loadStatus(false, true)">Làm mới</el-button>
         </div>
         <div v-for="device in status.devices" :key="device.id" class="deviceItem">
           <span class="deviceName">{{ device.name }}</span>
-          <el-tag :type="device.online ? 'success' : 'info'" size="small">{{ device.online ? '已连接' : '离线' }}</el-tag>
-          <el-button type="danger" link :disabled="busy" @click="revokeDevice(device.id)">撤销</el-button>
+          <el-tag :type="device.online ? 'success' : 'info'" size="small">{{ device.online ? 'Đã kết nối' : 'Ngoại tuyến' }}</el-tag>
+          <el-button type="danger" link :disabled="busy" @click="revokeDevice(device.id)">Thu hồi</el-button>
           <el-alert v-if="device.online && getDeviceVersionWarning(status.appVersion, device.appVersion)" class="deviceVersionWarning" :title="getDeviceVersionWarning(status.appVersion, device.appVersion)" type="warning" :closable="false" showIcon />
         </div>
-        <p v-if="!status.devices.length" class="description">等待设备连接</p>
+        <p v-if="!status.devices.length" class="description">Đang chờ thiết bị kết nối</p>
       </section>
     </template>
 
     <el-alert v-if="error" :title="error" type="error" :closable="false" showIcon />
-    <el-button v-if="!status && !loading" :icon="IconRefresh" @click="loadStatus()">重新加载</el-button>
+    <el-button v-if="!status && !loading" :icon="IconRefresh" @click="loadStatus()">Tải lại</el-button>
 
     <el-collapse class="advancedSettings">
-      <el-collapse-item title="高级选项" name="advanced">
-        <section class="settingSection" aria-label="连接设置">
+      <el-collapse-item title="Tùy chọn nâng cao" name="advanced">
+        <section class="settingSection" aria-label="Cài đặt kết nối">
           <el-form class="connectionForm" labelPosition="top" :disabled="busy || !status">
-            <el-form-item label="连接方式">
-              <el-radio-group v-model="addressMode" aria-label="连接方式">
-                <el-radio-button value="lan">同一 Wi-Fi</el-radio-button>
-                <el-radio-button value="public">公网连接</el-radio-button>
+            <el-form-item label="Cách kết nối">
+              <el-radio-group v-model="addressMode" aria-label="Cách kết nối">
+                <el-radio-button value="lan">Cùng mạng Wi-Fi</el-radio-button>
+                <el-radio-button value="public">Kết nối qua Internet</el-radio-button>
               </el-radio-group>
             </el-form-item>
-            <el-form-item v-if="addressMode === 'lan'" label="电脑地址">
-              <el-select v-if="(status?.addresses.length ?? 0) > 1" v-model="selectedAddress" aria-label="局域网地址">
+            <el-form-item v-if="addressMode === 'lan'" label="Địa chỉ máy tính">
+              <el-select v-if="(status?.addresses.length ?? 0) > 1" v-model="selectedAddress" aria-label="Địa chỉ mạng nội bộ">
                 <el-option v-for="address in status?.addresses ?? []" :key="address" :label="address" :value="address" />
               </el-select>
-              <code v-else class="connectionAddress">{{ selectedAddress || '未找到可用地址' }}</code>
-              <p class="description">无法连接时可尝试其他地址，并检查电脑防火墙是否允许 Toonflow 联网。</p>
+              <code v-else class="connectionAddress">{{ selectedAddress || 'Không tìm thấy địa chỉ khả dụng' }}</code>
+              <p class="description">Nếu không kết nối được, hãy thử địa chỉ khác và kiểm tra tường lửa có cho phép Toonflow truy cập mạng không.</p>
             </el-form-item>
-            <el-form-item v-if="addressMode === 'public'" label="公网 HTTPS 地址">
-              <el-input v-model="form.publicUrl" placeholder="https://toonflow.example.com" aria-label="公网 HTTPS 地址" />
-              <p class="description">请将这个 HTTPS 地址转发到下方互联端口，保留请求路径。保存后生效。</p>
+            <el-form-item v-if="addressMode === 'public'" label="Địa chỉ HTTPS công khai">
+              <el-input v-model="form.publicUrl" placeholder="https://toonflow.example.com" aria-label="Địa chỉ HTTPS công khai" />
+              <p class="description">Hãy chuyển tiếp địa chỉ HTTPS này đến cổng liên kết bên dưới và giữ nguyên đường dẫn yêu cầu. Có hiệu lực sau khi lưu.</p>
             </el-form-item>
-            <el-form-item label="互联端口">
-              <el-input-number v-model="form.port" :min="1" :max="65535" :precision="0" controlsPosition="right" aria-label="互联端口" />
-              <p class="description">通常无需修改。</p>
+            <el-form-item label="Cổng liên kết">
+              <el-input-number v-model="form.port" :min="1" :max="65535" :precision="0" controlsPosition="right" aria-label="Cổng liên kết" />
+              <p class="description">Thông thường không cần thay đổi.</p>
             </el-form-item>
           </el-form>
         </section>
         <section class="settingSection" aria-labelledby="sharedDirectoriesTitle">
           <div class="sectionHeader">
-            <h3 id="sharedDirectoriesTitle">共享工作目录</h3>
-            <el-button :icon="IconFolderPlus" :disabled="busy || !status" @click="addDirectory">添加目录</el-button>
+            <h3 id="sharedDirectoriesTitle">Thư mục làm việc dùng chung</h3>
+            <el-button :icon="IconFolderPlus" :disabled="busy || !status" @click="addDirectory">Thêm thư mục</el-button>
           </div>
-          <p class="description">这些工作目录允许连接设备访问；服务器自带工作区也可使用。首次开启会使用已有项目的工作目录。</p>
+          <p class="description">Các thiết bị được kết nối có thể truy cập những thư mục này, kể cả không gian làm việc trên máy chủ. Lần đầu bật sẽ dùng thư mục của dự án hiện có.</p>
           <div class="directoryList">
             <el-tag v-for="directory in form.directories" :key="directory" class="directoryTag" :closable="!busy" :title="directory" @close="removeDirectory(directory)">{{ directory }}</el-tag>
           </div>
         </section>
         <div class="advancedActions">
-          <el-button type="primary" :loading="saving" :disabled="busy || !status || !dirty" @click="saveConfig()">保存修改</el-button>
+          <el-button type="primary" :loading="saving" :disabled="busy || !status || !dirty" @click="saveConfig()">Lưu thay đổi</el-button>
         </div>
       </el-collapse-item>
     </el-collapse>
@@ -181,9 +181,9 @@ function errorMessage(cause: unknown) {
 async function copyConnectionInfo(value: string) {
   try {
     await writeClipboardText(value);
-    ElMessage.success("已复制");
+    ElMessage.success("Đã sao chép");
   } catch {
-    ElMessage.error("复制失败，请手动选择并复制");
+    ElMessage.error("Sao chép thất bại, hãy chọn và sao chép thủ công");
   }
 }
 
@@ -213,7 +213,7 @@ async function loadStatus(resetForm = true, quiet = false) {
   try {
     const { data } = await axios.get<ApiResponse<LinkStatus>>("/api/mobileLink/status", { headers, signal: request.signal, timeout: 8000 });
     if (request.signal.aborted) return;
-    if (data.code !== 200) throw new Error(data.message || "读取互联状态失败");
+    if (data.code !== 200) throw new Error(data.message || "Đọc trạng thái liên kết thất bại");
     const preserveForm = quiet || !resetForm && dirty.value;
     if (pairing.value && !data.data.pairingAvailable) {
       pairedSuccessfully.value = data.data.devices.some(device => !pairingDeviceIds.has(device.id));
@@ -254,15 +254,15 @@ async function saveConfig(enabled = form.enabled) {
   saving.value = true;
   error.value = "";
   try {
-    if (!Number.isInteger(form.port) || form.port < 1 || form.port > 65535) throw new Error("请输入 1–65535 之间的端口");
+    if (!Number.isInteger(form.port) || form.port < 1 || form.port > 65535) throw new Error("Vui lòng nhập cổng từ 1 đến 65535");
     const { data } = await axios.put<ApiResponse<LinkStatus>>("/api/mobileLink/config", { ...form, publicUrl: form.publicUrl.trim() }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "保存配置失败");
+    if (data.code !== 200) throw new Error(data.message || "Lưu cấu hình thất bại");
     deviceHubEnabled.value = data.data.hubEnabled ?? data.data.enabled;
     pairing.value = undefined;
     pairingMessage.value = "";
     pairedSuccessfully.value = pairingFinished.value = false;
     autoPairingUrl = "";
-    if (await loadStatus()) ElMessage.success("互联配置已保存");
+    if (await loadStatus()) ElMessage.success("Đã lưu cấu hình liên kết");
   } catch (cause) {
     form.enabled = status.value.hubEnabled ?? status.value.enabled;
     error.value = errorMessage(cause);
@@ -301,7 +301,7 @@ async function generatePairing() {
   try {
     const { data } = await axios.post<ApiResponse<Pairing>>("/api/mobileLink/pairing", { url }, { headers, signal: request.signal });
     if (request.signal.aborted || !props.visible || url !== pairingUrl.value) return;
-    if (data.code !== 200) throw new Error(data.message || "生成二维码失败");
+    if (data.code !== 200) throw new Error(data.message || "Tạo mã QR thất bại");
     pairing.value = data.data;
     pairingDeviceIds = new Set(status.value.devices.map(device => device.id));
   } catch (cause) {
@@ -316,9 +316,9 @@ async function revokeDevice(id: string) {
   revoking.value = true;
   error.value = "";
   try {
-    await ElMessageBox.confirm("撤销后，这个设备将无法继续访问当前 Toonflow。", "撤销设备授权", { confirmButtonText: "撤销授权", cancelButtonText: "取消", type: "warning" });
+    await ElMessageBox.confirm("Sau khi thu hồi quyền, thiết bị này sẽ không thể truy cập Toonflow hiện tại.", "Thu hồi quyền thiết bị", { confirmButtonText: "Thu hồi quyền", cancelButtonText: "Hủy", type: "warning" });
     const { data } = await axios.post<ApiResponse<unknown>>("/api/mobileLink/revoke", { id }, { headers });
-    if (data.code !== 200) throw new Error(data.message || "撤销授权失败");
+    if (data.code !== 200) throw new Error(data.message || "Thu hồi quyền thất bại");
     await loadStatus(false);
   } catch (cause) {
     if (cause !== "cancel" && cause !== "close") error.value = errorMessage(cause);

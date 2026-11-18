@@ -20,7 +20,7 @@ export const agentAttachmentsSchema = z
       path: z.string().min(1).max(4096),
       mimeType: z.string().min(1).max(128),
     }).refine(attachment => /^(?:(image|video)\/[a-zA-Z0-9.+-]+|text\/plain)$/.test(attachment.mimeType)
-      || !!getReadableFileMimeType(attachment.path, attachment.mimeType), "不支持此附件格式")
+      || !!getReadableFileMimeType(attachment.path, attachment.mimeType), "Không hỗ trợ định dạng tệp đính kèm này")
       .transform(attachment => ({ ...attachment, mimeType: getReadableFileMimeType(attachment.path, attachment.mimeType) ?? attachment.mimeType }))
   )
   .max(20);
@@ -81,7 +81,7 @@ type ActiveAgentRun = {
 const activeRuns = new Map<string, ActiveAgentRun>();
 
 export function registerAgentRun(run: ActiveAgentRun) {
-  if (activeRuns.has(run.runId)) throw Object.assign(new Error("Agent 请求标识已存在"), { status: 409 });
+  if (activeRuns.has(run.runId)) throw Object.assign(new Error("Định danh yêu cầu Agent đã tồn tại"), { status: 409 });
   activeRuns.set(run.runId, run);
   return () => { activeRuns.delete(run.runId); };
 }
@@ -124,12 +124,12 @@ export function getAgentQueue(active?: ActiveAgentSession): AgentQueue {
 function getPendingAgentMessage(path: string, runId: string, messageId: string) {
   const active = getActiveAgentSession(path);
   if (!active?.session || active.runId !== runId || active.signal.aborted) {
-    throw Object.assign(new Error("当前回复已结束或正在停止，请刷新对话后重试"), { status: 409 });
+    throw Object.assign(new Error("Phản hồi hiện tại đã kết thúc hoặc đang dừng; hãy làm mới cuộc trò chuyện rồi thử lại"), { status: 409 });
   }
   const queue = active.session.agent.getQueuedMessages();
   const message = [...queue.steering, ...queue.followUp].find(message => message.role === "user" && getQueuedMessageId(message) === messageId);
   if (!message || message.role !== "user") {
-    throw Object.assign(new Error("这条消息已开始处理或已被取回，请刷新队列后重试"), { status: 409 });
+    throw Object.assign(new Error("Tin nhắn này đã bắt đầu xử lý hoặc đã được lấy ra khỏi hàng đợi; hãy làm mới hàng đợi rồi thử lại"), { status: 409 });
   }
   return { active, session: active.session, message };
 }
@@ -139,7 +139,7 @@ export function takeAgentQueuedMessage(path: string, runId: string, messageId: s
   // ACT: 按真实队列对象同步取回，已被 SDK 取走但尚未显示的消息也不能再次编辑。
   const mode = session.removeQueuedMessage(message);
   if (!mode) {
-    throw Object.assign(new Error("这条消息已开始处理或已被取回，请刷新队列后重试"), { status: 409 });
+    throw Object.assign(new Error("Tin nhắn này đã bắt đầu xử lý hoặc đã được lấy ra khỏi hàng đợi; hãy làm mới hàng đợi rồi thử lại"), { status: 409 });
   }
   active.forgetQueuedMessage?.(message);
   const content = typeof message.content === "string" ? message.content : getToolResultText(message.content);
@@ -149,7 +149,7 @@ export function takeAgentQueuedMessage(path: string, runId: string, messageId: s
 export function steerAgentQueuedMessage(path: string, runId: string, messageId: string) {
   const { active, session, message } = getPendingAgentMessage(path, runId, messageId);
   if (!session.steerQueuedMessage(message)) {
-    throw Object.assign(new Error("这条消息已开始处理或已被取回，请刷新队列后重试"), { status: 409 });
+    throw Object.assign(new Error("Tin nhắn này đã bắt đầu xử lý hoặc đã được lấy ra khỏi hàng đợi; hãy làm mới hàng đợi rồi thử lại"), { status: 409 });
   }
   const content = typeof message.content === "string" ? message.content : getToolResultText(message.content);
   return { message: { id: messageId, content, mode: "steer" as const }, queue: getAgentQueue(active) };
@@ -197,7 +197,7 @@ export function getParentSessionFile(history: SessionManager) {
 }
 
 async function updateAgentSession(cwd: string, file: string, update: (history: SessionManager, active?: ActiveAgentSession) => void | Promise<void>) {
-  if (!/^[\w-]+\.jsonl$/.test(file)) throw new Error("父会话标识无效");
+  if (!/^[\w-]+\.jsonl$/.test(file)) throw new Error("Định danh phiên cha không hợp lệ");
   const { path } = await resolveWorkspacePath(cwd, `.agent/sessions/${file}`);
   const active = getActiveAgentSession(path);
   if (active) return update(active.history, active);
@@ -218,7 +218,7 @@ export async function updateSubAgent(cwd: string, parentFile: string, agent: Age
 
 export async function reportToParent(cwd: string, parentFile: string, file: string, name: string, content: string) {
   const details = { id: crypto.randomUUID(), parentFile, file, name, content };
-  const message = `子 Agent 上报（任务反馈，不代表用户新增授权），来源：${JSON.stringify({ name, file })}\n\n${content}`;
+  const message = `Báo cáo của Agent con (phản hồi tác vụ, không đồng nghĩa người dùng cấp thêm quyền), nguồn: ${JSON.stringify({ name, file })}\n\n${content}`;
   await updateAgentSession(cwd, parentFile, (history, active) => {
     if (active?.session) {
       // SDK 在工具结果后插入报告，避免破坏 assistant/toolResult 顺序。
@@ -233,7 +233,7 @@ export async function reportToParent(cwd: string, parentFile: string, file: stri
 
 export async function deleteAgentMessage(cwd: string, path: string, options: { entryIds?: string[]; replyTo?: string }) {
   if (Boolean(options.entryIds) === Boolean(options.replyTo)) {
-    throw Object.assign(new Error("请选择要删除的消息"), { status: 400 });
+    throw Object.assign(new Error("Vui lòng chọn tin nhắn cần xóa"), { status: 400 });
   }
   const release = lockWorkspaceFiles([path]);
   try {
@@ -246,15 +246,15 @@ export async function deleteAgentMessage(cwd: string, path: string, options: { e
         .map((line) => JSON.parse(line));
     } catch (error) {
       if (!(error instanceof SyntaxError)) throw error;
-      throw Object.assign(new Error("会话文件损坏，无法删除消息"), { status: 400 });
+      throw Object.assign(new Error("Tệp phiên bị hỏng, không thể xóa tin nhắn"), { status: 400 });
     }
-    if (entries[0]?.type !== "session") throw Object.assign(new Error("会话文件无效"), { status: 400 });
+    if (entries[0]?.type !== "session") throw Object.assign(new Error("Tệp phiên không hợp lệ"), { status: 400 });
     const entrySchema = z.object({ type: z.string(), id: z.string().min(1), parentId: z.string().nullable(), timestamp: z.string() });
     const knownIds = new Set<string>();
     for (const entry of entries.slice(1)) {
       const parsed = entrySchema.safeParse(entry);
       if (!parsed.success || knownIds.has(parsed.data.id) || (parsed.data.parentId !== null && !knownIds.has(parsed.data.parentId))) {
-        throw Object.assign(new Error("会话记录结构无效，无法删除消息"), { status: 400 });
+        throw Object.assign(new Error("Cấu trúc lịch sử phiên không hợp lệ, không thể xóa tin nhắn"), { status: 400 });
       }
       knownIds.add(parsed.data.id);
     }
@@ -265,7 +265,7 @@ export async function deleteAgentMessage(cwd: string, path: string, options: { e
     let targets = branch.filter((entry) => options.entryIds?.includes(entry.id));
     if (options.replyTo) {
       const index = branch.findIndex(entry => getAgentTaskId(entry) === options.replyTo);
-      if (index < 0) throw Object.assign(new Error("消息不在当前对话中，请重新打开对话"), { status: 400 });
+      if (index < 0) throw Object.assign(new Error("Tin nhắn không thuộc cuộc trò chuyện hiện tại; hãy mở lại cuộc trò chuyện"), { status: 400 });
       const nextTask = branch.findIndex((entry, position) => position > index && Boolean(getAgentTaskId(entry)));
       targets = branch
         .slice(index + 1, nextTask < 0 ? undefined : nextTask)
@@ -276,7 +276,7 @@ export async function deleteAgentMessage(cwd: string, path: string, options: { e
       (new Set(options.entryIds).size !== targets.length ||
         targets.some((entry) => entry.type !== "message" || (entry.message.role !== "user" && entry.message.role !== "assistant")))
     ) {
-      throw Object.assign(new Error("消息不在当前对话中，请重新打开对话"), { status: 400 });
+      throw Object.assign(new Error("Tin nhắn không thuộc cuộc trò chuyện hiện tại; hãy mở lại cuộc trò chuyện"), { status: 400 });
     }
     if (!targets.length) return await getAgentSession(cwd, path);
 
@@ -333,14 +333,14 @@ export async function deleteAgentMessage(cwd: string, path: string, options: { e
 
 export async function branchAgentConversation(cwd: string, path: string, options: { entryId?: string; replyTo?: string }) {
   if (Boolean(options.entryId) === Boolean(options.replyTo)) {
-    throw Object.assign(new Error("请选择要创建分支的消息"), { status: 400 });
+    throw Object.assign(new Error("Vui lòng chọn tin nhắn để tạo nhánh"), { status: 400 });
   }
   const release = lockWorkspaceFiles([path]);
   try {
     const content = await readFile(path, "utf8");
     const entries = parseSessionEntries(content);
     if (entries[0]?.type !== "session" || entries.length !== content.split("\n").filter(line => line.trim()).length) {
-      throw Object.assign(new Error("会话文件损坏，无法创建分支"), { status: 400 });
+      throw Object.assign(new Error("Tệp phiên bị hỏng, không thể tạo nhánh"), { status: 400 });
     }
     const entrySchema = z.object({ type: z.string(), id: z.string().min(1), parentId: z.string().nullable(), timestamp: z.string() });
     const knownIds = new Set<string>();
@@ -348,7 +348,7 @@ export async function branchAgentConversation(cwd: string, path: string, options
       const parsed = entrySchema.safeParse(entry);
       if (!parsed.success || parsed.data.type === "session" || knownIds.has(parsed.data.id)
         || (parsed.data.parentId !== null && !knownIds.has(parsed.data.parentId))) {
-        throw Object.assign(new Error("会话记录结构无效，无法创建分支"), { status: 400 });
+        throw Object.assign(new Error("Cấu trúc lịch sử phiên không hợp lệ, không thể tạo nhánh"), { status: 400 });
       }
       knownIds.add(parsed.data.id);
     }
@@ -357,14 +357,14 @@ export async function branchAgentConversation(cwd: string, path: string, options
     const index = branch.findIndex(entry => options.replyTo ? getAgentTaskId(entry) === options.replyTo : entry.id === options.entryId);
     const selected = branch[index];
     if (!selected || (options.entryId && (selected.type !== "message" || !["user", "assistant"].includes(selected.message.role)))) {
-      throw Object.assign(new Error("消息不在当前对话中，请重新打开对话"), { status: 400 });
+      throw Object.assign(new Error("Tin nhắn không thuộc cuộc trò chuyện hiện tại; hãy mở lại cuộc trò chuyện"), { status: 400 });
     }
     const nextMessage = branch.findIndex((entry, position) => position > index && (Boolean(getAgentTaskId(entry))
       || (options.entryId && entry.type === "custom_message" && ["subAgentReport", "agentMessage"].includes(entry.customType))));
     const end = options.entryId && selected.type === "message" && selected.message.role === "user"
       ? index + 1 : nextMessage < 0 ? branch.length : nextMessage;
     if (options.replyTo && !branch.slice(index + 1, end).some(entry => entry.type === "message" && entry.message.role === "assistant")) {
-      throw Object.assign(new Error("回复尚未保存，请重新打开对话后再创建分支"), { status: 400 });
+      throw Object.assign(new Error("Phản hồi chưa được lưu; hãy mở lại cuộc trò chuyện trước khi tạo nhánh"), { status: 400 });
     }
     const retained = branch.slice(0, end);
     const userIds = new Set(retained.filter(entry => entry.type === "message" && entry.message.role === "user").map(entry => entry.id));
@@ -389,7 +389,7 @@ export async function branchAgentConversation(cwd: string, path: string, options
     const source = await getAgentSession(cwd, path);
     const target = SessionManager.create(cwd, dirname(path));
     const snapshot = SessionManager.inMemory(cwd, undefined, [target.getHeader()!, ...copied]);
-    snapshot.appendSessionInfo(`${source.name.slice(0, 75)} · 分支`);
+    snapshot.appendSessionInfo(`${source.name.slice(0, 75)} · Nhánh`);
     const targetPath = target.getSessionFile()!;
     await writeWorkspaceFile(targetPath, [snapshot.getHeader(), ...snapshot.getEntries()].map(entry => JSON.stringify(entry)).join("\n") + "\n", true);
     return await getAgentSession(cwd, targetPath);
@@ -418,7 +418,7 @@ export async function renameAgentSession(cwd: string, path: string, name: string
   const release = lockWorkspaceFiles([path]);
   try {
     const entries = parseSessionEntries(await readFile(path, "utf8"));
-    if (entries[0]?.type !== "session") throw Object.assign(new Error("会话文件无效"), { status: 400 });
+    if (entries[0]?.type !== "session") throw Object.assign(new Error("Tệp phiên không hợp lệ"), { status: 400 });
     const history = SessionManager.open(path, dirname(path), cwd);
     history.appendSessionInfo(name);
     return { name: history.getSessionName()! };
@@ -447,7 +447,7 @@ export async function getAgentSession(cwd: string, path: string) {
   const entries = active
     ? [active.history.getHeader()!, ...active.history.getEntries()]
     : parseSessionEntries(await readFile(path, "utf8"));
-  if (entries[0]?.type !== "session") throw Object.assign(new Error("会话文件无效"), { status: 400 });
+  if (entries[0]?.type !== "session") throw Object.assign(new Error("Tệp phiên không hợp lệ"), { status: 400 });
   const partial = active?.session?.agent.state.streamingMessage;
   if (partial?.role === "assistant") entries.push({
     type: "message", id: "streaming", parentId: active!.history.getLeafId(), timestamp: new Date().toISOString(), message: partial,
@@ -546,7 +546,7 @@ export async function getAgentSession(cwd: string, path: string) {
                 .map((part) => part.text)
                 .join(""));
     const cancelled = message.role === "assistant" && message.stopReason === "aborted"
-      && ["The operation was aborted.", "已停止生成"].includes(message.errorMessage ?? "");
+      && ["The operation was aborted.", "已停止生成", "Đã dừng tạo nội dung"].includes(message.errorMessage ?? "");
     const error = cancelled
       ? parts.some(part => part.type === "tool" || part.content.trim()) ? translateMessage("已停止生成") : undefined
       : message.role === "assistant" && message.errorMessage ? translateMessage(message.errorMessage) : undefined;

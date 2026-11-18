@@ -16,24 +16,24 @@ export function createSandboxContext({ files, resolvePath }: Pick<ToolContext, "
       let inputBytes = 0;
       const addFile = (path: string, content: string | Uint8Array) => {
         const target = `/workspace/${path}`;
-        if (Object.hasOwn(initialFiles, target)) throw new Error(`沙盒输入路径重复：${path}`);
+        if (Object.hasOwn(initialFiles, target)) throw new Error(`Đường dẫn đầu vào sandbox bị trùng: ${path}`);
         inputBytes += typeof content === "string" ? Buffer.byteLength(content) : content.byteLength;
-        if (inputBytes > maxFileBytes) throw new Error("沙盒导入文件总大小不能超过 16 MiB");
+        if (inputBytes > maxFileBytes) throw new Error("Tổng dung lượng tệp nhập vào sandbox không được vượt quá 16 MiB");
         initialFiles[target] = Buffer.from(content).toString("base64");
       };
       for (const file of request.files ?? []) addFile(file.path, file.content);
       for (const file of request.imports ?? []) {
         signal?.throwIfAborted();
         const info = await files.stat(file.path, true);
-        if (!info.isFile()) throw new Error(`只能导入普通文件：${file.path}`);
-        if (inputBytes + info.size > maxFileBytes) throw new Error("沙盒导入文件总大小不能超过 16 MiB");
+        if (!info.isFile()) throw new Error(`Chỉ được nhập tệp thông thường: ${file.path}`);
+        if (inputBytes + info.size > maxFileBytes) throw new Error("Tổng dung lượng tệp nhập vào sandbox không được vượt quá 16 MiB");
         addFile(file.target, await files.readFile(file.path, true, { signal, maxBytes: maxFileBytes - inputBytes }));
       }
       const destinations = new Set<string>();
       for (const file of request.exports ?? []) {
         const target = await resolvePath(file.target);
         const key = process.platform === "win32" ? target.toLowerCase() : target;
-        if (destinations.has(key)) throw new Error(`沙盒输出目标重复：${file.target}`);
+        if (destinations.has(key)) throw new Error(`Đích đầu ra sandbox bị trùng: ${file.target}`);
         destinations.add(key);
       }
       signal?.throwIfAborted();
@@ -52,8 +52,8 @@ export function createSandboxContext({ files, resolvePath }: Pick<ToolContext, "
           timeout: request.timeoutMs, maxBuffer: 32 * 1024 * 1024,
         }, (error, stdout, stderr) => {
           if (signal?.aborted) reject(signal.reason);
-          else if (error?.killed && !inputError && error.code !== "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") reject(new Error(`沙盒执行超过 ${request.timeoutMs} 毫秒，进程已终止`, { cause: error }));
-          else if (error || inputError) reject(new Error(`沙盒执行失败：${stderr.trim() || (error ?? inputError)!.message}`, { cause: error ?? inputError }));
+          else if (error?.killed && !inputError && error.code !== "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") reject(new Error(`Thực thi sandbox vượt quá ${request.timeoutMs} mili giây; tiến trình đã bị kết thúc`, { cause: error }));
+          else if (error || inputError) reject(new Error(`Thực thi sandbox thất bại: ${stderr.trim() || (error ?? inputError)!.message}`, { cause: error ?? inputError }));
           else resolve(stdout);
         });
         child.stdin!.on("error", error => { inputError = error; child.kill("SIGKILL"); });
@@ -67,7 +67,7 @@ export function createSandboxContext({ files, resolvePath }: Pick<ToolContext, "
           for (const file of request.exports ?? []) {
             signal?.throwIfAborted();
             const content = result.files.find(output => output.path === file.path)?.content;
-            if (content === undefined) throw new Error(`沙盒未返回输出文件：${file.path}`);
+            if (content === undefined) throw new Error(`Sandbox không trả về tệp đầu ra: ${file.path}`);
             const directory = posix.dirname(file.target);
             if (directory !== ".") await files.mkdir(directory, true);
             signal?.throwIfAborted();
@@ -75,7 +75,7 @@ export function createSandboxContext({ files, resolvePath }: Pick<ToolContext, "
             exported.push(file.target);
           }
         } catch (error) {
-          throw new Error(`沙盒写回失败，已写回文件：${JSON.stringify(exported)}。${error instanceof Error ? error.message : String(error)}`, { cause: error });
+          throw new Error(`Ghi kết quả sandbox trở lại thất bại; các tệp đã ghi: ${JSON.stringify(exported)}。${error instanceof Error ? error.message : String(error)}`, { cause: error });
         }
       }
       const details = {

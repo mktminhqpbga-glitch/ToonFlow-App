@@ -1,15 +1,15 @@
-# 音频节点
+# Node âm thanh
 
-将音频素材放到画布中试听，并提供给支持音频参考的下游节点。
+Đưa tệp âm thanh lên Canvas để nghe thử và làm tham chiếu cho các node phía sau có hỗ trợ âm thanh.
 
-## 输入与输出
+## Đầu vào và đầu ra
 
-- 导入本地音频文件，单个文件不能为空且不超过 100 MB。
-- 输出当前音频素材，可连接支持音频输入的节点。
+- Nhập tệp âm thanh từ máy; tệp phải có nội dung và không quá 100 MB.
+- Xuất âm thanh hiện tại để nối sang node hỗ trợ đầu vào âm thanh.
 
-## 使用方法
+## Cách sử dụng
 
-1. 点击上传按钮，选择音频文件。
-2. 上传完成后，使用节点内的播放器试听、暂停或调整播放进度。
-3. 将音频输出连接到需要该素材的节点。
-4. 需要换素材时，将鼠标移到节点上，点击“替换音频”。
+1. Bấm nút tải lên và chọn tệp âm thanh.
+2. Khi tải xong, dùng trình phát trong node để nghe, tạm dừng hoặc tua.
+3. Nối cổng đầu ra âm thanh với node cần tư liệu này.
+4. Muốn thay tệp, đưa chuột lên node rồi bấm **Thay âm thanh**.

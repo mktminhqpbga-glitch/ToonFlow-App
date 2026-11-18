@@ -1,24 +1,24 @@
 <template>
-  <el-dialog v-model="visible" title="默认打开方式" width="min(660px, calc(100vw - 32px))" alignCenter appendToBody>
+  <el-dialog v-model="visible" title="Cách mở mặc định" width="min(660px, calc(100vw - 32px))" alignCenter appendToBody>
     <div class="extensionAssociations" v-loading="loading">
-      <p>按文件类型选择默认扩展。清除后，有多个可用扩展时会再次询问打开方式。</p>
+      <p>Chọn tiện ích mặc định cho từng loại tệp. Khi xóa lựa chọn, hệ thống sẽ hỏi lại nếu có nhiều tiện ích khả dụng.</p>
       <el-alert v-if="error" :title="error" type="error" :closable="false" />
-      <el-table :data="rows" maxHeight="420" emptyText="暂无已安装的文件扩展或默认关联">
-        <el-table-column label="文件类型" width="140">
-          <template #default="{ row }">{{ row.suffix === 'canvasNode' ? '画布节点' : `.${row.suffix}` }}</template>
+      <el-table :data="rows" maxHeight="420" emptyText="Chưa cài tiện ích tệp hoặc chưa có liên kết mặc định">
+        <el-table-column label="Loại tệp" width="140">
+          <template #default="{ row }">{{ row.suffix === 'canvasNode' ? 'Node Canvas' : `.${row.suffix}` }}</template>
         </el-table-column>
-        <el-table-column label="默认扩展">
+        <el-table-column label="Tiện ích mặc định">
           <template #default="{ row }">
-            <el-select :modelValue="extensionAssociations[row.suffix] ?? ''" placeholder="自动选择 / 每次询问" clearable
-              :disabled="saving" :aria-label="`${row.suffix} 默认扩展`" @change="id => save(row.suffix, id)">
-              <el-option v-if="row.unavailable" :value="row.unavailable" :label="`${row.unavailable}（不可用）`" disabled />
+            <el-select :modelValue="extensionAssociations[row.suffix] ?? ''" placeholder="Tự chọn / Hỏi mỗi lần" clearable
+              :disabled="saving" :aria-label="`${row.suffix} Tiện ích mặc định`" @change="id => save(row.suffix, id)">
+              <el-option v-if="row.unavailable" :value="row.unavailable" :label="`${row.unavailable}(không khả dụng)`" disabled />
               <el-option v-for="extension in row.candidates" :key="extension.id" :value="extension.id" :label="`${extension.displayName} · ${extension.id}`" />
             </el-select>
           </template>
         </el-table-column>
       </el-table>
     </div>
-    <template #footer><el-button @click="visible = false">完成</el-button></template>
+    <template #footer><el-button @click="visible = false">Hoàn tất</el-button></template>
   </el-dialog>
 </template>
 
@@ -47,14 +47,14 @@ watch(visible, async value => {
   loading.value = true;
   error.value = "";
   try { extensions.value = await listExtensions(); }
-  catch (cause) { error.value = cause instanceof Error ? cause.message : "读取文件扩展失败"; }
+  catch (cause) { error.value = cause instanceof Error ? cause.message : "Đọc tiện ích tệp thất bại"; }
   finally { loading.value = false; }
 }, { immediate: true });
 
 async function save(suffix: string, id: string) {
   saving.value = true;
   try { await setExtensionAssociation(suffix, id || undefined); }
-  catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "保存默认打开方式失败"); }
+  catch (cause) { ElMessage.error(cause instanceof Error ? cause.message : "Lưu cách mở mặc định thất bại"); }
   finally { saving.value = false; }
 }
 </script>

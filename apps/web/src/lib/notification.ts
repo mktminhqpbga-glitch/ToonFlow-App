@@ -23,7 +23,7 @@ export async function showNotification(options: Parameters<DesktopRuntime["showN
     const { data } = await axios.post<{ code: number; message: string }>("/api/desktop/notification", options, {
       headers: { "x-toonflow-desktop": "1" },
     });
-    if (data.code !== 200) throw new Error(data.message || "发送系统通知失败");
+    if (data.code !== 200) throw new Error(data.message || "Không thể gửi thông báo hệ thống");
     return;
   }
   if (getNotificationPermission() !== "granted") return;

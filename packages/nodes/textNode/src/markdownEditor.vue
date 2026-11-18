@@ -1,26 +1,26 @@
 <template>
   <section class="nodeMarkdownEditor">
-    <div class="editorToolbar" role="toolbar" aria-label="Markdown 编辑工具">
+    <div class="editorToolbar" role="toolbar" aria-label="Công cụ chỉnh sửa Markdown">
       <div class="toolbarGroup">
-        <el-button class="toolButton" :class="{ active: editor?.isActive('heading') }" text :disabled="locked || sourceMode || !ready" title="标题" aria-label="标题" :aria-pressed="!!editor?.isActive('heading')" @mousedown.prevent @click="run('heading')"><icon-heading :size="17" /></el-button>
-        <el-button class="toolButton" :class="{ active: editor?.isActive('bold') }" text :disabled="locked || sourceMode || !ready" title="加粗" aria-label="加粗" :aria-pressed="!!editor?.isActive('bold')" @mousedown.prevent @click="run('bold')"><icon-bold :size="17" /></el-button>
-        <el-button class="toolButton" :class="{ active: editor?.isActive('italic') }" text :disabled="locked || sourceMode || !ready" title="斜体" aria-label="斜体" :aria-pressed="!!editor?.isActive('italic')" @mousedown.prevent @click="run('italic')"><icon-italic :size="17" /></el-button>
-        <el-button class="toolButton" :class="{ active: editor?.isActive('bulletList') }" text :disabled="locked || sourceMode || !ready" title="列表" aria-label="列表" :aria-pressed="!!editor?.isActive('bulletList')" @mousedown.prevent @click="run('list')"><icon-list :size="17" /></el-button>
+        <el-button class="toolButton" :class="{ active: editor?.isActive('heading') }" text :disabled="locked || sourceMode || !ready" title="Tiêu đề" aria-label="Tiêu đề" :aria-pressed="!!editor?.isActive('heading')" @mousedown.prevent @click="run('heading')"><icon-heading :size="17" /></el-button>
+        <el-button class="toolButton" :class="{ active: editor?.isActive('bold') }" text :disabled="locked || sourceMode || !ready" title="In đậm" aria-label="In đậm" :aria-pressed="!!editor?.isActive('bold')" @mousedown.prevent @click="run('bold')"><icon-bold :size="17" /></el-button>
+        <el-button class="toolButton" :class="{ active: editor?.isActive('italic') }" text :disabled="locked || sourceMode || !ready" title="In nghiêng" aria-label="In nghiêng" :aria-pressed="!!editor?.isActive('italic')" @mousedown.prevent @click="run('italic')"><icon-italic :size="17" /></el-button>
+        <el-button class="toolButton" :class="{ active: editor?.isActive('bulletList') }" text :disabled="locked || sourceMode || !ready" title="Danh sách" aria-label="Danh sách" :aria-pressed="!!editor?.isActive('bulletList')" @mousedown.prevent @click="run('list')"><icon-list :size="17" /></el-button>
       </div>
       <div class="toolbarGroup">
-        <el-button class="toolButton" text :disabled="locked || sourceMode || !editor?.can().undo()" title="撤销" aria-label="撤销" @mousedown.prevent @click="run('undo')"><icon-arrow-back-up :size="17" /></el-button>
-        <el-button class="toolButton" text :disabled="locked || sourceMode || !editor?.can().redo()" title="重做" aria-label="重做" @mousedown.prevent @click="run('redo')"><icon-arrow-forward-up :size="17" /></el-button>
+        <el-button class="toolButton" text :disabled="locked || sourceMode || !editor?.can().undo()" title="Hoàn tác" aria-label="Hoàn tác" @mousedown.prevent @click="run('undo')"><icon-arrow-back-up :size="17" /></el-button>
+        <el-button class="toolButton" text :disabled="locked || sourceMode || !editor?.can().redo()" title="Làm lại" aria-label="Làm lại" @mousedown.prevent @click="run('redo')"><icon-arrow-forward-up :size="17" /></el-button>
       </div>
       <span class="toolbarSpacer" />
       <div class="toolbarGroup">
-        <el-button class="toolButton" text title="复制正文" aria-label="复制正文" @click="copyText"><icon-copy :size="17" /></el-button>
-        <el-button class="toolButton" :class="{ active: sourceMode }" text :title="sourceMode ? '富文本' : '原文'" :aria-label="sourceMode ? '切换到富文本' : '切换到原文'" :aria-pressed="sourceMode" @click="sourceMode = !sourceMode"><component :is="sourceMode ? IconFileText : IconFileCode" :size="17" /></el-button>
+        <el-button class="toolButton" text title="Sao chép nội dung" aria-label="Sao chép nội dung" @click="copyText"><icon-copy :size="17" /></el-button>
+        <el-button class="toolButton" :class="{ active: sourceMode }" text :title="sourceMode ? 'Văn bản định dạng' : 'Mã nguồn'" :aria-label="sourceMode ? 'Chuyển sang văn bản định dạng' : 'Chuyển sang mã nguồn'" :aria-pressed="sourceMode" @click="sourceMode = !sourceMode"><component :is="sourceMode ? IconFileText : IconFileCode" :size="17" /></el-button>
       </div>
     </div>
     <p v-if="error" class="editorError" role="alert">{{ error }}</p>
-    <textarea v-if="sourceMode" class="sourceEditor" :value="modelValue" :readonly="readonly" :disabled="disabled" :aria-label="ariaLabel || '编辑 Markdown 原文'" spellcheck="false" @input="updateSource" />
+    <textarea v-if="sourceMode" class="sourceEditor" :value="modelValue" :readonly="readonly" :disabled="disabled" :aria-label="ariaLabel || 'Chỉnh sửa mã Markdown'" spellcheck="false" @input="updateSource" />
     <editor-content v-if="editor && !sourceMode" :editor="editor" class="richHost" />
-    <p class="editorHint">富文本会规范化 Markdown；保留原始 HTML 写法请使用原文。</p>
+    <p class="editorHint">Chế độ văn bản định dạng sẽ chuẩn hóa Markdown; dùng chế độ mã nguồn để giữ nguyên HTML.</p>
   </section>
 </template>
 
@@ -56,7 +56,7 @@ function rebuild() {
       content: parseMarkdownContent(props.modelValue),
       editable: !locked.value,
       editorProps: {
-        attributes: { class: "textNodeMarkdown", "aria-label": props.ariaLabel || "编辑文本内容", role: "textbox", "aria-multiline": "true" },
+        attributes: { class: "textNodeMarkdown", "aria-label": props.ariaLabel || "Chỉnh sửa nội dung văn bản", role: "textbox", "aria-multiline": "true" },
         transformPastedHTML: parseMarkdownContent,
         handlePaste(_view, event) {
           const current = editor.value;
@@ -74,7 +74,7 @@ function rebuild() {
       },
     });
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : "编辑器加载失败，可切换原文继续编辑";
+    error.value = cause instanceof Error ? cause.message : "Không tải được trình chỉnh sửa, có thể chuyển sang mã nguồn để tiếp tục";
   }
 }
 
@@ -84,7 +84,7 @@ watch(() => props.modelValue, value => {
   try {
     editor.value.commands.setContent(parseMarkdownContent(value), { emitUpdate: false });
     lastMarkdown = value;
-  } catch (cause) { error.value = cause instanceof Error ? cause.message : "正文更新失败"; }
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : "Cập nhật nội dung thất bại"; }
 });
 watch(locked, value => editor.value?.setEditable(!value, false));
 onBeforeUnmount(destroyEditor);
@@ -106,7 +106,7 @@ async function copyText() {
   try {
     if (props.writeClipboardText) await props.writeClipboardText(props.modelValue);
     else await navigator.clipboard.writeText(props.modelValue);
-  } catch (cause) { error.value = cause instanceof Error ? cause.message : "复制失败，请在原文中选择并复制"; }
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : "Sao chép thất bại, hãy chọn và sao chép trong chế độ mã nguồn"; }
 }
 </script>
 

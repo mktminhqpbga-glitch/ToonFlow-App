@@ -11,14 +11,14 @@ const plugin: ToolPlugin = {
     if (!sandbox) return [];
     return [{
       name: "sandbox",
-      label: "代码沙盒",
-      description: "在独立的内存文件系统中执行 Bash、JavaScript（js-exec）和 Python（python3）。工作目录为 /workspace，通过 files 创建文本文件或 imports 导入指定文件；仅成功执行后按 exports 写回工作区，默认不覆盖。返回退出码和输出。环境禁网，JavaScript 不提供完整 Node.js API，Python 不支持 pip 或本机程序。",
-      promptSnippet: "在隔离的内存环境中运行技能的 JS/Python 脚本，并显式导入和导出文件。",
+      label: "Sandbox mã",
+      description: "Chạy Bash, JavaScript (js-exec) và Python (python3) trong filesystem bộ nhớ cô lập, thư mục /workspace. Dùng files tạo tệp chữ hoặc imports lấy tệp cần thiết; chỉ khi chạy thành công mới dùng exports ghi lại vào workspace, mặc định không ghi đè. Trả mã thoát và đầu ra. Không có mạng, JavaScript không hỗ trợ đầy đủ Node.js, Python không có pip hoặc chương trình máy chủ.",
+      promptSnippet: "Chạy script JS/Python của kỹ năng trong bộ nhớ cô lập và chủ động import/export tệp.",
       promptGuidelines: [
-        "执行技能附带代码前，先读取技能说明，确认需要的脚本、输入文件和依赖。用 imports 导入需要的文件；沙盒不会自动读取脚本相邻文件。",
-        "脚本使用 js-exec script.js 或 python3 script.py；JS 含 import/export 时使用 js-exec -m script.js。支持的 fs API 只访问虚拟文件系统。导入和导出文件总大小分别最多 16 MiB，文本输出最多 64 KiB。",
-        "每次调用都是全新的 /workspace；需要保留的结果必须显式指定 exports，后续调用需重新导入。覆盖工作区文件前确认用户意图，并显式设置 overwrite=true。",
-        "JavaScript 使用 QuickJS，Python 仅提供随附标准库；不支持完整 Node.js、pip、本机程序或联网。遇到缺失依赖应说明限制，不将沙盒成功运行等同于完整技能验证。",
+        "Trước khi chạy mã đi kèm kỹ năng, đọc hướng dẫn để xác định script, tệp đầu vào và phụ thuộc. Dùng imports nhập tệp cần thiết; sandbox không tự đọc file bên cạnh script.",
+        "Chạy bằng js-exec script.js hoặc python3 script.py; nếu JS có import/export thì dùng js-exec -m script.js. fs API chỉ vào filesystem ảo. Tổng tệp import/export tối đa 16 MiB mỗi chiều, kết quả văn bản tối đa 64 KiB.",
+        "Mỗi lượt là /workspace mới. Muốn giữ kết quả phải khai báo exports; lần sau nhập lại bằng imports. Trước khi ghi đè tệp workspace, xác nhận ý người dùng và đặt overwrite=true rõ ràng.",
+        "JavaScript dùng QuickJS, Python chỉ có thư viện tiêu chuẩn đi kèm; không có Node.js đầy đủ, pip, chương trình cục bộ hay mạng. Nếu thiếu phụ thuộc, nêu giới hạn; không coi sandbox chạy được là kỹ năng đã được kiểm chứng hoàn toàn.",
       ],
       parameters: z.toJSONSchema(sandboxRequestSchema, { io: "input", target: "draft-07" }),
       executionMode: "sequential",

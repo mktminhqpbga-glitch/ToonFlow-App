@@ -1,22 +1,22 @@
 <template>
-  <el-dialog v-model="visible" title="拉片报告" width="min(1040px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
+  <el-dialog v-model="visible" title="Báo cáo phân tích video" width="min(1040px, calc(100vw - 32px))" alignCenter appendToBody destroyOnClose>
     <div class="analysisReport nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop>
       <div class="reportToolbar">
         <div class="reportFacts">
-          <span class="shotCount"><icon-movie :size="16" />{{ result.scenes.length }} 个镜头</span>
+          <span class="shotCount"><icon-movie :size="16" />{{ result.scenes.length }} cảnh quay</span>
           <span><icon-clock :size="15" />{{ formatSceneTime(result.duration) }}</span>
           <span>{{ result.width }} × {{ result.height }}</span>
-          <span v-if="result.audio"><icon-wave-sine :size="15" />原音轨</span>
+          <span v-if="result.audio"><icon-wave-sine :size="15" />Âm thanh gốc</span>
         </div>
-        <el-button v-if="manifestUrl" class="downloadButton" tag="a" :href="manifestUrl" download="sceneManifest.json" :icon="IconDownload" text size="small">下载清单</el-button>
+        <el-button v-if="manifestUrl" class="downloadButton" tag="a" :href="manifestUrl" download="sceneManifest.json" :icon="IconDownload" text size="small">Tải danh sách</el-button>
       </div>
       <el-alert v-if="manifestError" :title="manifestError" type="error" :closable="false" showIcon />
-      <el-alert v-if="result.ai?.overviewError" :title="`整段归纳未完成：${result.ai.overviewError}`" type="warning" :closable="false" showIcon />
+      <el-alert v-if="result.ai?.overviewError" :title="`Chưa tổng hợp toàn bộ video: ${result.ai.overviewError}`" type="warning" :closable="false" showIcon />
       <el-tabs v-model="activeTab" class="reportTabs" :class="{ singleView: !result.overview }">
-        <el-tab-pane label="镜头明细" name="scenes">
+        <el-tab-pane label="Chi tiết từng cảnh" name="scenes">
           <div class="sceneLayout">
             <el-scrollbar class="sceneNavigation" height="var(--sceneListHeight, min(56vh, 540px))">
-              <nav class="sceneList" aria-label="镜头列表">
+              <nav class="sceneList" aria-label="Danh sách cảnh quay">
                 <button
                   v-for="scene in result.scenes"
                   :key="scene.index"
@@ -24,9 +24,9 @@
                   :class="{ selected: selectedScene?.index === scene.index }"
                   type="button"
                   :aria-pressed="selectedScene?.index === scene.index"
-                  :aria-label="`查看镜头 S${String(scene.index).padStart(2, '0')}`"
+                  :aria-label="`Xem cảnh S${String(scene.index).padStart(2, '0')}`"
                   @click="selectedIndex = scene.index">
-                  <span class="sceneItemHeading"><span class="sceneNumber">S{{ String(scene.index).padStart(2, '0') }}</span><span class="sceneDuration">{{ (scene.end - scene.start).toFixed(2) }} 秒</span></span>
+                  <span class="sceneItemHeading"><span class="sceneNumber">S{{ String(scene.index).padStart(2, '0') }}</span><span class="sceneDuration">{{ (scene.end - scene.start).toFixed(2) }} giây</span></span>
                   <span class="sceneRange">{{ formatSceneTime(scene.start) }} – {{ formatSceneTime(scene.end) }}</span>
                   <span v-if="scene.annotation" class="sceneCaption">{{ scene.annotation.description }}</span>
                 </button>
@@ -36,19 +36,19 @@
               <div v-if="selectedScene" class="sceneDetail" :class="{ hasAnnotation: !!selectedScene.annotation }">
                 <div class="sceneHeading">
                   <div class="sceneTitle">
-                    <h3>镜头 S{{ String(selectedScene.index).padStart(2, '0') }}</h3>
+                    <h3>Cảnh S{{ String(selectedScene.index).padStart(2, '0') }}</h3>
                     <span>{{ formatSceneTime(selectedScene.start) }} – {{ formatSceneTime(selectedScene.end) }}</span>
                   </div>
-                  <el-radio-group v-if="selectedScene.image && selectedScene.video" v-model="previewKind" size="small" aria-label="镜头预览类型">
-                    <el-radio-button value="image">关键帧</el-radio-button>
-                    <el-radio-button value="video">视频片段</el-radio-button>
+                  <el-radio-group v-if="selectedScene.image && selectedScene.video" v-model="previewKind" size="small" aria-label="Loại xem trước cảnh">
+                    <el-radio-button value="image">Khung hình chính</el-radio-button>
+                    <el-radio-button value="video">Đoạn video</el-radio-button>
                   </el-radio-group>
                 </div>
                 <div v-if="previewFile" class="previewStage">
                   <p v-if="previewError" class="previewMessage" role="alert">{{ previewError }}</p>
-                  <img v-else-if="previewUrl && previewFile.mimeType === 'image/jpeg'" :key="previewUrl" :src="previewUrl" :alt="`镜头 S${String(selectedScene.index).padStart(2, '0')} 关键帧`" @error="previewError = '关键帧无法预览，文件可能已被移动或删除'" />
-                  <video v-else-if="previewUrl" ref="previewVideo" :key="previewUrl" :src="previewUrl" controls playsinline preload="metadata" :aria-label="`镜头 S${String(selectedScene.index).padStart(2, '0')} 视频片段`" @error="previewError = '视频片段无法预览，文件可能已被移动或删除'" />
-                  <p v-else class="previewMessage" role="status">正在读取画面…</p>
+                  <img v-else-if="previewUrl && previewFile.mimeType === 'image/jpeg'" :key="previewUrl" :src="previewUrl" :alt="`Khung hình chính cảnh S${String(selectedScene.index).padStart(2, '0')}`" @error="previewError = 'Không thể xem trước khung hình, tệp có thể đã bị di chuyển hoặc xóa'" />
+                  <video v-else-if="previewUrl" ref="previewVideo" :key="previewUrl" :src="previewUrl" controls playsinline preload="metadata" :aria-label="`Đoạn video cảnh S${String(selectedScene.index).padStart(2, '0')}`" @error="previewError = 'Không thể xem trước đoạn video, tệp có thể đã bị di chuyển hoặc xóa'" />
+                  <p v-else class="previewMessage" role="status">Đang đọc khung hình…</p>
                 </div>
                 <div v-if="selectedScene.annotation" class="sceneAnnotation">
                   <div class="annotationFacts">
@@ -56,24 +56,24 @@
                     <span>{{ selectedScene.annotation.cameraAngle }}</span>
                   </div>
                   <p class="sceneDescription">{{ selectedScene.annotation.description }}</p>
-                  <div class="movementDetail"><span class="detailLabel">镜头运动</span><p>{{ selectedScene.annotation.movement }}</p></div>
+                  <div class="movementDetail"><span class="detailLabel">Chuyển động máy quay</span><p>{{ selectedScene.annotation.movement }}</p></div>
                 </div>
               </div>
             </el-scrollbar>
           </div>
         </el-tab-pane>
-        <el-tab-pane v-if="result.overview" label="整段分析" name="overview">
+        <el-tab-pane v-if="result.overview" label="Phân tích tổng thể" name="overview">
           <el-scrollbar height="min(56vh, 540px)">
             <div class="overviewBody">
               <section class="overviewLead">
-                <h3><icon-sparkles :size="17" />整体概述</h3>
+                <h3><icon-sparkles :size="17" />Tổng quan nội dung</h3>
                 <p>{{ result.overview.summary }}</p>
               </section>
-              <section class="overviewSection"><h3>叙事结构</h3><p>{{ result.overview.narrative }}</p></section>
-              <section class="overviewSection"><h3>节奏分析</h3><p>{{ result.overview.rhythm }}</p></section>
-              <section class="overviewSection"><h3>剪辑方式</h3><p>{{ result.overview.editing }}</p></section>
+              <section class="overviewSection"><h3>Cấu trúc kể chuyện</h3><p>{{ result.overview.narrative }}</p></section>
+              <section class="overviewSection"><h3>Phân tích nhịp độ</h3><p>{{ result.overview.rhythm }}</p></section>
+              <section class="overviewSection"><h3>Cách dựng phim</h3><p>{{ result.overview.editing }}</p></section>
               <section v-if="result.overview.focusResponse" class="overviewSection">
-                <h3>分析重点</h3>
+                <h3>Trọng tâm phân tích</h3>
                 <div><p v-if="result.ai?.focus" class="focusQuestion">{{ result.ai.focus }}</p><p>{{ result.overview.focusResponse }}</p></div>
               </section>
             </div>
@@ -116,10 +116,10 @@ watch(previewFile, () => {
 }, { flush: "sync" });
 onBeforeUnmount(() => previewVideo.value?.pause());
 // ACT: 仅加载当前选中的画面，切换镜头或关闭报告时由宿主释放文件 URL。
-const previewUrl = files.useFileUrl(previewFile, () => { previewError.value = "画面读取失败，文件可能已被移动或删除"; });
+const previewUrl = files.useFileUrl(previewFile, () => { previewError.value = "Không đọc được khung hình, tệp có thể đã bị di chuyển hoặc xóa"; });
 const manifestUrl = files.useFileUrl(
   computed(() => visible.value ? { url: props.result.manifest, mimeType: "application/json" } : undefined),
-  () => { manifestError.value = "拉片清单读取失败，文件可能已被移动或删除"; },
+  () => { manifestError.value = "Không đọc được danh sách cảnh, tệp có thể đã bị di chuyển hoặc xóa"; },
 );
 watch(selectedScene, scene => {
   if (scene && !(previewKind.value === "image" ? scene.image : scene.video)) previewKind.value = scene.image ? "image" : "video";

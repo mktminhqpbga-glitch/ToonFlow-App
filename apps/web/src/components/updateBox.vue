@@ -14,9 +14,9 @@
       <div class="updateHeader">
         <div class="versionInfo">
           <h2 :id="titleId" class="updateTitle">Toonflow <span class="versionNumber">v{{ version }}</span></h2>
-          <div class="buildInfo"><span class="buildLabel">构建代码</span><code>{{ buildCode }}</code></div>
+          <div class="buildInfo"><span class="buildLabel">Mã bản dựng</span><code>{{ buildCode }}</code></div>
         </div>
-        <button class="closeButton" type="button" aria-label="关闭更新说明" @click="close">
+        <button class="closeButton" type="button" aria-label="Đóng ghi chú cập nhật" @click="close">
           <icon-x :size="20" aria-hidden="true" />
         </button>
       </div>
@@ -24,7 +24,7 @@
 
     <div class="updateBody">
       <div class="artworkSection">
-        <svg class="buildArtwork" viewBox="0 0 600 200" role="img" :aria-label="`构建 ${buildCode} 的色块图`">
+        <svg class="buildArtwork" viewBox="0 0 600 200" role="img" :aria-label="`Bản dựng ${buildCode} - hình minh họa khối màu`">
           <g v-for="(tile, index) in buildTiles" :key="index" :transform="`translate(${index % 6 * 100} ${Math.floor(index / 6) * 100})`">
             <rect width="100" height="100" :fill="tile.background" />
             <g :transform="`rotate(${tile.rotation} 50 50)`" :fill="tile.foreground">
@@ -37,16 +37,16 @@
         </svg>
       </div>
 
-      <section class="releaseSection" aria-label="更新内容">
-        <h3 class="releaseTitle">更新内容</h3>
-        <div class="releaseContent" tabindex="0" role="region" aria-label="Markdown 更新说明">
+      <section class="releaseSection" aria-label="Nội dung cập nhật">
+        <h3 class="releaseTitle">Nội dung cập nhật</h3>
+        <div class="releaseContent" tabindex="0" role="region" aria-label="Ghi chú cập nhật Markdown">
           <messageMarkdown v-if="markdown.trim()" :content="markdown" />
         </div>
       </section>
     </div>
 
     <template #footer>
-      <el-button class="confirmButton" type="primary" @click="visible = false">开始使用<icon-arrow-right :size="16" aria-hidden="true" /></el-button>
+      <el-button class="confirmButton" type="primary" @click="visible = false">Bắt đầu sử dụng<icon-arrow-right :size="16" aria-hidden="true" /></el-button>
     </template>
   </el-dialog>
 </template>

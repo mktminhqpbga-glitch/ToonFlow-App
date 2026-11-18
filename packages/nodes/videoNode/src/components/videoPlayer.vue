@@ -21,35 +21,35 @@
       @volumechange="readVolume"
       @error="mediaError" />
     <div v-if="preparingPreview || previewError" class="previewStatus" role="status">
-      {{ preparingPreview ? "正在生成兼容预览…" : previewError }}
+      {{ preparingPreview ? "Đang tạo bản xem trước tương thích…" : previewError }}
     </div>
     <div v-show="!fullscreen" class="playerControls nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop>
-      <el-button class="playerButton playButton" text circle :icon="playing ? IconPlayerPause : IconPlayerPlay" :disabled="!ready" :aria-label="playing ? '暂停视频' : '播放视频'" :title="playing ? '暂停' : '播放'" @click="togglePlayback" />
+      <el-button class="playerButton playButton" text circle :icon="playing ? IconPlayerPause : IconPlayerPlay" :disabled="!ready" :aria-label="playing ? 'Tạm dừng video' : 'Phát video'" :title="playing ? 'Tạm dừng' : 'Phát'" @click="togglePlayback" />
       <span class="currentTime">{{ formatTime(currentTime) }}</span>
-      <el-slider class="progressSlider" :modelValue="currentTime" :min="0" :max="duration || 1" :step="0.01" :disabled="!ready || !duration" :formatTooltip="formatTime" aria-label="视频播放进度" @input="seek" />
+      <el-slider class="progressSlider" :modelValue="currentTime" :min="0" :max="duration || 1" :step="0.01" :disabled="!ready || !duration" :formatTooltip="formatTime" aria-label="Tiến độ phát video" @input="seek" />
       <span class="durationLabel"><span class="timeSeparator">/</span>{{ formatTime(duration) }}</span>
       <div class="volumeControl">
         <el-popover trigger="hover" placement="top" :width="40" :popperStyle="{ minWidth: '40px', padding: '8px 0', borderRadius: 'var(--el-border-radius-base)' }" :showArrow="false" :showAfter="80" :hideAfter="150" :disabled="!ready">
           <template #reference>
-            <el-button class="playerButton volumeButton" text circle :icon="muted || !volume ? IconVolumeOff : IconVolume" :disabled="!ready" :aria-pressed="muted || !volume" :aria-label="muted || !volume ? '取消静音' : '静音视频'" title="音量 · 点击切换静音" @click="toggleMute" />
+            <el-button class="playerButton volumeButton" text circle :icon="muted || !volume ? IconVolumeOff : IconVolume" :disabled="!ready" :aria-pressed="muted || !volume" :aria-label="muted || !volume ? 'Bật tiếng' : 'Tắt tiếng video'" title="Âm lượng · Nhấn để bật/tắt tiếng" @click="toggleMute" />
           </template>
           <div class="volumePanel nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop>
             <span class="volumeValue">{{ muted ? 0 : volume }}%</span>
-            <el-slider class="volumeSlider" :modelValue="muted ? 0 : volume" vertical height="60px" :min="0" :max="100" :showTooltip="false" aria-label="视频音量" @input="setVolume" />
+            <el-slider class="volumeSlider" :modelValue="muted ? 0 : volume" vertical height="60px" :min="0" :max="100" :showTooltip="false" aria-label="Âm lượng video" @input="setVolume" />
           </div>
         </el-popover>
       </div>
       <el-dropdown v-if="!readOnly && files" class="captureMenu" trigger="click" placement="top-end" :disabled="!ready || capturing" @visibleChange="captureMenuVisible = $event" @command="captureFrame">
-        <el-button class="playerButton" text circle :icon="IconPhotoScan" :loading="capturing" :disabled="!ready || capturing" :aria-expanded="captureMenuVisible" aria-label="截取视频帧" title="截取视频帧" />
+        <el-button class="playerButton" text circle :icon="IconPhotoScan" :loading="capturing" :disabled="!ready || capturing" :aria-expanded="captureMenuVisible" aria-label="Chụp khung hình video" title="Chụp khung hình video" />
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="current" :icon="IconPhotoScan">截取当前帧</el-dropdown-item>
-            <el-dropdown-item command="first" :icon="IconPlayerSkipBack">截取首帧</el-dropdown-item>
-            <el-dropdown-item command="last" :icon="IconPlayerSkipForward">截取尾帧</el-dropdown-item>
+            <el-dropdown-item command="current" :icon="IconPhotoScan">Chụp khung hình hiện tại</el-dropdown-item>
+            <el-dropdown-item command="first" :icon="IconPlayerSkipBack">Chụp khung hình đầu</el-dropdown-item>
+            <el-dropdown-item command="last" :icon="IconPlayerSkipForward">Chụp khung hình cuối</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
-      <el-button class="playerButton fullscreenButton" text circle :icon="IconMaximize" :disabled="!ready" aria-label="全屏视频" title="全屏" @click="enterFullscreen" />
+      <el-button class="playerButton fullscreenButton" text circle :icon="IconMaximize" :disabled="!ready" aria-label="Video toàn màn hình" title="Toàn màn hình" @click="enterFullscreen" />
     </div>
   </div>
 </template>
@@ -62,7 +62,7 @@ import { IconPlayerPlay, IconPlayerPause, IconVolume, IconVolumeOff, IconPhotoSc
 import { useNodeFiles } from "@toonflow/nodes-scaffold/workspaceFiles";
 import { useMediaPreview } from "@toonflow/node-shared/mediaPreview";
 
-const { src, label = "节点视频", readOnly = false } = defineProps<{ src: string; label?: string; readOnly?: boolean }>();
+const { src, label = "Video của node", readOnly = false } = defineProps<{ src: string; label?: string; readOnly?: boolean }>();
 const emit = defineEmits<{ loadedmetadata: [event: Event] }>();
 const video = ref<HTMLVideoElement>();
 const fullscreen = ref(false);
@@ -103,7 +103,7 @@ async function enterFullscreen() {
     await video.value.requestFullscreen();
   } catch {
     fullscreen.value = false;
-    ElMessage.error("无法进入视频全屏");
+    ElMessage.error("Không thể mở video toàn màn hình");
   }
 }
 
@@ -137,7 +137,7 @@ function readPreview(event: Event) {
     context.drawImage(source, 0, 0, canvas.width, canvas.height);
     poster.value = canvas.toDataURL("image/jpeg", 0.8);
   } catch (error) {
-    console.warn("视频封面生成失败", error);
+    console.warn("Không tạo được ảnh bìa video", error);
   }
 }
 
@@ -146,7 +146,7 @@ function mediaError(event: Event) {
   ready.value = false;
   playing.value = false;
   if ([3, 4].includes(video.value?.error?.code ?? 0)) handleError(event);
-  else previewError.value = "无法预览该视频";
+  else previewError.value = "Không thể xem trước video này";
 }
 
 async function togglePlayback() {
@@ -154,7 +154,7 @@ async function togglePlayback() {
   if (playing.value) video.value.pause();
   else {
     try { await video.value.play(); }
-    catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) ElMessage.error("视频播放失败"); }
+    catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) ElMessage.error("Phát video thất bại"); }
   }
 }
 
@@ -188,7 +188,7 @@ function toggleMute() {
 
 function loadFrame(source: HTMLVideoElement, time: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(() => finish(new Error("视频帧读取超时")), 15000);
+    const timer = window.setTimeout(() => finish(new Error("Đọc khung hình video quá thời gian")), 15000);
     function finish(error?: unknown) {
       clearTimeout(timer);
       source.onloadeddata = null;
@@ -203,7 +203,7 @@ function loadFrame(source: HTMLVideoElement, time: number, signal: AbortSignal) 
       else source.currentTime = time;
     };
     source.onseeked = () => finish();
-    source.onerror = () => finish(new Error("无法读取视频帧"));
+    source.onerror = () => finish(new Error("Không đọc được khung hình video"));
     signal.addEventListener("abort", abort, { once: true });
     source.src = playbackSrc.value;
     source.load();
@@ -214,7 +214,7 @@ function loadFrame(source: HTMLVideoElement, time: number, signal: AbortSignal) 
 async function captureFrame(command: "current" | "first" | "last") {
   if (readOnly || !node || !flow || !files || !video.value || !ready.value || capturing.value) return;
   const { addNodes, findNode, getNodes, nodeTypes } = flow;
-  if (!nodeTypes?.value?.["remote-imageNode"]) return void ElMessage.error("请先启用图片节点插件");
+  if (!nodeTypes?.value?.["remote-imageNode"]) return void ElMessage.error("Hãy bật plugin node ảnh trước");
   capturing.value = true;
   const controller = captureController = new AbortController();
   const id = crypto.randomUUID();
@@ -237,18 +237,18 @@ async function captureFrame(command: "current" | "first" | "last") {
     canvas.width = source.videoWidth;
     canvas.height = source.videoHeight;
     const context = canvas.getContext("2d");
-    if (!context || !canvas.width || !canvas.height) throw new Error("视频帧尚未就绪");
+    if (!context || !canvas.width || !canvas.height) throw new Error("Khung hình video chưa sẵn sàng");
     context.drawImage(source, 0, 0);
-    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("截图生成失败")), "image/png"));
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Tạo ảnh chụp thất bại")), "image/png"));
     controller.signal.throwIfAborted();
-    const frameLabel = { current: "当前帧", first: "首帧", last: "尾帧" }[command];
+    const frameLabel = { current: "Khung hình hiện tại", first: "Khung hình đầu", last: "Khung hình cuối" }[command];
     const name = `${node.data.label || label} · ${frameLabel}`;
-    if (findNode(node.id) !== node) throw new Error("画布节点已变化，请重新截帧");
+    if (findNode(node.id) !== node) throw new Error("Node trên Canvas đã thay đổi, hãy chụp khung hình lại");
     workspace = files.getWorkspaceFiles();
     uploadStarted = true;
     const path = await files.uploadFile(id, new File([blob], "frame.png", { type: "image/png" }));
     controller.signal.throwIfAborted();
-    if (findNode(node.id) !== node || !nodeTypes?.value?.["remote-imageNode"]) throw new Error("画布节点已变化，请重新截帧");
+    if (findNode(node.id) !== node || !nodeTypes?.value?.["remote-imageNode"]) throw new Error("Node trên Canvas đã thay đổi, hãy chụp khung hình lại");
     const x = node.computedPosition.x + node.dimensions.width + 40;
     let y = node.computedPosition.y;
     const width = 240 * canvas.width / canvas.height + 18;
@@ -258,14 +258,14 @@ async function captureFrame(command: "current" | "first" | "last") {
     }
     addNodes({ id, type: "remote-imageNode", position: { x, y }, data: { label: name, outputs: { image: { dataType: "IMAGE", value: { url: path, mimeType: "image/png" } } } } });
     committed = true;
-    ElMessage.success("已截取为图片节点");
+    ElMessage.success("Đã chụp và tạo node ảnh");
   } catch (error) {
-    if (!controller.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "截帧失败");
+    if (!controller.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Chụp khung hình thất bại");
   } finally {
     if (frameVideo) { frameVideo.removeAttribute("src"); frameVideo.load(); }
     if (uploadStarted && !committed) {
       await workspace!.remove(`assets/${id}`, true).catch(error => {
-        if (error?.response?.data?.data?.code !== "ENOENT") ElMessage.error("截帧中断，临时图片清理失败");
+        if (error?.response?.data?.data?.code !== "ENOENT") ElMessage.error("Chụp khung hình bị gián đoạn, không xóa được ảnh tạm");
       });
     }
     capturing.value = false;

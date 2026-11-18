@@ -1,26 +1,28 @@
 ---
 name: v118workflow
-description: 融合 Toonflow v1.1.8 的编剧方法、12 类叙事技法、11 种美术风格及资产、分镜、图像和视频提示词知识，将小说或剧本逐阶段制作并确认。统一维护剧本画布、资产画布和每集制作画布；用于旧版流程复现、分集制作或续作，讨论或编辑技能本身时不启动制作。
+description: Quy trình sản xuất Toonflow v1.1.8 kết hợp phương pháp biên kịch, 12 kỹ thuật kể chuyện, 11 phong cách mỹ thuật và cách làm tài nguyên, phân cảnh, prompt ảnh/video. Làm theo giai đoạn có xác nhận, duy trì Canvas kịch bản, tài nguyên và từng tập; dùng cho dự án kiểu cũ, sản xuất nhiều tập hoặc tiếp tục dự án.
 metadata:
   version: "1.1.0"
-  displayName: v1.1.8 分集制作流程
+  displayName: Quy trình sản xuất theo tập v1.1.8
   author: Toonflow
   github: https://github.com/HBAI-Ltd/Toonflow-app
 ---
 
-# v1.1.8 分集制作流程
+# Quy trình sản xuất theo tập v1.1.8
 
-把旧版的「编剧流水线 + 制作流水线 + 视频工作台」转换为当前 Toonflow 的画布操作。每步执行顺序是：**读已确认输入 → 完成本阶段 → 保存到指定画布 → 回读并检查 → 展示结果 → 等待用户确认**。聊天摘要不能代替画布成果，任务启动不能代替媒体成功。
+**Ngôn ngữ sử dụng:** Mặc định giao tiếp, mô tả phân cảnh, danh sách tài nguyên và prompt bằng tiếng Việt, trừ khi người dùng yêu cầu khác. Không dịch định danh, trường JSON, lời thoại gốc hoặc nhãn tham chiếu có sẵn. Các đoạn tiếng Trung cũ là tài liệu phương pháp, không phải yêu cầu xuất kết quả tiếng Trung.
 
-本技能同时包含子流程和完成它们所需的专业知识。先读当前阶段的 reference，再按其中要求读取 `references/knowledge/` 的通用方法与所选类型/风格；不能仅按流程表填几个摘要就宣布完成，也不一次套用全部类型与画风。旧版依据与迁移取舍见 [来源映射](references/sourceMap.md)；不调用旧版数据库、XML 写入或子 Agent 专用接口，不自动套用其他 workflow 的模型路由。
+Chuyển quy trình cũ “Dây chuyền viết kịch bản + Dây chuyền sản xuất + Bàn làm việc video” thành các thao tác Canvas hiện tại của Toonflow. Thứ tự thực hiện mỗi bước là: **Đọc dữ liệu đầu vào đã xác nhận → Hoàn thành giai đoạn hiện tại → Lưu vào Canvas được chỉ định → Đọc lại và kiểm tra → Trình bày kết quả → Chờ người dùng xác nhận**. Bản tóm tắt trò chuyện không thay thế sản phẩm đã lưu trên Canvas, và việc bắt đầu tác vụ không đồng nghĩa phương tiện đã được tạo thành công.
 
-阶段验收按 [产出契约对照](references/sourceMap.md#阶段产出契约对照) 核对内容、数量、来源映射与状态。这里保持旧版的核心产物及两条制作路线，画布存储、逐步确认和生成验收为迁移要求；不能把阶段名称相同或文件已创建当作产出一致，也不承诺两次 AI 生成逐字或逐帧相同。
+Kỹ năng này chứa cả các quy trình con và kiến thức chuyên môn cần thiết để hoàn thành chúng. Đọc tài liệu tham chiếu (reference) của giai đoạn hiện tại trước, rồi làm theo chỉ dẫn trong đó để đọc phương pháp chung và thể loại/phong cách đã chọn từ `references/knowledge/`. Không được chỉ điền vài dòng tóm tắt theo bảng quy trình rồi tuyên bố hoàn thành, cũng không áp dụng đồng thời mọi thể loại và phong cách. Xem [Ánh xạ nguồn](references/sourceMap.md) để biết cơ sở của phiên bản cũ và các lựa chọn khi chuyển đổi. Không gọi cơ sở dữ liệu cũ, thao tác ghi XML hoặc giao diện riêng cho Agent con; không tự động áp dụng cơ chế chọn mô hình của workflow khác.
 
-## 先定位进度与画布
+Kiểm tra nghiệm thu từng giai đoạn theo [Đối chiếu hợp đồng đầu ra](references/sourceMap.md#阶段产出契约对照), bao gồm nội dung, số lượng, ánh xạ nguồn và trạng thái. Kỹ năng này giữ nguyên các sản phẩm cốt lõi cùng hai lộ trình sản xuất của phiên bản cũ; lưu trữ trên Canvas, xác nhận từng bước và nghiệm thu kết quả tạo là những yêu cầu mới khi chuyển đổi. Không coi hai giai đoạn trùng tên hoặc tệp đã được tạo là bằng chứng đầu ra tương đương, và không hứa hai lần tạo bằng AI sẽ giống nhau từng chữ hoặc từng khung hình.
 
-1. 确认当前项目、用户本次目标、已有输入与已确认结果。已有完整定稿剧本时，先按初始化步骤原样存入剧本总画布的正式节点，再进入基础资产或目标集制作，不倒推虚构小说、事件表或骨架；续作从首个未确认阶段继续。
-2. 先读 [项目初始化与归档](references/projectSetup.md) 和 [画布执行](references/canvasOperations.md)，核实工具、文件位置和当前节点。沿用已确认配置，只补影响当前步骤的缺项。
-3. 所有画布位于**用户选择的项目工作区**，不是技能安装目录。默认结构如下；已有项目可沿用用户确认的文件夹与名称，但仍保持一个剧本总画布、一个资产总画布、每集一个制作画布。
+## Xác định tiến độ và Canvas trước
+
+1. Xác nhận dự án hiện tại, mục tiêu của người dùng trong lượt này, dữ liệu đầu vào sẵn có và kết quả đã xác nhận. Nếu đã có kịch bản hoàn chỉnh, được chốt, trước tiên lưu nguyên văn kịch bản vào các node chính thức trên Canvas tổng kịch bản theo bước khởi tạo; sau đó mới làm tài nguyên cơ sở hoặc tập cần sản xuất. Không tự suy ngược để bịa tiểu thuyết, bảng sự kiện hoặc khung cốt truyện. Khi tiếp tục dự án cũ, bắt đầu từ giai đoạn chưa được xác nhận đầu tiên.
+2. Trước tiên đọc [Khởi tạo và lưu trữ dự án](references/projectSetup.md) cùng [Thực thi trên Canvas](references/canvasOperations.md) để kiểm tra công cụ, vị trí tệp và các node hiện tại. Kế thừa cấu hình đã xác nhận, chỉ bổ sung những mục còn thiếu có ảnh hưởng đến bước hiện tại.
+3. Mọi Canvas đều nằm trong **không gian làm việc của dự án do người dùng chọn**, không phải thư mục cài kỹ năng. Cấu trúc mặc định như bên dưới. Dự án hiện có có thể dùng thư mục và tên mà người dùng đã xác nhận, nhưng vẫn phải có một Canvas tổng kịch bản, một Canvas tổng tài nguyên và một Canvas sản xuất riêng cho mỗi tập.
 
 ```text
 项目工作区/
@@ -33,70 +35,70 @@ metadata:
       └─ …
 ```
 
-| 画布 | 唯一正式内容 |
+| Canvas | Nội dung chính thức duy nhất |
 | --- | --- |
-| 剧本 | 项目配置、来源索引、章节事件、故事骨架与分集大纲、改编策略、各集正式剧本、画布路径索引 |
-| 资产 | 全剧基础与衍生资产、父子关系、视觉设定、提示词、已选图片、使用集数 |
-| 第 N 集 | 本集剧本来源/工作快照、导演规划、分镜表、参考素材节点、分镜图、视频、选用与交付记录 |
+| Kịch bản | Cấu hình dự án, chỉ mục nguồn, sự kiện theo chương, khung cốt truyện và đề cương các tập, chiến lược chuyển thể, kịch bản chính thức từng tập, chỉ mục đường dẫn Canvas |
+| Tài nguyên | Tài nguyên cơ sở và tài nguyên phát sinh của toàn bộ tác phẩm, quan hệ cha-con, thiết kế hình ảnh, prompt, ảnh đã chọn, danh sách tập sử dụng |
+| Tập N | Nguồn kịch bản/bản chụp làm việc của tập, kế hoạch đạo diễn, bảng storyboard, node tư liệu tham chiếu, ảnh storyboard, video, bản ghi lựa chọn và bàn giao |
 
-分集画布里的图片是同一资产文件的本地引用，不是另一套正式资产库。跨画布不能直接连边；先切换读取真实资产输出，再在本集建立引用节点。素材文件保留宿主返回的位置，不能为了整理画布文件夹而搬动 `assets/` 中的生成结果。
+Ảnh trên Canvas của từng tập là tham chiếu cục bộ đến cùng tệp tài nguyên, không tạo thành một thư viện tài nguyên chính thức thứ hai. Không thể nối trực tiếp giữa hai Canvas; trước tiên chuyển Canvas để đọc đầu ra tài nguyên thực tế, rồi tạo node tham chiếu trong tập hiện tại. Giữ nguyên vị trí tệp tư liệu mà ứng dụng trả về; không di chuyển kết quả đã tạo trong `assets/` chỉ để sắp xếp thư mục Canvas.
 
-当前 `addCanvas` 没有目录参数。必须按 [画布归档办法](references/canvasOperations.md#画布创建与归档) 完成文件树归位、重新发现真实路径/ID后再填入成果，不能把所有画布留在根目录便宣布归档完成。
+`addCanvas` hiện không có tham số thư mục. Bắt buộc làm theo [Cách lưu trữ Canvas](references/canvasOperations.md#画布创建与归档) để đặt các tệp đúng vị trí trong cây thư mục, tìm lại đường dẫn/ID thực tế rồi mới điền sản phẩm vào Canvas. Không được để toàn bộ Canvas ở thư mục gốc mà vẫn tuyên bố đã hoàn tất lưu trữ.
 
-## 主流程与确认关口
+## Quy trình chính và các điểm xác nhận
 
-每行是独立阶段，执行前读取该行 reference 及其指定的知识。已有明确确认的产出可复用并记录来源；“跳过”必须有适用理由和用户明确选择。项目不涉及原著改编时，章节事件、骨架或策略可按已有输入缩短或跳过，不能凭空补造经历。
+Mỗi hàng là một giai đoạn riêng biệt. Trước khi thực hiện, đọc tài liệu tham chiếu của hàng đó và những kiến thức được chỉ định. Có thể tái sử dụng đầu ra đã được xác nhận rõ ràng, đồng thời ghi lại nguồn. Việc “bỏ qua” phải có lý do phù hợp và lựa chọn rõ ràng của người dùng. Nếu dự án không chuyển thể từ tác phẩm gốc, có thể rút ngắn hoặc bỏ qua phần sự kiện theo chương, khung cốt truyện hoặc chiến lược dựa trên đầu vào sẵn có; không được bịa thêm sự kiện hoặc trải nghiệm.
 
-| 步骤 | 子流程 | 成果落点与本次需要确认的结果 |
+| Bước | Quy trình con | Vị trí lưu sản phẩm và kết quả cần xác nhận trong lượt này |
 | --- | --- | --- |
-| 0 | [项目初始化](references/projectSetup.md) | 剧本画布：项目配置、范围、文件夹与画布索引 |
-| 1 | [来源与章节事件](references/sourceEvents.md) | 剧本画布：实际章节与事件表；确认来源覆盖与事实 |
-| 2 | [故事骨架](references/storySkeleton.md) | 剧本画布：故事核、人物弧、分集大纲、删减记录；确认分集方案 |
-| 3 | [改编策略](references/adaptationStrategy.md) | 剧本画布：改编原则与边界；确认取舍 |
-| 4 | [逐集剧本](references/episodeScript.md) | 剧本画布：本集完整剧本；默认一集一确认，再决定续写哪集 |
-| 5 | [基础资产提取](references/baseAssets.md) | 资产画布：角色/场景/道具及出场集；确认复用、新建与视觉设定 |
-| 6 | [资产图片制作](references/generateAssets.md) | 资产画布：基础资产提示词与图片；先确认生成方案，再确认采用图片 |
-| 7 | [导演规划](references/directorPlan.md) | 当前集画布：分场、台词统计、情绪、过渡与注意事项 |
-| 8 | [衍生资产分析](references/deriveAssets.md) | 资产画布：本集衍生清单与父资产；确认全部、部分、调整或跳过 |
-| 9 | [资产图片制作](references/generateAssets.md) | 资产画布：已选衍生图片；无衍生需求时明确记录跳过 |
-| 10 | [分镜表](references/storyboardTable.md) | 当前集画布：场→片段→镜头、真实资产映射及检查结果 |
-| 11 | [分镜面板落点](references/storyboardPanel.md) | 当前集画布：按实际模式建立文本、参考、图像/视频节点；确认数量、时长与连线 |
-| 12 | [分镜图片](references/storyboardImages.md) | 当前集画布：首帧模式的分镜图；纯文本多参模式可跳过，须记录原因 |
-| 13 | [视频与交付](references/videoProduction.md) | 当前集画布：视频提示词/配置 → 生成结果 → 选用与交付，三个独立确认关口 |
+| 0 | [Khởi tạo dự án](references/projectSetup.md) | Canvas kịch bản: cấu hình dự án, phạm vi, thư mục và chỉ mục Canvas |
+| 1 | [Nguồn và sự kiện theo chương](references/sourceEvents.md) | Canvas kịch bản: các chương thực tế và bảng sự kiện; xác nhận tính bao phủ của nguồn và tính xác thực |
+| 2 | [Khung cốt truyện](references/storySkeleton.md) | Canvas kịch bản: hạt nhân câu chuyện, hành trình phát triển nhân vật, đề cương từng tập, nhật ký lược bỏ; xác nhận phương án chia tập |
+| 3 | [Chiến lược chuyển thể](references/adaptationStrategy.md) | Canvas kịch bản: nguyên tắc và ranh giới chuyển thể; xác nhận các lựa chọn giữ/bỏ |
+| 4 | [Kịch bản từng tập](references/episodeScript.md) | Canvas kịch bản: kịch bản hoàn chỉnh của tập hiện tại; mặc định xác nhận từng tập, rồi mới quyết định viết tiếp tập nào |
+| 5 | [Trích xuất tài nguyên cơ sở](references/baseAssets.md) | Canvas tài nguyên: nhân vật/bối cảnh/đạo cụ và các tập xuất hiện; xác nhận tái sử dụng, tạo mới và thiết kế hình ảnh |
+| 6 | [Tạo ảnh tài nguyên](references/generateAssets.md) | Canvas tài nguyên: prompt và ảnh tài nguyên cơ sở; xác nhận phương án tạo trước, rồi xác nhận ảnh được chọn |
+| 7 | [Kế hoạch đạo diễn](references/directorPlan.md) | Canvas của tập hiện tại: chia cảnh, thống kê thoại, cảm xúc, chuyển tiếp và lưu ý |
+| 8 | [Phân tích tài nguyên phát sinh](references/deriveAssets.md) | Canvas tài nguyên: danh sách tài nguyên phát sinh của tập và tài nguyên cha; xác nhận tất cả, một phần, điều chỉnh hoặc bỏ qua |
+| 9 | [Tạo ảnh tài nguyên](references/generateAssets.md) | Canvas tài nguyên: ảnh phát sinh đã được chọn; nếu không cần tài nguyên phát sinh, phải ghi rõ lý do bỏ qua |
+| 10 | [Bảng storyboard](references/storyboardTable.md) | Canvas của tập hiện tại: cảnh → đoạn phim → góc máy, ánh xạ tài nguyên thực tế và kết quả kiểm tra |
+| 11 | [Dựng bảng node storyboard](references/storyboardPanel.md) | Canvas của tập hiện tại: tạo node văn bản, tham chiếu, ảnh/video theo chế độ thực tế; xác nhận số lượng, thời lượng và kết nối |
+| 12 | [Ảnh storyboard](references/storyboardImages.md) | Canvas của tập hiện tại: ảnh storyboard cho chế độ khung hình đầu; chế độ văn bản với nhiều tham chiếu có thể bỏ qua nếu ghi rõ lý do |
+| 13 | [Video và bàn giao](references/videoProduction.md) | Canvas của tập hiện tại: prompt/cấu hình video → kết quả tạo → lựa chọn và bàn giao, với ba điểm xác nhận độc lập |
 
-第 7–13 步每集循环。完成本集后让用户选择继续哪集；不要把“一集完成”理解为全剧已完成。基础资产可按已确认的剧本分批补齐，跨集仍在同一资产画布维护。
+Lặp lại bước 7–13 cho mỗi tập. Sau khi hoàn thành tập hiện tại, cho người dùng chọn tập tiếp theo; không coi “đã xong một tập” là “đã xong toàn bộ phim”. Có thể bổ sung tài nguyên cơ sở theo từng lô dựa trên kịch bản đã xác nhận, nhưng tài nguyên dùng xuyên tập vẫn được duy trì trên cùng một Canvas tài nguyên.
 
-## 知识如何随流程使用
+## Cách dùng kiến thức trong từng giai đoạn
 
-| 工作内容 | 必须读取的知识 | 必须落实的成果 |
+| Nội dung công việc | Kiến thức bắt buộc đọc | Sản phẩm bắt buộc thực hiện |
 | --- | --- | --- |
-| 故事骨架、改编、逐集剧本 | [编剧方法](references/knowledge/scriptCraft.md) + [叙事类型](references/knowledge/narrativeGenres.md) 中本项目类型 | 剧本画布：人物欲望与阻碍、人物弧、情绪推进、信息释放、反转/伏笔及具体改编取舍 |
-| 基础/衍生资产设计与提示词 | [资产设计](references/knowledge/assetDesign.md) + [美术风格](references/knowledge/visualStyles.md) 中所选风格 | 资产画布：角色识别锚点、场景空间与色光、道具结构、变体差异、可执行提示词和采用版本 |
-| 导演规划与分镜 | [镜头设计](references/knowledge/shotCraft.md) + 本项目叙事类型；涉及视觉表达时读取所选美术风格 | 本集画布：镜头意图、信息可见范围、站位视轴、节奏和连续性，落入导演规划及具体镜头 |
-| 分镜图提示词与验收 | [图像提示词](references/knowledge/imagePromptCraft.md) + 所选美术风格 | 本集画布：首帧状态、景别/朝向、实际参考映射、适配模型的提示词与检查结果 |
-| 视频提示词与验收 | [视频提示词](references/knowledge/videoPromptCraft.md) + 所选美术风格的视频表现方法 | 本集画布：按所选模式编写的时序/动作/声音、真实参考绑定、动态连续性与逐段验收 |
+| Khung cốt truyện, chuyển thể, kịch bản từng tập | [Phương pháp viết kịch bản](references/knowledge/scriptCraft.md) + thể loại của dự án trong [Các thể loại tự sự](references/knowledge/narrativeGenres.md) | Canvas kịch bản: mong muốn và trở ngại của nhân vật, hành trình phát triển nhân vật, tiến triển cảm xúc, cách tiết lộ thông tin, cú ngoặt/gợi mở và các lựa chọn chuyển thể cụ thể |
+| Thiết kế và prompt cho tài nguyên cơ sở/phát sinh | [Thiết kế tài nguyên](references/knowledge/assetDesign.md) + phong cách đã chọn trong [Phong cách mỹ thuật](references/knowledge/visualStyles.md) | Canvas tài nguyên: đặc điểm nhận diện nhân vật, không gian và ánh sáng/màu bối cảnh, cấu trúc đạo cụ, điểm khác biệt của các biến thể, prompt có thể thực thi và phiên bản được chọn |
+| Kế hoạch đạo diễn và storyboard | [Thiết kế góc máy](references/knowledge/shotCraft.md) + thể loại tự sự của dự án; đọc thêm phong cách mỹ thuật đã chọn nếu có biểu đạt hình ảnh | Canvas của tập hiện tại: ý đồ góc máy, phạm vi thông tin có thể nhìn thấy, vị trí và trục nhìn, nhịp độ và tính liên tục, được ghi thành kế hoạch đạo diễn và góc máy cụ thể |
+| Prompt ảnh storyboard và nghiệm thu | [Kỹ thuật prompt ảnh](references/knowledge/imagePromptCraft.md) + phong cách mỹ thuật đã chọn | Canvas của tập hiện tại: trạng thái khung hình đầu, cỡ cảnh/hướng nhìn, ánh xạ tham chiếu thực tế, prompt phù hợp mô hình và kết quả kiểm tra |
+| Prompt video và nghiệm thu | [Kỹ thuật prompt video](references/knowledge/videoPromptCraft.md) + phương pháp thể hiện video của phong cách mỹ thuật đã chọn | Canvas của tập hiện tại: trình tự thời gian/hành động/âm thanh theo chế độ chọn, liên kết tham chiếu thực, tính liên tục chuyển động và nghiệm thu từng đoạn |
 
-叙事类型决定如何组织信息、情绪和镜头，美术风格决定形态、材质、色光和表现方式，两者独立选择，不把“悬疑”当画风或把“黏土”当剧情类型。用户已有明确选择就沿用；未选择时依据内容提出有理由的方案，确认后写入项目配置。
+Thể loại tự sự quyết định cách tổ chức thông tin, cảm xúc và góc máy; phong cách mỹ thuật quyết định hình dáng, chất liệu, ánh sáng/màu sắc và cách thể hiện. Hai yếu tố phải được chọn độc lập: không coi “bí ẩn/giật gân” là một phong cách hình ảnh, cũng không coi “đất nặn” là thể loại cốt truyện. Nếu người dùng đã chọn rõ ràng thì giữ nguyên; nếu chưa, hãy đề xuất phương án có lý do dựa trên nội dung và chỉ ghi vào cấu hình dự án sau khi được xác nhận.
 
-知识不是额外的剧情授权。编剧阶段可在用户允许的改编范围内使用结构与反转方法；剧本定稿后，类型技法只指导已确认事件的表现，不得新增红鲱鱼、改结局、交换事件顺序或自行加戏。风格示例也不能覆盖已确认角色身份、世界观和参考图。
+Kiến thức chuyên môn không phải giấy phép để tự thêm tình tiết. Ở giai đoạn viết kịch bản, có thể dùng các phương pháp tổ chức cấu trúc và tạo cú ngoặt trong phạm vi chuyển thể người dùng cho phép. Sau khi kịch bản đã chốt, thủ pháp thể loại chỉ hướng dẫn cách thể hiện các sự kiện đã xác nhận; không được tự thêm tình tiết đánh lạc hướng, thay kết thúc, đảo thứ tự sự kiện hoặc thêm cảnh. Ví dụ về phong cách cũng không được ghi đè danh tính nhân vật, thế giới quan và ảnh tham chiếu đã xác nhận.
 
-通用方法、类型特例和历史模型模板冲突时，先满足用户已确认内容及当前工具真实能力，再采用匹配本项目的方法。旧版单线快节奏、固定镜长、肤色/身高模板等不强套所有项目；商业短剧、群像、留白和特殊变体的适用条件见各知识文件。
+Khi có mâu thuẫn giữa phương pháp chung, ngoại lệ của thể loại và mẫu mô hình cũ, trước tiên phải đáp ứng nội dung đã được người dùng xác nhận cùng khả năng thực tế của công cụ hiện tại, sau đó mới áp dụng phương pháp phù hợp dự án. Không ép mọi dự án theo khuôn phiên bản cũ như một tuyến truyện nhịp nhanh, thời lượng góc máy cố định hoặc mẫu màu da/chiều cao. Điều kiện áp dụng cho phim ngắn thương mại, dàn nhân vật đông, khoảng lặng và biến thể đặc biệt được giải thích trong các tài liệu kiến thức tương ứng.
 
-每次只把**本项目实际采用的方法及结果**写入对应画布：例如本场隐藏哪条线索、角色为何保持侧身、场景主光从哪来、父图哪些特征不变。不要把整本知识文档复制成节点，也不要仅记录“已参考某技能”而没有可审阅的制作决策。
+Mỗi lần chỉ ghi **phương pháp và kết quả thực sự được dự án này áp dụng** lên Canvas tương ứng. Ví dụ: manh mối nào được giấu trong cảnh này, vì sao nhân vật đứng nghiêng người, nguồn sáng chính đến từ đâu và những đặc điểm nào của ảnh gốc phải giữ nguyên. Không sao chép cả tài liệu kiến thức thành node; cũng không chỉ ghi “đã tham khảo kỹ năng X” mà thiếu quyết định sản xuất cụ thể để người dùng xem xét.
 
-## 每一步如何确认
+## Cách xác nhận từng bước
 
-- 先把本阶段完整可审阅结果写入画布，通过工具回读确认已保存；文本较长可按章节、集、场拆节点，不截断正式内容。用 `fitCanvas` 展示本次结果。
-- 在当前画布的「阶段记录」文本节点写明阶段/集号、输入版本、产出节点 ID、检查结果、状态与待决策项。状态区分 `草稿`、`待确认`、`已确认`、`生成中`、`失败`、`待复核`、`已跳过`。
-- 展示画布名称及相对路径、成果摘要、具体问题、下一步内容。用可用的 `askUser` 让用户选择“确认进入下一步 / 修改指定项 / 重做当前步”；没有提问工具时在对话中提问并等待。用户回复之前结束本阶段，不提前创建下阶段制作节点或触发媒体生成。
-- 用户答复后记录其决定。只修改用户指定项，回读修订结果再确认；不要把检查通过、提问取消、跳过问答、超时或沉默视为批准。“继续”只推进当前待确认的下一阶段。
-- 用户已经明确确认的配置、资产或具体生成批次继续有效，不重复索取同一授权。若用户明确授权多集同阶段批次，可以按该范围执行并集中展示；没有这种授权时仍逐集确认，不把整项目目标当作全流程放行。
-- 生成方案应包含实际模型/模式、对象与数量、提示词、参考、时长/画幅/分辨率及已知费用；未知费用标明未知。仅在当前批次范围得到确认后调用生成。失败后先核对真实状态，额外候选、改模型或收费重试不得超出已确认范围。
+- Trước tiên ghi toàn bộ kết quả có thể xem xét của giai đoạn hiện tại vào Canvas, dùng công cụ đọc lại để xác nhận đã lưu. Nếu văn bản dài, có thể chia node theo chương, tập hoặc cảnh, nhưng không cắt ngắn nội dung chính thức. Dùng `fitCanvas` để hiển thị kết quả của lượt này.
+- Trong node văn bản “Nhật ký giai đoạn” trên Canvas hiện tại, ghi rõ giai đoạn/số tập, phiên bản đầu vào, ID node đầu ra, kết quả kiểm tra, trạng thái và các mục đang chờ quyết định. Phân biệt các trạng thái `草稿` (bản nháp), `待确认` (chờ xác nhận), `已确认` (đã xác nhận), `生成中` (đang tạo), `失败` (thất bại), `待复核` (chờ rà soát lại), `已跳过` (đã bỏ qua).
+- Trình bày tên Canvas và đường dẫn tương đối, bản tóm tắt sản phẩm, các vấn đề cụ thể và nội dung bước tiếp theo. Dùng `askUser` nếu khả dụng để người dùng chọn “Xác nhận chuyển bước tiếp / Sửa mục được chỉ định / Làm lại bước hiện tại”. Nếu không có công cụ hỏi, hãy hỏi trong cuộc trò chuyện và chờ phản hồi. Kết thúc giai đoạn tại đây trong lúc chờ người dùng; không tạo sẵn node sản xuất cho giai đoạn sau hoặc kích hoạt tạo phương tiện.
+- Khi người dùng phản hồi, ghi lại quyết định. Chỉ sửa những mục họ chỉ định, đọc lại kết quả sửa rồi mới xác nhận. Không coi kiểm tra đạt, hủy câu hỏi, bỏ qua trao đổi, quá thời gian hoặc im lặng là phê duyệt. Lệnh “tiếp tục” chỉ chuyển đến giai đoạn kế tiếp đang chờ xác nhận.
+- Cấu hình, tài nguyên hoặc lô tạo cụ thể đã được người dùng xác nhận vẫn có hiệu lực; không yêu cầu cấp lại cùng một quyền. Nếu người dùng đã cho phép rõ một lô cùng giai đoạn trên nhiều tập, có thể thực hiện đúng phạm vi đó và trình bày kết quả chung. Nếu chưa được phép, vẫn phải xác nhận từng tập, không coi mục tiêu toàn dự án là cho phép chạy toàn bộ quy trình.
+- Phương án tạo nội dung phải gồm mô hình/chế độ thực tế, đối tượng và số lượng, prompt, tham chiếu, thời lượng/tỷ lệ khung hình/độ phân giải và các chi phí đã biết; chi phí chưa rõ phải ghi là chưa rõ. Chỉ gọi tạo nội dung sau khi đã được xác nhận cho đúng lô hiện tại. Nếu thất bại, trước tiên kiểm tra trạng thái thực tế; không thêm phương án ứng viên, đổi mô hình hoặc thử lại có phí vượt phạm vi đã xác nhận.
 
-## 续作、修改与失败
+## Tiếp tục dự án, chỉnh sửa và xử lý thất bại
 
-每次续作以画布内容及用户确认记录为准，不只依赖聊天记忆。已有结果缺少确认时，先展示已有结果补确认，不重新生成。
+Mỗi lần tiếp tục dự án phải lấy nội dung Canvas và bản ghi xác nhận của người dùng làm căn cứ, không chỉ dựa vào trí nhớ cuộc trò chuyện. Nếu kết quả đã có nhưng chưa được xác nhận, hãy trình bày kết quả đó để xin xác nhận bổ sung, không tạo lại.
 
-改动上游后标出实际受影响的下游：剧本变化检查本集导演/分镜/视频，资产版本变化检查引用该资产的分镜/视频。将它们标为待复核，保留原成果与选用记录，不自动全剧重做。未受影响的确认继续有效。
+Sau khi thay đổi nội dung ở bước trước, đánh dấu những bước sau thực sự bị ảnh hưởng: nếu kịch bản đổi, kiểm tra kế hoạch đạo diễn/storyboard/video của tập đó; nếu phiên bản tài nguyên đổi, kiểm tra storyboard/video đang tham chiếu tài nguyên đó. Đánh dấu chúng là chờ rà soát lại, giữ nguyên sản phẩm cũ và lịch sử lựa chọn, không tự làm lại toàn bộ phim. Các xác nhận không bị ảnh hưởng vẫn có hiệu lực.
 
-来源缺失、目录未归位、工具缺失或写入失败时，说明具体未完成项和恢复步骤。不得将聊天文本、空节点、假文件路径、旧输出或任务已启动包装成阶段完成。只处理用户本次要求的范围；仅咨询或编辑技能时不创建制作项目。
+Nếu thiếu nguồn, thư mục chưa được sắp đúng vị trí, thiếu công cụ hoặc ghi tệp thất bại, hãy nêu cụ thể các mục chưa hoàn tất và các bước khôi phục. Không được trình bày văn bản trò chuyện, node rỗng, đường dẫn giả, đầu ra cũ hoặc tác vụ vừa khởi chạy như thể giai đoạn đã hoàn thành. Chỉ xử lý phạm vi người dùng yêu cầu trong lượt này; khi chỉ tư vấn hoặc chỉnh sửa kỹ năng, không tạo dự án sản xuất.

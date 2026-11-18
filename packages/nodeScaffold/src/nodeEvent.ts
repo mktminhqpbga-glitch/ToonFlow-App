@@ -20,7 +20,7 @@ type NodeEventListeners = {
 const nodeEventsKey = Symbol.for("toonflow.nodeEvents");
 
 export function useNodeEvent(nodeId = useNodeId(), canvas = useVueFlow()) {
-  if (!nodeId) throw new Error("请在节点组件中使用 useNodeEvent()，或传入节点 ID");
+  if (!nodeId) throw new Error("Hãy dùng useNodeEvent() trong component node hoặc truyền ID node");
   const { getSourceValue, getTargetValues } = useNodeInputs(canvas);
   const flow = canvas as ReturnType<typeof useVueFlow> & {
     [nodeEventsKey]?: Map<string, NodeEventListeners>;
@@ -43,7 +43,7 @@ export function useNodeEvent(nodeId = useNodeId(), canvas = useVueFlow()) {
         { deep: true, immediate: true },
       );
     }
-    if (name !== "delete" && name !== "save" && name !== "copy" && name !== "canConnect") throw new Error(`未知节点事件：${name}`);
+    if (name !== "delete" && name !== "save" && name !== "copy" && name !== "canConnect") throw new Error(`Sự kiện node không xác định: ${name}`);
     let events = registry.get(nodeId);
     if (!events) {
       events = { delete: new Set(), save: new Set(), copy: new Set(), canConnect: new Set() };
@@ -72,7 +72,7 @@ export function useNodeEvent(nodeId = useNodeId(), canvas = useVueFlow()) {
         const node = canvas.findNode(nodeId);
         const data: Record<string, unknown> = {};
         for (const callback of [...events?.copy ?? []]) Object.assign(data, await callback());
-        if (canvas.findNode(nodeId) !== node || registry.get(nodeId) !== events) throw new Error("节点已切换，请重新复制");
+        if (canvas.findNode(nodeId) !== node || registry.get(nodeId) !== events) throw new Error("Node đã được chuyển, vui lòng sao chép lại");
         return data;
       })();
     }
@@ -81,7 +81,7 @@ export function useNodeEvent(nodeId = useNodeId(), canvas = useVueFlow()) {
         const node = canvas.findNode(nodeId);
         // 删除前完成已有文件写入，保证立即撤销时能读回最新内容。
         for (const callback of [...events?.save ?? []]) await callback();
-        if (canvas.findNode(nodeId) !== node || registry.get(nodeId) !== events) throw new Error("节点已切换，请重新操作");
+        if (canvas.findNode(nodeId) !== node || registry.get(nodeId) !== events) throw new Error("Node đã được chuyển, vui lòng thực hiện lại");
       }
       for (const callback of [...events?.[args[0]] ?? []]) {
         if (args[0] === "save" && args[1]) await callback(args[1]);

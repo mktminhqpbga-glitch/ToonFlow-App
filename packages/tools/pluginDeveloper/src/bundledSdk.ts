@@ -24,17 +24,17 @@ async function ready() {
 async function unpack() {
   for (const path of [resources, dirname(base), base]) {
     await mkdir(path, { recursive: true });
-    if (!(await lstat(path)).isDirectory()) throw new Error("内置 SDK 缓存目录无效");
+    if (!(await lstat(path)).isDirectory()) throw new Error("Thư mục cache SDK tích hợp không hợp lệ");
   }
   if (await ready()) return directory;
   const bytes = Buffer.from(data, "base64");
-  if (createHash("sha256").update(bytes).digest("hex") !== digest) throw new Error("内置 SDK 的 ZIP 校验失败，请重新安装开发工具");
+  if (createHash("sha256").update(bytes).digest("hex") !== digest) throw new Error("Kiểm tra ZIP của SDK tích hợp thất bại; hãy cài lại công cụ phát triển");
   const stage = await mkdtemp(join(base, "extract"));
   try {
     for (const [name, content] of Object.entries(unzipSync(bytes))) {
       const output = resolve(stage, name);
       const offset = relative(stage, output);
-      if (!offset || offset === ".." || offset.startsWith(`..${sep}`) || isAbsolute(offset)) throw new Error("内置 SDK 文件超出缓存目录");
+      if (!offset || offset === ".." || offset.startsWith(`..${sep}`) || isAbsolute(offset)) throw new Error("Tệp SDK tích hợp nằm ngoài thư mục cache");
       await mkdir(dirname(output), { recursive: true });
       await writeAtomic(output, content, { exclusive: true });
     }

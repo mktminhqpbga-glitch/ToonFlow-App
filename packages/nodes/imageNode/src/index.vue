@@ -11,22 +11,22 @@
     :style="{ width: previewUrl && imageWidth ? `${imageWidth + 18}px` : undefined }">
     <template v-if="editor?.mode" #top><div ref="paintToolbar" /></template>
     <template #topActions>
-      <el-button class="panoramaButton" :icon="IconPanoramaHorizontal" :disabled="uploading || editor?.busy || lighting?.generating || multiAngle?.generating || gridSplit?.splitting || inpaintPrompt?.creating || panorama?.busy || !previewUrl" text title="全景图" aria-label="全景图" @click.stop="panorama?.open($event)">全景图<icon-chevron-down class="menuChevron" :size="14" /></el-button>
-      <el-button :icon="IconBrush" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="局部重绘" aria-label="局部重绘" @click.stop="startEditor('inpaint')">局部重绘</el-button>
-      <el-button :icon="IconSun" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="打光" aria-label="打光" @click.stop="openLighting">打光</el-button>
-      <el-button :icon="IconCameraRotate" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="多角度" aria-label="多角度" @click.stop="openMultiAngle">多角度</el-button>
-      <el-button :icon="IconLayoutGrid" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl" :loading="gridSplit?.splitting" text title="宫格切分" aria-label="宫格切分" @click.stop="gridSplit?.open($event)">宫格切分</el-button>
+      <el-button class="panoramaButton" :icon="IconPanoramaHorizontal" :disabled="uploading || editor?.busy || lighting?.generating || multiAngle?.generating || gridSplit?.splitting || inpaintPrompt?.creating || panorama?.busy || !previewUrl" text title="Ảnh toàn cảnh" aria-label="Ảnh toàn cảnh" @click.stop="panorama?.open($event)" />
+      <el-button :icon="IconBrush" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="Vẽ lại một vùng" aria-label="Vẽ lại một vùng" @click.stop="startEditor('inpaint')" />
+      <el-button :icon="IconSun" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="Ánh sáng" aria-label="Ánh sáng" @click.stop="openLighting" />
+      <el-button :icon="IconCameraRotate" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="Nhiều góc nhìn" aria-label="Nhiều góc nhìn" @click.stop="openMultiAngle" />
+      <el-button :icon="IconLayoutGrid" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl" :loading="gridSplit?.splitting" text title="Chia ảnh dạng lưới" aria-label="Chia ảnh dạng lưới" @click.stop="gridSplit?.open($event)" />
       <el-button
         :icon="IconTransfer"
         :loading="uploading"
         :disabled="lighting?.generating || multiAngle?.generating || panorama?.busy"
         text
-        title="替换图片"
-        aria-label="替换图片"
-        @click.stop="fileInput?.click()">替换图片</el-button>
+        title="Thay ảnh"
+        aria-label="Thay ảnh"
+        @click.stop="fileInput?.click()" />
     </template>
     <template #topRightActions>
-      <el-button :icon="IconPencil" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="标记" aria-label="标记" @click.stop="startEditor('mark')" />
+      <el-button :icon="IconPencil" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="Đánh dấu" aria-label="Đánh dấu" @click.stop="startEditor('mark')" />
     </template>
     <div class="imageContent nopan" :class="{ empty: !outputFile }">
       <imageEditor
@@ -35,20 +35,20 @@
         :src="previewUrl"
         :toolbarTarget="paintToolbar"
         :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy"
-        alt="节点图片"
+        alt="Ảnh của node"
         @load="resizeImage"
-        @error="ElMessage.error('无法预览该图片')" />
-      <input ref="fileInput" class="fileInput" type="file" accept="image/*" aria-label="选择图片" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @change="uploadImage" />
+        @error="ElMessage.error('Không thể xem trước ảnh này')" />
+      <input ref="fileInput" class="fileInput" type="file" accept="image/*" aria-label="Chọn ảnh" :disabled="uploading || lighting?.generating || multiAngle?.generating || panorama?.busy" @change="uploadImage" />
       <el-button
         v-if="!outputFile"
         class="nodrag nopan"
         :icon="IconUpload"
         text
         :loading="uploading"
-        title="上传图片"
-        aria-label="上传图片"
+        title="Tải ảnh lên"
+        aria-label="Tải ảnh lên"
         @dblclick.stop
-        @click.stop="fileInput?.click()">上传</el-button>
+        @click.stop="fileInput?.click()">Tải lên</el-button>
     </div>
     <template v-if="lightingVisible || multiAngleVisible || editor?.mode === 'inpaint'" #bottom>
       <div v-if="lightingVisible" ref="lightingTarget" />
@@ -69,9 +69,8 @@
 </template>
 
 <script setup lang="ts">
-import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, nextTick, ref } from "vue";
-import { IconPhoto, IconUpload, IconTransfer, IconLayoutGrid, IconBrush, IconPencil, IconSun, IconCameraRotate, IconPanoramaHorizontal, IconChevronDown } from "@tabler/icons-vue";
+import { IconPhoto, IconUpload, IconTransfer, IconLayoutGrid, IconBrush, IconPencil, IconSun, IconCameraRotate, IconPanoramaHorizontal } from "@tabler/icons-vue";
 import { ElButton, ElImageViewer, ElMessage } from "element-plus";
 import { nodeSkeleton, nodeTools, useNode, z, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { getMediaMimeType } from "@toonflow/node-shared/mediaTypes";
@@ -87,13 +86,12 @@ defineOptions({
   inheritAttrs: false,
   icon: IconPhoto,
   handles: [
-    { id: "in", type: "target", dataType: "IMAGE", label: "来源图片" },
-    { id: "image", type: "source", dataType: "IMAGE", label: "图片输出" },
+    { id: "in", type: "target", dataType: "IMAGE", label: "Ảnh nguồn" },
+    { id: "image", type: "source", dataType: "IMAGE", label: "Đầu ra ảnh" },
   ] satisfies NodeHandle[],
 });
-const vietnamese = useNodeVietnamese();
 const { node, nodeProps, outputs, nodeEvent, files, updateNodeInternals } = useNode({
-  label: () => { void vietnamese.value; return nodeText("图片", "Hình ảnh"); },
+  label: "Ảnh",
 });
 const fileInput = ref<HTMLInputElement>();
 const gridSplit = ref<InstanceType<typeof imageGridSplit>>();
@@ -115,17 +113,17 @@ const imageWidth = ref(0);
 const outputFile = computed(() => outputs.value.image?.dataType === "IMAGE" ? outputs.value.image.value : undefined);
 const previewUrl = files.useFileUrl(
   outputFile,
-  (error) => showError(error, "图片读取失败")
+  (error) => showError(error, "Lỗi đọc ảnh")
 );
 const imagePreviewUrl = computed(() => editor.value?.previewSrc || previewUrl.value);
 
 nodeEvent.on("save", reason => {
   // ACT: 普通保存不等待打光和多角度生成，后台任务继续由原画布实例承载。
   if (uploading.value || editor.value?.busy || inpaintPrompt.value?.creating || panorama.value?.busy
-    || (reason === "reload" && (lighting.value?.generating || multiAngle.value?.generating))) throw new Error("图片处理中，请完成后再切换或刷新节点");
+    || (reason === "reload" && (lighting.value?.generating || multiAngle.value?.generating))) throw new Error("Đang xử lý ảnh, hãy hoàn tất trước khi chuyển hoặc làm mới node");
 });
 nodeEvent.on("delete", () => {
-  if (uploading.value || editor.value?.busy || inpaintPrompt.value?.creating || lighting.value?.generating || multiAngle.value?.generating || panorama.value?.busy) throw new Error("图片处理中，请稍后删除节点");
+  if (uploading.value || editor.value?.busy || inpaintPrompt.value?.creating || lighting.value?.generating || multiAngle.value?.generating || panorama.value?.busy) throw new Error("Đang xử lý ảnh, hãy xóa node sau");
   uploading.value = true;
   return files.removeNodeFiles().finally(() => {
     uploading.value = false;
@@ -134,19 +132,19 @@ nodeEvent.on("delete", () => {
 
 nodeTools.register({
   name: "setImage",
-  description: "选择工作区内已有的图片文件作为此节点的输出，path 使用工作区相对路径",
+  description: "Chọn tệp ảnh đã có trong không gian làm việc làm đầu ra cho node này; path dùng đường dẫn tương đối của không gian làm việc",
   parameters: z.strictObject({
     path: z.string().min(1).max(4096),
     mimeType: z.string().regex(/^image\/[a-zA-Z0-9.+-]+$/),
   }),
   async execute({ path, mimeType }, { signal }) {
     signal?.throwIfAborted();
-    if (uploading.value || editor.value?.busy || inpaintPrompt.value?.creating || lighting.value?.generating || multiAngle.value?.generating || panorama.value?.busy) throw new Error("图片处理中，请稍后重试");
+    if (uploading.value || editor.value?.busy || inpaintPrompt.value?.creating || lighting.value?.generating || multiAngle.value?.generating || panorama.value?.busy) throw new Error("Đang xử lý ảnh, hãy thử lại sau");
     uploading.value = true;
     try {
       const content = await files.getWorkspaceFiles().read(path);
       signal?.throwIfAborted();
-      if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("图片不能为空且不能超过 100 MB");
+      if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("Ảnh không được rỗng hoặc vượt quá 100 MB");
       outputs.value.image = { dataType: "IMAGE", value: { url: path, mimeType } };
       return outputs.value.image;
     } finally {
@@ -191,7 +189,7 @@ function startEditor(mode: "inpaint" | "mark") {
 }
 
 async function createInpaint(input: InpaintDraftInput, signal: AbortSignal) {
-  if (!editor.value) throw new Error("请先进入局部重绘");
+  if (!editor.value) throw new Error("Hãy mở chế độ vẽ lại một vùng");
   await editor.value.createInpaint(input, signal);
 }
 
@@ -201,15 +199,15 @@ async function uploadImage(event: Event) {
   input.value = "";
   if (!file || uploading.value || editor.value?.busy || inpaintPrompt.value?.creating || lighting.value?.generating || multiAngle.value?.generating || panorama.value?.busy) return;
   const mimeType = getMediaMimeType(file);
-  if (!mimeType.startsWith("image/")) return void ElMessage.error("请选择图片文件");
-  if (!file.size || file.size > 100 * 1024 * 1024) return void ElMessage.error("图片不能为空且不能超过 100 MB");
+  if (!mimeType.startsWith("image/")) return void ElMessage.error("Hãy chọn tệp ảnh");
+  if (!file.size || file.size > 100 * 1024 * 1024) return void ElMessage.error("Ảnh không được rỗng hoặc vượt quá 100 MB");
   uploading.value = true;
   try {
     const url = await files.uploadFile(file);
     // ACT: 复制节点可能仍引用旧图片，替换输出不删除共享文件。
     outputs.value.image = { dataType: "IMAGE", value: { url, mimeType } };
   } catch (error) {
-    showError(error, "图片替换失败");
+    showError(error, "Thay ảnh thất bại");
   } finally {
     uploading.value = false;
   }
@@ -222,10 +220,6 @@ function showError(error: unknown, fallback: string) {
 </script>
 
 <style scoped lang="scss">
-.panoramaButton {
-  &[aria-expanded="true"] .menuChevron { transform: rotate(180deg); }
-}
-
 .imageContent {
   min-height: 144px;
 

@@ -1,66 +1,66 @@
 <template>
   <div class="accountPanel">
     <div v-if="account" class="overview" :aria-busy="overviewLoading">
-      <section class="profileCard" aria-label="当前账户">
+      <section class="profileCard" aria-label="Tài khoản hiện tại">
         <div class="profileIcon"><img :src="logoUrl" alt="Toonflow" /></div>
         <div class="profileInfo">
-          <h3>{{ account.nickname || "Toonflow 账号" }}</h3>
+          <h3>{{ account.nickname || "Tài khoản Toonflow" }}</h3>
           <p v-if="account.contact">{{ account.contact }}</p>
         </div>
         <div class="profileActions">
-          <el-button tag="a" href="https://api.toonflow.net/console/preview" target="_blank" rel="noopener noreferrer" text type="primary" :icon="IconExternalLink">更多账号信息</el-button>
-          <el-button text :icon="IconRefresh" :loading="overviewLoading" :disabled="loggingOut" @click="refreshAccount">刷新</el-button>
-          <el-button text type="danger" :icon="IconLogout" :loading="loggingOut" @click="logout">退出登录</el-button>
+          <el-button tag="a" href="https://api.toonflow.net/console/preview" target="_blank" rel="noopener noreferrer" text type="primary" :icon="IconExternalLink">Thông tin tài khoản khác</el-button>
+          <el-button text :icon="IconRefresh" :loading="overviewLoading" :disabled="loggingOut" @click="refreshAccount">Làm mới</el-button>
+          <el-button text type="danger" :icon="IconLogout" :loading="loggingOut" @click="logout">Đăng xuất</el-button>
         </div>
       </section>
 
       <div class="accountTabs">
-        <el-segmented v-model="accountTab" class="tabSwitch" :options="accountOptions" ariaLabel="账号页面" />
+        <el-segmented v-model="accountTab" class="tabSwitch" :options="accountOptions" ariaLabel="Trang tài khoản" />
         <div v-show="accountTab === 'overview'" class="overviewContent">
           <el-alert v-if="overviewError" :title="overviewError" type="error" :closable="false" showIcon />
 
           <div class="summaryGrid">
-            <section class="summaryCard" aria-label="本金余额">
-              <div class="summaryLabel"><span>本金余额</span><icon-wallet :size="20" aria-hidden="true" /></div>
+            <section class="summaryCard" aria-label="Số dư chính">
+              <div class="summaryLabel"><span>Số dư chính</span><icon-wallet :size="20" aria-hidden="true" /></div>
               <strong>{{ formatMoney(previewData?.totalPoints) }}</strong>
-              <el-button class="rechargeButton" type="primary" :icon="IconCreditCard" @click="accountTab = 'wallet'">充值</el-button>
+              <el-button class="rechargeButton" type="primary" :icon="IconCreditCard" @click="accountTab = 'wallet'">Nạp tiền</el-button>
             </section>
-            <section class="summaryCard" aria-label="可用赠送金">
-              <div class="summaryLabel"><span>可用赠送金</span><icon-gift :size="20" aria-hidden="true" /></div>
+            <section class="summaryCard" aria-label="Ưu đãi khả dụng">
+              <div class="summaryLabel"><span>Ưu đãi khả dụng</span><icon-gift :size="20" aria-hidden="true" /></div>
               <strong>{{ formatMoney(previewData?.bonusBalance) }}</strong>
             </section>
-            <section class="summaryCard" aria-label="累计消费金额">
-              <div class="summaryLabel"><span>累计消费金额</span><icon-chart-bar :size="20" aria-hidden="true" /></div>
+            <section class="summaryCard" aria-label="Tổng số tiền đã sử dụng">
+              <div class="summaryLabel"><span>Tổng số tiền đã sử dụng</span><icon-chart-bar :size="20" aria-hidden="true" /></div>
               <strong>{{ formatMoney(previewData?.totalConsumption) }}</strong>
             </section>
           </div>
 
           <section class="usageCard" aria-labelledby="usageTitle">
-            <h3 id="usageTitle">用量概览（今日）</h3>
+            <h3 id="usageTitle">Tổng quan sử dụng (hôm nay)</h3>
             <dl class="usageMetrics">
               <div>
-                <dt>API 请求次数</dt>
+                <dt>Số lần gọi API</dt>
                 <dd>{{ usageStatistics?.summary.totalRequests ?? "" }}</dd>
               </div>
               <div>
-                <dt>消费金额</dt>
+                <dt>Chi phí sử dụng</dt>
                 <dd>{{ formatMoney(usageStatistics?.summary.totalAmount) }}</dd>
               </div>
             </dl>
             <div class="chartHeader">
-              <span>消费金额（CNY）</span>
+              <span>Số tiền sử dụng (CNY)</span>
             </div>
             <accountChart
               kind="bar"
               :dates="usageStatistics?.dates ?? []"
               :series="usageStatistics?.series ?? []"
-              label="按模型统计消费金额"
+              label="Chi phí theo mô hình"
               :loading="usageLoading" />
           </section>
 
           <section class="trendCard" aria-labelledby="trendTitle">
-            <h3 id="trendTitle">余额消耗趋势（最近14天）</h3>
-            <accountChart kind="line" :dates="trendData.dates" :series="trendData.series" label="最近14天的余额消耗趋势" :loading="previewLoading" />
+            <h3 id="trendTitle">Biến động số dư (14 ngày gần nhất)</h3>
+            <accountChart kind="line" :dates="trendData.dates" :series="trendData.series" label="Biểu đồ biến động số dư trong 14 ngày gần nhất" :loading="previewLoading" />
           </section>
         </div>
         <wallet
@@ -92,57 +92,57 @@
       </div>
     </div>
 
-    <section v-else class="authSection" aria-label="登录与注册">
+    <section v-else class="authSection" aria-label="Đăng nhập và đăng ký">
       <div class="authContent">
         <header class="authHeader">
           <div class="authLogo"><img :src="logoUrl" alt="Toonflow" /></div>
           <div class="authInfo">
             <h3>Toonflow</h3>
-            <p>登录后直接使用 Toonflow</p>
+            <p>Đăng nhập để sử dụng Toonflow</p>
           </div>
-          <el-segmented v-model="authTab" class="authTabs" :options="authOptions" :disabled="submitting" block aria-label="登录或注册" />
+          <el-segmented v-model="authTab" class="authTabs" :options="authOptions" :disabled="submitting" block aria-label="Đăng nhập hoặc đăng ký" />
         </header>
         <el-form v-if="authTab === 'login'" class="authForm" labelPosition="top" :disabled="submitting" @submit.prevent="submitLogin">
-          <el-form-item label="手机号或邮箱">
-            <el-input v-model="loginForm.account" autocomplete="username" placeholder="请输入手机号或邮箱" />
+          <el-form-item label="Số điện thoại hoặc email">
+            <el-input v-model="loginForm.account" autocomplete="username" placeholder="Nhập số điện thoại hoặc email" />
           </el-form-item>
-          <el-form-item label="密码">
-            <el-input v-model="loginForm.password" type="password" autocomplete="current-password" showPassword placeholder="请输入密码" />
+          <el-form-item label="Mật khẩu">
+            <el-input v-model="loginForm.password" type="password" autocomplete="current-password" showPassword placeholder="Nhập mật khẩu" />
           </el-form-item>
-          <el-form-item label="图形验证码">
+          <el-form-item label="Mã xác minh hình ảnh">
             <div class="verificationRow">
-              <el-input v-model="loginForm.captcha" autocomplete="off" placeholder="请输入计算结果" aria-label="图形验证码" />
-              <el-button class="captchaButton" :class="{ captchaLoaded: !!captchaImage }" aria-label="刷新图形验证码" :icon="captchaImage ? undefined : IconRefresh" :loading="captchaLoading" @click="refreshCaptcha">
-                <img v-if="captchaImage" :src="captchaImage" alt="图形验证码" />
-                <span v-else>获取验证码</span>
+              <el-input v-model="loginForm.captcha" autocomplete="off" placeholder="Nhập kết quả phép tính" aria-label="Mã xác minh hình ảnh" />
+              <el-button class="captchaButton" :class="{ captchaLoaded: !!captchaImage }" aria-label="Làm mới mã xác minh hình ảnh" :icon="captchaImage ? undefined : IconRefresh" :loading="captchaLoading" @click="refreshCaptcha">
+                <img v-if="captchaImage" :src="captchaImage" alt="Mã xác minh hình ảnh" />
+                <span v-else>Lấy mã xác minh</span>
               </el-button>
             </div>
           </el-form-item>
           <div class="authActions">
-            <el-button link type="primary" @click="forgotPasswordVisible = true">忘记密码</el-button>
-            <el-button class="submitButton" type="primary" nativeType="submit" :loading="submitting" :disabled="!loginReady">登录</el-button>
+            <el-button link type="primary" @click="forgotPasswordVisible = true">Quên mật khẩu</el-button>
+            <el-button class="submitButton" type="primary" nativeType="submit" :loading="submitting" :disabled="!loginReady">Đăng nhập</el-button>
           </div>
         </el-form>
         <el-form v-else class="authForm" labelPosition="top" :disabled="submitting" @submit.prevent="submitRegister">
-          <el-form-item label="手机号">
-            <el-input v-model="registerForm.phone" autocomplete="tel" placeholder="请输入手机号" />
+          <el-form-item label="Số điện thoại">
+            <el-input v-model="registerForm.phone" autocomplete="tel" placeholder="Nhập số điện thoại" />
           </el-form-item>
-          <el-form-item label="昵称">
-            <el-input v-model="registerForm.nickname" autocomplete="nickname" placeholder="请输入昵称" />
+          <el-form-item label="Biệt danh">
+            <el-input v-model="registerForm.nickname" autocomplete="nickname" placeholder="Nhập biệt danh" />
           </el-form-item>
-          <el-form-item label="密码">
-            <el-input v-model="registerForm.password" type="password" autocomplete="new-password" showPassword placeholder="请输入密码" />
+          <el-form-item label="Mật khẩu">
+            <el-input v-model="registerForm.password" type="password" autocomplete="new-password" showPassword placeholder="Nhập mật khẩu" />
           </el-form-item>
-          <el-form-item label="确认密码" :error="registerForm.confirmPassword && registerForm.confirmPassword !== registerForm.password ? '两次输入的密码不一致' : ''">
-            <el-input v-model="registerForm.confirmPassword" type="password" autocomplete="new-password" showPassword placeholder="请再次输入密码" />
+          <el-form-item label="Xác nhận mật khẩu" :error="registerForm.confirmPassword && registerForm.confirmPassword !== registerForm.password ? 'Mật khẩu nhập lại không khớp' : ''">
+            <el-input v-model="registerForm.confirmPassword" type="password" autocomplete="new-password" showPassword placeholder="Nhập lại mật khẩu" />
           </el-form-item>
-          <el-form-item label="短信验证码">
+          <el-form-item label="Mã xác minh SMS">
             <div class="verificationRow">
-              <el-input v-model="registerForm.verificationCode" autocomplete="one-time-code" placeholder="请输入短信验证码" aria-label="短信验证码" />
+              <el-input v-model="registerForm.verificationCode" autocomplete="one-time-code" placeholder="Nhập mã xác minh SMS" aria-label="Mã xác minh SMS" />
               <smsCodeButton :phone="registerForm.phone" :disabled="submitting" :visible="visible" />
             </div>
           </el-form-item>
-          <el-button class="submitButton" type="primary" nativeType="submit" :loading="submitting" :disabled="!registerReady">注册</el-button>
+          <el-button class="submitButton" type="primary" nativeType="submit" :loading="submitting" :disabled="!registerReady">Đăng ký</el-button>
         </el-form>
       </div>
     </section>
@@ -193,7 +193,7 @@ const walletPanel = ref<InstanceType<typeof wallet>>();
 const walletLoading = ref(false);
 const subAccountsPanel = ref<InstanceType<typeof subAccounts>>();
 const subAccountsLoading = ref(false);
-const accountOptions = [{ label: "总览", value: "overview" }, { label: "钱包", value: "wallet" }, { label: "任务记录", value: "taskRecords" }, { label: "凭证", value: "subAccounts" }, { label: "模型列表", value: "models" }];
+const accountOptions = [{ label: "Tổng quan", value: "overview" }, { label: "Ví", value: "wallet" }, { label: "Lịch sử tác vụ", value: "taskRecords" }, { label: "Thông tin xác thực", value: "subAccounts" }, { label: "Danh sách mô hình", value: "models" }];
 const previewData = ref<PreviewData>();
 const usageStatistics = ref<UsageStatistics>();
 const previewLoading = ref(false);
@@ -201,7 +201,7 @@ const usageLoading = ref(false);
 const overviewLoading = computed(() => previewLoading.value || usageLoading.value || toonflowProviderLoading.value || modelsLoading.value || recordsLoading.value || walletLoading.value || subAccountsLoading.value);
 const previewError = ref("");
 const usageError = ref("");
-const overviewError = computed(() => [...new Set([previewError.value, usageError.value, toonflowProviderError.value].filter(Boolean))].join("；"));
+const overviewError = computed(() => [...new Set([previewError.value, usageError.value, toonflowProviderError.value].filter(Boolean))].join("; "));
 const trendData = computed(() => {
   const daily = [...(previewData.value?.daily ?? [])].sort((left, right) => left.date.localeCompare(right.date));
   return { dates: daily.map(item => item.date), series: [{ name: translate("消费金额"), data: daily.map(item => item.total) }] };
@@ -209,7 +209,7 @@ const trendData = computed(() => {
 let previewRequest: AbortController | undefined;
 let usageRequest: AbortController | undefined;
 const authTab = ref("login");
-const authOptions = [{ label: "登录", value: "login" }, { label: "注册", value: "register" }];
+const authOptions = [{ label: "Đăng nhập", value: "login" }, { label: "Đăng ký", value: "register" }];
 const loginForm = reactive({ account: "", password: "", captcha: "" });
 const registerForm = reactive({ phone: "", nickname: "", password: "", confirmPassword: "", verificationCode: "" });
 const captchaImage = ref("");
@@ -315,7 +315,7 @@ async function refreshCaptcha() {
     captchaImage.value = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.svg)}`;
     originalCaptcha.value = result.captcha;
   } catch (error) {
-    if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "获取图形验证码失败");
+    if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Không lấy được mã xác minh hình ảnh");
   } finally {
     if (captchaRequest === request) captchaLoading.value = false;
   }
@@ -336,12 +336,12 @@ async function submitLogin() {
     });
     const saved = await saveSettings(() => request.signal.aborted ? undefined : { toonflowAccount: result });
     if (saved && !request.signal.aborted) {
-      ElMessage.success("登录成功");
+      ElMessage.success("Đăng nhập thành công");
       emit("loggedIn");
     }
   } catch (error) {
     if (!request.signal.aborted) {
-      ElMessage.error(error instanceof Error ? error.message : "登录失败");
+      ElMessage.error(error instanceof Error ? error.message : "Đăng nhập thất bại");
       void refreshCaptcha();
     }
   } finally {
@@ -367,9 +367,9 @@ async function submitRegister() {
     clearForms();
     loginForm.account = phone;
     authTab.value = "login";
-    ElMessage.success("注册成功，请登录");
+    ElMessage.success("Đăng ký thành công, hãy đăng nhập");
   } catch (error) {
-    if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "注册失败");
+    if (!request.signal.aborted) ElMessage.error(error instanceof Error ? error.message : "Đăng ký thất bại");
   } finally {
     if (authRequest === request) submitting.value = false;
   }
@@ -380,9 +380,9 @@ async function logout() {
   loggingOut.value = true;
   try {
     await saveSettings(() => ({ toonflowAccount: null }));
-    ElMessage.success("已退出登录");
+    ElMessage.success("Đã đăng xuất");
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "退出登录失败");
+    ElMessage.error(error instanceof Error ? error.message : "Đăng xuất thất bại");
   } finally {
     loggingOut.value = false;
   }

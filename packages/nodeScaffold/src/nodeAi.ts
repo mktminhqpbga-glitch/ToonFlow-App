@@ -13,12 +13,11 @@ export type NodeAiModel = {
   modelId: string;
   routeId?: string;
   label: string;
-  protocol: "openai-completions" | "openai-responses" | "anthropic-messages";
+  protocol: "openai-completions" | "openai-responses" | "anthropic-messages" | "chrome";
   contextWindow?: number;
   maxOutputTokens?: number;
 };
 export type NodeMediaModel = Omit<MediaModel, "mode"> & {
-  availability?: "ready" | "configured" | "needsConfiguration";
   routeId?: string;
   mode?: (string | string[])[];
 };
@@ -43,14 +42,16 @@ export function findNodeModel<T extends ModelIdentity>(models: readonly T[], sel
   } else identity = selection;
   if (!identity || typeof identity.providerId !== "string" || !identity.providerId
     || typeof identity.modelId !== "string" || !identity.modelId) return;
-  return models.find(model => model.providerId === identity.providerId && (model.modelId === identity.modelId
+  const modelId = identity.providerId === "aiChrome" && identity.modelId === "museImage" ? "museChrome" : identity.modelId;
+  return models.find(model => model.providerId === identity.providerId && (model.modelId === modelId
     || identity.providerId === "multiTenant" && model.routeId === identity.modelId));
 }
 
 export function useNodeModelSelection<T extends ModelIdentity>(models: MaybeRefOrGetter<readonly T[]>, selection: Ref<string>) {
   const selected = computed(() => findNodeModel(toValue(models), selection.value));
   watch(selected, model => {
-    if (!model || model.providerId !== "multiTenant") return;
+    if (!model || (model.providerId !== "multiTenant"
+      && !(model.providerId === "aiChrome" && selection.value === JSON.stringify(["aiChrome", "museImage"])))) return;
     const key = getNodeModelKey(model);
     if (selection.value !== key) selection.value = key;
   }, { immediate: true, flush: "sync" });
@@ -77,6 +78,9 @@ export type NodeAudioResult = { path: string; mimeType: string; mediaType: "audi
 export type NodeAiRequest = {
   providerId: string;
   modelId: string;
+  chromeTabId?: number;
+  /** Exact AI-Bridge profile/tab/document identity encoded as JSON by the tab picker. */
+  bridgeTarget?: string;
   prompt: string;
   systemPrompt?: string;
   directory?: string;
@@ -101,7 +105,7 @@ export type NodeAiTool = {
 
 async function readResult<T>(response: Response): Promise<T> {
   const result = await response.json();
-  if (!response.ok || result.code !== 200) throw Object.assign(new Error(result.message || `AI 请求失败（HTTP ${response.status}），请稍后重试。`), { status: response.status });
+  if (!response.ok || result.code !== 200) throw Object.assign(new Error(result.message || `Yêu cầu AI thất bại (HTTP  ${response.status}), vui lòng thử lại sau.`), { status: response.status });
   return result.data;
 }
 
@@ -174,7 +178,7 @@ function createMediaTasks() {
               const task = pending.get(id);
               if (!task || task !== waitingTasks.get(id)) continue;
               const item = byId.get(id);
-              if (!item) throw new Error("生成任务响应不完整，请重试");
+              if (!item) throw new Error("Phản hồi tác vụ tạo nội dung chưa đầy đủ, vui lòng thử lại");
               task.resume = false;
               task.failedAt = undefined;
               try { await task.onStatus?.(item); }
@@ -187,7 +191,7 @@ function createMediaTasks() {
               if (!task || task !== waitingTasks.get(id)) continue;
               // ACT: 状态查询允许 90 秒临时断线，不因几次快速失败取消已经提交的生成。
               task.failedAt ??= Date.now();
-              if (task.failedAt + 90000 <= Date.now()) task.fail(Object.assign(error instanceof Error ? error : new Error("生成状态查询中断"), { mediaTaskDisconnected: true }));
+              if (task.failedAt + 90000 <= Date.now()) task.fail(Object.assign(error instanceof Error ? error : new Error("Kết nối truy vấn trạng thái tạo nội dung bị gián đoạn"), { mediaTaskDisconnected: true }));
             }
           }
         }
@@ -200,7 +204,7 @@ function createMediaTasks() {
 
   function wait(directory: string, taskId: string, signal: AbortSignal, options: NodeMediaTaskOptions = {}, resume = false) {
     signal.throwIfAborted();
-    if (pending.has(taskId)) throw new Error("生成任务已在当前窗口查询，请等待查询结束");
+    if (pending.has(taskId)) throw new Error("Tác vụ tạo nội dung đang được kiểm tra trong cửa sổ này, vui lòng chờ kết quả");
     return new Promise<NonNullable<MediaTaskResult["data"]>>((resolve, reject) => {
       const cleanup = () => {
         if (pending.get(taskId) === task) pending.delete(taskId);
@@ -215,7 +219,7 @@ function createMediaTasks() {
         finish(result) {
           cleanup();
           if (result.code === 200 && result.data) resolve(result.data);
-          else reject(new Error(result.message || "媒体生成失败"));
+          else reject(new Error(result.message || "Tạo media thất bại"));
         },
         fail(error) { cleanup(); reject(error); },
       };
@@ -233,26 +237,72 @@ async function requestModel(input: NodeAiRequest, context: Context, model: Model
   const stream = createAssistantMessageEventStream();
   try {
     signal.throwIfAborted();
+    if (providerId === "aiBridge") {
+      if (!input.bridgeTarget) throw new Error("Hãy chọn đúng AI và tab AI-Bridge trong MacFlow trước khi gửi.");
+      let identity: unknown;
+      try { identity = JSON.parse(input.bridgeTarget); }
+      catch { throw new Error("Định danh tab AI-Bridge không hợp lệ. Hãy chọn lại tab."); }
+      if (!Array.isArray(identity) || identity.length !== 4
+        || typeof identity[0] !== "string" || typeof identity[1] !== "number"
+        || typeof identity[2] !== "string" || typeof identity[3] !== "string") {
+        throw new Error("Phiên tab AI-Bridge không hợp lệ. Hãy chọn lại tab.");
+      }
+      if (context.tools?.length) throw new Error("AI-Bridge hiện chỉ hỗ trợ tác vụ văn bản, chưa cho phép gọi công cụ tự động.");
+      if (references?.some(ref => ref.dataType !== "STRING")) throw new Error("AI-Bridge chưa hỗ trợ gửi file hoặc media tham chiếu. Hãy chọn mô hình khác.");
+      const instructions = references?.filter(ref => ref.dataType === "STRING").map(ref => ref.value).join("\n\n") ?? "";
+      const messages = context.messages.map(message => {
+        if (message.role !== "user" && message.role !== "assistant") throw new Error("AI-Bridge chưa hỗ trợ loại tin nhắn hệ thống/công cụ này.");
+        const raw = message.content;
+        if (typeof raw === "string") return { role: message.role, content: raw };
+        if (!Array.isArray(raw) || raw.some(part => part.type !== "text")) throw new Error("AI-Bridge chỉ hỗ trợ nội dung văn bản, không chuyển ảnh hoặc file âm thầm.");
+        return { role: message.role, content: raw.map(part => part.type === "text" ? part.text : "").join("\n") };
+      });
+      if (context.systemPrompt) messages.unshift({ role: "user", content: `System instruction:\n${context.systemPrompt}` });
+      if (instructions) messages.push({ role: "user", content: instructions });
+      const response = await fetch("/api/aiBridge/chat", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-toonflow-workspace": "1" },
+        body: JSON.stringify({ model: `bridge-${modelId}`, messages, target: {
+          profileInstanceId: identity[0], tabId: identity[1], documentToken: identity[2], url: identity[3],
+        } }), signal,
+      });
+      const envelope = await response.json();
+      if (!response.ok || (typeof envelope?.code === "number" && envelope.code !== 200)) {
+        throw new Error(envelope?.message || envelope?.error?.message || `AI-Bridge HTTP ${response.status}. Kiểm tra tab trước khi gửi lại.`);
+      }
+      const data = envelope?.data ?? envelope;
+      const text = data?.choices?.[0]?.message?.content;
+      if (typeof text !== "string") throw new Error("AI-Bridge chưa xác nhận kết quả văn bản. Kiểm tra tab trước khi gửi lại.");
+      onEvent?.({ type: "text", delta: text });
+      const message: AssistantMessage = {
+        role: "assistant", api: model.api, provider: model.provider, model: model.id, timestamp: Date.now(),
+        stopReason: "stop", content: [{ type: "text", text }],
+        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      };
+      stream.push({ type: "start", partial: { ...message, content: [], stopReason: "pending" } });
+      stream.push({ type: "done", reason: "stop", message });
+      return stream;
+    }
     const response = await fetch("/api/ai/generate", {
       method: "POST", headers: { "Content-Type": "application/json", "x-toonflow-workspace": "1" },
-      body: JSON.stringify({ providerId, modelId, context, directory, references, requestId: crypto.randomUUID() }), signal,
+      body: JSON.stringify({ providerId, modelId, context, directory, references, chromeTabId: input.chromeTabId, requestId: crypto.randomUUID() }), signal,
     });
     if (!response.ok) await readResult(response);
-    if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream")) throw new Error("AI 未返回预期的 SSE 数据流，无法接收生成内容。");
+    if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream")) throw new Error("AI không trả về luồng SSE như mong đợi nên không thể nhận nội dung tạo ra.");
     const reader = response.body.pipeThrough(new TextDecoderStream()).pipeThrough(new EventSourceParserStream()).getReader();
     try {
       while (true) {
         const { value, done } = await reader.read();
         signal.throwIfAborted();
-        if (done) throw new Error("AI 数据流提前结束，生成内容可能不完整，请重试。");
+        if (done) throw new Error("Luồng dữ liệu AI kết thúc sớm; nội dung có thể chưa đầy đủ, vui lòng thử lại.");
         const event = JSON.parse(value.data);
-        if (event.type === "error") throw new Error(event.message || "AI 生成失败");
+        if (event.type === "error") throw new Error(event.message || "Tạo nội dung bằng AI thất bại");
         if (event.type === "text" || event.type === "reasoning") onEvent?.(event);
         if (event.type !== "done") continue;
         const message = event.message as AssistantMessage;
-        if (message?.role !== "assistant" || !Array.isArray(message.content)) throw new Error("AI 返回的消息不完整，请确认 Toonflow 服务端已更新后重试。");
-        if (message.stopReason === "deferred" || message.stopReason === "pending") throw new Error("AI 返回的任务尚未完成，本次生成未能正常结束。");
-        if (message.stopReason === "error" || message.stopReason === "aborted") throw new Error(message.errorMessage || "AI 请求失败");
+        if (message?.role !== "assistant" || !Array.isArray(message.content)) throw new Error("Thông điệp AI trả về chưa đầy đủ; hãy kiểm tra backend Toonflow đã cập nhật rồi thử lại.");
+        if (message.stopReason === "deferred" || message.stopReason === "pending") throw new Error("Tác vụ AI trả về chưa hoàn tất; lần tạo nội dung này không kết thúc bình thường.");
+        if (message.stopReason === "error" || message.stopReason === "aborted") throw new Error(message.errorMessage || "Yêu cầu AI thất bại");
         // ACT: 增量直接通知 UI；SDK 只消费完整单轮消息，避免每个 token 传输全量快照。
         stream.push({ type: "start", partial: { ...message, content: [], stopReason: "pending" } });
         stream.push({ type: "done", reason: message.stopReason, message });
@@ -266,7 +316,7 @@ async function requestModel(input: NodeAiRequest, context: Context, model: Model
     const reason = signal.aborted ? "aborted" : "error";
     stream.push({ type: "error", reason, error: {
       role: "assistant", content: [], api: model.api, provider: model.provider, model: model.id, timestamp: Date.now(),
-      stopReason: reason, errorMessage: error instanceof Error ? error.message : "AI 请求失败",
+      stopReason: reason, errorMessage: error instanceof Error ? error.message : "Yêu cầu AI thất bại",
       usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
     } });
   }
@@ -302,7 +352,7 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
     const requestedInput = input;
     if (input.providerId === "multiTenant") {
       const selected = findNodeModel(await getMediaModels(waitingSignal, true), input);
-      if (!selected) throw new Error("所选模型不存在，请重新选择");
+      if (!selected) throw new Error("Mô hình đã chọn không tồn tại, vui lòng chọn lại");
       input = { ...input, modelId: selected.modelId };
     }
     const now = Date.now();
@@ -344,7 +394,7 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
         signal: AbortSignal.timeout(15000),
       }).then(readResult<NodeMediaPrice | null>).then(price => {
         if (price !== null && (!price || typeof price.price !== "string" || !price.price.trim() || typeof price.tips !== "string")) {
-          throw new Error("价格响应格式不正确");
+          throw new Error("Định dạng dữ liệu giá trả về không hợp lệ");
         }
         pending.expires = hasReferences ? 0 : Date.now() + 30000;
         return price;
@@ -374,7 +424,7 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
     waitingSignal.throwIfAborted();
     if (input.providerId === "multiTenant") {
       const selected = findNodeModel(await getMediaModels(waitingSignal, true), input);
-      if (!selected) throw new Error("所选模型不存在，请重新选择");
+      if (!selected) throw new Error("Mô hình đã chọn không tồn tại, vui lòng chọn lại");
       input = { ...input, modelId: selected.modelId };
       waitingSignal.throwIfAborted();
     }
@@ -405,7 +455,7 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
         waitingSignal.addEventListener("abort", abort, { once: true });
       })]);
       waitingSignal.throwIfAborted();
-      if (started.taskId !== taskId) throw new Error("生成任务响应无效，无法确认任务状态，请确认 Toonflow 服务端已更新后重试。");
+      if (started.taskId !== taskId) throw new Error("Phản hồi tác vụ tạo nội dung không hợp lệ, không thể xác nhận trạng thái; hãy kiểm tra backend Toonflow đã cập nhật rồi thử lại.");
     } catch (error) {
       if (!waitingSignal.aborted) explicitCancel();
       waitingSignal.removeEventListener("abort", explicitCancel);
@@ -450,11 +500,11 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
     const signal = requestSignal(input.signal);
     const callSignal = input.tools?.length ? AbortSignal.any([signal, AbortSignal.timeout(600000)]) : signal;
     const { providerId, modelId, prompt, systemPrompt, onEvent } = input;
-    if (!prompt.trim()) throw new Error("请输入提示词");
+    if (!prompt.trim()) throw new Error("Vui lòng nhập prompt");
     const definitions = input.tools ?? [];
-    if (new Set(definitions.map(tool => tool.name)).size !== definitions.length) throw new Error("工具名称不能重复");
+    if (new Set(definitions.map(tool => tool.name)).size !== definitions.length) throw new Error("Tên công cụ không được trùng nhau");
     const selected = findNodeModel(await getModels(callSignal, providerId === "multiTenant"), { providerId, modelId });
-    if (!selected) throw new Error("所选模型不存在，请重新选择");
+    if (!selected) throw new Error("Mô hình đã chọn không tồn tại, vui lòng chọn lại");
     const model: Model<NodeAiModel["protocol"]> = {
       id: selected.modelId, name: selected.label, provider: selected.providerId, api: selected.protocol, baseUrl: "",
       reasoning: false, input: ["text", "image"],
@@ -465,7 +515,7 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
       name: tool.name, label: tool.name, description: tool.description, parameters: tool.parameters,
       async execute(_id, args, toolSignal) {
         callSignal.throwIfAborted();
-        if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("工具参数格式错误：必须是对象。");
+        if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("Tham số công cụ sai định dạng: phải là đối tượng.");
         const result = await tool.execute(args as Record<string, unknown>, toolSignal) ?? null;
         callSignal.throwIfAborted();
         return { content: [{ type: "text", text: JSON.stringify(result) ?? "null" }], details: undefined };
@@ -489,15 +539,15 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
     }, callSignal, async (_model, context) => {
       const current = requests++ === 0 || selected.providerId !== "multiTenant" ? selected
         : findNodeModel(await getModels(callSignal, true), identity);
-      if (!current) throw new Error("所选模型不存在，请重新选择");
+      if (!current) throw new Error("Mô hình đã chọn không tồn tại, vui lòng chọn lại");
       return requestModel({ ...input, providerId: current.providerId, modelId: current.modelId }, context, model, callSignal);
     });
     callSignal.throwIfAborted();
     const message = messages.findLast((message): message is AssistantMessage => message.role === "assistant");
-    if (!message) throw new Error("AI 未返回结果");
-    if (message.stopReason === "error" || message.stopReason === "aborted") throw new Error(message.errorMessage || "AI 请求失败");
-    if (definitions.length && message.stopReason === "length") throw new Error("模型输出达到上限，请精简任务后重试");
-    if (message.content.some(part => part.type === "toolCall")) throw new Error("AI 已达到 40 轮调用上限，请缩小任务后重试");
+    if (!message) throw new Error("AI không trả về kết quả");
+    if (message.stopReason === "error" || message.stopReason === "aborted") throw new Error(message.errorMessage || "Yêu cầu AI thất bại");
+    if (definitions.length && message.stopReason === "length") throw new Error("Đầu ra mô hình đã đạt giới hạn, hãy rút gọn yêu cầu rồi thử lại");
+    if (message.content.some(part => part.type === "toolCall")) throw new Error("AI đã đạt giới hạn 40 vòng gọi công cụ, hãy thu hẹp yêu cầu rồi thử lại");
     const text = message.content.filter(part => part.type === "text").map(part => part.text).join("");
     const reasoning = message.content.filter(part => part.type === "thinking").map(part => part.thinking).join("");
     return { text, ...(reasoning ? { reasoning } : {}) };

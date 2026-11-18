@@ -25,11 +25,8 @@
         :fileAction="performFileAction"
         :saveNode="saveDocumentNode" />
     </keep-alive>
-    <batchPage v-if="activePanel === 'batchImage' || activePanel === 'batchVideo'"
-      :key="JSON.stringify([workspaceStore.project?.directory, activePanel])"
-      :kind="activePanel === 'batchImage' ? 'image' : 'video'"
-      :directory="workspaceStore.project?.directory" :active="true" @importMedia="importBatchMedia" />
     <workspaceMenu class="workspaceMenu" @openSettings="settingsVisible = true" />
+    <PromptLibraryDialog v-model="promptVisible" />
     <div class="workspaceTools">
       <el-segmented :modelValue="activePanel" class="panelSwitcher" :options="panelOptions" size="small" aria-label="切换面板" @change="switchPanel">
         <template #default="{ item }">
@@ -58,19 +55,14 @@
                 <component :is="selectedTool === 'move' ? IconPointer : IconHandStop" :size="18" aria-hidden="true" />
               </el-button>
             </el-tooltip>
+            <el-tooltip content="Thư viện prompt tạo ảnh" placement="top" :showArrow="false">
+              <el-button class="toolButton" text aria-label="Mở thư viện prompt" :disabled="!canvasPanelRef?.canvasReady || settingsVisible" @click="promptTargetId = ''; promptVisible = true">
+                <icon-book :size="18" aria-hidden="true" />
+              </el-button>
+            </el-tooltip>
             <el-tooltip content="搜索节点" placement="top" :showArrow="false" :hideAfter="0" :enterable="false" :triggerKeys="[]">
               <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="搜索节点" @click="canvasPanelRef?.openNodeSearch()">
                 <icon-search :size="18" aria-hidden="true" />
-              </el-button>
-            </el-tooltip>
-            <el-tooltip content="Thư viện vật liệu" placement="top" :showArrow="false" :hideAfter="0">
-              <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="Thư viện vật liệu" @click="canvasPanelRef?.openMaterialPresets()">
-                <icon-shape :size="18" aria-hidden="true" />
-              </el-button>
-            </el-tooltip>
-            <el-tooltip content="Studio nhân vật" placement="top" :showArrow="false" :hideAfter="0">
-              <el-button class="toolButton" text :disabled="!canvasPanelRef?.canvasReady || settingsVisible" aria-label="Studio nhân vật" @click="canvasPanelRef?.openCharacterStudio()">
-                <icon-mood-smile :size="18" aria-hidden="true" />
               </el-button>
             </el-tooltip>
             <el-tooltip :showArrow="false" content="帮助" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]" :disabled="helpVisible">
@@ -146,9 +138,9 @@
 <script setup lang="ts">
 import { translate } from "@toonflow/i18n/vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onScopeDispose, provide, ref, shallowRef, watch, type ComponentPublicInstance } from "vue";
-import { onBeforeRouteLeave, useRoute } from "vue-router";
+import { onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
-import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase, IconPhoto, IconVideo, IconShape, IconMoodSmile } from "@tabler/icons-vue";
+import { IconVector, IconFileText, IconPointer, IconHandStop, IconPlus, IconSearch, IconHelp, IconBook, IconBug, IconBrandWechat, IconBriefcase } from "@tabler/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { QRCode } from "tdesign-vue-next";
 import settings from "@/components/settings/index.vue";
@@ -159,17 +151,13 @@ import { useProviderBalances } from "@/lib/providerBilling";
 import canvasPanel from "./panels/canvas/canvasHost.vue";
 import type { DocumentNodeOptions } from "./panels/canvas/canvasFiles";
 import workspaceMenu from "./components/workspaceMenu.vue";
-import batchPage from "./components/batchPage.vue";
 import floatingAgent from "./components/floatingAgent.vue";
+import PromptLibraryDialog from "@/components/promptLibrary/PromptLibraryDialog.vue";
+import { getPendingPrompt, clearPendingPrompt } from "@/lib/promptLibrary";
 
 const documentPanel = defineAsyncComponent(() => import("./panels/document/index.vue"));
 
-// Home sidebar can deep-link directly to the selected project's batch page.
-const route = useRoute();
-const requestedPanel = route.query.panel;
-const activePanel = ref<"canvas" | "document" | "batchImage" | "batchVideo">(
-  requestedPanel === "batchImage" || requestedPanel === "batchVideo" ? requestedPanel : "canvas"
-);
+const activePanel = ref<"canvas" | "document">("canvas");
 const selectedTool = ref<"move" | "hand">("move");
 const sideButtonEvents = ["mousedown", "mouseup", "auxclick"] as const;
 // 鼠标侧键会直接触发原生历史导航，需在 DOM 事件阶段拦截，避免生成中的工作区被误关闭。
@@ -188,12 +176,12 @@ useProviderBalances();
 const panelOptions = [
   { label: "画布", value: "canvas", icon: IconVector },
   { label: "文档", value: "document", icon: IconFileText },
-  { label: "Tạo ảnh hàng loạt", value: "batchImage", icon: IconPhoto },
-  { label: "Tạo video hàng loạt", value: "batchVideo", icon: IconVideo },
 ];
 const agentVisible = ref(true);
 const agentWidth = ref(0);
 const settingsVisible = ref(false);
+const promptVisible = ref(false);
+const promptTargetId = ref("");
 const helpVisible = ref(false);
 const contactVisible = ref(false);
 const contactType = ref<"community" | "business">("community");
@@ -217,6 +205,37 @@ function showContact(type: "community" | "business") {
   contactVisible.value = true;
 }
 const canvasPanelRef = ref<InstanceType<typeof canvasPanel>>();
+let applyingPrompt = false;
+async function applyPendingPrompt() {
+  const pending = getPendingPrompt();
+  if (!pending || applyingPrompt || !workspaceStore.project?.directory || activePanel.value !== "canvas" || !canvasPanelRef.value?.canvasReady) return;
+  applyingPrompt = true;
+  try {
+    const applied = await canvasPanelRef.value.applyPromptTemplate(pending.item, {
+      nodeId: promptTargetId.value || undefined, includeReferences: pending.includeReferences,
+    });
+    // Cancel or Close is a final user decision; do not reapply later.
+    clearPendingPrompt();
+    if (applied) promptTargetId.value = "";
+  } catch (error) { ElMessage.error(error instanceof Error ? error.message : "Không áp dụng được mẫu prompt."); }
+  finally { applyingPrompt = false; }
+}
+function handleOpenPromptLibrary(event: Event) {
+  promptTargetId.value = (event as CustomEvent<{nodeId?: string}>).detail?.nodeId ?? "";
+  promptVisible.value = true;
+}
+function handleUsePrompt() { void applyPendingPrompt(); }
+onMounted(() => {
+  window.addEventListener("macflow:open-prompt-library", handleOpenPromptLibrary);
+  window.addEventListener("macflow:prompt-template-use", handleUsePrompt);
+  window.addEventListener("macflow:pending-image-prompt", handleUsePrompt);
+});
+onScopeDispose(() => {
+  window.removeEventListener("macflow:open-prompt-library", handleOpenPromptLibrary);
+  window.removeEventListener("macflow:prompt-template-use", handleUsePrompt);
+  window.removeEventListener("macflow:pending-image-prompt", handleUsePrompt);
+});
+watch([() => canvasPanelRef.value?.canvasReady, () => workspaceStore.project?.directory, activePanel], () => { void applyPendingPrompt(); }, { immediate: true, flush: "post" });
 watch(() => canvasPanelRef.value?.canvasListReady, ready => {
   workspaceStore.projectLoading = !ready;
 }, { immediate: true });
@@ -325,7 +344,7 @@ onBeforeRouteLeave(async () => {
 });
 
 async function switchPanel(value: string | number | boolean) {
-  if (value !== "canvas" && value !== "document" && value !== "batchImage" && value !== "batchVideo") return false;
+  if (value !== "canvas" && value !== "document") return false;
   try {
     if (activePanel.value === "document") await documentPanelRef.value?.flushSave();
     const changed = activePanel.value !== value;
@@ -336,25 +355,6 @@ async function switchPanel(value: string | number | boolean) {
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "文本保存失败");
     return false;
-  }
-}
-
-async function importBatchMedia(result: { path: string; mimeType: string; mediaType: "image" | "video" }) {
-  const directory = workspaceStore.project?.directory;
-  if (!directory || !result.path || !result.mimeType) return;
-  if (!result.mimeType.startsWith(result.mediaType + "/")) {
-    ElMessage.error("Loại media không khớp kết quả batch");
-    return;
-  }
-  try {
-    if (!await switchPanel("canvas")) throw new Error("Không thể mở Canvas");
-    if (!canvasPanelRef.value?.canvasReady) throw new Error("Canvas chưa sẵn sàng");
-    if (directory !== workspaceStore.project?.directory) throw new Error("Workspace đã thay đổi");
-    const imported = await canvasPanelRef.value.importWorkspaceMedia(result.path, result.mimeType);
-    if (!imported) throw new Error("Không thể nhập kết quả vào Canvas");
-    ElMessage.success("Đã tạo và lưu node media trên Canvas");
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "Không thể nhập kết quả Batch");
   }
 }
 

@@ -13,6 +13,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@toonflow/i18n": "workspace:*",
     "@toonflow/asr": "workspace:*",
     "@toonflow/file": "workspace:*",
     "@toonflow/ffmpeg": "workspace:*",

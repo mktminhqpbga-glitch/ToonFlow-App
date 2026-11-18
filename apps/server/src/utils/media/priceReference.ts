@@ -4,6 +4,7 @@ import type { MediaReference } from "@toonflow/tools-scaffold/runtime";
 import conf from "@/utils/conf";
 import { getStatus } from "@/utils/ffmpeg";
 import { resolveWorkspacePath } from "@/utils/workspace/files";
+import { t } from "@/lib/i18n";
 
 const references = new Map<string, { revision: string; expires: number; value: Promise<ProviderPriceReference> }>();
 let probeStatus: { config: string; expires: number; value: Promise<string | null> } | undefined;
@@ -104,7 +105,7 @@ async function loadPriceReference(cwd: string, reference: MediaReference, mediaT
     try { await handle.read(header, 0, header.length, 0); }
     finally { await handle.close(); }
     const mimeType = detectMimeType(header, reference.mimeType);
-    if (!mimeType.startsWith(`${mediaType}/`)) throw new Error(`参考媒体类型须为 ${mediaType}`);
+    if (!mimeType.startsWith(`${mediaType}/`)) throw new Error(t`参考媒体类型须为 ${mediaType}`);
     const metadata: ProviderPriceReference = { mimeType, sizeBytes: info.size };
     const deadline = AbortSignal.timeout(5000);
     try {

@@ -1,5 +1,5 @@
 <template>
-  <section ref="panelElement" class="documentPanel" aria-label="文档工作区">
+  <section ref="panelElement" class="documentPanel" aria-label="Workspace tài liệu">
     <dockview-vue class="documentLayout" :theme="theme" :disableAutoResizing="true" :disableFloatingGroups="true" @ready="onLayoutReady" />
     <openWithDialog ref="openWithRef" />
     <quickOpen v-if="directory" ref="quickOpenRef" :directory="directory" @open="selection => openSelection(selection).catch(reportError)" />
@@ -99,7 +99,7 @@ function keepOpen(id: string) {
 }
 
 function addView(id: string, session: DocumentSession, preview = false, position?: { referencePanel: string; direction: "right" | "below" }) {
-  if (sessions.has(id) || editorApi.value?.getPanel(id)) throw new Error("标签已打开，请重新选择");
+  if (sessions.has(id) || editorApi.value?.getPanel(id)) throw new Error("Tab đã mở; hãy chọn lại");
   sessions.set(id, session);
   views.set(id, shallowReactive({ preview, description: "" }));
   try {
@@ -148,7 +148,7 @@ async function restoreLayout() {
 
 async function chooseExtension(resource: ExtResource, force: boolean) {
   const options = await extensionCandidates(resource);
-  if (!options.length) throw new Error(`尚未启用支持此文件的扩展，请到插件市场安装或启用：${resource.label}`);
+  if (!options.length) throw new Error(`Chưa bật tiện ích hỗ trợ tệp này; hãy cài hoặc bật trong chợ plugin: ${resource.label}`);
   const key = resource.kind === "canvasNode" ? "canvasNode" : resource.path.split(".").at(-1)!.toLowerCase();
   const associations = settings.value.documentExtensions as Record<string, string> | undefined;
   const defaultId = options.find(option => option.id === associations?.[key])?.id;
@@ -224,7 +224,7 @@ function reportError(error: unknown) { ElMessage.error(documentError(error)); }
 function relativePath(path: string) {
   const parts = path.replaceAll("\\", "/").split("/").filter(part => part && part !== ".");
   if (!parts.length || /^[\\/]/.test(path) || /^[a-z][a-z\d+.-]*:/i.test(path) || path.includes("\0") || parts.includes("..")) {
-    throw new Error("请选择工作区内的文件或目录");
+    throw new Error("Hãy chọn tệp hoặc thư mục trong workspace");
   }
   return parts.join("/");
 }
@@ -245,17 +245,17 @@ function openSelection(selection: TreeSelection, signal = lifetime.signal, force
 async function openSelectionNow(selection: TreeSelection, signal: AbortSignal, forceChoice: boolean, extensionId: string | undefined, preview: boolean, restoredId: string | undefined, request: number) {
   const revision = fileRevision;
   signal.throwIfAborted();
-  if (changingFiles) throw new Error("文件操作尚未完成，请稍后再打开");
-  if (!directory || workspace.project?.directory !== directory) throw new Error("工作目录已切换");
+  if (changingFiles) throw new Error("Thao tác với tệp chưa hoàn tất; hãy mở lại sau");
+  if (!directory || workspace.project?.directory !== directory) throw new Error("Thư mục làm việc đã thay đổi");
   const api = await waitForControlValue(() => editorApi.value, signal);
   const resource: ExtResource = "filePath" in selection
     ? { kind: "file", directory, path: relativePath(selection.filePath), label: selection.label }
     : { kind: "canvasNode", directory, path: relativePath(selection.canvasPath), nodeId: selection.nodeId, label: selection.label };
   if (resource.kind === "file" && /\.json$/i.test(resource.path) && await isCanvasFile(useWorkspaceFiles(directory), resource.path)) {
-    throw new Error("画布文件请展开后打开节点，不能作为普通文本编辑");
+    throw new Error("Hãy mở rộng tệp Canvas để mở node; không thể chỉnh như văn bản thuần");
   }
   signal.throwIfAborted();
-  if (changingFiles || revision !== fileRevision || workspace.project?.directory !== directory) throw new Error("文件或工作目录已变更，请重新打开");
+  if (changingFiles || revision !== fileRevision || workspace.project?.directory !== directory) throw new Error("Tệp hoặc thư mục làm việc đã thay đổi; hãy mở lại");
   const resourceId = JSON.stringify([resource.kind, directory, pathIdentity(resource.path), resource.kind === "canvasNode" ? resource.nodeId : ""]);
   const matching = [...sessions].filter(([, session]) => {
     const current = session.context.resource;
@@ -285,7 +285,7 @@ async function openSelectionNow(selection: TreeSelection, signal: AbortSignal, f
   const olderSession = [...sessions.values()].find(session => session.extension.id === extension!.id && session.extensionChanged && session.component);
   // 同一扩展的旧标签仍打开时共用旧组件，避免新版样式提前替换旧编辑器的样式。
   if (olderSession) extension = { ...olderSession.extension, load: async () => ({ default: olderSession.component! }) };
-  if (changingFiles || revision !== fileRevision) throw new Error("文件已变更，请重新打开");
+  if (changingFiles || revision !== fileRevision) throw new Error("Tệp đã thay đổi; hãy mở lại");
   // 等待选择期间可能已从其他入口打开同一文件。
   const concurrent = [...sessions].find(([, session]) => session.context.resource.kind === resource.kind
     && pathIdentity(session.context.resource.path) === pathIdentity(resource.path)
@@ -299,7 +299,7 @@ async function openSelectionNow(selection: TreeSelection, signal: AbortSignal, f
     for (const [viewId, current] of [...sessions]) if (current === concurrent[1]) await closeEditor(viewId);
   }
   signal.throwIfAborted();
-  if (changingFiles || revision !== fileRevision || workspace.project?.directory !== directory) throw new Error("文件或工作目录已变更，请重新打开");
+  if (changingFiles || revision !== fileRevision || workspace.project?.directory !== directory) throw new Error("Tệp hoặc thư mục làm việc đã thay đổi; hãy mở lại");
   if (preview && !restoring && !restoredId) {
     for (const panel of [...(api.activeGroup?.panels ?? [])]) {
       if (!views.get(panel.id)?.preview) continue;
@@ -343,7 +343,7 @@ async function openSelectionNow(selection: TreeSelection, signal: AbortSignal, f
 async function closeEditor(id: string, remember = true) {
   const session = sessions.get(id);
   if (!session) return;
-  if (session.closing) throw new Error("文档正在关闭，请稍后再试");
+  if (session.closing) throw new Error("Tài liệu đang đóng; hãy thử lại sau");
   session.closing = true;
   const release = session.lock();
   try {
@@ -370,7 +370,7 @@ async function tabAction(id: string, action: TabAction) {
     keepOpen(id);
     if (session.context.resource.kind === "canvasNode") {
       // ACT: 画布节点保留唯一运行实例，分屏只移动，不能复制 Teleport 的挂载目标。
-      if (panel.group.panels.length < 2) { ElMessage.info("画布节点只有一个视图，请先打开另一标签再移动到分屏"); return; }
+      if (panel.group.panels.length < 2) { ElMessage.info("Node Canvas chỉ có một khung xem; hãy mở thêm tab trước khi chuyển sang chế độ chia màn hình"); return; }
       panel.api.moveTo({ group: panel.group, position: action === "splitRight" ? "right" : "bottom" });
     } else {
       const viewId = `${id}:${crypto.randomUUID()}`;
@@ -417,7 +417,7 @@ function getDocument(includeText = true) {
   const session = currentSession();
   if (!includeText || !session) return snapshot(session, includeText);
   return readSession(session).then(() => {
-    if (currentSession() !== session) throw new Error("文档已切换，请重新读取");
+    if (currentSession() !== session) throw new Error("Đã chuyển tài liệu; hãy đọc lại");
     return snapshot(session, true);
   });
 }
@@ -426,36 +426,36 @@ async function openDocument(args: Record<string, unknown>, signal: AbortSignal) 
   let selection: TreeSelection;
   if (typeof args.path === "string") selection = { filePath: args.path, label: args.path.split(/[\\/]/).at(-1)! };
   else if (typeof args.canvasPath === "string" && typeof args.nodeId === "string") selection = { canvasPath: args.canvasPath, nodeId: args.nodeId, label: args.nodeId };
-  else throw new Error("请指定文件 path，或画布 canvasPath 和 nodeId");
+  else throw new Error("Hãy chỉ định path của tệp, hoặc canvasPath và nodeId của Canvas");
   const session = await openSelection(selection, signal);
-  if (!session) throw new Error("已取消选择打开方式");
+  if (!session) throw new Error("Đã hủy chọn cách mở tệp");
   if (typeof args.handleId === "string" && session.context.resource.kind === "canvasNode") {
     const resource = session.context.resource;
     const node = await props.readNode(resource.directory, resource.path, resource.nodeId);
-    if (!node.outputs.some(output => output.id === args.handleId)) throw new Error("文本输出不存在");
+    if (!node.outputs.some(output => output.id === args.handleId)) throw new Error("Đầu ra văn bản không tồn tại");
     session.handleId = args.handleId;
   }
   signal.throwIfAborted();
-  if (currentSession() !== session) throw new Error("文档已切换，请重新读取");
+  if (currentSession() !== session) throw new Error("Đã chuyển tài liệu; hãy đọc lại");
 }
 
 async function writeDocument(args: Record<string, unknown>, signal: AbortSignal) {
   signal.throwIfAborted();
   const session = currentSession();
-  if (!session || session.closing || session.context.loading) throw new Error("请先打开需要编辑的文档");
-  if (typeof args.text !== "string" || typeof args.expectedText !== "string") throw new Error("需要 text 和读取时的 expectedText");
+  if (!session || session.closing || session.context.loading) throw new Error("Hãy mở tài liệu cần chỉnh sửa trước");
+  if (typeof args.text !== "string" || typeof args.expectedText !== "string") throw new Error("Cần có text và expectedText của lần đọc");
   await readSession(session);
   signal.throwIfAborted();
-  if (currentSession() !== session) throw new Error("文档已切换，请重新读取");
-  if (session.closing || session.context.loading) throw new Error("文档正在关闭或加载，请稍后再试");
-  if (session.context.text !== args.expectedText) throw new Error("文档内容已变化，请重新读取后编辑");
+  if (currentSession() !== session) throw new Error("Đã chuyển tài liệu; hãy đọc lại");
+  if (session.closing || session.context.loading) throw new Error("Tài liệu đang đóng hoặc đang tải; hãy thử lại sau");
+  if (session.context.text !== args.expectedText) throw new Error("Nội dung tài liệu đã thay đổi; hãy đọc lại trước khi sửa");
   const resource = session.context.resource;
   if (resource.kind === "canvasNode") {
-    if (!session.handleId) throw new Error("当前节点没有可编辑的文本输出");
+    if (!session.handleId) throw new Error("Node hiện tại không có đầu ra văn bản có thể chỉnh sửa");
     await props.saveNode(resource.directory, resource.path, resource.nodeId, session.handleId, args.text, args.expectedText);
     await readSession(session);
   } else {
-    if (!session.extension.text) throw new Error("当前文件扩展不支持文本编辑");
+    if (!session.extension.text) throw new Error("Tiện ích tệp hiện tại không hỗ trợ chỉnh sửa văn bản");
     session.context.updateText(args.text);
     await session.context.flushSave();
   }
@@ -471,18 +471,18 @@ async function openSearchResult(location: { path: string; line: number; column: 
 }
 
 async function replaceSearchFile(path: string, expectedText: string, nextText: string) {
-  if (!directory || workspace.project?.directory !== directory || changingFiles) throw new Error("工作区或文件正在变更，请重新搜索");
+  if (!directory || workspace.project?.directory !== directory || changingFiles) throw new Error("Workspace hoặc tệp đang thay đổi; hãy tìm lại");
   path = relativePath(path);
   changingFiles = true;
   fileRevision++;
   try {
     const files = useWorkspaceFiles(directory);
-    if (/\.json$/i.test(path) && await isCanvasFile(files, path)) throw new Error("画布 JSON 不支持全文替换，请编辑节点内容");
+    if (/\.json$/i.test(path) && await isCanvasFile(files, path)) throw new Error("Không hỗ trợ thay thế toàn văn trong JSON Canvas; hãy chỉnh sửa nội dung node");
     const node = await props.resolveNodeFile(directory, path);
     if (node) {
       const document = await props.readNode(directory, node.canvasPath, node.nodeId);
       const output = document.outputs.find(output => output.text === expectedText);
-      if (!output) throw new Error("节点内容已变化，请重新搜索");
+      if (!output) throw new Error("Nội dung node đã thay đổi; hãy tìm lại");
       await props.saveNode(directory, node.canvasPath, node.nodeId, output.id, nextText, expectedText);
       await props.flushNodes();
       return;
@@ -490,13 +490,13 @@ async function replaceSearchFile(path: string, expectedText: string, nextText: s
     const session = uniqueSessions().find(session => session.context.resource.kind === "file" && pathIdentity(session.context.resource.path) === pathIdentity(path));
     if (session) {
       await session.ready;
-      if (!session.extension.text || session.context.loading || session.context.text !== expectedText) throw new Error("打开的文档内容已变化或不可编辑，请重新搜索");
+      if (!session.extension.text || session.context.loading || session.context.text !== expectedText) throw new Error("Nội dung tài liệu đang mở đã thay đổi hoặc không thể chỉnh sửa; hãy tìm lại");
       session.context.updateText(nextText);
       const release = session.lock();
       try { await session.context.flushSave(); } finally { release(); }
     } else {
       const snapshot = await files.readTextSnapshot(path);
-      if (snapshot.text !== expectedText) throw new Error("磁盘内容已变化，请重新搜索");
+      if (snapshot.text !== expectedText) throw new Error("Nội dung trên đĩa đã thay đổi; hãy tìm lại");
       await files.writeTextSnapshot(path, nextText, snapshot);
     }
   } finally { changingFiles = false; }
@@ -519,7 +519,7 @@ async function refreshExtensions() {
 }
 
 async function executeFileAction(action: FileAction, item: FileTreeItem, target?: string) {
-  if (!directory || workspace.project?.directory !== directory) throw new Error("工作目录已切换");
+  if (!directory || workspace.project?.directory !== directory) throw new Error("Thư mục làm việc đã thay đổi");
   if (action === "openWith") {
     await openSelection({ filePath: item.path, label: item.name }, lifetime.signal, true);
     return;
@@ -528,11 +528,11 @@ async function executeFileAction(action: FileAction, item: FileTreeItem, target?
   if (action === "reveal") return files.reveal(item.path);
   if (action === "create") return files.write(item.path, "", true);
   if (action === "mkdir") return files.mkdir(item.path);
-  if (changingFiles) throw new Error("文件操作尚未完成，请稍后再试");
-  if (!item.path || (item.type === "node" && (action !== "delete" || !item.nodeId))) throw new Error("不能修改这个文件树条目");
+  if (changingFiles) throw new Error("Thao tác tệp chưa hoàn tất; hãy thử lại sau");
+  if (!item.path || (item.type === "node" && (action !== "delete" || !item.nodeId))) throw new Error("Không thể sửa mục này trong cây thư mục");
   const sourcePath = relativePath(item.path);
   if (target !== undefined) target = relativePath(target);
-  if (item.type === "canvas" && ["rename", "move"].includes(action) && !target?.toLowerCase().endsWith(".json")) throw new Error("画布文件须保留 .json 后缀");
+  if (item.type === "canvas" && ["rename", "move"].includes(action) && !target?.toLowerCase().endsWith(".json")) throw new Error("Tệp Canvas phải giữ phần mở rộng .json");
   changingFiles = true;
   fileRevision++;
   const pending = [...sessions.entries()].map(([id, session]) => ({ id, session, release: session.lock() }));
@@ -587,7 +587,7 @@ async function executeFileAction(action: FileAction, item: FileTreeItem, target?
   saveLayout();
 }
 async function performFileAction(currentDirectory: string, action: "copy" | "rename" | "move" | "delete", path: string, target?: string, entryType: "canvas" | "directory" = "canvas") {
-  if (currentDirectory !== directory) throw new Error("工作目录已切换");
+  if (currentDirectory !== directory) throw new Error("Thư mục làm việc đã thay đổi");
   await executeFileAction(action, { key: path, path, name: path.split(/[\\/]/).at(-1)!, type: entryType }, target);
   refreshFileTree();
 }
@@ -657,7 +657,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", onDocumentKeydown, true);
   clearTimeout(layoutTimer);
   saveLayout();
-  lifetime.abort(new Error("文档工作区已关闭"));
+  lifetime.abort(new Error("Workspace tài liệu đã đóng"));
   cancelSave();
   sessionWatchers.forEach(stop => stop());
   disposables.forEach(disposable => disposable.dispose());

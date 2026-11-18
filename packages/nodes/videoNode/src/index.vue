@@ -8,59 +8,58 @@
     :style="{ width: previewUrl && videoWidth ? `${videoWidth + 18}px` : undefined }"
     @fullscreen="player?.enterFullscreen()">
     <template #topActions>
-      <el-button :icon="IconMusic" text :disabled="!outputFile || uploading || exporting || actions?.processing" @click.stop="actions?.open('extractAudio')">提取音轨</el-button>
-      <el-button :icon="IconLayersSubtract" text :disabled="!outputFile || uploading || exporting || actions?.processing" @click.stop="actions?.open('separate')">分离音视频</el-button>
-      <el-button :icon="IconScissors" text :disabled="!outputFile || uploading || exporting || actions?.processing" @click.stop="actions?.open('trim')">截取片段</el-button>
-      <el-button :icon="IconMovie" text :loading="actions?.creatingAnalysis" :disabled="!outputFile || uploading || exporting || actions?.processing || actions?.creatingAnalysis" @click.stop="actions?.createFrameAnalysis()">逐帧拉片</el-button>
+      <el-button :icon="IconMusic" text :disabled="!outputFile || uploading || exporting || actions?.processing" @click.stop="actions?.open('extractAudio')" title="Trích xuất âm thanh" aria-label="Trích xuất âm thanh" />
+      <el-button :icon="IconLayersSubtract" text :disabled="!outputFile || uploading || exporting || actions?.processing" @click.stop="actions?.open('separate')" title="Tách hình và tiếng" aria-label="Tách hình và tiếng" />
+      <el-button :icon="IconScissors" text :disabled="!outputFile || uploading || exporting || actions?.processing" @click.stop="actions?.open('trim')" title="Cắt đoạn video" aria-label="Cắt đoạn video" />
+      <el-button :icon="IconMovie" text :loading="actions?.creatingAnalysis" :disabled="!outputFile || uploading || exporting || actions?.processing || actions?.creatingAnalysis" @click.stop="actions?.createFrameAnalysis()" title="Phân tích từng khung hình" aria-label="Phân tích từng khung hình" />
       <el-button
         :icon="IconTransfer"
         :loading="uploading"
         :disabled="exporting"
         text
-        title="替换视频"
-        aria-label="替换视频"
-        @click.stop="fileInput?.click()">替换视频</el-button>
+        title="Thay video"
+        aria-label="Thay video"
+        @click.stop="fileInput?.click()" />
     </template>
     <template #topRightActions>
       <el-dropdown trigger="click" placement="bottom-end" :disabled="!player?.ready || player?.capturing || uploading || exporting" @command="player?.captureFrame($event)">
-        <el-button :icon="IconPhotoScan" :loading="player?.capturing" :disabled="!player?.ready || player?.capturing || uploading || exporting" text title="截取视频帧" aria-label="截取视频帧" />
+        <el-button :icon="IconPhotoScan" :loading="player?.capturing" :disabled="!player?.ready || player?.capturing || uploading || exporting" text title="Chụp khung hình video" aria-label="Chụp khung hình video" />
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="current" :icon="IconPhotoScan">截取当前帧</el-dropdown-item>
-            <el-dropdown-item command="first" :icon="IconPlayerSkipBack">截取首帧</el-dropdown-item>
-            <el-dropdown-item command="last" :icon="IconPlayerSkipForward">截取尾帧</el-dropdown-item>
+            <el-dropdown-item command="current" :icon="IconPhotoScan">Chụp khung hình hiện tại</el-dropdown-item>
+            <el-dropdown-item command="first" :icon="IconPlayerSkipBack">Chụp khung hình đầu</el-dropdown-item>
+            <el-dropdown-item command="last" :icon="IconPlayerSkipForward">Chụp khung hình cuối</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
     </template>
     <div class="videoContent nopan">
-      <div v-if="exporting" class="exportLoading" role="status" aria-label="视频导出中">
+      <div v-if="exporting" class="exportLoading" role="status" aria-label="Đang xuất video">
         <el-progress type="circle" :percentage="exportProgress" :width="64" :strokeWidth="3" />
-        <span>正在导出视频</span>
+        <span>Đang xuất video</span>
       </div>
       <videoPlayer
         v-else-if="previewUrl"
         ref="player"
         :src="previewUrl"
         @loadedmetadata="resizeVideo" />
-      <input ref="fileInput" class="fileInput" type="file" accept="video/*" aria-label="选择视频" :disabled="uploading || exporting" @change="uploadVideo" />
+      <input ref="fileInput" class="fileInput" type="file" accept="video/*" aria-label="Chọn video" :disabled="uploading || exporting" @change="uploadVideo" />
       <el-button
         v-if="!exporting && !outputs.video"
         class="nodrag nopan"
         :icon="IconUpload"
         text
         :loading="uploading"
-        title="上传视频"
-        aria-label="上传视频"
+        title="Tải video lên"
+        aria-label="Tải video lên"
         @dblclick.stop
-        @click.stop="fileInput?.click()">上传</el-button>
+        @click.stop="fileInput?.click()">Tải lên</el-button>
     </div>
   </nodeSkeleton>
   <videoActions ref="actions" :file="outputFile" :src="previewUrl" :disabled="uploading || exporting" />
 </template>
 
 <script setup lang="ts">
-import { nodeText, useNodeVietnamese } from "@toonflow/node-shared/nodeLanguage";
 import { computed, nextTick, ref } from "vue";
 import { IconVideo, IconUpload, IconTransfer, IconMusic, IconLayersSubtract, IconScissors, IconMovie, IconPhotoScan, IconPlayerSkipBack, IconPlayerSkipForward } from "@tabler/icons-vue";
 import { ElButton, ElMessage, ElProgress, ElDropdown, ElDropdownMenu, ElDropdownItem } from "element-plus";
@@ -72,11 +71,10 @@ import { getMediaMimeType } from "@toonflow/node-shared/mediaTypes";
 defineOptions({
   inheritAttrs: false,
   icon: IconVideo,
-  handles: [{ id: "video", type: "source", dataType: "VIDEO", label: "视频输出" }] satisfies NodeHandle[],
+  handles: [{ id: "video", type: "source", dataType: "VIDEO", label: "Đầu ra video" }] satisfies NodeHandle[],
 });
-const vietnamese = useNodeVietnamese();
 const { node, nodeProps, outputs, nodeEvent, files, updateNodeInternals } = useNode({
-  label: () => { void vietnamese.value; return nodeText("视频", "Video"); },
+  label: "Video",
 });
 const fileInput = ref<HTMLInputElement>();
 const uploading = ref(false);
@@ -89,15 +87,15 @@ const videoWidth = ref(0);
 const outputFile = computed(() => outputs.value.video?.dataType === "VIDEO" ? outputs.value.video.value : undefined);
 const previewUrl = files.useFileUrl(
   outputFile,
-  (error) => showError(error, "视频读取失败")
+  (error) => showError(error, "Lỗi đọc video")
 );
 
 nodeEvent.on("save", (reason) => {
-  if (uploading.value) throw new Error("视频处理中，请完成后再切换或刷新节点");
-  if (reason === "reload" && exporting.value) throw new Error("视频正在导出，请完成后再刷新节点");
+  if (uploading.value) throw new Error("Đang xử lý video, hãy hoàn tất trước khi chuyển hoặc làm mới node");
+  if (reason === "reload" && exporting.value) throw new Error("Đang xuất video, hãy hoàn tất trước khi làm mới node");
 });
 nodeEvent.on("delete", () => {
-  if (uploading.value) throw new Error("视频上传中，请稍后删除节点");
+  if (uploading.value) throw new Error("Đang tải video lên, hãy xóa node sau");
   uploading.value = true;
   return files.removeNodeFiles().finally(() => {
     uploading.value = false;
@@ -106,19 +104,19 @@ nodeEvent.on("delete", () => {
 
 nodeTools.register({
   name: "setVideo",
-  description: "选择工作区内已有的视频文件作为此节点的输出，path 使用工作区相对路径",
+  description: "Chọn tệp video đã có trong không gian làm việc làm đầu ra của node này; path dùng đường dẫn tương đối trong không gian làm việc",
   parameters: z.strictObject({
     path: z.string().min(1).max(4096),
     mimeType: z.string().regex(/^video\/[a-zA-Z0-9.+-]+$/),
   }),
   async execute({ path, mimeType }, { signal }) {
     signal?.throwIfAborted();
-    if (uploading.value || exporting.value) throw new Error("视频处理中，请稍后重试");
+    if (uploading.value || exporting.value) throw new Error("Đang xử lý video, hãy thử lại sau");
     uploading.value = true;
     try {
       const content = await files.getWorkspaceFiles().read(path);
       signal?.throwIfAborted();
-      if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("视频不能为空且不能超过 100 MB");
+      if (!content.byteLength || content.byteLength > 100 * 1024 * 1024) throw new Error("Video không được rỗng hoặc vượt quá 100 MB");
       outputs.value.video = { dataType: "VIDEO", value: { url: path, mimeType } };
       return outputs.value.video;
     } finally {
@@ -141,15 +139,15 @@ async function uploadVideo(event: Event) {
   input.value = "";
   if (!file || uploading.value || exporting.value) return;
   const mimeType = getMediaMimeType(file);
-  if (!mimeType.startsWith("video/")) return void ElMessage.error("请选择视频文件");
-  if (!file.size || file.size > 100 * 1024 * 1024) return void ElMessage.error("视频不能为空且不能超过 100 MB");
+  if (!mimeType.startsWith("video/")) return void ElMessage.error("Hãy chọn tệp video");
+  if (!file.size || file.size > 100 * 1024 * 1024) return void ElMessage.error("Video không được rỗng hoặc vượt quá 100 MB");
   uploading.value = true;
   try {
     const url = await files.uploadFile(file);
     // ACT: 复制节点可能仍引用旧视频，替换输出不删除共享文件。
     outputs.value.video = { dataType: "VIDEO", value: { url, mimeType } };
   } catch (error) {
-    showError(error, "视频替换失败");
+    showError(error, "Thay video thất bại");
   } finally {
     uploading.value = false;
   }

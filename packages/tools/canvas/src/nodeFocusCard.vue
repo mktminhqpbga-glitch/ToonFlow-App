@@ -6,8 +6,8 @@
         :key="item.nodeId"
         type="button"
         class="nodeFocusChip"
-        :title="`聚焦节点：${item.label}`"
-        :aria-label="`聚焦节点：${item.label}`"
+        :title="`Tập trung vào node: ${item.label}`"
+        :aria-label="`Tập trung vào node: ${item.label}`"
         @click="focusNode(item.nodeId)">
         <icon-focus2 :size="14" aria-hidden="true" />
         <span class="nodeFocusName">{{ item.label }}</span>
@@ -81,14 +81,14 @@ async function focusNode(nodeId: string) {
   await nextTick();
   const canvas = getCanvas?.();
   if (!canvas) {
-    ElMessage.error("画布尚未就绪");
+    ElMessage.error("Canvas chưa sẵn sàng");
     return;
   }
   try {
     await canvas.call({ name: "fitCanvas", args: { nodeIds: [nodeId] } });
     await canvas.call({ name: "selectNodes", args: { nodeIds: [nodeId] } });
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "聚焦节点失败");
+    ElMessage.error(error instanceof Error ? error.message : "Không thể tập trung vào node");
   }
 }
 </script>

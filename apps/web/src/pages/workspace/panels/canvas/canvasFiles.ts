@@ -52,7 +52,7 @@ export async function readCanvasFiles(files: Files, path = "", options: Omit<Doc
   signal?.throwIfAborted();
   const entries = path ? (await files.list(path.slice(0, path.lastIndexOf("/") + 1), signal)).entries.filter(entry => entry.path === path) : (await files.list("", signal)).entries;
   signal?.throwIfAborted();
-  if (path && !entries.length) throw new Error("文件或目录不存在");
+  if (path && !entries.length) throw new Error("Tệp hoặc thư mục không tồn tại");
   const canvases: { id: string; name: string; data: CanvasFile }[] = [];
   for (let index = 0; index < entries.length; index++) {
     signal?.throwIfAborted();
@@ -68,10 +68,10 @@ export async function readCanvasFiles(files: Files, path = "", options: Omit<Doc
       if (data?.toonflowCanvas !== true || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || !data.viewport
         || ![data.viewport.x, data.viewport.y, data.viewport.zoom].every(Number.isFinite) || data.viewport.zoom <= 0
         || data.nodes.some(node => !node || typeof node.id !== "string" || !node.id || /[\\/\0]/.test(node.id) || [".", ".."].includes(node.id))) {
-        throw new Error(`画布文件格式无效：${entry.path}`);
+        throw new Error(`Định dạng tệp Canvas không hợp lệ: ${entry.path}`);
       }
       const ids = new Set(data.nodes.map(node => node.id));
-      if (ids.size !== data.nodes.length || data.edges.some(edge => !edge || !ids.has(edge.source) || !ids.has(edge.target))) throw new Error(`画布节点或连线无效：${entry.path}`);
+      if (ids.size !== data.nodes.length || data.edges.some(edge => !edge || !ids.has(edge.source) || !ids.has(edge.target))) throw new Error(`Node hoặc dây nối Canvas không hợp lệ: ${entry.path}`);
       canvases.push({ id: entry.path, name: entry.name.slice(0, -5), data });
     } catch (error) {
       signal?.throwIfAborted();
@@ -158,7 +158,7 @@ export async function copyCanvasFiles(files: Files, path: string, target: string
   } catch (error) {
     const cleanup = await Promise.allSettled([...copiedAssets, ...(copied ? [temporary] : [])].map(path => files.remove(path, true)));
     if (createdAssets) cleanup.push(...await Promise.allSettled([files.remove("assets")]));
-    if (cleanup.some(result => result.status === "rejected")) throw new Error(`复制失败且部分副本未能清理，请检查“${target}”：${error instanceof Error ? error.message : "文件操作失败"}`);
+    if (cleanup.some(result => result.status === "rejected")) throw new Error(`Sao chép thất bại và một số bản sao không thể dọn dẹp; hãy kiểm tra “${target}”: ${error instanceof Error ? error.message : "Thao tác tệp thất bại"}`);
     throw error;
   }
 }

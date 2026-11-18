@@ -24,7 +24,7 @@ function isWithin(directory: string, path: string) {
 
 async function allowedPath(path: string) {
   const actual = await realpath(path.split("?")[0]!);
-  if (!isWithin(root, actual) && !isWithin(sdkModules, actual)) throw new Error(`插件只能引用项目源码或内置 SDK：${path}`);
+  if (!isWithin(root, actual) && !isWithin(sdkModules, actual)) throw new Error(`Plugin chỉ được tham chiếu mã nguồn dự án hoặc SDK tích hợp: ${path}`);
   return actual;
 }
 
@@ -40,7 +40,7 @@ function validateStyle(source: string) {
   // ACT: 工作区只提供无外部引用的普通 CSS。拒绝转义以免 CSS 标识符有多种等价写法。
   if (source.includes("\\") || /sourceMappingURL/i.test(source)
     || /@import\b|(?:url|image-set)\s*\(/i.test(source.replace(/\/\*[\s\S]*?\*\//g, ""))) {
-    throw new Error("插件样式仅支持无文件引用和转义的 CSS；请在脚本中 import 资源后绑定到模板");
+    throw new Error("CSS plugin không được tham chiếu tệp hoặc dùng escape; hãy import tài nguyên trong script rồi liên kết với template");
   }
 }
 
@@ -48,19 +48,19 @@ function validateProjectModule(id: string, source: string) {
   const [file, query] = id.split("?");
   const path = file!.toLowerCase();
   const params = new URLSearchParams(query);
-  if (/\.(?:s[ac]ss|less|styl(?:us)?|sss|module\.css)(?:[?&#]|$)/i.test(id) || params.has("module")) throw new Error("插件项目仅支持普通 CSS");
+  if (/\.(?:s[ac]ss|less|styl(?:us)?|sss|module\.css)(?:[?&#]|$)/i.test(id) || params.has("module")) throw new Error("Dự án plugin chỉ hỗ trợ CSS thông thường");
   if (path.endsWith(".css") || params.get("type") === "style") return validateStyle(source);
   if (path.endsWith(".vue") && !query) {
     const { descriptor, errors } = parse(source, { filename: path });
     if (errors.length) throw errors[0];
     if (descriptor.customBlocks.length || descriptor.template?.src || descriptor.template?.lang
-      || descriptor.script?.src || descriptor.scriptSetup?.src) throw new Error("插件 Vue 组件仅支持内联模板、脚本和样式");
+      || descriptor.script?.src || descriptor.scriptSetup?.src) throw new Error("Component Vue plugin chỉ hỗ trợ template, script và style nội tuyến");
     for (const style of descriptor.styles) {
-      if (style.src || style.module || (style.lang && style.lang !== "css")) throw new Error("插件组件的 style 仅支持内联普通 CSS");
+      if (style.src || style.module || (style.lang && style.lang !== "css")) throw new Error("Style của component plugin chỉ hỗ trợ CSS thường nội tuyến");
       validateStyle(style.content);
     }
   }
-  if (/\bimport\s*[./]/.test(source)) throw new Error("插件前端请使用静态 import 引入资源，不支持 import.meta 或 import 与模块名之间的注释");
+  if (/\bimport\s*[./]/.test(source)) throw new Error("Frontend plugin phải dùng import tĩnh để nhập tài nguyên; không hỗ trợ import.meta hoặc chú thích giữa import và tên module");
 }
 
 const fixedBuild: Plugin = {
@@ -78,17 +78,17 @@ const fixedBuild: Plugin = {
   },
   configResolved(config) {
     const api = config.plugins.find(plugin => plugin.name === "vite:vue")?.api;
-    if (!api) throw new Error("缺少 Vue 插件构建器");
+    if (!api) throw new Error("Thiếu bộ build plugin Vue");
     api.options = { ...api.options, script: { ...api.options.script, fs: {
       fileExists: (path: string) => Boolean(typeFile(path)),
       readFile(path: string) { const file = typeFile(path); return file ? readFileSync(file, "utf8") : undefined; },
-      realpath(path: string) { const file = typeFile(path); if (!file) throw new Error("类型文件不在插件项目或 SDK 内"); return file; },
+      realpath(path: string) { const file = typeFile(path); if (!file) throw new Error("Tệp kiểu dữ liệu không nằm trong dự án plugin hoặc SDK"); return file; },
     } } };
   },
   async resolveId(source, importer, options) {
     if (source.startsWith("\0") || source.startsWith("virtual:")) return;
     const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
-    if (!resolved) throw new Error(`无法解析插件依赖：${source}；请使用内置 SDK 或项目相对路径`);
+    if (!resolved) throw new Error(`Không phân giải được phụ thuộc plugin: ${source}; hãy dùng SDK tích hợp hoặc đường dẫn tương đối trong dự án`);
     if (!resolved.external && !resolved.id.startsWith("\0")) await allowedPath(resolved.id);
     return resolved;
   },
@@ -121,7 +121,7 @@ try {
             const ast = babelParse(source, { sourceType: "unambiguous", plugins: path.endsWith("x") ? ["jsx", "typescript", "deprecatedImportAssert"] : ["typescript", "deprecatedImportAssert"] });
             for (const node of ast.program.body) {
               if (("attributes" in node && node.attributes?.length) || ("source" in node && node.source?.value.startsWith("macro:"))) {
-                throw new Error("工具源码不支持构建时导入属性或 Bun 宏");
+                throw new Error("Mã công cụ không hỗ trợ import attributes lúc build hoặc Bun macro");
               }
             }
           });

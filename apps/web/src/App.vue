@@ -8,7 +8,6 @@
       </router-view>
       <loadingPage v-model:visible="workspaceStore.projectLoadingVisible" v-model:drawn="workspaceStore.projectLoadingDrawn" :active="workspaceStore.projectLoading" />
       <ffmpegRequired v-if="currentUser?.role !== 'user'" />
-      <desktopQuit v-if="actualPlatform.isDesktop" />
       <updateBox
         v-if="updateBoxBuild && !installFailure"
         v-model="updateBoxVisible"
@@ -64,7 +63,6 @@ import { currentUser } from "@/stores/multiTenant";
 import loadingPage from "@/components/loadingPage.vue";
 import { useMcpControl } from "@/lib/mcpControl";
 import ffmpegRequired from "@/components/settings/ffmpegRequired.vue";
-import desktopQuit from "@/components/desktopQuit.vue";
 import updateBox from "@/components/updateBox.vue";
 import "element-plus/theme-chalk/dark/css-vars.css";
 

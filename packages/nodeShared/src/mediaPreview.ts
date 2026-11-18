@@ -5,9 +5,9 @@ const previews = new Map<string, { users: number; controller: AbortController; u
 
 export async function createMediaPreview(source: string, kind: MediaPreviewKind, signal: AbortSignal) {
   const original = await fetch(source, { signal });
-  if (!original.ok) throw new Error("无法读取原文件以生成兼容预览");
+  if (!original.ok) throw new Error("Không thể đọc tệp gốc để tạo bản xem trước tương thích");
   const maxBytes = 100 * 1024 * 1024;
-  const sizeError = "兼容预览仅支持 100 MB 以内的非空媒体文件";
+  const sizeError = "Chỉ hỗ trợ xem trước tương thích với media không rỗng, tối đa 100 MB";
   if (Number(original.headers.get("content-length")) > maxBytes) {
     await original.body?.cancel();
     throw new Error(sizeError);
@@ -38,11 +38,11 @@ export async function createMediaPreview(source: string, kind: MediaPreviewKind,
   });
   if (!response.ok) {
     const details = await response.json().catch(() => null) as { message?: string } | null;
-    throw new Error(details?.message || "生成兼容预览失败");
+    throw new Error(details?.message || "Không thể tạo bản xem trước tương thích");
   }
   const preview = await response.blob();
   signal.throwIfAborted();
-  if (!preview.size) throw new Error("生成的兼容预览为空");
+  if (!preview.size) throw new Error("Bản xem trước tương thích bị rỗng");
   return preview;
 }
 
@@ -70,7 +70,7 @@ function acquirePreview(source: string, kind: MediaPreviewKind) {
   };
 }
 
-/** 原文件始终用于输出和下载；这里只替换展示 URL，不读写工作区。 */
+/** 原Tệp始终用于输出和下载；这里只替换展示 URL，不读写工作区。 */
 export function useMediaPreview(source: MaybeRefOrGetter<string | undefined>, kind: MaybeRefOrGetter<MediaPreviewKind>) {
   const src = ref("");
   const preparing = ref(false);
@@ -97,14 +97,14 @@ export function useMediaPreview(source: MaybeRefOrGetter<string | undefined>, ki
   function handleError(event?: Event) {
     if (!isCurrent(event) || !src.value) return;
     if (preparing.value && src.value === toValue(source)) return;
-    if (attempted) { error.value = "当前环境无法显示兼容预览，文件可能已损坏"; return; }
+    if (attempted) { error.value = "Môi trường hiện tại không hiển thị được bản xem trước; tệp có thể đã hỏng"; return; }
     attempted = true;
     preparing.value = true;
     const current = preview = acquirePreview(toValue(source)!, toValue(kind));
     void current.url.then(url => {
       if (preview === current) src.value = url;
     }).catch(cause => {
-      if (preview === current) error.value = cause instanceof Error ? cause.message : "生成兼容预览失败";
+      if (preview === current) error.value = cause instanceof Error ? cause.message : "Không thể tạo bản xem trước tương thích";
     }).finally(() => { if (preview === current) preparing.value = false; });
   }
 
