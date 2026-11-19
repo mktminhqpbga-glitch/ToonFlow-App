@@ -41,7 +41,7 @@
               :disabled="submitting" />
 
             <label class="fieldLabel" for="studioModel">Mô hình {{ kind === "image" ? "ảnh" : "video" }}</label>
-            <el-select id="studioModel" v-model="modelKey" class="fullWidth" filterable :loading="modelsLoading" placeholder="Chọn mô hình đa phương tiện" @change="resetModelOptions">
+            <el-select id="studioModel" v-model="modelKey" class="fullWidth" filterable :loading="modelsLoading" placeholder="Chọn mô hình đa phương tiện" @change="changeModel">
               <el-option v-for="model in availableModels" :key="modelKeyOf(model)" :value="modelKeyOf(model)"
                 :label="`${model.label} · ${model.providerLabel} (${model.providerId})`" />
             </el-select>
@@ -50,6 +50,8 @@
               <el-button type="primary" plain @click="openMediaSettings">Cài đặt → Mô hình đa phương tiện</el-button>
             </div>
             <p v-else-if="model" class="fieldHint">Nguồn: {{ model.providerLabel }} ({{ model.providerId }}). Chỉ gửi những tuỳ chọn mà mô hình công bố hỗ trợ.</p>
+            <el-alert v-if="!modelsLoading && requestedModelKey && modelKey !== requestedModelKey" type="warning" :closable="false" showIcon
+              title="Mô hình cần thử chưa có trong xưởng. Hãy lưu mô hình và kiểm tra kết nối mac2API trong Cài đặt, sau đó bấm Làm mới." />
             <el-alert v-if="model && ['chatgpt/image', 'gemini-web/image'].includes(model.modelId)" class="browserModelNotice" type="info" :closable="false" showIcon>
               ChatGPT Web và Gemini Web cần Chrome được kết nối trên máy chủ mac2API. Danh sách mô hình cho biết nguồn đã cài, không có nghĩa tab AI đang sẵn sàng. Backend sẽ kiểm tra trước khi gửi tạo ảnh.
             </el-alert>
@@ -159,7 +161,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import axios from "axios";
 import {
@@ -190,6 +192,7 @@ const pendingStorageKey = "macflow.mediaStudio.pending.v1";
 
 const props = defineProps<{ kind: "image" | "video" }>();
 const router = useRouter();
+const route = useRoute();
 const workspaceStore = useWorkspaceStore();
 const directory = computed(() => workspaceStore.project?.directory ?? "");
 const files = useWorkspaceFiles(directory);
@@ -227,6 +230,11 @@ let timer: ReturnType<typeof setInterval> | undefined;
 let mounted = false;
 
 function modelKeyOf(item: Pick<NodeMediaModel, "providerId" | "modelId" | "routeId">) { return JSON.stringify([item.providerId, item.providerId === "multiTenant" ? item.routeId ?? item.modelId : item.modelId]); }
+const requestedModelKey = computed(() => {
+  const { providerId, modelId } = route.query;
+  return route.path === `/${props.kind}` && typeof providerId === "string" && typeof modelId === "string" && providerId && modelId
+    ? modelKeyOf({ providerId, modelId }) : "";
+});
 const availableModels = computed(() => models.value.filter(item => item.type === props.kind)
   .sort((left, right) => Number(!!right.referenceLimits) - Number(!!left.referenceLimits)
     || Number(right.providerId.startsWith("mac2Api")) - Number(left.providerId.startsWith("mac2Api"))));
@@ -249,7 +257,7 @@ const sizeOptions = computed(() => model.value?.imageSizes ?? []);
 const durationOptions = computed(() => [...new Set(model.value?.durationResolutionMap?.flatMap(item => item.duration) ?? [])]);
 const resolutionOptions = computed(() => [...new Set((model.value?.durationResolutionMap ?? []).filter(item => !duration.value || item.duration.includes(Number(duration.value))).flatMap(item => item.resolution))]);
 const canSubmit = computed(() => !!directory.value && !!prompt.value.trim() && !!model.value && !submitting.value
-  && !referenceBusy.value);
+  && !modelsLoading.value && !referenceBusy.value && (!requestedModelKey.value || modelKey.value === requestedModelKey.value));
 const latestTask = computed(() => tasks.value.find(task => task.taskId === selectedTaskId.value) ?? tasks.value[0]);
 const orderedTasks = computed(() => [
   ...tasks.value.filter(task => task.state === "running"),
@@ -290,6 +298,12 @@ function clearReferences() {
   for (const entry of references.value) URL.revokeObjectURL(entry.preview);
   references.value = [];
 }
+function changeModel() {
+  resetModelOptions();
+  if (requestedModelKey.value) {
+    void router.replace({ query: { ...route.query, providerId: undefined, modelId: undefined } });
+  }
+}
 function removeReference(path: string) {
   const item = references.value.find(entry => entry.path === path);
   if (item) URL.revokeObjectURL(item.preview);
@@ -302,8 +316,12 @@ async function loadModels() {
     const loaded = await readNodeModels<NodeMediaModel>("media", undefined, true);
     if (version !== scopeVersion) return;
     models.value = loaded;
-    if (!availableModels.value.some(item => modelKeyOf(item) === modelKey.value)) {
-      modelKey.value = availableModels.value[0] ? modelKeyOf(availableModels.value[0]!) : "";
+    const preferredKey = requestedModelKey.value || modelKey.value;
+    const preferredModel = availableModels.value.find(item => modelKeyOf(item) === preferredKey);
+    const nextModel = preferredModel ?? (requestedModelKey.value ? undefined : availableModels.value[0]);
+    const nextKey = nextModel ? modelKeyOf(nextModel) : "";
+    if (nextKey !== modelKey.value) {
+      modelKey.value = nextKey;
       resetModelOptions();
     }
   } catch (cause) { if (version === scopeVersion) ElMessage.error(messageOf(cause)); }
@@ -621,6 +639,7 @@ function openMediaSettings() {
   settingsVisible.value = true;
   nextTick(() => settingsRef.value?.openPanel("mediaModel"));
 }
+watch(requestedModelKey, key => { if (key && !modelsLoading.value) void loadModels(); });
 watch([() => props.kind, directory, () => currentUser.value?.id], async () => {
   scopeVersion++;
   historySequence++;

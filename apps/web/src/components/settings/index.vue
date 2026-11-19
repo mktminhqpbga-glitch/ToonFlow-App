@@ -56,7 +56,8 @@
                 :is="activePanel.component"
                 v-bind="
                   ['account', 'pluginMarket', 'languageModel', 'mediaModel', 'personalization', 'deviceLink', 'aiChrome'].includes(activePanel.id) ? { visible } : {}
-                " />
+                "
+                v-on="activePanel.id === 'mediaModel' ? { studioOpened: () => visible = false } : {}" />
             </keep-alive>
           </transition>
         </div>

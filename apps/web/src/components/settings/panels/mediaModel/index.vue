@@ -36,7 +36,7 @@
       <el-button class="addButton" :icon="IconSettings" @click="openAdd('custom')">Thêm nhà cung cấp tùy chỉnh</el-button>
     </div>
     <component :is="mediaProviderDialog" v-model="providerDialogVisible" :mode="addMode" :provider="editingSourceProvider" @added="saveProviderItem" @saved="saveProviderItem" />
-    <component :is="editProviderDialog" v-model="editorVisible" :provider="editingProvider" @saved="saveProviderItem" />
+    <component :is="editProviderDialog" v-model="editorVisible" :provider="editingProvider" @saved="saveProviderItem" @studioOpened="emit('studioOpened')" />
   </div>
 </template>
 
@@ -52,6 +52,7 @@ import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
 import toonflowProviderCard from "../../toonflowProviderCard.vue";
 
 defineProps<{ visible?: boolean }>();
+const emit = defineEmits<{ studioOpened: [] }>();
 const mediaProviderDialog = shallowRef<Component>();
 const editProviderDialog = shallowRef<Component>();
 const providers = ref<MediaProvider[]>([]);

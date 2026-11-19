@@ -28,7 +28,11 @@
               </div>
             </div>
             <div class="actionButtons">
-              <el-button text size="small" :icon="IconPlayerPlay" :loading="loadingTestModel === index" :disabled="saving || loadingTestModel !== undefined || item.type === 'text'" :title="item.type === 'text' ? 'Tại đây hỗ trợ kiểm thử mô hình ảnh, video và âm thanh' : undefined" :aria-label="`Kiểm thử mô hình ${item.label}`" @click="testModel(index)">Kiểm thử</el-button>
+              <el-button v-if="usesStudioTest && (item.type === 'image' || item.type === 'video')" text size="small" :icon="IconPlayerPlay"
+                :disabled="saving" :aria-label="`Thử mô hình ${item.label} trong xưởng`" @click="testModel(index)">Thử trong xưởng</el-button>
+              <el-button v-else-if="!usesStudioTest" text size="small" :icon="IconPlayerPlay" :loading="loadingTestModel === index"
+                :disabled="saving || loadingTestModel !== undefined || item.type === 'text'" :title="item.type === 'text' ? 'Tại đây hỗ trợ kiểm thử mô hình ảnh, video và âm thanh' : undefined"
+                :aria-label="`Kiểm thử mô hình ${item.label}`" @click="testModel(index)">Kiểm thử</el-button>
             <el-button text size="small" :icon="IconEdit" :disabled="saving" :aria-label="`Sửa mô hình ${item.label}`" @click="editModel(index)">Sửa</el-button>
             <el-button text size="small" type="danger" :icon="IconTrash" :disabled="saving" :aria-label="`Xóa mô hình ${item.label}`" @click="models.splice(index, 1)">Xóa</el-button>
             </div>
@@ -65,6 +69,7 @@ import { translate } from "@toonflow/i18n/vue";
 
 import axios from "axios";
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, toRaw, watch, type Component } from "vue";
+import { isNavigationFailure, NavigationFailureType, useRouter } from "vue-router";
 import { IconPlus, IconTrash, IconDeviceFloppy, IconEdit, IconPlayerPlay } from "@tabler/icons-vue";
 import formCreate, { type Api, type Options } from "@toonflow/provider-web/formCreate";
 import { modelIcon } from "@toonflow/model-icons";
@@ -77,7 +82,9 @@ import providerTestPanel from "./providerTestPanel.vue";
 const { provider } = defineProps<{ provider?: MediaProvider }>();
 const modelEditorDialog = shallowRef<Component>();
 const visible = defineModel<boolean>({ default: false });
-const emit = defineEmits<{ saved: [provider: MediaProvider] }>();
+const emit = defineEmits<{ saved: [provider: MediaProvider]; studioOpened: [] }>();
+const router = useRouter();
+const usesStudioTest = computed(() => !!provider && ["mac2ApiMuse", "mac2ApiChatGpt", "mac2ApiGemini"].includes(provider.id));
 const models = ref<MediaProviderModel[]>([]);
 const modelEditorVisible = ref(false);
 const editingModelIndex = ref<number>();
@@ -122,10 +129,22 @@ onBeforeUnmount(() => testLoading?.abort());
 async function testModel(index: number) {
   const model = models.value[index];
   if (saving.value || loadingTestModel.value !== undefined || !provider || !model || model.type === "text") return;
+  formError.value = "";
+  if (usesStudioTest.value) {
+    if (model.type !== "image" && model.type !== "video") return;
+    try {
+      const failure = await router.push({ path: `/${model.type}`, query: { providerId: provider.id, modelId: model.id } });
+      if (failure && !isNavigationFailure(failure, NavigationFailureType.duplicated)) throw failure;
+      visible.value = false;
+      emit("studioOpened");
+    } catch {
+      formError.value = "Không thể mở xưởng để kiểm thử mô hình. Vui lòng thử lại.";
+    }
+    return;
+  }
   const controller = new AbortController();
   testLoading = controller;
   loadingTestModel.value = index;
-  formError.value = "";
   try {
     const currentProvider = { ...provider, models: JSON.parse(JSON.stringify(models.value)) as MediaProviderModel[] };
     const currentRevision = revision.value;
