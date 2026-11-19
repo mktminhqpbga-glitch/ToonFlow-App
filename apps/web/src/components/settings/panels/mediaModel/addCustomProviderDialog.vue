@@ -125,6 +125,9 @@ import metasoSource from "@toonflow/providers/media/metaso?raw";
 import compshareSource from "@toonflow/providers/media/compshare?raw";
 import muse2ApiSource from "@toonflow/providers/media/muse2Api?raw";
 import geminiWebToApiSource from "@toonflow/providers/media/geminiWebToApi?raw";
+import mac2ApiMuseSource from "@toonflow/providers/media/mac2ApiMuse?raw";
+import mac2ApiChatGptSource from "@toonflow/providers/media/mac2ApiChatGpt?raw";
+import mac2ApiGeminiSource from "@toonflow/providers/media/mac2ApiGemini?raw";
 import type { MediaProvider } from "@toonflow/provider-web/types";
 import { providerPrompt } from "./providerPrompt";
 import { modelChoices, saveSettings } from "@/stores/settings";
@@ -134,7 +137,9 @@ import { actualPlatform } from "@/lib/platform";
 const { mode = "custom", provider } = defineProps<{ mode?: "builtin" | "custom"; provider?: MediaProvider }>();
 const visible = defineModel<boolean>({ default: false });
 const emit = defineEmits<{ added: [provider: MediaProvider]; saved: [provider: MediaProvider] }>();
-const providerSources: Record<string, string> = { apiMart: apiMartSource, metaso: metasoSource, compshare: compshareSource, muse2Api: muse2ApiSource, geminiWebToApi: geminiWebToApiSource };
+const providerSources: Record<string, string> = { apiMart: apiMartSource, metaso: metasoSource, compshare: compshareSource,
+  muse2Api: muse2ApiSource, geminiWebToApi: geminiWebToApiSource, mac2ApiMuse: mac2ApiMuseSource,
+  mac2ApiChatGpt: mac2ApiChatGptSource, mac2ApiGemini: mac2ApiGeminiSource };
 const selectedProvider = ref<string>(mediaProviders[0]?.id ?? "");
 const activeProvider = computed(() => mediaProviders.find(provider => provider.id === selectedProvider.value));
 const models = computed<MediaProvider["models"]>(() => (activeProvider.value?.models ?? []).map(model => ({ ...model, label: translate(model.label) })));

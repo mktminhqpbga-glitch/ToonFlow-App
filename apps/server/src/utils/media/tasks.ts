@@ -15,6 +15,8 @@ import { modelGateway } from "@/utils/multiTenant/gateway";
 import { readPriceReference } from "@/utils/media/priceReference";
 import { completeTask, failTask } from "@/utils/aiChrome";
 import { assertProviderAvailable, isRetiredProvider } from "@/lib/retiredProviders";
+import { isMac2ApiProvider } from "@/utils/mac2Api/contract";
+import { cancelMac2Api } from "@/utils/mac2Api/tasks";
 
 const maxRecordSize = 16 * 1024 * 1024;
 const maxBlobSize = 140 * 1024 * 1024;
@@ -49,6 +51,7 @@ const recordSchema = z.strictObject({
   chargeId: z.string().min(1).max(128).optional(),
   chargeStatus: z.enum(["settled", "released", "pendingReview"]).optional(),
   studioQueue: z.literal(true).optional(),
+  cancelDisposition: z.enum(["confirmed", "requested", "running", "terminal", "localOnly", "notSent"]).optional(),
   state: z.enum(["queued", "running", "interrupted", "succeeded", "failed", "cancelled"]),
   createdAt: z.number().finite().nonnegative(), updatedAt: z.number().finite().nonnegative(),
   checkpoint: checkpointSchema,
@@ -406,6 +409,7 @@ async function resumable(task: MediaTask) {
 
 function publicData(task: MediaTask) {
   const data = task.record.checkpoint.providerData;
+  if (data?.transport === "mac2Api") return undefined;
   if (!data || task.blobs.length || task.prepared?.blobs.length) return undefined;
   const pending: unknown[] = [data];
   while (pending.length) {
@@ -422,9 +426,10 @@ function publicData(task: MediaTask) {
 }
 
 async function snapshot(task: MediaTask, owner?: AuthIdentity | null) {
-  const { taskId, state, nodeId, canvasPath, result } = task.record;
+  const { taskId, state, nodeId, canvasPath, result, cancelDisposition } = task.record;
   return { taskId, state, resumable: await resumable(task), nodeId, canvasPath,
-    ...(owner?.role === "user" ? {} : { providerData: publicData(task) }), ...(result ? { result } : {}) };
+    ...(owner?.role === "user" ? {} : { providerData: publicData(task) }), ...(result ? { result } : {}),
+    ...(cancelDisposition ? { cancelDisposition } : {}) };
 }
 
 async function finalizeCharge(task: MediaTask, outcome: ModelOutcome) {
@@ -755,6 +760,13 @@ export async function cancel(cwd: string, taskIds: string[], owner?: AuthIdentit
       }
       task.record.state = "cancelled";
       task.record.result = error<GeneratedMedia[]>("生成已取消", null, 499);
+      const mac2Api = !modelGateway.enabled() && isMac2ApiProvider(task.record.request?.providerId ?? "");
+      const remote = mac2Api ? task.record.checkpoint.providerData : undefined;
+      if (mac2Api) {
+        task.record.cancelDisposition = remote ? "localOnly" : "notSent";
+        task.record.result = error<GeneratedMedia[]>(remote ? "Đã dừng theo dõi trong MacFlow; đang kiểm tra khả năng hủy từ xa."
+          : "Đã hủy trong MacFlow trước khi gửi yêu cầu.", null, 499);
+      }
       // 取消先落盘；包括尚未收到提交的 ID，防止乱序请求稍后创建付费任务。
       await persist(task, exclusive);
       const studioType = studioMediaTypeSchema.safeParse(task.record.mediaType);
@@ -766,6 +778,19 @@ export async function cancel(cwd: string, taskIds: string[], owner?: AuthIdentit
         }
       }
       await releaseCharge(task);
+      if (remote) {
+        const disposition = await cancelMac2Api(remote);
+        const messages = {
+          confirmed: "mac2API đã xác nhận hủy tác vụ.",
+          requested: "Đã yêu cầu mac2API hủy; máy chủ chưa xác nhận dừng.",
+          running: "mac2API báo tác vụ đang chạy và không thể hủy. MacFlow đã dừng theo dõi.",
+          terminal: "mac2API báo tác vụ đã kết thúc. MacFlow đã dừng theo dõi.",
+          localOnly: "MacFlow đã dừng theo dõi cục bộ. Chưa xác nhận hủy trên mac2API.",
+        };
+        task.record.cancelDisposition = disposition;
+        task.record.result = error<GeneratedMedia[]>(messages[disposition], null, 499);
+        await persist(task);
+      }
     });
   }));
 }

@@ -15,6 +15,9 @@ import { chromeModels, runTask } from "@/utils/aiChrome";
 import { readReferences } from "@/utils/aiChrome/files";
 import { providerForChromeModel } from "@/utils/aiChrome/protocol";
 import { assertProviderAvailable } from "@/lib/retiredProviders";
+import { isMac2ApiProvider, imageMimeTypes, mac2ApiProviders, maxLegacyReferenceBytes } from "@/utils/mac2Api/contract";
+import { discoverMac2Api, getConnection } from "@/utils/mac2Api/connection";
+import { generateMac2Api, Mac2ApiRejected, resumeMac2Api } from "@/utils/mac2Api/tasks";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
@@ -79,11 +82,30 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       ...(model.type === "audio" ? { voices: model.voices } : {}),
       ...(model.type === "image" ? {
         imageSizes: imageOptions(Array.isArray(model.imageSizes) ? model.imageSizes : builtIn?.imageSizes, /^[^\u0000-\u001f\u007f]+$/),
+      } : {}),
+      ...(model.type !== "audio" ? {
         imageRatios: imageOptions(Array.isArray(model.imageRatios) ? model.imageRatios : builtIn?.imageRatios, /^[1-9]\d{0,3}:[1-9]\d{0,3}$/),
       } : {}),
     } as MediaModel];
   }));
-  return [...installedModels, ...chromeModels()] as MediaModel[];
+  const models = await Promise.all(installedModels.map(async model => {
+    const { providerId } = model;
+    if (!isMac2ApiProvider(providerId)) return model;
+    const connection = getConnection(providerId);
+    if (!connection) return undefined;
+    const discovery = await discoverMac2Api(connection);
+    if (!discovery.modelIds.includes(model.modelId)) return undefined;
+    const capability = discovery.capabilities?.models.find(item => item.id === model.modelId && item.type === model.type
+      && item.provider === mac2ApiProviders[providerId].upstream);
+    if (discovery.capabilities && !capability) return undefined;
+    const modes = capability?.modes?.map(mode => mode.startsWith("imageReference:") ? [mode] : mode);
+    return { ...model, mode: modes ?? model.mode, referenceLimits: {
+      maxReferences: capability?.maxReferences ?? (model.providerId === "mac2ApiMuse" ? 4 : 1),
+      maxReferenceBytes: capability?.maxReferenceBytes ?? maxLegacyReferenceBytes,
+      allowedMimeTypes: capability?.allowedMimeTypes ?? imageMimeTypes,
+    } };
+  }));
+  return [...models.filter(model => model !== undefined), ...chromeModels()] as MediaModel[];
 }
 
 export async function readReference(cwd: string, reference: MediaReference, mediaType: string, signal?: AbortSignal): Promise<Extract<MediaInput, { type: "base64" }>> {
@@ -166,7 +188,8 @@ function resumableAssets(assets: MediaAsset[], mediaType: "image" | "video" | "a
 async function prepareRequest<T>(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest,
   read: (cwd: string, reference: MediaReference, type: string, signal?: AbortSignal) => Promise<T>, signal?: AbortSignal) {
   // ACT: 仅向已适配引用映射的内置供应商传递，其他第三方适配器仍接收原有公共参数。
-  const referenceOrder = mediaType === "video" && ["toonflow", "apiMart", "metaso", "compshare"].includes(request.providerId) ? request.referenceOrder : undefined;
+  const referenceOrder = mediaType === "video" && (["toonflow", "apiMart", "metaso", "compshare", "muse2Api"].includes(request.providerId)
+    || isMac2ApiProvider(request.providerId)) ? request.referenceOrder : undefined;
   if (referenceOrder) {
     const media = { image: request.images, video: request.videos, audio: request.audios };
     for (const [index, reference] of referenceOrder.entries()) {
@@ -237,6 +260,7 @@ export async function getMediaPrice(directory: string | undefined, mediaType: "i
   signal?.throwIfAborted();
   assertProviderAvailable(request.providerId);
   if (request.providerId === "aiChrome" && !modelGateway.enabled()) return null;
+  if (isMac2ApiProvider(request.providerId) && !modelGateway.enabled()) return null;
   if (modelGateway.enabled()) {
     const quote = await modelGateway.quoteRequest(mediaType, request.providerId, request.modelId, request);
     return { ...quote, price: `${quote.amount} ${quote.currency}`, tips: translateMessage("平台售价，按实际用量结算") };
@@ -316,7 +340,30 @@ async function executeMedia(
   try {
     signal?.throwIfAborted();
     let assets: MediaAsset[] | undefined;
-    if (request.providerId === "aiChrome") {
+    if (isMac2ApiProvider(request.providerId)) {
+      if (!task || mediaType === "audio" || modelGateway.enabled() || modelRouteCipher) {
+        invalid("mac2API cần tác vụ có lưu tiến độ trong MacFlow độc lập.");
+      }
+      await getMediaProvider(request.providerId);
+      const save = async (data: ProviderTaskData) => {
+        await task.save({ providerData: data });
+        markSubmitted();
+      };
+      if (task.resume) {
+        if (!checkpoint?.providerData) invalid("Chưa có mã yêu cầu mac2API để kiểm tra.");
+        assets = await resumeMac2Api(checkpoint.providerData, task.taskId, save, signal);
+      } else {
+        if (checkpoint?.providerData) invalid("Tác vụ đã có mã yêu cầu. Hãy dùng Khôi phục để tra cứu.");
+        const parameters = await prepareRequest(directory, mediaType, request, readReference, signal);
+        if (parameters.type === "audio") invalid("mac2API không hỗ trợ tác vụ âm thanh.");
+        try {
+          assets = await generateMac2Api(request.providerId, mediaType, task.taskId, parameters, save, signal);
+        } catch (cause) {
+          if (cause instanceof Mac2ApiRejected) notSubmittedFailures.add(cause);
+          throw cause;
+        }
+      }
+    } else if (request.providerId === "aiChrome") {
       if (modelGateway.enabled() || modelRouteCipher || !task || !providerForChromeModel(request.modelId)
         || request.modelId === "museImage" && mediaType !== "image") invalid("AI chrome cần tác vụ bền vững ở chế độ độc lập và mô hình hợp lệ.");
       if (task.resume || checkpoint?.providerData) invalid("Tác vụ Chrome đã gián đoạn; kiểm tra tab trước khi chủ động tạo yêu cầu mới.");

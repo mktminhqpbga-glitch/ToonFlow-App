@@ -9,6 +9,9 @@ import compshare from "./src/media/compshare";
 import muse2ApiLanguage from "./src/language/muse2Api";
 import muse2ApiMedia from "./src/media/muse2Api";
 import geminiWebToApiMedia from "./src/media/geminiWebToApi";
+import mac2ApiMuse from "./src/media/mac2ApiMuse";
+import mac2ApiChatGpt from "./src/media/mac2ApiChatGpt";
+import mac2ApiGemini from "./src/media/mac2ApiGemini";
 
 export type Provider = ProviderDefinition;
 export type ProviderPrice = NonNullable<Awaited<ReturnType<NonNullable<Provider["getPrice"]>>>>;
@@ -21,4 +24,4 @@ export type AudioConvertOptions = Parameters<ProviderTools["audio"]["convert"]>[
 export type { FfmpegFactory, FfmpegCommand } from "@toonflow/ffmpeg/types";
 
 export const languageProviders = [deepSeek, gemini, geminiWebToApi, muse2ApiLanguage] as const;
-export const mediaProviders = [apiMart, metaso, compshare, muse2ApiMedia, geminiWebToApiMedia] as const;
+export const mediaProviders = [apiMart, metaso, compshare, muse2ApiMedia, geminiWebToApiMedia, mac2ApiMuse, mac2ApiChatGpt, mac2ApiGemini] as const;

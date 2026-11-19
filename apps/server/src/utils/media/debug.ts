@@ -2,6 +2,7 @@ import { z } from "zod";
 import { loadMediaProviderSource, replaceMediaProviderModels } from "@/utils/media/provider";
 import { t, translateError } from "@/lib/i18n";
 import { requireDirectModelAccess } from "@/utils/multiTenant/gateway";
+import { isMac2ApiProvider } from "@/utils/mac2Api/contract";
 
 export const providerDebugSchema = {
   source: z.string().min(1).max(2 * 1024 * 1024),
@@ -111,6 +112,9 @@ export async function runProviderSource(
   try {
     const provider = await loadMediaProviderSource(models === undefined ? source : replaceMediaProviderModels(source, models), config, signal, fetchRequest);
     collectSecrets(provider.config);
+    if (isMac2ApiProvider(provider.id)) {
+      throw new Error("Kiểm tra kết nối trong Cài đặt → Kết nối mac2API. Để tạo thử và lưu tiến độ, dùng Xưởng hoặc Canvas trong một dự án.");
+    }
     const model = provider.models.find(model => model.id === request.model);
     if (!model) throw new Error("模型已变更，请重新选择模型");
     const method = model.type === "image" ? provider.generateImage : model.type === "video" ? provider.generateVideo : model.type === "audio" ? provider.generateAudio : undefined;

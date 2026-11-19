@@ -16,6 +16,9 @@
     "./media/metaso": "./src/media/metaso.ts",
     "./media/compshare": "./src/media/compshare.ts",
     "./media/muse2Api": "./src/media/muse2Api.ts",
-    "./media/geminiWebToApi": "./src/media/geminiWebToApi.ts"
+    "./media/geminiWebToApi": "./src/media/geminiWebToApi.ts",
+    "./media/mac2ApiMuse": "./src/media/mac2ApiMuse.ts",
+    "./media/mac2ApiChatGpt": "./src/media/mac2ApiChatGpt.ts",
+    "./media/mac2ApiGemini": "./src/media/mac2ApiGemini.ts"
   }
 }

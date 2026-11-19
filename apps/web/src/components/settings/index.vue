@@ -105,6 +105,7 @@ const allSettingsPanels = [
     component: defineAsyncComponent(() => import("./panels/languageModel/index.vue")),
   },
   { id: "mediaModel", label: "Mô hình media", icon: IconPhotoVideo, component: defineAsyncComponent(() => import("./panels/mediaModel/index.vue")) },
+  { id: "mac2Api", label: "Kết nối mac2API", icon: IconPlugConnected, component: defineAsyncComponent(() => import("./panels/mac2Api/index.vue")) },
   { id: "aiChrome", label: "AI chrome", icon: IconBrandChrome, component: defineAsyncComponent(() => import("./panels/aiChrome/index.vue")) },
   {
     id: "pluginMarket",
@@ -132,8 +133,8 @@ const allSettingsPanels = [
 const publicAccountPanel = { ...allSettingsPanels[0]!, get label() { return translate("账号"); } };
 const settingsPanels = computed(() => allSettingsPanels.filter(item => {
   if (publicWeb.value && currentUser.value?.role === "user") return ["account", "general", "about"].includes(item.id);
-  if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket", "aiChrome"].includes(item.id)) return false;
-  return !multiTenantEnabled.value || !["languageModel", "mediaModel", "aiChrome", "developer"].includes(item.id);
+  if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket", "aiChrome", "mac2Api"].includes(item.id)) return false;
+  return !multiTenantEnabled.value || !["languageModel", "mediaModel", "aiChrome", "mac2Api", "developer"].includes(item.id);
 }).map(item => publicWeb.value && item.id === "account" ? publicAccountPanel : item));
 const morePanelIds = new Set(["account", "aiChrome", "mcp", "network", "deviceLink", "developer", "multiTenant", "about"]);
 const mainPanels = computed(() => settingsPanels.value.filter(item => !morePanelIds.has(item.id)));

@@ -19,6 +19,7 @@ const taskSchema = z.object({
   taskId: z.uuid(), cwd: z.string(), ownerUserId: z.uuid().optional(),
   mediaType: z.enum(["image", "video", "audio"]).optional(),
   state: z.enum(["queued", "running", "interrupted", "succeeded", "failed", "cancelled"]),
+  cancelDisposition: z.enum(["confirmed", "requested", "running", "terminal", "localOnly", "notSent"]).optional(),
   createdAt: z.number(), updatedAt: z.number(),
   request: z.object({ providerId: z.string(), modelId: z.string(), prompt: z.string() }).optional(),
   result: z.object({ code: z.number(), message: z.string(), data: z.array(fileSchema).nullable() }).optional(),
@@ -39,6 +40,7 @@ export type StudioTaskEntry = {
   modelId?: string;
   prompt?: string;
   resumable: boolean;
+  cancelDisposition?: StudioTask["cancelDisposition"];
   result?: { code: number; message: string; data: z.infer<typeof fileSchema>[] | null };
 };
 
@@ -102,6 +104,7 @@ async function taskSummary(task: StudioTask): Promise<StudioTaskEntry> {
     createdAt: task.createdAt, updatedAt: task.updatedAt,
     providerId: task.request?.providerId, modelId: task.request?.modelId,
     prompt: task.request?.prompt, resumable,
+    ...(task.cancelDisposition ? { cancelDisposition: task.cancelDisposition } : {}),
     ...(task.result ? { result: { code: task.result.code, message: task.result.message,
       data: task.result.data?.filter(file => file.mediaType === task.mediaType) ?? null } } : {}),
   };

@@ -54,6 +54,8 @@
               ChatGPT Web và Gemini Web cần Chrome được kết nối trên máy chủ mac2API. Danh sách mô hình cho biết nguồn đã cài, không có nghĩa tab AI đang sẵn sàng. Backend sẽ kiểm tra trước khi gửi tạo ảnh.
             </el-alert>
 
+            <p v-if="model?.referenceLimits && !ratioOptions.length" class="fieldHint">mac2API chưa công bố tỉ lệ có thể chọn. Xưởng dùng tỉ lệ mặc định của mô hình.</p>
+
             <div v-if="model && (ratioOptions.length || sizeOptions.length || durationOptions.length || resolutionOptions.length)" class="studioOptions">
               <div v-if="ratioOptions.length"><label class="fieldLabel">Tỷ lệ khung hình</label>
                 <el-select v-model="ratio" class="fullWidth" placeholder="Mặc định của mô hình" clearable><el-option v-for="item in ratioOptions" :key="item" :label="item" :value="item" /></el-select>
@@ -69,7 +71,7 @@
               </div>
             </div>
 
-            <div class="referenceHeading"><label class="fieldLabel">{{ kind === "image" ? "Ảnh tham chiếu" : "Ảnh khung đầu" }}</label><span v-if="supportsReferences">{{ references.length }} / {{ maxReferences }}</span></div>
+            <div class="referenceHeading"><label class="fieldLabel">{{ kind === "image" || maxReferences > 1 ? "Ảnh tham chiếu" : "Ảnh khung đầu" }}</label><span v-if="supportsReferences">{{ references.length }} / {{ maxReferences }}</span></div>
             <div v-if="supportsReferences" class="referenceArea">
               <div v-for="reference in references" :key="reference.path" class="referenceItem">
                 <img :src="reference.preview" :alt="reference.name" />
@@ -78,10 +80,12 @@
               </div>
               <button v-if="references.length < maxReferences" class="referenceAdd" type="button" :disabled="submitting || !directory" @click="referenceInput?.click()"><icon-plus :size="21" /><span>Tải ảnh lên</span></button>
               <el-button v-if="references.length < maxReferences && currentUser?.role !== 'user'" plain :disabled="submitting || !directory" @click="assetPickerVisible = true">Chọn từ thư viện</el-button>
+              <el-button v-if="kind === 'image' && latestTask && fileOf(latestTask) && references.length < maxReferences" plain
+                :disabled="submitting || referenceBusy" @click="useCurrentImage(latestTask)">Dùng ảnh hiện tại làm tham chiếu</el-button>
             </div>
             <p v-else class="fieldHint">Mô hình được chọn chỉ hỗ trợ tạo từ văn bản; không gửi ảnh tham chiếu.</p>
-            <p v-if="kind === 'video' && supportsReferences" class="fieldHint">Nếu chọn ảnh đầu, MacFlow chỉ gửi ảnh này làm khung đầu. Không gửi khung cuối khi mô hình không hỗ trợ.</p>
-            <input ref="referenceInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" hidden multiple :disabled="submitting" @change="uploadReferences" />
+            <p v-if="kind === 'video' && supportsReferences && maxReferences === 1" class="fieldHint">Ảnh đã chọn sẽ được dùng làm khung đầu.</p>
+            <input ref="referenceInput" type="file" :accept="referenceMimeTypes.join(',')" hidden multiple :disabled="submitting" @change="uploadReferences" />
 
             <div class="studioQueue">
               <label class="fieldLabel" for="studioQueueLimit">Số tác vụ chạy cùng lúc</label>
@@ -104,7 +108,7 @@
           <el-card shadow="never">
             <template #header><div class="studioCardHeading"><span><icon-photo-scan v-if="kind === 'image'" :size="19" /><icon-player-play v-else :size="19" /> Kết quả</span><el-tag size="small">{{ tasks.length }} tác vụ</el-tag></div></template>
             <div v-if="latestTask" class="resultCard">
-              <div class="resultMeta"><el-tag :type="statusTag(latestTask.state)" size="small">{{ statusText(latestTask.state) }}</el-tag><span>{{ formatDate(latestTask.createdAt) }}</span></div>
+              <div class="resultMeta"><el-tag :type="statusTag(latestTask.state)" size="small">{{ statusText(latestTask) }}</el-tag><span>{{ formatDate(latestTask.createdAt) }}</span></div>
               <div v-if="fileOf(latestTask)" class="mediaPreview">
                 <img v-if="kind === 'image' && previewUrls[fileOf(latestTask)!.path]" :src="previewUrls[fileOf(latestTask)!.path]" alt="Ảnh vừa tạo" />
                 <video v-else-if="kind === 'video' && previewUrls[fileOf(latestTask)!.path]" :src="previewUrls[fileOf(latestTask)!.path]" controls playsinline preload="metadata" />
@@ -114,11 +118,13 @@
                 <icon-loader-2 v-if="latestTask.state === 'running'" :size="34" class="spinning" />
                 <icon-alert-circle v-else-if="latestTask.state === 'failed' || latestTask.state === 'interrupted'" :size="34" />
                 <icon-sparkles v-else :size="34" />
-                <span>{{ statusText(latestTask.state) }}</span>
+                <span>{{ statusText(latestTask) }}</span>
               </div>
               <div class="taskInfo"><small>ID tác vụ</small><code>{{ latestTask.taskId }}</code></div>
               <p v-if="latestTask.result && latestTask.result.code !== 200" class="taskError">{{ describeError(latestTask.result.message) }}</p>
               <p v-if="latestTask.state === 'interrupted'" class="fieldHint">Chỉ kiểm tra/khôi phục ID này, không gửi yêu cầu tạo mới. Nếu chưa rõ trạng thái, kiểm tra mac2API → Tác vụ.</p>
+              <el-button v-if="latestTask.state === 'queued' || latestTask.state === 'running'" type="danger" plain
+                :loading="cancelling" @click="cancelTask(latestTask)">Hủy tác vụ</el-button>
               <div v-if="fileOf(latestTask)" class="resultActions">
                 <el-button :icon="IconDownload" @click="downloadResult(latestTask)">Tải về</el-button>
                 <el-button :icon="IconFolderPlus" :disabled="currentUser?.role === 'user'" @click="saveToLibrary(latestTask)">Lưu vào thư viện</el-button>
@@ -134,7 +140,7 @@
               <button v-for="task in orderedTasks" :key="task.taskId" type="button" class="taskRow" :class="{ selected: selectedTaskId === task.taskId }" @click="selectedTaskId = task.taskId">
                 <span class="taskIcon"><icon-photo v-if="kind === 'image'" :size="19" /><icon-video v-else :size="19" /></span>
                 <span class="taskDescription"><strong>{{ task.prompt || task.modelId || "Tác vụ tạo nội dung" }}</strong><small>{{ formatDate(task.createdAt) }} · {{ task.modelId || task.taskId.slice(0, 8) }}</small></span>
-                <el-tag :type="statusTag(task.state)" size="small">{{ statusText(task.state) }}</el-tag>
+                <el-tag :type="statusTag(task.state)" size="small">{{ statusText(task) }}</el-tag>
               </button>
             </div>
             <el-empty v-else :description="historyLoading ? 'Đang tải lịch sử…' : 'Chưa có tác vụ trong xưởng này'" :imageSize="84" />
@@ -174,8 +180,9 @@ type StudioTask = {
   taskId: string; state: "queued" | "running" | "interrupted" | "succeeded" | "failed" | "cancelled";
   resumable?: boolean; createdAt?: number; updatedAt?: number; prompt?: string; providerId?: string; modelId?: string;
   result?: { code: number; message: string; data: MediaFile[] | null };
+  cancelDisposition?: "confirmed" | "requested" | "running" | "terminal" | "localOnly" | "notSent";
 };
-type ImageReference = { path: string; mimeType: string; name: string; preview: string };
+type ImageReference = { path: string; mimeType: string; name: string; preview: string; digest: string; file?: File };
 type AssetEntry = { name: string; type: "file" | "directory"; path: string };
 type PendingStudioId = { taskId: string; directory: string; kind: "image" | "video"; ownerId: string; createdAt: number };
 type StudioQueueStatus = { limit: number; running: number; queued: number };
@@ -211,6 +218,7 @@ const queueRunning = ref(0);
 const queueWaiting = ref(0);
 const queueLimitSaving = ref(false);
 const statusBusy = ref(false);
+const cancelling = ref(false);
 const previewUrls = ref<Record<string, string>>({});
 const mediaLeases = new Map<string, { release: () => void }>();
 let historySequence = 0;
@@ -220,15 +228,22 @@ let mounted = false;
 
 function modelKeyOf(item: Pick<NodeMediaModel, "providerId" | "modelId" | "routeId">) { return JSON.stringify([item.providerId, item.providerId === "multiTenant" ? item.routeId ?? item.modelId : item.modelId]); }
 const availableModels = computed(() => models.value.filter(item => item.type === props.kind)
-  .sort((left, right) => Number(right.providerId === "mac2Api") - Number(left.providerId === "mac2Api")));
+  .sort((left, right) => Number(!!right.referenceLimits) - Number(!!left.referenceLimits)
+    || Number(right.providerId.startsWith("mac2Api")) - Number(left.providerId.startsWith("mac2Api"))));
 const model = computed(() => availableModels.value.find(item => modelKeyOf(item) === modelKey.value));
 const modes = computed<string[]>(() => {
   const raw = model.value?.mode;
   const values = typeof raw === "string" ? [raw] : Array.isArray(raw) ? raw : [];
   return values.filter((value): value is string => typeof value === "string");
 });
-const supportsReferences = computed(() => modes.value.some(value => ["singleImage", "multiReference", "startFrameOptional", "startEndRequired", "endFrameOptional"].includes(value)));
-const maxReferences = computed(() => props.kind === "video" || !modes.value.includes("multiReference") ? 1 : 4);
+const supportsReferences = computed(() => model.value?.referenceLimits
+  ? model.value.referenceLimits.maxReferences > 0
+  : modes.value.some(value => ["singleImage", "multiReference", "startFrameOptional", "startEndRequired", "endFrameOptional"].includes(value)));
+const maxReferences = computed(() => model.value?.referenceLimits?.maxReferences
+  ?? (props.kind === "video" || !modes.value.includes("multiReference") ? 1 : 4));
+const referenceMimeTypes = computed(() => model.value?.referenceLimits?.allowedMimeTypes
+  ?? ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const maxReferenceBytes = computed(() => model.value?.referenceLimits?.maxReferenceBytes ?? 20 * 1024 * 1024);
 const ratioOptions = computed(() => model.value?.imageRatios ?? []);
 const sizeOptions = computed(() => model.value?.imageSizes ?? []);
 const durationOptions = computed(() => [...new Set(model.value?.durationResolutionMap?.flatMap(item => item.duration) ?? [])]);
@@ -242,8 +257,12 @@ const orderedTasks = computed(() => [
   ...tasks.value.filter(task => task.state !== "running" && task.state !== "queued"),
 ]);
 
-function statusText(state: StudioTask["state"]) {
-  return ({ queued: "Đang chờ", running: "Đang xử lý", interrupted: "Chưa rõ / gián đoạn", succeeded: "Hoàn tất", failed: "Thất bại", cancelled: "Đã huỷ" })[state];
+function statusText(task: StudioTask) {
+  if (task.state === "cancelled" && task.cancelDisposition) {
+    return ({ confirmed: "Đã hủy trên mac2API", requested: "Đã yêu cầu hủy", running: "Đã dừng theo dõi",
+      terminal: "Đã dừng theo dõi", localOnly: "Đã dừng cục bộ", notSent: "Đã hủy trước khi gửi" })[task.cancelDisposition];
+  }
+  return ({ queued: "Đang chờ", running: "Đang xử lý", interrupted: "Chưa rõ / gián đoạn", succeeded: "Hoàn tất", failed: "Thất bại", cancelled: "Đã huỷ" })[task.state];
 }
 function statusTag(state: StudioTask["state"]) {
   return ({ queued: "info", running: "warning", interrupted: "info", succeeded: "success", failed: "danger", cancelled: "info" } as const)[state];
@@ -318,15 +337,18 @@ function forgetPendingId(taskId: string) {
   savePendingIds(readPendingIds().filter(item => item.taskId !== taskId));
 }
 
-async function saveReference(file: File, version: number) {
+async function saveReference(file: File, version: number, existingPath?: string) {
   if (version !== scopeVersion || !directory.value || !supportsReferences.value || references.value.length >= maxReferences.value) return;
-  if (!file.type.startsWith("image/") || !file.size || file.size > 20 * 1024 * 1024) throw new Error("Chỉ nhận ảnh không rỗng, tối đa 20 MB mỗi ảnh.");
+  if (!referenceMimeTypes.value.includes(file.type) || !file.size || file.size > maxReferenceBytes.value) {
+    throw new Error(`Ảnh tham chiếu phải đúng định dạng và không vượt ${(maxReferenceBytes.value / 1024 / 1024).toFixed(1)} MiB.`);
+  }
   const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/avif": "avif" } as Record<string, string>)[file.type];
   if (!extension) throw new Error("Ảnh phải có định dạng PNG, JPEG, WebP, GIF hoặc AVIF.");
-  const path = `studioReference${crypto.randomUUID().replaceAll("-", "")}.${extension}`;
-  await files.write(path, file, true);
+  const path = existingPath ?? `studioReference${crypto.randomUUID().replaceAll("-", "")}.${extension}`;
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), byte => byte.toString(16).padStart(2, "0")).join("");
   if (version !== scopeVersion) return;
-  references.value.push({ path, mimeType: file.type, name: file.name, preview: URL.createObjectURL(file) });
+  if (references.value.some(item => item.path === path || item.digest === digest)) return;
+  references.value.push({ path, mimeType: file.type, name: file.name, preview: URL.createObjectURL(file), digest, file: existingPath ? undefined : file });
 }
 async function uploadReferences(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -334,14 +356,30 @@ async function uploadReferences(event: Event) {
   input.value = "";
   if (!candidates.length || referenceBusy.value) return;
   const version = scopeVersion;
+  if (candidates.length > maxReferences.value - references.value.length) {
+    ElMessage.warning(`Mô hình này nhận tối đa ${maxReferences.value} ảnh tham chiếu.`);
+    return;
+  }
   referenceBusy.value = true;
   try {
-    for (const file of candidates.slice(0, maxReferences.value - references.value.length)) await saveReference(file, version);
+    for (const file of candidates) await saveReference(file, version);
   } catch (cause) { ElMessage.error(messageOf(cause)); }
   finally { referenceBusy.value = false; }
 }
 function canSelectAsset(entry: AssetEntry) {
   return entry.type === "file" && /\.(png|jpe?g|webp|gif|avif)$/i.test(entry.name);
+}
+async function useCurrentImage(task: StudioTask) {
+  const media = fileOf(task);
+  if (!media || media.mediaType !== "image" || referenceBusy.value) return;
+  const version = scopeVersion;
+  referenceBusy.value = true;
+  try {
+    const bytes = await files.read(media.path);
+    const file = new File([bytes], media.path.split("/").at(-1) ?? "Ảnh hiện tại", { type: media.mimeType });
+    await saveReference(file, version, media.path);
+  } catch (cause) { ElMessage.error(messageOf(cause)); }
+  finally { referenceBusy.value = false; }
 }
 async function selectAsset(entry: AssetEntry) {
   if (!canSelectAsset(entry) || referenceBusy.value) return;
@@ -411,7 +449,7 @@ async function loadHistory() {
   finally { if (sequence === historySequence) historyLoading.value = false; }
 }
 async function refreshStatuses(resume = false) {
-  if (!mounted || !directory.value || statusBusy.value || submitting.value) return;
+  if (!mounted || !directory.value || statusBusy.value || submitting.value || cancelling.value) return;
   const version = scopeVersion;
   const active = resume ? tasks.value.filter(item => item.taskId === latestTask.value?.taskId && item.state === "interrupted")
     : orderedTasks.value.filter(item => item.state === "queued" || item.state === "running");
@@ -441,6 +479,18 @@ async function refreshStatuses(resume = false) {
     if (version === scopeVersion) historyError.value = `Không thể cập nhật hàng chờ: ${messageOf(cause)}`;
   }
   finally { statusBusy.value = false; }
+}
+async function cancelTask(task: StudioTask) {
+  if (cancelling.value || !directory.value) return;
+  const version = scopeVersion;
+  cancelling.value = true;
+  try {
+    await request("/api/ai/media/tasks/cancel", {
+      method: "POST", body: JSON.stringify({ directory: directory.value, taskIds: [task.taskId] }), signal: AbortSignal.timeout(30000),
+    });
+    if (version === scopeVersion) await loadHistory();
+  } catch (cause) { if (version === scopeVersion) ElMessage.error(messageOf(cause)); }
+  finally { cancelling.value = false; }
 }
 async function fillPreviews() {
   for (const task of tasks.value) {
@@ -478,19 +528,39 @@ async function submitTask() {
     if (resolution.value && resolutionOptions.value.includes(resolution.value)) input.resolution = resolution.value;
     if (supportsReferences.value && referencesSnapshot[0]) input.firstFrame = { path: referencesSnapshot[0].path, mimeType: referencesSnapshot[0].mimeType };
     if (current.providerId.startsWith("mac2Api")) input.mode = referencesSnapshot.length ? "singleImage" : "text";
+    if (current.referenceLimits && referencesSnapshot.length > 1) {
+      delete input.firstFrame;
+      input.images = referencesSnapshot.map(item => ({ path: item.path, mimeType: item.mimeType }));
+      input.mode = [`imageReference:${referencesSnapshot.length}`];
+    }
   }
   const task = reactive<StudioTask>({ taskId, state: "queued", createdAt: Date.now(), prompt: prompt.value.trim(), providerId: current.providerId, modelId: current.modelId });
-  // ACT: Lưu chỉ ID/loại/workspace trước POST; phản hồi không rõ có thể tra cứu lại, tuyệt đối không tự gửi lần hai.
-  rememberPendingId(taskId, studioDirectory);
-  tasks.value.unshift(task);
-  selectedTaskId.value = taskId;
   submitError.value = "";
   submitting.value = true;
+  let submittingRequest = false;
   try {
+    const targetFiles = useWorkspaceFiles(studioDirectory);
+    for (const reference of referencesSnapshot) {
+      if (version !== scopeVersion) return;
+      if (reference.file) {
+        await targetFiles.write(reference.path, reference.file, true);
+        reference.file = undefined;
+      }
+    }
+    if (version !== scopeVersion) return;
+    // ACT: Sau khi ghi ảnh tham chiếu thành công, lưu ID trước khi gửi. Không tự gửi lại khi mất phản hồi.
+    rememberPendingId(taskId, studioDirectory);
+    tasks.value.unshift(task);
+    selectedTaskId.value = taskId;
+    submittingRequest = true;
     const result = await request<{ taskId: string }>("/api/ai/media/generate", { method: "POST", body: JSON.stringify(input), signal: AbortSignal.timeout(30000) });
     if (result.taskId !== taskId) throw new Error("Máy chủ trả ID tác vụ khác ID đã lưu. Cần kiểm tra thủ công trước khi tiếp tục.");
     forgetPendingId(taskId);
   } catch (cause) {
+    if (!submittingRequest) {
+      if (version === scopeVersion) submitError.value = `Không lưu được ảnh tham chiếu: ${messageOf(cause)}`;
+      return;
+    }
     const status = (cause as { status?: number })?.status;
     if ([400, 401, 403, 404, 405, 413, 415, 422, 429].includes(status ?? 0)) {
       forgetPendingId(taskId);

@@ -89,6 +89,7 @@ export interface MediaModel {
   imageSizes?: string[];
   imageRatios?: string[];
   durationResolutionMap?: { duration: number[]; resolution: string[] }[];
+  referenceLimits?: { maxReferences: number; maxReferenceBytes: number; allowedMimeTypes: string[] };
   audio?: boolean | "optional";
   voices?: { title: string; voice: string }[];
 }

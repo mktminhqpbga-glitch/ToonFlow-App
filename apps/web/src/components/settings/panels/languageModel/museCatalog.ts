@@ -3,6 +3,8 @@ import type { CustomProviderModel } from "@/stores/settings";
 // Muse2API /v1/models hiện trả chung model văn bản và media nhưng không trả trường loại.
 // Chỉ cho phép các ID văn bản đã đối chiếu với catalog Muse2API, không tự gán model media thành chat.
 const names: Record<string, string> = {
+  "muse-spark": "Muse Spark",
+  "muse/text": "Muse Text",
   "muse-chat": "Muse Chat",
   "gpt-4o": "GPT-4o",
   "gpt-4o-mini": "GPT-4o mini",
