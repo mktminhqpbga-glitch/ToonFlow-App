@@ -135,7 +135,7 @@ const settingsPanels = computed(() => allSettingsPanels.filter(item => {
   if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket", "aiChrome"].includes(item.id)) return false;
   return !multiTenantEnabled.value || !["languageModel", "mediaModel", "aiChrome", "developer"].includes(item.id);
 }).map(item => publicWeb.value && item.id === "account" ? publicAccountPanel : item));
-const morePanelIds = new Set(["account", "mcp", "network", "deviceLink", "developer", "multiTenant", "about"]);
+const morePanelIds = new Set(["account", "aiChrome", "mcp", "network", "deviceLink", "developer", "multiTenant", "about"]);
 const mainPanels = computed(() => settingsPanels.value.filter(item => !morePanelIds.has(item.id)));
 const morePanels = computed(() => settingsPanels.value.filter(item => morePanelIds.has(item.id)));
 const moreExpanded = ref(false);

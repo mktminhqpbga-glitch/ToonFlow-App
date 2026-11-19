@@ -47,12 +47,19 @@ export const settingsStorage = {
   },
 };
 
-export const defaultUiSettings = { theme: "dark", language: "vi", primaryColor: "#409eff", fontScale: 100, mobileScale: 75, radius: 8, startupAnimation: true };
+export const uiLanguages = [
+  { code: "en", name: "English", flag: "us" },
+  { code: "zh-CN", name: "简体中文", flag: "cn" },
+  { code: "vi", name: "Tiếng Việt", flag: "vn" },
+] as const;
+type UiLanguage = (typeof uiLanguages)[number]["code"];
+export const defaultUiSettings = { theme: "dark", language: "vi" as UiLanguage, primaryColor: "#409eff", fontScale: 100, mobileScale: 75, radius: 8, startupAnimation: true };
 export const uiSettings = computed(() => {
   const raw = settings.value.ui;
   const ui = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  const language = normalizeLocale(ui.language);
   return {
-    language: ui.language === "system" ? "system" as const : normalizeLocale(ui.language) ?? "vi" as const,
+    language: uiLanguages.find(option => option.code === (language === "zh-TW" ? "zh-CN" : language))?.code ?? defaultUiSettings.language,
     theme: ui.theme === "light" || ui.theme === "dark" || ui.theme === "system" ? ui.theme : defaultUiSettings.theme,
     primaryColor: typeof ui.primaryColor === "string" && /^#[\da-f]{6}$/i.test(ui.primaryColor) ? ui.primaryColor : defaultUiSettings.primaryColor,
     fontScale: typeof ui.fontScale === "number" && Number.isFinite(ui.fontScale) ? Math.min(125, Math.max(85, ui.fontScale)) : defaultUiSettings.fontScale,

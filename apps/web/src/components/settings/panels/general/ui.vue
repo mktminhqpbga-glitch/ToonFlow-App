@@ -22,7 +22,7 @@
 
     <section class="settingSection" aria-labelledby="languageTitle">
       <h3 id="languageTitle"><icon-language :size="18" />Ngôn ngữ</h3>
-      <p class="description">Ngôn ngữ giao diện được áp dụng ngay. Mặc định là tiếng Việt; bạn có thể chọn Theo hệ thống hoặc ngôn ngữ khác.</p>
+      <p class="description">Ngôn ngữ giao diện được áp dụng ngay. Mặc định là tiếng Việt.</p>
       <languageSelect class="languageCards" />
     </section>
 

@@ -13,9 +13,8 @@
     @after-enter="popoverPanel?.focusSelected()">
     <template #reference>
       <button ref="triggerButton" class="languageTrigger" type="button" :aria-label="translate('语言')" @keydown.esc.stop.prevent="closePopover">
-        <icon-world v-if="uiSettings.language === 'system'" :size="20" aria-hidden="true" />
-        <svg v-else class="languageFlag" viewBox="0 0 32 24" aria-hidden="true"><use :href="`${languageFlags}#${flagIds[locale]}`" /></svg>
-        <span class="triggerName" :lang="locale" dir="auto">{{ selectedName }}</span>
+        <svg class="languageFlag" viewBox="0 0 32 24" aria-hidden="true"><use :href="`${languageFlags}#${selectedLanguage?.flag}`" /></svg>
+        <span class="triggerName" :lang="uiSettings.language" dir="auto">{{ selectedLanguage?.name }}</span>
         <icon-chevron-down class="triggerChevron" :class="{ opened: visible }" :size="15" aria-hidden="true" />
       </button>
     </template>
@@ -31,21 +30,9 @@
     </div>
   </el-popover>
   <div v-else ref="panel" class="languagePanel" role="radiogroup" :aria-label="translate('语言')" @keydown="navigateLanguages">
-    <button
-      class="systemCard"
-      type="button"
-      role="radio"
-      :aria-checked="uiSettings.language === 'system'"
-      :tabindex="uiSettings.language === 'system' ? 0 : -1"
-      data-language="system"
-      @click="changeLanguage('system')">
-      <span class="systemIcon"><icon-device-desktop :size="22" aria-hidden="true" /></span>
-      <span class="systemText"><strong>{{ translate('跟随系统') }}</strong><small dir="auto">{{ systemLanguageName }}</small></span>
-      <span class="selectionMark" aria-hidden="true"><icon-check v-if="uiSettings.language === 'system'" :size="12" stroke="3" /></span>
-    </button>
     <div class="languageGrid">
       <button
-        v-for="language in supportedLocales"
+        v-for="language in uiLanguages"
         :key="language.code"
         class="languageCard"
         type="button"
@@ -55,7 +42,7 @@
         :data-language="language.code"
         @click="changeLanguage(language.code)">
         <span class="cardTop">
-          <svg class="languageFlag" viewBox="0 0 32 24" aria-hidden="true"><use :href="`${languageFlags}#${flagIds[language.code]}`" /></svg>
+          <svg class="languageFlag" viewBox="0 0 32 24" aria-hidden="true"><use :href="`${languageFlags}#${language.flag}`" /></svg>
           <span class="selectionMark" aria-hidden="true"><icon-check v-if="uiSettings.language === language.code" :size="12" stroke="3" /></span>
         </span>
         <span class="languageName" :lang="language.code" dir="auto">{{ language.name }}</span>
@@ -66,10 +53,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref } from "vue";
-import { IconCheck, IconChevronDown, IconDeviceDesktop, IconLanguage, IconWorld, IconX } from "@tabler/icons-vue";
-import { detectLocale, isRtlLocale, supportedLocales, type Locale } from "@toonflow/i18n";
+import { IconCheck, IconChevronDown, IconLanguage, IconX } from "@tabler/icons-vue";
+import { isRtlLocale } from "@toonflow/i18n";
 import { locale, translate } from "@toonflow/i18n/vue";
-import { uiSettings, updateUiSettings } from "@/stores/settings";
+import { uiLanguages, uiSettings, updateUiSettings } from "@/stores/settings";
 import languageFlags from "@/assets/languageFlags.svg?url";
 
 defineProps<{ popover?: boolean }>();
@@ -78,15 +65,10 @@ const visible = ref(false);
 const panel = ref<HTMLDivElement>();
 const triggerButton = ref<HTMLButtonElement>();
 const popoverPanel = ref<{ focusSelected: () => void }>();
-const flagIds: Record<Locale, string> = {
-  "zh-CN": "cn", "zh-TW": "cn", en: "us", ja: "jp", ru: "ru", vi: "vn", th: "th", ko: "kr", hi: "in",
-  id: "id", ms: "my", fil: "ph", bn: "bd", ur: "pk", ta: "in", te: "in", mr: "in", pa: "in", ar: "sa", fa: "ir", tr: "tr",
-};
-const systemLanguageName = computed(() => supportedLocales.find(language => language.code === (uiSettings.value.language === "system" ? locale.value : detectLocale(navigator.languages)))?.name);
-const selectedName = computed(() => supportedLocales.find(language => language.code === locale.value)?.name);
+const selectedLanguage = computed(() => uiLanguages.find(language => language.code === uiSettings.value.language));
 const rtl = computed(() => isRtlLocale(locale.value));
 
-function changeLanguage(language: Locale | "system") {
+function changeLanguage(language: (typeof uiLanguages)[number]["code"]) {
   if (uiSettings.value.language !== language) updateUiSettings({ language });
   emit("select");
 }
@@ -114,7 +96,8 @@ function navigateLanguages(event: KeyboardEvent) {
   event.preventDefault();
   const index = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (current + direction + buttons.length) % buttons.length;
   const button = buttons[index];
-  updateUiSettings({ language: button.dataset.language as Locale | "system" });
+  const language = uiLanguages.find(option => option.code === button.dataset.language);
+  if (language) updateUiSettings({ language: language.code });
   void nextTick(() => focusLanguage(button));
 }
 function closePopover() {
@@ -207,7 +190,6 @@ defineExpose({ focusSelected });
   min-width: 0;
   container-type: inline-size;
 
-  .systemCard,
   .languageCard {
     min-width: 0;
     border: 1px solid var(--el-border-color-lighter);
@@ -239,28 +221,9 @@ defineExpose({ focusSelected });
     }
     &:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 2px; }
   }
-  .systemCard {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 10px;
-
-    .systemIcon { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; background: var(--el-fill-color-light); color: var(--el-text-color-regular); }
-    .systemText {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-      overflow-wrap: anywhere;
-      strong { font-size: 13px; font-weight: 500; line-height: 1.45; }
-      small { color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.4; }
-    }
-  }
   .languageGrid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 
     .languageCard {
@@ -275,12 +238,6 @@ defineExpose({ focusSelected });
       .languageName { font-size: 13px; line-height: 1.45; font-weight: 500; text-align: start; overflow-wrap: anywhere; }
     }
   }
-  @container (max-width: 460px) {
-    .languageGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  }
-  @container (max-width: 360px) {
-    .languageGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  }
   @container (max-width: 275px) {
     .languageGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -289,7 +246,6 @@ defineExpose({ focusSelected });
 @media (prefers-reduced-motion: reduce) {
   .languageTrigger,
   .languageTrigger .triggerChevron,
-  .languagePanel .systemCard,
   .languagePanel .languageCard { transition: none; }
 }
 </style>
