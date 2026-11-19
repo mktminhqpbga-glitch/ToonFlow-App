@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { dirname, join, relative } from "node:path";
-import { lstat, mkdir, readFile, realpath, writeAtomic } from "@toonflow/file";
+import { lstat, mkdir, readdir, readFile, realpath, writeAtomic } from "@toonflow/file";
 import type { ProviderTaskData } from "@toonflow/providers";
 import type { GeneratedMedia, MediaGenerationRequest } from "@toonflow/tools-scaffold/runtime";
 import type { AuthIdentity } from "@toonflow/multi-tenant-auth";
@@ -18,6 +18,9 @@ import { completeTask, failTask } from "@/utils/aiChrome";
 const maxRecordSize = 16 * 1024 * 1024;
 const maxBlobSize = 140 * 1024 * 1024;
 const mediaTypeSchema = z.enum(["image", "video", "audio"]);
+const studioMediaTypeSchema = z.enum(["image", "video"]);
+const studioLimitSchema = z.number().int().min(1).max(10);
+type StudioMediaType = z.infer<typeof studioMediaTypeSchema>;
 const relativePathSchema = z.string().min(1).max(4096).refine(value => !/^[\\/]|[:\u0000-\u001f]/.test(value)
   && value.split(/[\\/]/).every(part => part && part !== "." && part !== ".."));
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -44,7 +47,8 @@ const recordSchema = z.strictObject({
   ownerUserId: z.uuid().optional(), modelRouteCipher: z.string().min(1).max(8 * 1024 * 1024).optional(),
   chargeId: z.string().min(1).max(128).optional(),
   chargeStatus: z.enum(["settled", "released", "pendingReview"]).optional(),
-  state: z.enum(["running", "interrupted", "succeeded", "failed", "cancelled"]),
+  studioQueue: z.literal(true).optional(),
+  state: z.enum(["queued", "running", "interrupted", "succeeded", "failed", "cancelled"]),
   createdAt: z.number().finite().nonnegative(), updatedAt: z.number().finite().nonnegative(),
   checkpoint: checkpointSchema,
   blobs: z.array(blobSchema).optional(),
@@ -54,7 +58,8 @@ const recordSchema = z.strictObject({
   if (!record.request || !record.mediaType) {
     if (record.state !== "cancelled" || record.request || record.mediaType) issue("任务缺少生成请求");
   } else if (!requestSchemas[record.mediaType].safeParse(record.request).success) issue("任务生成请求无效");
-  if (record.state === "running" ? record.result !== undefined : record.result === undefined) issue("任务状态与结果不一致");
+  if (record.state === "queued" && (!record.studioQueue || !studioMediaTypeSchema.safeParse(record.mediaType).success)) issue("无效的排队任务");
+  if (record.state === "running" || record.state === "queued" ? record.result !== undefined : record.result === undefined) issue("任务状态与结果不一致");
   if (record.state === "succeeded" && (record.result?.code !== 200 || !record.result.data?.length)) issue("任务成功结果无效");
   if (record.result && record.state !== "succeeded" && (record.result.code === 200 || record.result.data !== null)) issue("任务错误结果无效");
   const { assetCount, assets, files } = record.checkpoint;
@@ -86,6 +91,156 @@ const tasks = new Map<string, MediaTask>();
 const operations = new Map<string, Promise<void>>();
 let activeCount = 0;
 
+type StudioQueue = {
+  ownerKey: string;
+  mediaType: StudioMediaType;
+  pending: Map<string, MediaTask>;
+  running: Set<string>;
+  draining: boolean;
+  lastEnqueuedAt: number;
+};
+const studioQueues = new Map<string, StudioQueue>();
+const restoredStudioWorkspaces = new Set<string>();
+
+function studioOwnerKey(owner?: AuthIdentity | null) {
+  return owner?.role === "user" ? owner.id : "host";
+}
+
+function studioQueueKey(ownerKey: string, mediaType: StudioMediaType) {
+  return `studioQueue:${ownerKey}:${mediaType}`;
+}
+
+function studioLimit(ownerKey: string, mediaType: StudioMediaType) {
+  const parsed = studioLimitSchema.safeParse(conf.get("studioQueueLimits", {})[ownerKey]?.[mediaType]);
+  return parsed.data ?? 1;
+}
+
+function getStudioQueue(ownerKey: string, mediaType: StudioMediaType) {
+  const key = studioQueueKey(ownerKey, mediaType);
+  let queue = studioQueues.get(key);
+  if (!queue) {
+    queue = { ownerKey, mediaType, pending: new Map(), running: new Set(), draining: false, lastEnqueuedAt: 0 };
+    studioQueues.set(key, queue);
+  }
+  return queue;
+}
+
+function releaseStudioSlot(queue: StudioQueue, key: string) {
+  queue.running.delete(key);
+  drainStudioQueue(queue);
+}
+
+function drainStudioQueue(queue: StudioQueue) {
+  if (queue.draining) return;
+  queue.draining = true;
+  void (async () => {
+    try {
+      while (queue.pending.size && activeCount < 1000 && queue.running.size < studioLimit(queue.ownerKey, queue.mediaType)) {
+        const task = queue.pending.values().next().value!;
+        queue.pending.delete(task.key);
+        queue.running.add(task.key);
+        try {
+          await locked(task.key, async () => {
+            if (task.record.state !== "queued") return;
+            try {
+              task.record.state = "running";
+              await persist(task);
+              await prepareCharge(task);
+              await launch(task, false);
+            } catch (cause) {
+              task.record.state = "failed";
+              const result = errorFromCause(cause);
+              task.record.result = { ...result, code: result.code === 200 ? 500 : result.code, data: null };
+              task.settledAt = Date.now();
+              await persist(task);
+              await releaseCharge(task, true);
+            }
+          });
+        } catch {
+          console.error("Không thể lưu trạng thái tác vụ trong hàng chờ.");
+        } finally {
+          if (task.active && task.completion) {
+            void task.completion.then(() => releaseStudioSlot(queue, task.key), () => releaseStudioSlot(queue, task.key));
+          } else queue.running.delete(task.key);
+        }
+      }
+    } finally {
+      queue.draining = false;
+      if (!queue.pending.size && !queue.running.size) studioQueues.delete(studioQueueKey(queue.ownerKey, queue.mediaType));
+    }
+  })().catch(() => console.error("Không thể xử lý hàng chờ của xưởng."));
+}
+
+async function restoreStudioQueues(cwd: string, owner?: AuthIdentity | null) {
+  const ownerKey = studioOwnerKey(owner);
+  const scope = `restoreStudioQueue:${JSON.stringify([ownerKey, identity(cwd)])}`;
+  if (restoredStudioWorkspaces.has(scope)) return;
+  await locked(scope, async () => {
+    if (restoredStudioWorkspaces.has(scope)) return;
+    const root = taskDirectory(cwd);
+    const entries = await privateDirectory(root, false) ? await readdir(root, { withFileTypes: true }) : [];
+    const queued: MediaTask[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !/^task[a-f0-9]{32}\.json$/.test(entry.name)) continue;
+      const key = join(root, entry.name);
+      await locked(key, async () => {
+        let raw: unknown;
+        try { raw = JSON.parse((await readPrivateFile(key, maxRecordSize)).toString("utf8")); }
+        catch { return; }
+        const candidate = z.object({ taskId: z.uuid(), state: z.literal("queued"), studioQueue: z.literal(true), ownerUserId: z.uuid().optional() }).safeParse(raw);
+        if (!candidate.success || (candidate.data.ownerUserId ?? "host") !== ownerKey || taskPath(cwd, candidate.data.taskId) !== key) return;
+        const record = recordSchema.safeParse(raw);
+        if (!record.success || identity(record.data.cwd) !== identity(cwd) || record.data.canvasPath || record.data.nodeId) return;
+        const task = await load(cwd, candidate.data.taskId, key, owner);
+        if (task?.record.state === "queued") queued.push(task);
+      });
+    }
+    for (const mediaType of studioMediaTypeSchema.options) {
+      const recovered = queued.filter(task => task.record.mediaType === mediaType);
+      if (!recovered.length) continue;
+      const queue = getStudioQueue(ownerKey, mediaType);
+      for (const task of recovered) {
+        if (task.record.state !== "queued" || queue.running.has(task.key)) continue;
+        queue.pending.set(task.key, task);
+        queue.lastEnqueuedAt = Math.max(queue.lastEnqueuedAt, task.record.createdAt);
+      }
+      queue.pending = new Map([...queue.pending].sort(([, left], [, right]) => left.record.createdAt - right.record.createdAt));
+      drainStudioQueue(queue);
+    }
+    restoredStudioWorkspaces.add(scope);
+  });
+}
+
+export async function getStudioQueueStatus(cwd: string, mediaType: StudioMediaType, owner?: AuthIdentity | null) {
+  requireOwner(owner);
+  await restoreStudioQueues(cwd, owner);
+  const ownerKey = studioOwnerKey(owner);
+  const queue = studioQueues.get(studioQueueKey(ownerKey, mediaType));
+  return { limit: studioLimit(ownerKey, mediaType), running: queue?.running.size ?? 0, queued: queue?.pending.size ?? 0 };
+}
+
+export function getStudioActiveTasks(cwd: string, mediaType: StudioMediaType, owner?: AuthIdentity | null) {
+  const queue = studioQueues.get(studioQueueKey(studioOwnerKey(owner), mediaType));
+  if (!queue) return [];
+  const workspace = identity(cwd);
+  return [...queue.running, ...queue.pending.keys()].flatMap(key => {
+    const record = tasks.get(key)?.record;
+    if (!record || identity(record.cwd) !== workspace || (record.state !== "queued" && record.state !== "running")) return [];
+    return [{ taskId: record.taskId, state: record.state, mediaType, createdAt: record.createdAt, updatedAt: record.updatedAt,
+      providerId: record.request?.providerId, modelId: record.request?.modelId, prompt: record.request?.prompt.slice(0, 240), resumable: false }];
+  });
+}
+
+export function setStudioQueueLimit(mediaType: StudioMediaType, limit: number, owner?: AuthIdentity | null) {
+  requireOwner(owner);
+  studioLimitSchema.parse(limit);
+  const ownerKey = studioOwnerKey(owner);
+  const limits = conf.get("studioQueueLimits", {});
+  conf.set("studioQueueLimits", { ...limits, [ownerKey]: { ...limits[ownerKey], [mediaType]: limit } });
+  const queue = studioQueues.get(studioQueueKey(ownerKey, mediaType));
+  if (queue) drainStudioQueue(queue);
+}
+
 function invalid(message: string, status = 400): never { throw Object.assign(new Error(message), { status }); }
 function requireOwner(owner?: AuthIdentity | null) {
   if (modelGateway.enabled() && !owner) invalid("请先登录 Toonflow", 401);
@@ -97,9 +252,12 @@ function assertOwner(task: MediaTask, owner?: AuthIdentity | null) {
   }
 }
 function identity(value: string) { return process.platform === "win32" ? value.toLowerCase() : value; }
+function taskDirectory(cwd: string) {
+  return join(dirname(conf.path), "mediaTasks", `workspace${createHash("sha256").update(identity(cwd)).digest("hex")}`);
+}
 function taskPath(cwd: string, taskId: string) {
   z.uuid().parse(taskId);
-  return join(dirname(conf.path), "mediaTasks", `workspace${createHash("sha256").update(identity(cwd)).digest("hex")}`, `task${taskId.replaceAll("-", "").toLowerCase()}.json`);
+  return join(taskDirectory(cwd), `task${taskId.replaceAll("-", "").toLowerCase()}.json`);
 }
 function serialize(value: unknown) {
   return JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item)
@@ -409,6 +567,7 @@ async function execute(task: MediaTask, resume: boolean) {
         task.prepared = undefined;
       }
     });
+    if (activeCount === 999) for (const queue of studioQueues.values()) drainStudioQueue(queue);
   }
 }
 
@@ -458,7 +617,7 @@ async function launch(task: MediaTask, resume: boolean, exclusive = false) {
 }
 
 export async function start(cwd: string, taskId: string, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest,
-  attachment: TaskOwner = {}, owner?: AuthIdentity | null) {
+  attachment: TaskOwner = {}, owner?: AuthIdentity | null, studioQueue = false) {
   requireOwner(owner);
   cwd = await realpath(cwd);
   const key = taskPath(cwd, taskId);
@@ -469,30 +628,42 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
     const resolved = await resolveWorkspacePath(cwd, attachment.canvasPath, true);
     attachment = { ...attachment, canvasPath: relative(cwd, resolved.path).replace(/\\/g, "/") };
   }
-  return locked(key, async () => {
+  const studioType = studioQueue ? studioMediaTypeSchema.parse(mediaType) : undefined;
+  const ownerKey = studioOwnerKey(owner);
+  if (studioType) await restoreStudioQueues(cwd, owner);
+  const submit = () => locked(key, async () => {
     const current = await load(cwd, taskId, key, owner);
     if (current) {
-      if (current.record.request && serialize({ mediaType: current.record.mediaType, request: current.record.request, nodeId: current.record.nodeId, canvasPath: current.record.canvasPath })
-        !== serialize({ mediaType, request: parsed, nodeId: attachment.nodeId, canvasPath: attachment.canvasPath })) invalid("相同任务 ID 不能用于不同的生成请求", 409);
+      if (current.record.request && serialize({ mediaType: current.record.mediaType, request: current.record.request, nodeId: current.record.nodeId, canvasPath: current.record.canvasPath, studioQueue: current.record.studioQueue })
+        !== serialize({ mediaType, request: parsed, nodeId: attachment.nodeId, canvasPath: attachment.canvasPath, studioQueue: studioQueue || undefined })) invalid("相同任务 ID 不能用于不同的生成请求", 409);
       if (current.persistenceError) await persist(current);
-      if (current.record.state === "running" && !current.active && await prepareCharge(current, true)) await launch(current, false);
+      if (!current.record.studioQueue && current.record.state === "running" && !current.active && await prepareCharge(current, true)) await launch(current, false);
       await reconcileCharge(current);
       return snapshot(current, owner);
     }
-    if (activeCount >= 1000) invalid("生成任务过多，请稍后重试", 429);
+    if (!studioType && activeCount >= 1000) invalid("生成任务过多，请稍后重试", 429);
     const modelRouteCipher = modelGateway.enabled()
       ? await modelGateway.capture(mediaType, parsed.providerId, parsed.modelId, parsed) : undefined;
     if (owner?.role === "user" && !modelRouteCipher) invalid("多租户模型路由尚未开启", 403);
-    const now = Date.now();
+    const lastEnqueuedAt = studioType ? studioQueues.get(studioQueueKey(ownerKey, studioType))?.lastEnqueuedAt ?? 0 : 0;
+    const now = Math.max(Date.now(), lastEnqueuedAt + 1);
     const task: MediaTask = { key, blobs: [], active: false, record: {
       version: 1, taskId, cwd, mediaType, request: parsed, ...attachment,
       ownerUserId: owner?.role === "user" ? owner.id : undefined, modelRouteCipher,
-      state: "running", createdAt: now, updatedAt: now, checkpoint: {},
+      studioQueue: studioQueue || undefined,
+      state: studioType ? "queued" : "running", createdAt: now, updatedAt: now, checkpoint: {},
     } };
     try {
       // SQL 预占与文件提交不能原子完成；先保留提交意图，chargeId 成功落盘后才允许调用上游。
       await persist(task, true);
       tasks.set(key, task);
+      if (studioType) {
+        const queue = getStudioQueue(ownerKey, studioType);
+        queue.lastEnqueuedAt = Math.max(queue.lastEnqueuedAt, now);
+        queue.pending.set(key, task);
+        drainStudioQueue(queue);
+        return snapshot(task, owner);
+      }
       await prepareCharge(task);
       await launch(task, false);
     } catch (cause) {
@@ -508,6 +679,7 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
     }
     return snapshot(task, owner);
   });
+  return studioType ? locked(studioQueueKey(ownerKey, studioType), submit) : submit();
 }
 
 export async function status(cwd: string, taskIds: string[], resume = false, owner?: AuthIdentity | null) {
@@ -520,6 +692,29 @@ export async function status(cwd: string, taskIds: string[], resume = false, own
       if (!task) return { taskId, state: "interrupted" as const, resumable: false, result: error<GeneratedMedia[]>("生成任务不存在", null, 404) };
       if (task.persistenceError) await persist(task);
       await reconcileCharge(task);
+      if (task.record.studioQueue && !task.active) {
+        const mediaType = studioMediaTypeSchema.parse(task.record.mediaType);
+        const ownerKey = task.record.ownerUserId ?? "host";
+        const queueKey = studioQueueKey(ownerKey, mediaType);
+        if (task.record.state === "running" && !studioQueues.get(queueKey)?.running.has(key)) {
+          task.record.state = "interrupted";
+          task.record.result = error("Tác vụ bị gián đoạn. Hãy kiểm tra trạng thái trước khi khôi phục.", null, 409);
+          await persist(task);
+        }
+        if (resume && task.record.state === "interrupted" && await resumable(task)) {
+          const existing = studioQueues.get(queueKey);
+          if (!existing?.pending.size && (existing?.running.size ?? 0) < studioLimit(ownerKey, mediaType) && activeCount < 1000) {
+            const queue = getStudioQueue(ownerKey, mediaType);
+            queue.running.add(key);
+            try {
+              await launch(task, true);
+              const completion = task.completion!;
+              void completion.then(() => releaseStudioSlot(queue, key), () => releaseStudioSlot(queue, key));
+            } catch (cause) { releaseStudioSlot(queue, key); throw cause; }
+          }
+        }
+        return snapshot(task, owner);
+      }
       if (!task.active && task.record.state === "running" && await prepareCharge(task, true)) await launch(task, false);
       if (!task.active && (task.record.state === "running" || (resume && task.record.state === "interrupted"))) {
         if (await resumable(task)) await launch(task, true);
@@ -559,6 +754,14 @@ export async function cancel(cwd: string, taskIds: string[], owner?: AuthIdentit
       task.record.result = error<GeneratedMedia[]>("生成已取消", null, 499);
       // 取消先落盘；包括尚未收到提交的 ID，防止乱序请求稍后创建付费任务。
       await persist(task, exclusive);
+      const studioType = studioMediaTypeSchema.safeParse(task.record.mediaType);
+      if (task.record.studioQueue && studioType.success) {
+        const queue = studioQueues.get(studioQueueKey(task.record.ownerUserId ?? "host", studioType.data));
+        if (queue) {
+          queue.pending.delete(key);
+          drainStudioQueue(queue);
+        }
+      }
       await releaseCharge(task);
     });
   }));
@@ -590,7 +793,8 @@ export async function wait(cwd: string, taskId: string, owner?: AuthIdentity | n
 const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, task] of tasks) {
-    if (!task.active && !task.persistenceError && !operations.has(key) && task.settledAt !== undefined && task.settledAt + 300000 <= now) tasks.delete(key);
+    if (task.record.state !== "queued" && !task.active && !task.persistenceError && !operations.has(key)
+      && task.settledAt !== undefined && task.settledAt + 300000 <= now) tasks.delete(key);
   }
 }, 30000);
 cleanupTimer.unref();

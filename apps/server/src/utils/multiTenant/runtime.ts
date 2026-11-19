@@ -169,7 +169,7 @@ export async function multiTenantAccess(req: Request, res: Response, next: NextF
   if (user.role === "admin") return runWithIdentity(user, next);
   const fileRoute = path.startsWith("/api/workspaces/") && path !== "/api/workspaces/files/reveal";
   const settingsRoute = path === "/api/settings/get" && req.method === "GET" || path === "/api/settings/save" && req.method === "PUT";
-  if (fileRoute || settingsRoute || req.method === "GET" && userReadRoutes.has(path)
+  if (fileRoute || settingsRoute || req.method === "PUT" && path === "/api/mediastudio/queuelimit" || req.method === "GET" && userReadRoutes.has(path)
     || req.method === "POST" && modelWriteRoutes.has(path) || communityReads.has(path) && ["GET", "POST"].includes(req.method)) return runWithIdentity(user, next);
   throw Object.assign(new Error("当前账号尚未开放此功能"), { status: 403 });
 }

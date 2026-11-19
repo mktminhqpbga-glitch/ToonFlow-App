@@ -17,7 +17,7 @@ const fileSchema = z.object({
 const taskSchema = z.object({
   taskId: z.uuid(), cwd: z.string(), ownerUserId: z.uuid().optional(),
   mediaType: z.enum(["image", "video", "audio"]).optional(),
-  state: z.enum(["running", "interrupted", "succeeded", "failed", "cancelled"]),
+  state: z.enum(["queued", "running", "interrupted", "succeeded", "failed", "cancelled"]),
   createdAt: z.number(), updatedAt: z.number(),
   request: z.object({ providerId: z.string(), modelId: z.string(), prompt: z.string() }).optional(),
   result: z.object({ code: z.number(), message: z.string(), data: z.array(fileSchema).nullable() }).optional(),

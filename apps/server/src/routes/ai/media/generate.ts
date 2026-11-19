@@ -8,9 +8,16 @@ import { translateMessage, validationOptions } from "@/lib/i18n";
 
 export default Router().post("/", validateFields({
   directory: z.string().min(1).max(4096), mediaType: z.enum(["image", "video", "audio"]), taskId: z.uuid().optional(),
-  nodeId: z.string().min(1).max(256).optional(), canvasPath: z.string().min(1).max(4096).optional(),
+  nodeId: z.string().min(1).max(256).optional(), canvasPath: z.string().min(1).max(4096).optional(), studioQueue: z.boolean().optional(),
 }), async (req, res) => {
-  const { directory, mediaType, taskId, nodeId, canvasPath, ...request } = req.body;
+  const { directory, mediaType, taskId, nodeId, canvasPath, studioQueue, ...request } = req.body;
+  if (studioQueue) {
+    u.mcpControl.assertAppRequest(req);
+    if (!taskId || mediaType === "audio" || nodeId !== undefined || canvasPath !== undefined) {
+      res.status(400).json(error("Chỉ có thể xếp hàng tác vụ ảnh hoặc video của xưởng có ID riêng.", null, 400));
+      return;
+    }
+  }
   const parsed = (mediaType === "image" ? u.mediaSchemas.imageGenerationSchema : mediaType === "video" ? u.mediaSchemas.videoGenerationSchema : u.mediaSchemas.audioGenerationSchema).safeParse(request, validationOptions());
   if (!parsed.success) {
     res.status(400).json(error("参数错误", parsed.error.issues.map(issue => ({ ...issue, message: translateMessage(issue.message) })), 400));
@@ -21,7 +28,7 @@ export default Router().post("/", validateFields({
   const owner = u.multiTenant.requestIdentity(req);
   if (taskId) {
     if (req.aborted || res.destroyed) return;
-    await u.mediaTasks.start(cwd, taskId, mediaType, parsed.data, { nodeId, canvasPath }, owner);
+    await u.mediaTasks.start(cwd, taskId, mediaType, parsed.data, { nodeId, canvasPath }, owner, studioQueue);
     res.set("Cache-Control", "no-store").json(success({ taskId }));
     return;
   }

@@ -83,11 +83,18 @@
             <p v-if="kind === 'video' && supportsReferences" class="fieldHint">Nếu chọn ảnh đầu, MacFlow chỉ gửi ảnh này làm khung đầu. Không gửi khung cuối khi mô hình không hỗ trợ.</p>
             <input ref="referenceInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" hidden multiple :disabled="submitting" @change="uploadReferences" />
 
+            <div class="studioQueue">
+              <label class="fieldLabel" for="studioQueueLimit">Số tác vụ chạy cùng lúc</label>
+              <el-select id="studioQueueLimit" :modelValue="queueLimit" class="fullWidth" aria-label="Số tác vụ chạy cùng lúc"
+                :disabled="!directory || queueLimitSaving" @change="saveQueueLimit">
+                <el-option v-for="limit in 10" :key="limit" :value="limit" :label="String(limit)" />
+              </el-select>
+              <p class="fieldHint" role="status">{{ queueRunning }} đang chạy · {{ queueWaiting }} đang chờ</p>
+            </div>
             <div class="studioSubmit">
               <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting" :disabled="!canSubmit" @click="submitTask">
-                {{ submitting ? "Đang gửi tác vụ…" : kind === "image" ? "Tạo ảnh" : "Tạo video" }}
+                {{ submitting ? "Đang thêm tác vụ…" : "Thêm vào hàng chờ" }}
               </el-button>
-              <span>Tác vụ được lưu trong workspace, không tự gửi lại khi mất kết nối.</span>
             </div>
             <el-alert v-if="submitError" :title="submitError" type="error" showIcon :closable="true" @close="submitError = ''" />
           </el-card>
@@ -117,14 +124,14 @@
                 <el-button :icon="IconFolderPlus" :disabled="currentUser?.role === 'user'" @click="saveToLibrary(latestTask)">Lưu vào thư viện</el-button>
                 <el-button type="primary" plain :icon="IconLayoutDashboard" @click="sendToCanvas(latestTask)">Đưa vào Canvas</el-button>
               </div>
-              <el-button v-else-if="latestTask.state === 'interrupted' && latestTask.resumable" plain @click="refreshStatuses(true)">Kiểm tra / khôi phục tác vụ</el-button>
+              <el-button v-else-if="latestTask.state === 'interrupted' && latestTask.resumable" plain :disabled="statusBusy" @click="refreshStatuses(true)">Kiểm tra / khôi phục tác vụ</el-button>
             </div>
             <el-empty v-else description="Kết quả mới sẽ xuất hiện tại đây" :imageSize="110" />
           </el-card>
           <el-card class="studioHistory" shadow="never">
             <template #header><div class="studioCardHeading"><span><icon-history :size="19" /> Lịch sử tác vụ</span><el-button text :loading="historyLoading" :icon="IconRefresh" @click="loadHistory">Làm mới</el-button></div></template>
             <div v-if="tasks.length" class="taskList">
-              <button v-for="task in tasks" :key="task.taskId" type="button" class="taskRow" :class="{ selected: selectedTaskId === task.taskId }" @click="selectedTaskId = task.taskId">
+              <button v-for="task in orderedTasks" :key="task.taskId" type="button" class="taskRow" :class="{ selected: selectedTaskId === task.taskId }" @click="selectedTaskId = task.taskId">
                 <span class="taskIcon"><icon-photo v-if="kind === 'image'" :size="19" /><icon-video v-else :size="19" /></span>
                 <span class="taskDescription"><strong>{{ task.prompt || task.modelId || "Tác vụ tạo nội dung" }}</strong><small>{{ formatDate(task.createdAt) }} · {{ task.modelId || task.taskId.slice(0, 8) }}</small></span>
                 <el-tag :type="statusTag(task.state)" size="small">{{ statusText(task.state) }}</el-tag>
@@ -145,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -164,13 +171,14 @@ import logoUrl from "@toonflow/assets/logo.svg";
 
 type MediaFile = { path: string; mimeType: string; mediaType: "image" | "video" };
 type StudioTask = {
-  taskId: string; state: "running" | "interrupted" | "succeeded" | "failed" | "cancelled";
+  taskId: string; state: "queued" | "running" | "interrupted" | "succeeded" | "failed" | "cancelled";
   resumable?: boolean; createdAt?: number; updatedAt?: number; prompt?: string; providerId?: string; modelId?: string;
   result?: { code: number; message: string; data: MediaFile[] | null };
 };
 type ImageReference = { path: string; mimeType: string; name: string; preview: string };
 type AssetEntry = { name: string; type: "file" | "directory"; path: string };
 type PendingStudioId = { taskId: string; directory: string; kind: "image" | "video"; ownerId: string; createdAt: number };
+type StudioQueueStatus = { limit: number; running: number; queued: number };
 const pendingStorageKey = "macflow.mediaStudio.pending.v1";
 
 const props = defineProps<{ kind: "image" | "video" }>();
@@ -198,10 +206,15 @@ const submitting = ref(false);
 const submitError = ref("");
 const historyLoading = ref(false);
 const historyError = ref("");
+const queueLimit = ref(1);
+const queueRunning = ref(0);
+const queueWaiting = ref(0);
+const queueLimitSaving = ref(false);
+const statusBusy = ref(false);
 const previewUrls = ref<Record<string, string>>({});
 const mediaLeases = new Map<string, { release: () => void }>();
 let historySequence = 0;
-let statusBusy = false;
+let scopeVersion = 0;
 let timer: ReturnType<typeof setInterval> | undefined;
 let mounted = false;
 
@@ -221,14 +234,19 @@ const sizeOptions = computed(() => model.value?.imageSizes ?? []);
 const durationOptions = computed(() => [...new Set(model.value?.durationResolutionMap?.flatMap(item => item.duration) ?? [])]);
 const resolutionOptions = computed(() => [...new Set((model.value?.durationResolutionMap ?? []).filter(item => !duration.value || item.duration.includes(Number(duration.value))).flatMap(item => item.resolution))]);
 const canSubmit = computed(() => !!directory.value && !!prompt.value.trim() && !!model.value && !submitting.value
-  && !referenceBusy.value && !tasks.value.some(task => task.state === "running"));
+  && !referenceBusy.value);
 const latestTask = computed(() => tasks.value.find(task => task.taskId === selectedTaskId.value) ?? tasks.value[0]);
+const orderedTasks = computed(() => [
+  ...tasks.value.filter(task => task.state === "running"),
+  ...tasks.value.filter(task => task.state === "queued").sort((left, right) => (left.createdAt ?? 0) - (right.createdAt ?? 0)),
+  ...tasks.value.filter(task => task.state !== "running" && task.state !== "queued"),
+]);
 
 function statusText(state: StudioTask["state"]) {
-  return ({ running: "Đang xử lý", interrupted: "Chưa rõ / gián đoạn", succeeded: "Hoàn tất", failed: "Thất bại", cancelled: "Đã huỷ" })[state];
+  return ({ queued: "Đang chờ", running: "Đang xử lý", interrupted: "Chưa rõ / gián đoạn", succeeded: "Hoàn tất", failed: "Thất bại", cancelled: "Đã huỷ" })[state];
 }
 function statusTag(state: StudioTask["state"]) {
-  return ({ running: "warning", interrupted: "info", succeeded: "success", failed: "danger", cancelled: "info" } as const)[state];
+  return ({ queued: "info", running: "warning", interrupted: "info", succeeded: "success", failed: "danger", cancelled: "info" } as const)[state];
 }
 function formatDate(value?: number) { return value ? new Date(value).toLocaleString("vi-VN") : "Chưa rõ thời gian"; }
 function describeError(value?: string) {
@@ -259,15 +277,18 @@ function removeReference(path: string) {
   references.value = references.value.filter(entry => entry.path !== path);
 }
 async function loadModels() {
+  const version = scopeVersion;
   modelsLoading.value = true;
   try {
-    models.value = await readNodeModels<NodeMediaModel>("media", undefined, true);
+    const loaded = await readNodeModels<NodeMediaModel>("media", undefined, true);
+    if (version !== scopeVersion) return;
+    models.value = loaded;
     if (!availableModels.value.some(item => modelKeyOf(item) === modelKey.value)) {
       modelKey.value = availableModels.value[0] ? modelKeyOf(availableModels.value[0]!) : "";
       resetModelOptions();
     }
-  } catch (cause) { ElMessage.error(messageOf(cause)); }
-  finally { modelsLoading.value = false; }
+  } catch (cause) { if (version === scopeVersion) ElMessage.error(messageOf(cause)); }
+  finally { if (version === scopeVersion) modelsLoading.value = false; }
 }
 function messageOf(cause: unknown) {
   return axios.isAxiosError<{ message?: string }>(cause) ? cause.response?.data.message || cause.message
@@ -297,13 +318,14 @@ function forgetPendingId(taskId: string) {
   savePendingIds(readPendingIds().filter(item => item.taskId !== taskId));
 }
 
-async function saveReference(file: File) {
-  if (!directory.value || !supportsReferences.value || references.value.length >= maxReferences.value) return;
+async function saveReference(file: File, version: number) {
+  if (version !== scopeVersion || !directory.value || !supportsReferences.value || references.value.length >= maxReferences.value) return;
   if (!file.type.startsWith("image/") || !file.size || file.size > 20 * 1024 * 1024) throw new Error("Chỉ nhận ảnh không rỗng, tối đa 20 MB mỗi ảnh.");
   const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/avif": "avif" } as Record<string, string>)[file.type];
   if (!extension) throw new Error("Ảnh phải có định dạng PNG, JPEG, WebP, GIF hoặc AVIF.");
   const path = `studioReference${crypto.randomUUID().replaceAll("-", "")}.${extension}`;
   await files.write(path, file, true);
+  if (version !== scopeVersion) return;
   references.value.push({ path, mimeType: file.type, name: file.name, preview: URL.createObjectURL(file) });
 }
 async function uploadReferences(event: Event) {
@@ -311,9 +333,10 @@ async function uploadReferences(event: Event) {
   const candidates = Array.from(input.files ?? []);
   input.value = "";
   if (!candidates.length || referenceBusy.value) return;
+  const version = scopeVersion;
   referenceBusy.value = true;
   try {
-    for (const file of candidates.slice(0, maxReferences.value - references.value.length)) await saveReference(file);
+    for (const file of candidates.slice(0, maxReferences.value - references.value.length)) await saveReference(file, version);
   } catch (cause) { ElMessage.error(messageOf(cause)); }
   finally { referenceBusy.value = false; }
 }
@@ -322,24 +345,48 @@ function canSelectAsset(entry: AssetEntry) {
 }
 async function selectAsset(entry: AssetEntry) {
   if (!canSelectAsset(entry) || referenceBusy.value) return;
+  const version = scopeVersion;
   referenceBusy.value = true;
   try {
     const response = await axios.get<Blob>("/api/assets/read", { params: { path: entry.path }, responseType: "blob" });
     const mime = response.data.type || ({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif", avif: "image/avif" } as Record<string, string>)[entry.name.split(".").at(-1)?.toLowerCase() ?? ""] || "";
-    await saveReference(new File([response.data], entry.name, { type: mime }));
-    assetPickerVisible.value = false;
+    await saveReference(new File([response.data], entry.name, { type: mime }), version);
+    if (version === scopeVersion) assetPickerVisible.value = false;
   } catch (cause) { ElMessage.error(messageOf(cause)); }
   finally { referenceBusy.value = false; }
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
-    cache: "no-store", ...options,
+    cache: "no-store", signal: AbortSignal.timeout(15000), ...options,
     headers: { "x-toonflow-workspace": "1", ...(options?.body ? { "Content-Type": "application/json" } : {}), ...options?.headers },
   });
   const result = await response.json() as { code: number; message: string; data: T };
   if (!response.ok || result.code !== 200) throw Object.assign(new Error(describeError(result.message) || `HTTP ${response.status}`), { status: response.status });
   return result.data;
+}
+function updateQueue(queue?: StudioQueueStatus) {
+  if (!queue) return false;
+  if (!queueLimitSaving.value) queueLimit.value = queue.limit;
+  const changed = queueRunning.value !== queue.running || queueWaiting.value !== queue.queued;
+  queueRunning.value = queue.running;
+  queueWaiting.value = queue.queued;
+  return changed;
+}
+async function saveQueueLimit(limit: number) {
+  const version = scopeVersion;
+  queueLimitSaving.value = true;
+  try {
+    const result = await request<{ limit: number }>("/api/mediaStudio/queueLimit", {
+      method: "PUT", body: JSON.stringify({ mediaType: props.kind, limit }),
+    });
+    if (version === scopeVersion) queueLimit.value = result.limit;
+  } catch (cause) {
+    if (version === scopeVersion) ElMessage.error(messageOf(cause));
+  } finally {
+    queueLimitSaving.value = false;
+    void refreshStatuses();
+  }
 }
 async function loadHistory() {
   if (!directory.value) { tasks.value = []; return; }
@@ -347,12 +394,12 @@ async function loadHistory() {
   historyLoading.value = true;
   historyError.value = "";
   try {
-    const data = await request<{ entries: StudioTask[] }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}`);
+    const data = await request<{ entries: StudioTask[] }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}&includeActive=1`);
     if (sequence !== historySequence) return;
     const known = new Set(data.entries.map(item => item.taskId));
     const fromSession = readPendingIds().filter(item => item.directory === directory.value
       && item.kind === props.kind && item.ownerId === (currentUser.value?.id ?? "standalone"));
-    const localPending = tasks.value.filter(item => ["running", "interrupted"].includes(item.state) && !known.has(item.taskId));
+    const localPending = tasks.value.filter(item => ["queued", "running", "interrupted"].includes(item.state) && !known.has(item.taskId));
     const localIds = new Set(localPending.map(item => item.taskId));
     const unresolved = fromSession.filter(item => !known.has(item.taskId) && !localIds.has(item.taskId))
       .map(item => ({ taskId: item.taskId, state: "interrupted" as const, resumable: false, createdAt: item.createdAt }));
@@ -364,21 +411,36 @@ async function loadHistory() {
   finally { if (sequence === historySequence) historyLoading.value = false; }
 }
 async function refreshStatuses(resume = false) {
-  if (!directory.value || statusBusy) return;
-  const active = tasks.value.filter(item => item.state === "running" || item.state === "interrupted" && (resume || !!item.resumable));
-  if (!active.length) return;
-  statusBusy = true;
+  if (!mounted || !directory.value || statusBusy.value || submitting.value) return;
+  const version = scopeVersion;
+  const active = resume ? tasks.value.filter(item => item.taskId === latestTask.value?.taskId && item.state === "interrupted")
+    : orderedTasks.value.filter(item => item.state === "queued" || item.state === "running");
+  statusBusy.value = true;
   try {
-    const items = await request<StudioTask[]>("/api/ai/media/tasks/status", {
-      method: "POST", body: JSON.stringify({ directory: directory.value, taskIds: active.map(item => item.taskId), ...(resume ? { resume: true } : {}) }),
-    });
+    const taskIds = active.slice(0, 100).map(item => item.taskId);
+    const [queue, items] = await Promise.all([
+      request<{ queue?: StudioQueueStatus }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}&queueOnly=1`),
+      taskIds.length ? request<StudioTask[]>("/api/ai/media/tasks/status", {
+        method: "POST", body: JSON.stringify({ directory: directory.value, taskIds, ...(resume ? { resume: true } : {}) }),
+      }) : Promise.resolve([]),
+    ]);
+    if (version !== scopeVersion) return;
+    let changed = updateQueue(queue.queue);
+    if (resume && items[0]?.state === "interrupted" && (queueWaiting.value || queueRunning.value >= queueLimit.value)) {
+      ElMessage.info("Hãy đợi hàng chờ có chỗ trống trước khi khôi phục tác vụ.");
+    }
     for (const item of items) {
       const task = tasks.value.find(task => task.taskId === item.taskId);
-      if (task) Object.assign(task, item);
+      if (!task) continue;
+      changed ||= task.state !== item.state;
+      Object.assign(task, item);
     }
-    void fillPreviews();
-  } catch (cause) { historyError.value = `Truy vấn tác vụ thất bại: ${messageOf(cause)}. Không có yêu cầu tạo mới nào được gửi.`; }
-  finally { statusBusy = false; }
+    if (changed) void loadHistory();
+    else void fillPreviews();
+  } catch (cause) {
+    if (version === scopeVersion) historyError.value = `Không thể cập nhật hàng chờ: ${messageOf(cause)}`;
+  }
+  finally { statusBusy.value = false; }
 }
 async function fillPreviews() {
   for (const task of tasks.value) {
@@ -386,8 +448,8 @@ async function fillPreviews() {
     if (!file || mediaLeases.has(file.path) || !directory.value) continue;
     const lease = files.acquireUrl(file.path, file.mimeType);
     mediaLeases.set(file.path, lease);
-    try { const url = await lease.url; if (mounted) previewUrls.value = { ...previewUrls.value, [file.path]: url }; }
-    catch (cause) { if (mounted) historyError.value = `Không đọc được media đã lưu: ${messageOf(cause)}`; }
+    try { const url = await lease.url; if (mounted && mediaLeases.get(file.path) === lease) previewUrls.value = { ...previewUrls.value, [file.path]: url }; }
+    catch (cause) { if (mounted && mediaLeases.get(file.path) === lease) historyError.value = `Không đọc được media đã lưu: ${messageOf(cause)}`; }
   }
 }
 function clearPreviews() {
@@ -395,15 +457,16 @@ function clearPreviews() {
   mediaLeases.clear();
   previewUrls.value = {};
 }
-async function refreshAll() { await Promise.all([loadModels(), loadHistory()]); await refreshStatuses(true); }
+async function refreshAll() { await Promise.all([loadModels(), loadHistory()]); await refreshStatuses(); }
 async function submitTask() {
   if (!canSubmit.value || !model.value) return;
   const current = model.value;
   const taskId = crypto.randomUUID();
   const referencesSnapshot = [...references.value];
   const studioDirectory = directory.value;
+  const version = scopeVersion;
   const input: Record<string, unknown> = {
-    directory: studioDirectory, mediaType: props.kind, taskId,
+    directory: studioDirectory, mediaType: props.kind, taskId, studioQueue: true,
     providerId: current.providerId, modelId: current.modelId, prompt: prompt.value.trim(), outputDirectory: "assets/generated",
   };
   if (ratio.value && ratioOptions.value.includes(ratio.value)) input.ratio = ratio.value;
@@ -416,7 +479,7 @@ async function submitTask() {
     if (supportsReferences.value && referencesSnapshot[0]) input.firstFrame = { path: referencesSnapshot[0].path, mimeType: referencesSnapshot[0].mimeType };
     if (current.providerId.startsWith("mac2Api")) input.mode = referencesSnapshot.length ? "singleImage" : "text";
   }
-  const task: StudioTask = { taskId, state: "running", createdAt: Date.now(), prompt: prompt.value.trim(), providerId: current.providerId, modelId: current.modelId };
+  const task = reactive<StudioTask>({ taskId, state: "queued", createdAt: Date.now(), prompt: prompt.value.trim(), providerId: current.providerId, modelId: current.modelId });
   // ACT: Lưu chỉ ID/loại/workspace trước POST; phản hồi không rõ có thể tra cứu lại, tuyệt đối không tự gửi lần hai.
   rememberPendingId(taskId, studioDirectory);
   tasks.value.unshift(task);
@@ -427,7 +490,6 @@ async function submitTask() {
     const result = await request<{ taskId: string }>("/api/ai/media/generate", { method: "POST", body: JSON.stringify(input), signal: AbortSignal.timeout(30000) });
     if (result.taskId !== taskId) throw new Error("Máy chủ trả ID tác vụ khác ID đã lưu. Cần kiểm tra thủ công trước khi tiếp tục.");
     forgetPendingId(taskId);
-    void refreshStatuses();
   } catch (cause) {
     const status = (cause as { status?: number })?.status;
     if ([400, 401, 403, 404, 405, 413, 415, 422, 429].includes(status ?? 0)) {
@@ -438,9 +500,16 @@ async function submitTask() {
       task.state = "interrupted";
       task.resumable = true;
     }
+    if (version !== scopeVersion) return;
     submitError.value = status === 429 ? "Quá nhiều tác vụ (HTTP 429). Hãy chờ và kiểm tra tác vụ hiện tại trước khi tạo tiếp."
       : `${messageOf(cause)}. ${status ? "Tác vụ bị từ chối." : "Chưa xác nhận trạng thái gửi. Không tự gửi lại; hãy kiểm tra mac2API → Tác vụ."}`;
-  } finally { submitting.value = false; void loadHistory(); }
+  } finally {
+    submitting.value = false;
+    if (mounted && version === scopeVersion) {
+      void loadHistory();
+      void refreshStatuses();
+    }
+  }
 }
 async function downloadResult(task: StudioTask) {
   const media = fileOf(task);
@@ -482,10 +551,17 @@ function openMediaSettings() {
   settingsVisible.value = true;
   nextTick(() => settingsRef.value?.openPanel("mediaModel"));
 }
-watch([() => props.kind, directory], async () => {
+watch([() => props.kind, directory, () => currentUser.value?.id], async () => {
+  scopeVersion++;
   historySequence++;
   tasks.value = [];
   selectedTaskId.value = "";
+  submitError.value = "";
+  historyError.value = "";
+  historyLoading.value = false;
+  queueLimit.value = 1;
+  queueRunning.value = 0;
+  queueWaiting.value = 0;
   clearPreviews();
   clearReferences();
   modelKey.value = "";
@@ -499,6 +575,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   mounted = false;
+  scopeVersion++;
   historySequence++;
   if (timer) clearInterval(timer);
   clearPreviews();
@@ -550,7 +627,7 @@ onBeforeUnmount(() => {
     .referenceAdd { display: grid; place-content: center; gap: 7px; justify-items: center; color: var(--el-text-color-secondary); border: 1px dashed var(--el-border-color); background: var(--el-fill-color-light); border-radius: 10px; width: 94px; height: 94px; cursor: pointer; font: inherit; font-size: 11px; }
   }
   .emptyModels { text-align: center; margin-top: 10px; }
-  .studioSubmit { display: grid; gap: 12px; margin: 26px 0 14px; > span { font-size: 11px; line-height: 1.5; color: var(--el-text-color-secondary); } }
+  .studioSubmit { display: grid; margin: 16px 0 14px; }
   .studioResults { display: grid; gap: 22px; min-width: 0; }
   .resultCard { display: grid; gap: 15px; }
   .resultMeta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--el-text-color-secondary); }
