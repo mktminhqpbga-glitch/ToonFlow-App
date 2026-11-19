@@ -17,6 +17,14 @@
           <component :is="section.icon" :size="18" aria-hidden="true" />
           <span class="sidebarText">{{ translate(section.label) }}</span>
         </button>
+        <button class="sidebarItem" type="button" aria-label="Xưởng tạo ảnh" title="Xưởng tạo ảnh" @click="router.push('/image')">
+          <icon-photo :size="18" aria-hidden="true" />
+          <span class="sidebarText">Xưởng tạo ảnh</span>
+        </button>
+        <button class="sidebarItem" type="button" aria-label="Xưởng tạo video" title="Xưởng tạo video" @click="router.push('/video')">
+          <icon-video :size="18" aria-hidden="true" />
+          <span class="sidebarText">Xưởng tạo video</span>
+        </button>
         <hr v-if="currentUser?.role !== 'user'" class="sidebarDivider" />
         <button v-if="currentUser?.role !== 'user'" class="sidebarItem" :class="{ active: assetsVisible }" type="button" aria-label="Thư viện tài nguyên" title="Thư viện tài nguyên" aria-haspopup="dialog" :aria-expanded="assetsVisible" @click="assetsVisible = true">
           <icon-library-photo :size="18" aria-hidden="true" />

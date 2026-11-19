@@ -2,6 +2,12 @@
   <div class="workspaceMenu">
     <el-card shadow="never" :bodyStyle="{ padding: '2px 4px' }">
       <div class="menuContent">
+        <el-button class="toolButton" text aria-label="Xưởng tạo ảnh" title="Xưởng tạo ảnh" @click="router.push('/image')">
+          <icon-photo :size="18" aria-hidden="true" />
+        </el-button>
+        <el-button class="toolButton" text aria-label="Xưởng tạo video" title="Xưởng tạo video" @click="router.push('/video')">
+          <icon-video :size="18" aria-hidden="true" />
+        </el-button>
         <el-button class="toolButton" text aria-label="退出项目" title="退出项目" @click="exitVisible = true">
           <icon-logout :size="18" aria-hidden="true" />
         </el-button>

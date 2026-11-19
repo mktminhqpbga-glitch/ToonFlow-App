@@ -192,6 +192,7 @@ import { currentUser } from "@/stores/multiTenant";
 import { generalSettings } from "@/stores/settings";
 import { getShortcutBindings, shortcutLabel, shortcutMatches, shortcutPressed } from "@/lib/canvasShortcuts";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
+import { clearStudioMediaForCanvas, pendingStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
 import anonymousData from "@/lib/anonymousData";
 import type { PromptItem } from "@/lib/promptLibrary";
 import { createClipboardMediaFile, dropCanvasFiles, getCanvasFileType, getClipboardMediaFiles, importCanvasFiles, isCanvasFileDrag } from "./canvasDrop";
@@ -1097,6 +1098,36 @@ async function importCanvasContent(files: File[], position: { x: number; y: numb
     return false;
   }
 }
+
+let importingStudioMedia = false;
+async function importPendingStudioMedia() {
+  const pending = pendingStudioMediaForCanvas();
+  const directory = project.value?.directory;
+  if (!pending || importingStudioMedia || !directory || pending.directory !== directory || !props.active
+    || !canvasReady.value || !canvasId.value || !availableNodes.value.some(node => node.type === `remote-${pending.mediaType}Node`)) return;
+  importingStudioMedia = true;
+  try {
+    const bytes = await useWorkspaceFiles(directory).read(pending.path);
+    if (pendingStudioMediaForCanvas() !== pending || project.value?.directory !== directory || canvasController.signal.aborted) return;
+    const name = pending.path.split("/").at(-1) ?? `studio.${pending.mediaType === "image" ? "png" : "mp4"}`;
+    const position = pastePosition() ?? { x: 0, y: 0 };
+    let imported = 0;
+    await canvasHistory.batch(async () => {
+      const ids = await importCanvasFiles([new File([bytes], name, { type: pending.mimeType })], position, {
+        directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow,
+      });
+      imported = ids.length;
+    });
+    if (!imported) throw new Error("Không thể đưa tệp vào Canvas; vui lòng kiểm tra node ảnh/video.");
+    clearStudioMediaForCanvas(pending);
+    ElMessage.success("Đã đưa kết quả từ xưởng vào Canvas hiện tại.");
+  } catch (cause) {
+    if (!canvasController.signal.aborted) ElMessage.error(cause instanceof Error ? cause.message : "Không thể đưa kết quả từ xưởng vào Canvas");
+  } finally { importingStudioMedia = false; }
+}
+
+watch([() => props.active, canvasReady, canvasId, availableNodes, () => project.value?.directory],
+  () => { void importPendingStudioMedia(); }, { immediate: true, flush: "post" });
 
 async function pasteClipboardNode(position: { x: number; y: number }, command?: string) {
   if (!props.active || !canvasId.value || !project.value?.directory) return false;

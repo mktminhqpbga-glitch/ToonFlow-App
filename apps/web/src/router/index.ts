@@ -20,6 +20,16 @@ const router = createRouter({
       component: () => import("@/pages/home/index.vue"),
     },
     {
+      path: "/image",
+      component: () => import("@/pages/mediaStudio/index.vue"),
+      props: { kind: "image" },
+    },
+    {
+      path: "/video",
+      component: () => import("@/pages/mediaStudio/index.vue"),
+      props: { kind: "video" },
+    },
+    {
       path: "/canvas",
       redirect: "/workspace",
     },
