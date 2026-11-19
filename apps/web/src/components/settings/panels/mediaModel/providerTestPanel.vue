@@ -47,7 +47,7 @@
             <el-form-item v-if="activeModel?.type === 'video'" label="Thời lượng (giây)">
               <el-input-number v-model="duration" :min="1" :precision="0" controlsPosition="right" aria-label="Thời lượng video" />
             </el-form-item>
-            <el-form-item v-if="activeModel?.type === 'video'" label="Tạo âm thanh"><el-switch v-model="generateAudio" aria-label="Tạo âm thanh" /></el-form-item>
+            <el-form-item v-if="supportsAudioToggle" label="Tạo âm thanh"><el-switch v-model="generateAudio" aria-label="Tạo âm thanh" /></el-form-item>
             <el-form-item v-if="activeModel?.type === 'audio'" label="Giọng đọc">
               <el-select v-model="voice" clearable filterable allowCreate defaultFirstOption aria-label="Giọng đọc">
                 <el-option v-for="item in activeModel.voices ?? []" :key="item.voice" :label="item.title" :value="item.voice" />
@@ -135,6 +135,7 @@ const formOptions = computed<Options>(() => ({ form: { labelPosition: "top", dis
 const mediaModels = computed(() => (props.models ?? props.provider.models).filter(model => model.type !== "text") as Provider["models"]);
 const selectedModelId = ref("");
 const activeModel = computed(() => mediaModels.value.find(model => model.id === selectedModelId.value));
+const supportsAudioToggle = computed(() => activeModel.value?.type === "video" && activeModel.value.audio === "optional");
 const resolutions = computed(() => [...new Set(activeModel.value?.durationResolutionMap?.flatMap(item => item.resolution) ?? ["720p", "1080p"])]);
 const prompt = ref("");
 const ratio = ref("");
@@ -194,7 +195,8 @@ async function buildRequest(signal: AbortSignal) {
   const type = activeModel.value?.type;
   const request: Record<string, unknown> = { model, [type === "audio" ? "text" : "prompt"]: prompt.value };
   const parameters = type === "image" ? { ratio: ratio.value, size: size.value }
-    : type === "video" ? { ratio: ratio.value, resolution: resolution.value, duration: duration.value, generateAudio: generateAudio.value }
+    : type === "video" ? { ratio: ratio.value, resolution: resolution.value, duration: duration.value,
+      ...(supportsAudioToggle.value ? { generateAudio: generateAudio.value } : {}) }
     : { voice: voice.value };
   for (const [key, value] of Object.entries(parameters)) if (value !== "" && value !== undefined) request[key] = value;
   const selectedReferences = references.value.map(({ file, role }) => ({ file, role }));
