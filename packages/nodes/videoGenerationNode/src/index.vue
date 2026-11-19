@@ -56,7 +56,6 @@
           <chromeModelSelect
             :modelValue="data.model"
             :chromeTabId="data.chromeTabId"
-            :bridgeTarget="data.bridgeTarget"
             :models="models"
             outputKind="video"
             :loading="modelsLoading"
@@ -64,9 +63,8 @@
             placeholder="Chọn mô hình"
             ariaLabel="Mô hình tạo video"
             noDataText="Hãy thêm mô hình tạo video trong Cài đặt"
-            @update:modelValue="data.model = $event; data.chromeTabId = undefined; data.bridgeTarget = undefined"
+            @update:modelValue="data.model = $event; data.chromeTabId = undefined"
             @update:chromeTabId="data.chromeTabId = $event"
-            @update:bridgeTarget="data.bridgeTarget = $event"
             @open="loadModels().catch((error) => showNodeError(error, 'Lỗi tải mô hình'))" />
           <generationSettings
             v-model:duration="data.duration"
@@ -132,7 +130,7 @@ const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals 
   onModelsChanged: () => void refreshProviderModels(),
 });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean; other: Record<string, unknown>; chromeTabId?: number; bridgeTarget?: string });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; model: string; duration?: number; resolution: string; ratio: string; mode: string; generateAudio: boolean; other: Record<string, unknown>; chromeTabId?: number });
 data.value.prompt ??= "";
 data.value.promptModel ??= [];
 data.value.model ??= "";
@@ -256,9 +254,8 @@ function getGenerationInput(prompt: string): Omit<NodeVideoRequest, "directory">
     resolution: data.value.resolution || undefined,
     ratio: data.value.ratio,
     generateAudio: choice.audio === "optional" ? data.value.generateAudio : choice.audio,
-    other: choice.providerId === "aiBridge" || choice.providerId === "aiBridgeLocal" || choice.providerId === "aiBr" ? { ...data.value.other, bridgeTarget: data.value.bridgeTarget }
-      : chromeServiceId(choice) ? { ...data.value.other, chromeTabId: data.value.chromeTabId }
-        : Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
+    other: chromeServiceId(choice) ? { ...data.value.other, chromeTabId: data.value.chromeTabId }
+      : Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
     outputDirectory: `assets/${id}`,
     images: frameMode.value ? undefined : images,
     firstFrame,
@@ -360,8 +357,6 @@ async function startGeneration() {
   const input = getGenerationInput(prompt);
   if (!choice || !input) throw new Error("Hãy chọn mô hình tạo video");
   await requireChromeTab(choice, data.value.chromeTabId, "video");
-  if ((choice.providerId === "aiBridge" || choice.providerId === "aiBridgeLocal") && !data.value.bridgeTarget)
-    throw new Error("Hãy chọn AI và tab trong menu AI-Bridge của node trước khi tạo video.");
   if (!input.prompt) throw new Error("Hãy nhập mô tả tạo video");
   if (refList.value.some(item => item.value === undefined)) throw new Error("Node tham chiếu chưa có nội dung, hãy bổ sung nội dung");
   for (const match of input.prompt.matchAll(/\{\{ref (\d+)\}\}/g)) {

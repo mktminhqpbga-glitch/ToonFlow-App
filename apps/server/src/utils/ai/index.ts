@@ -14,16 +14,17 @@ import { readDocument } from "@/utils/documents";
 import { getConfiguredProviders, getModelLimits, getModelReasoning, getProviderBaseUrl, providerSchema } from "@/utils/ai/provider";
 import { modelGateway, requireDirectModelAccess } from "@/utils/multiTenant/gateway";
 import { createBillingUsageTracker } from "@/utils/ai/billingUsage";
-import { getAiBrTextProvider } from "@/utils/aiBridge/models";
+import { assertProviderAvailable } from "@/lib/retiredProviders";
 
 export { fetchProviderModels } from "@/utils/ai/models";
 export { accountProviderSchema, getAccountProvider, getAccountToken, getConfiguredProviders, getModelLimits, getModelReasoning, providerSchema, reasoningEffortsSchema } from "@/utils/ai/provider";
 
 export async function getConfiguredModel(providerId: string, modelId: string) {
+  assertProviderAvailable(providerId);
   const execution = modelGateway.enabled() ? await modelGateway.resolve("text", providerId, modelId) : undefined;
+  if (execution) assertProviderAvailable(execution.route.providerId);
   const resolved = execution?.upstream;
-  const parsed = providerSchema.safeParse(resolved?.provider ?? (providerId === "aiBr"
-    ? await getAiBrTextProvider() : getConfiguredProviders().find(item => item?.id === providerId)));
+  const parsed = providerSchema.safeParse(resolved?.provider ?? getConfiguredProviders().find(item => item?.id === providerId));
   if (!parsed.success) {
     const official = providerId.toLowerCase() === "toonflow";
     throw Object.assign(new Error(official ? "请先登录 Toonflow 账号并刷新供应商" : "请先在设置中配置模型供应商"), { status: official ? 401 : 400 });
@@ -59,12 +60,7 @@ export async function listAiModels() {
       };
     });
   });
-  const aiBr = await getAiBrTextProvider().then(provider => provider.models.map(model => ({
-    providerId: "aiBr", providerLabel: "AI-Br (Chrome qua API)", protocol: provider.protocol,
-    modelId: model.id, label: model.label, contextWindow: 262144, maxOutputTokens: 32768,
-    reasoningLevels: [] as string[], supportsAgent: false,
-  }))).catch(() => []);
-  return [...installedModels, ...chromeTextModels(), ...aiBr];
+  return [...installedModels, ...chromeTextModels()];
 }
 
 export function publicAiMessage(configured: ConfiguredModel, message: AssistantMessage, usageKnown = true) {
@@ -158,13 +154,11 @@ export function streamAi(
   context: Context,
   signal: AbortSignal,
   references: Awaited<ReturnType<typeof readAiReferences>> = [],
-  aiBrTarget?: { profileInstanceId: string; tabId: number; documentToken: string; url: string },
 ) {
   const { provider, model: configuredModel, baseUrl } = configured;
   const isMuse2Api = (configured.route?.providerId ?? configured.publicProviderId) === "muse2Api";
   const isGeminiApi = (configured.route?.providerId ?? configured.publicProviderId) === "gemini";
   const isGeminiWebToApi = (configured.route?.providerId ?? configured.publicProviderId) === "geminiWebToApi";
-  const isAiBr = (configured.route?.providerId ?? configured.publicProviderId) === "aiBr";
   const model: Model<typeof provider.protocol> = {
     id: configuredModel.id, name: configuredModel.label, provider: "toonflow", api: provider.protocol, baseUrl,
     reasoning: false, input: ["text", "image"],
@@ -190,7 +184,7 @@ export function streamAi(
     signal,
     ...(configured.route ? { maxTokens: configuredModel.maxOutputTokens } : {}),
     // 此入口没有 AgentSession，仅重试尚未交付响应的请求，已输出的流不能直接拼接重放。
-    maxRetries: configured.route || isMuse2Api || isGeminiApi || isGeminiWebToApi || isAiBr ? 0 : 3,
+    maxRetries: configured.route || isMuse2Api || isGeminiApi || isGeminiWebToApi ? 0 : 3,
     fetch: Object.assign((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
       if (!configured.execution) requireDirectModelAccess();
       return files.fetch(input, init);
@@ -212,11 +206,6 @@ export function streamAi(
       }
       if (isMuse2Api && (getRequestFiles(body).length || context.tools?.length)) {
         throw new Error("Muse2API vip0014 hiện chỉ hỗ trợ chat văn bản, không hỗ trợ ảnh đính kèm hoặc gọi công cụ. Tạo ảnh/video qua model media Muse2API.");
-      }
-      if (isAiBr) {
-        if (getRequestFiles(body).length || context.tools?.length || references.some(item => item.dataType !== "STRING"))
-          throw new Error("AI-Br chưa xác minh upload ảnh/tệp và gọi công cụ ở luồng văn bản; chưa gửi prompt.");
-        body = { ...body, ...(aiBrTarget ? { target: aiBrTarget } : {}) };
       }
       await files.prepare(body);
       const imageBytes = getRequestFiles(body).filter(file => file.mimeType.toLowerCase().startsWith("image/")).reduce((sum, file) => sum + file.inlineBytes, 0);

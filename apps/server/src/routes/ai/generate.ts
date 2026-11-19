@@ -6,7 +6,6 @@ import { validateFields } from "@/lib/middleware";
 import u from "@/utils";
 import { translateError, translateMessage, validationOptions } from "@/lib/i18n";
 import { generateChromeText } from "@/utils/aiChrome/text";
-import { verifyAiBrTextTarget } from "@/utils/aiBridge/models";
 
 const textPart = z.object({ type: z.literal("text"), text: z.string(), textSignature: z.string().optional() });
 const imagePart = z.object({ type: z.literal("image"), data: z.string(), mimeType: z.string().startsWith("image/") });
@@ -57,7 +56,6 @@ const contextSchema: z.ZodType<Context> = z.object({
 const inputSchema = z.object({
   providerId: z.string().min(1), modelId: z.string().min(1),
   chromeTabId: z.number().int().nonnegative().optional(),
-  bridgeTarget: z.string().max(2300).optional(),
   requestId: z.uuid().optional(),
   context: contextSchema,
   directory: z.string().min(1).max(4096).optional(),
@@ -122,9 +120,7 @@ export default Router().post("/", validateFields(inputSchema.shape), async (req,
     res.set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" });
     res.flushHeaders();
     controller.signal.throwIfAborted();
-    const aiBrTarget = input.providerId === "aiBr"
-      ? await verifyAiBrTextTarget(input.modelId, input.bridgeTarget) : undefined;
-    stream = u.ai.streamAi(configured, input.context, controller.signal, references, aiBrTarget);
+    stream = u.ai.streamAi(configured, input.context, controller.signal, references);
     heartbeat = setInterval(() => {
       if (!res.writableNeedDrain) write(": keepalive\n\n");
     }, 20000);

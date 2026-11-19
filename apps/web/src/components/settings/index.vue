@@ -55,7 +55,7 @@
                 v-else
                 :is="activePanel.component"
                 v-bind="
-                  ['account', 'pluginMarket', 'languageModel', 'mediaModel', 'personalization', 'deviceLink', 'aiChrome', 'aiBridge'].includes(activePanel.id) ? { visible } : {}
+                  ['account', 'pluginMarket', 'languageModel', 'mediaModel', 'personalization', 'deviceLink', 'aiChrome'].includes(activePanel.id) ? { visible } : {}
                 " />
             </keep-alive>
           </transition>
@@ -106,7 +106,6 @@ const allSettingsPanels = [
   },
   { id: "mediaModel", label: "Mô hình media", icon: IconPhotoVideo, component: defineAsyncComponent(() => import("./panels/mediaModel/index.vue")) },
   { id: "aiChrome", label: "AI chrome", icon: IconBrandChrome, component: defineAsyncComponent(() => import("./panels/aiChrome/index.vue")) },
-  { id: "aiBridge", label: "Kết nối AI-Bridge (API)", icon: IconPlugConnected, component: defineAsyncComponent(() => import("./panels/aiBridge/index.vue")) },
   {
     id: "pluginMarket",
     label: "Chợ plugin",
@@ -133,8 +132,8 @@ const allSettingsPanels = [
 const publicAccountPanel = { ...allSettingsPanels[0]!, get label() { return translate("账号"); } };
 const settingsPanels = computed(() => allSettingsPanels.filter(item => {
   if (publicWeb.value && currentUser.value?.role === "user") return ["account", "general", "about"].includes(item.id);
-  if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket", "aiChrome", "aiBridge"].includes(item.id)) return false;
-  return !multiTenantEnabled.value || !["languageModel", "mediaModel", "aiChrome", "aiBridge", "developer"].includes(item.id);
+  if (publicWeb.value && ["multiTenant", "deviceLink", "network", "mcp", "developer", "pluginMarket", "aiChrome"].includes(item.id)) return false;
+  return !multiTenantEnabled.value || !["languageModel", "mediaModel", "aiChrome", "developer"].includes(item.id);
 }).map(item => publicWeb.value && item.id === "account" ? publicAccountPanel : item));
 const morePanelIds = new Set(["account", "mcp", "network", "deviceLink", "developer", "multiTenant", "about"]);
 const mainPanels = computed(() => settingsPanels.value.filter(item => !morePanelIds.has(item.id)));

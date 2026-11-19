@@ -6,6 +6,7 @@ import { z } from "zod";
 import conf from "@/utils/conf";
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { resolveWorkspacePath } from "@/utils/workspace/files";
+import { isRetiredProvider } from "@/lib/retiredProviders";
 
 const mediaTypeSchema = z.enum(["image", "video"]);
 const fileSchema = z.object({
@@ -92,8 +93,9 @@ async function hasCompleteFiles(task: StudioTask) {
 
 async function taskSummary(task: StudioTask): Promise<StudioTaskEntry> {
   const checkpoint = task.checkpoint;
+  const providerId = task.request?.providerId;
   const resumable = (task.state === "running" || task.state === "interrupted")
-    && (task.request?.providerId !== "aiChrome" && (!!checkpoint?.providerData || !!checkpoint?.assets?.length)
+    && (providerId !== "aiChrome" && (!providerId || !isRetiredProvider(providerId)) && (!!checkpoint?.providerData || !!checkpoint?.assets?.length)
       || await hasCompleteFiles(task));
   return {
     taskId: task.taskId, mediaType: task.mediaType as "image" | "video", state: task.state,

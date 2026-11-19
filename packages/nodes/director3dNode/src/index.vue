@@ -19,7 +19,7 @@
       <chromeModelSelect chromeOnly
         :modelValue="model"
         :chromeTabId="data.chromeTabId"
-        :models="models.filter(item => item.providerId !== 'aiBridge')"
+        :models="models"
         outputKind="text"
         :disabled="modelLoading || addingMannequin"
         :loading="modelsLoading"

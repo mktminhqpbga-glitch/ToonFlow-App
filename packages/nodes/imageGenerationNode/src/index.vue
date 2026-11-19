@@ -58,7 +58,6 @@
           <chromeModelSelect
             :modelValue="data.model"
             :chromeTabId="data.chromeTabId"
-            :bridgeTarget="data.bridgeTarget"
             :models="models"
             outputKind="image"
             :loading="modelsLoading"
@@ -66,9 +65,8 @@
             placeholder="Chọn mô hình"
             ariaLabel="Mô hình tạo ảnh"
             noDataText="Hãy thêm mô hình tạo ảnh trong Cài đặt"
-            @update:modelValue="data.model = $event; data.chromeTabId = undefined; data.bridgeTarget = undefined"
+            @update:modelValue="data.model = $event; data.chromeTabId = undefined"
             @update:chromeTabId="data.chromeTabId = $event"
-            @update:bridgeTarget="data.bridgeTarget = $event"
             @open="loadModels(true).catch((error) => showNodeError(error, 'Lỗi tải mô hình'))" />
           <imageGenerationSettings
             v-if="editor?.mode !== 'inpaint'"
@@ -146,7 +144,7 @@ const { id, node, nodeProps, nodeEvent, outputs, files, ai, updateNodeInternals 
   onModelsChanged: () => void refreshProviderModels(),
 });
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; chromeTabId?: number; bridgeTarget?: string; inpaint?: ImageInpaint });
+const data = computed(() => node.data as { prompt: string; promptModel: PromptModel; inpaintPrompt: string; inpaintPromptModel: PromptModel; model: string; size: string; ratio: string; other: Record<string, unknown>; chromeTabId?: number; inpaint?: ImageInpaint });
 function openPromptLibrary() {
   window.dispatchEvent(new CustomEvent("macflow:open-prompt-library", { detail: { nodeId: id } }));
 }
@@ -214,9 +212,8 @@ const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined
     prompt: generationPrompt.value,
     size: data.value.size,
     ratio: data.value.ratio,
-    other: choice.providerId === "aiBridge" || choice.providerId === "aiBridgeLocal" || choice.providerId === "aiBr" ? { ...data.value.other, bridgeTarget: data.value.bridgeTarget }
-      : chromeServiceId(choice) ? { ...data.value.other, chromeTabId: data.value.chromeTabId }
-        : Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
+    other: chromeServiceId(choice) ? { ...data.value.other, chromeTabId: data.value.chromeTabId }
+      : Object.keys(data.value.other).length ? { ...data.value.other } : undefined,
     outputDirectory: `assets/${id}`,
     images: references.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
   };
@@ -352,8 +349,6 @@ async function startGeneration() {
   if (references.some(item => item.value === undefined)) throw new Error("Node tham chiếu chưa có nội dung, hãy bổ sung nội dung");
   if (!input) throw new Error("Hãy chọn mô hình tạo ảnh");
   await requireChromeTab(selectedModel.value!, data.value.chromeTabId, "image");
-  if ((selectedModel.value?.providerId === "aiBridge" || selectedModel.value?.providerId === "aiBridgeLocal") && !data.value.bridgeTarget)
-    throw new Error("Hãy chọn AI và tab trong menu AI-Bridge của node trước khi tạo ảnh.");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   const inpaintData = data.value.inpaint;

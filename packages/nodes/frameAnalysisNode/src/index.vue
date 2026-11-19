@@ -65,7 +65,7 @@
           <chromeModelSelect v-if="settings.aiEnabled"
             :modelValue="settings.aiModel"
             :chromeTabId="settings.chromeTabId"
-            :models="models.filter(item => item.providerId !== 'aiBridge')"
+            :models="models"
             outputKind="text"
             :loading="modelsLoading"
             :disabled="busy"

@@ -14,6 +14,8 @@ import { languageRequest, setLocaleFallback, translateError, translateMessage } 
 import { detectLocale, normalizeLocale } from "@toonflow/i18n";
 
 const autoInstallProviders = ["apiMart.ts", "metaso.ts", "compshare.ts", "muse2Api.ts"];
+const modelPickerNodes = ["audioGenerationNode", "director3dNode", "frameAnalysisNode", "imageGenerationNode", "textNode", "videoGenerationNode"]
+  .map(name => `${name}.umd.js`);
 
 export async function createApp({
   webRoot,
@@ -62,7 +64,12 @@ export async function createApp({
     ?? detectLocale([Intl.DateTimeFormat().resolvedOptions().locale]));
   if (dataDirectory && toolsRoot)
     await initializePlugins(resolve(dataDirectory, "tools"), toolsRoot, /^[a-z][a-zA-Z0-9]*\.tool\.js$/, pluginRevision);
-  if (dataDirectory && nodesRoot) await initializePlugins(resolve(dataDirectory, "nodes"), nodesRoot, /^[a-z][a-zA-Z0-9]*\.umd\.js$/, pluginRevision);
+  if (dataDirectory && nodesRoot) {
+    const nodeDirectory = resolve(dataDirectory, "nodes");
+    await initializePlugins(nodeDirectory, nodesRoot, /^[a-z][a-zA-Z0-9]*\.umd\.js$/, pluginRevision);
+    // ACT: 更新旧版安装中的内置模型选择器，保留自定义节点和节点配置。
+    if (pluginRevision === undefined) await initializePlugins(nodeDirectory, nodesRoot, modelPickerNodes, "1", "modelPickerRevision");
+  }
   if (dataDirectory && extRoot) {
     const { default: initializeExt } = await import("@/utils/plugins/initializeExt");
     await initializeExt(resolve(dataDirectory, "ext"), extRoot, pluginRevision);

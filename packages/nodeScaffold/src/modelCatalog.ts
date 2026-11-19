@@ -57,20 +57,7 @@ export async function readNodeModels<T>(type: ModelType, signal?: AbortSignal, f
     }).then(async response => {
       const result = await response.json();
       if (!response.ok || result.code !== 200 || !Array.isArray(result.data)) throw new Error(result.message || "Không thể tải danh sách mô hình, vui lòng thử lại sau");
-      // AI-Bridge is a local Chrome-tab transport, not an API-key provider.
-      // Advertise its text models only; a tab must still be explicitly selected
-      // and verified before any prompt is sent. Media adapters are not present.
-      if (type !== "language") return result.data as unknown[];
-      const providerNames: Record<string, string> = {
-        muse: "Muse", chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude", grok: "Grok",
-        deepseek: "DeepSeek", perplexity: "Perplexity", qwen: "Qwen", kimi: "Kimi", zai: "Z.ai",
-      };
-      const bridgeModels = Object.entries(providerNames).map(([id, label]) => ({
-        providerId: "aiBridge", providerLabel: "AI-Bridge", modelId: id,
-        label: `${label} · AI-Bridge`, protocol: "chrome" as const,
-        contextWindow: 24000, maxOutputTokens: 16000,
-      }));
-      return [...(result.data as unknown[]), ...bridgeModels];
+      return result.data as unknown[];
     }).then(models => {
       next.models = models;
       next.pending = undefined;

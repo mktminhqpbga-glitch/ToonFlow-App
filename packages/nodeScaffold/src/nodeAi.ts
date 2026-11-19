@@ -79,8 +79,6 @@ export type NodeAiRequest = {
   providerId: string;
   modelId: string;
   chromeTabId?: number;
-  /** Exact AI-Bridge profile/tab/document identity encoded as JSON by the tab picker. */
-  bridgeTarget?: string;
   prompt: string;
   systemPrompt?: string;
   directory?: string;
@@ -237,52 +235,6 @@ async function requestModel(input: NodeAiRequest, context: Context, model: Model
   const stream = createAssistantMessageEventStream();
   try {
     signal.throwIfAborted();
-    if (providerId === "aiBridge") {
-      if (!input.bridgeTarget) throw new Error("Hãy chọn đúng AI và tab AI-Bridge trong MacFlow trước khi gửi.");
-      let identity: unknown;
-      try { identity = JSON.parse(input.bridgeTarget); }
-      catch { throw new Error("Định danh tab AI-Bridge không hợp lệ. Hãy chọn lại tab."); }
-      if (!Array.isArray(identity) || identity.length !== 4
-        || typeof identity[0] !== "string" || typeof identity[1] !== "number"
-        || typeof identity[2] !== "string" || typeof identity[3] !== "string") {
-        throw new Error("Phiên tab AI-Bridge không hợp lệ. Hãy chọn lại tab.");
-      }
-      if (context.tools?.length) throw new Error("AI-Bridge hiện chỉ hỗ trợ tác vụ văn bản, chưa cho phép gọi công cụ tự động.");
-      if (references?.some(ref => ref.dataType !== "STRING")) throw new Error("AI-Bridge chưa hỗ trợ gửi file hoặc media tham chiếu. Hãy chọn mô hình khác.");
-      const instructions = references?.filter(ref => ref.dataType === "STRING").map(ref => ref.value).join("\n\n") ?? "";
-      const messages = context.messages.map(message => {
-        if (message.role !== "user" && message.role !== "assistant") throw new Error("AI-Bridge chưa hỗ trợ loại tin nhắn hệ thống/công cụ này.");
-        const raw = message.content;
-        if (typeof raw === "string") return { role: message.role, content: raw };
-        if (!Array.isArray(raw) || raw.some(part => part.type !== "text")) throw new Error("AI-Bridge chỉ hỗ trợ nội dung văn bản, không chuyển ảnh hoặc file âm thầm.");
-        return { role: message.role, content: raw.map(part => part.type === "text" ? part.text : "").join("\n") };
-      });
-      if (context.systemPrompt) messages.unshift({ role: "user", content: `System instruction:\n${context.systemPrompt}` });
-      if (instructions) messages.push({ role: "user", content: instructions });
-      const response = await fetch("/api/aiBridge/chat", {
-        method: "POST", headers: { "Content-Type": "application/json", "x-toonflow-workspace": "1" },
-        body: JSON.stringify({ model: `bridge-${modelId}`, messages, target: {
-          profileInstanceId: identity[0], tabId: identity[1], documentToken: identity[2], url: identity[3],
-        } }), signal,
-      });
-      const envelope = await response.json();
-      if (!response.ok || (typeof envelope?.code === "number" && envelope.code !== 200)) {
-        throw new Error(envelope?.message || envelope?.error?.message || `AI-Bridge HTTP ${response.status}. Kiểm tra tab trước khi gửi lại.`);
-      }
-      const data = envelope?.data ?? envelope;
-      const text = data?.choices?.[0]?.message?.content;
-      if (typeof text !== "string") throw new Error("AI-Bridge chưa xác nhận kết quả văn bản. Kiểm tra tab trước khi gửi lại.");
-      onEvent?.({ type: "text", delta: text });
-      const message: AssistantMessage = {
-        role: "assistant", api: model.api, provider: model.provider, model: model.id, timestamp: Date.now(),
-        stopReason: "stop", content: [{ type: "text", text }],
-        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
-      };
-      stream.push({ type: "start", partial: { ...message, content: [], stopReason: "pending" } });
-      stream.push({ type: "done", reason: "stop", message });
-      return stream;
-    }
     const response = await fetch("/api/ai/generate", {
       method: "POST", headers: { "Content-Type": "application/json", "x-toonflow-workspace": "1" },
       body: JSON.stringify({ providerId, modelId, context, directory, references, chromeTabId: input.chromeTabId, requestId: crypto.randomUUID() }), signal,

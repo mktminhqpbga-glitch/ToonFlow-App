@@ -119,6 +119,7 @@ export const customProviders = computed<CustomProvider[]>(() => {
   const accountProvider = settings.value.toonflowProvider as CustomProvider | null | undefined;
   if (toonflowAccountToken.value && (accountProvider?.id === "Toonflow" || accountProvider?.id === "toonflow")) providers.unshift(accountProvider);
   return providers.filter((item): item is CustomProvider => !!item && typeof item.id === "string" && typeof item.label === "string" && Array.isArray(item.models)
+    && !/^(?:aibr|aibridge|aibridgelocal)$/i.test(item.id)
     && item.models.every((model: CustomProviderModel) => !!model && typeof model.id === "string" && typeof model.label === "string"));
 });
 

@@ -31,7 +31,6 @@
           <chromeModelSelect
             :modelValue="model"
             :chromeTabId="data.chromeTabId"
-            :bridgeTarget="data.bridgeTarget"
             :models="models"
             outputKind="text"
             :loading="modelsLoading"
@@ -39,9 +38,8 @@
             placeholder="Chọn mô hình"
             ariaLabel="Mô hình tạo nội dung"
             noDataText="Hãy thêm mô hình trong Cài đặt"
-            @update:modelValue="model = $event; data.chromeTabId = undefined; data.bridgeTarget = undefined"
+            @update:modelValue="model = $event; data.chromeTabId = undefined"
             @update:chromeTabId="data.chromeTabId = $event"
-            @update:bridgeTarget="data.bridgeTarget = $event"
             @open="loadModels()" />
           <div class="promptActions">
             <el-button class="sendButton" :icon="IconArrowUp" :loading="generating" :disabled="!prompt.trim() || !selectedModel || generating || !textReady" title="Tạo nội dung" aria-label="Tạo nội dung" @click="generateText" />
@@ -100,7 +98,7 @@ watch([() => outputs.value.text.value, () => node.selected || !!documentContext?
   downloadUrl.value = url;
   onCleanup(() => URL.revokeObjectURL(url));
 }, { immediate: true });
-const data = computed(() => node.data as typeof node.data & { prompt?: string; promptModel?: PromptModel; model?: string; textPath?: string; textSnapshot?: string; chromeTabId?: number; bridgeTarget?: string });
+const data = computed(() => node.data as typeof node.data & { prompt?: string; promptModel?: PromptModel; model?: string; textPath?: string; textSnapshot?: string; chromeTabId?: number });
 const prompt = computed({ get: () => data.value.prompt ?? "", set: (value: string) => { data.value.prompt = value; } });
 const model = computed({ get: () => data.value.model ?? "", set: (value: string) => { data.value.model = value; } });
 const models = ref<NodeAiModel[]>([]);
@@ -247,7 +245,7 @@ async function generateText() {
     const references = refList.value
       .filter(item => item.value !== undefined && (item.dataType === "STRING" || item.dataType === "IMAGE" || item.dataType === "VIDEO" || item.dataType === "FILE"))
       .map(item => item.dataType === "STRING" ? { dataType: item.dataType, value: item.value } : { dataType: item.dataType, value: { ...item.value } });
-    const input = { ...getNodeModelIdentity(choice), prompt: prompt.value.trim(), references, chromeTabId, bridgeTarget: data.value.bridgeTarget };
+    const input = { ...getNodeModelIdentity(choice), prompt: prompt.value.trim(), references, chromeTabId };
     const directory = references.some(item => item.dataType !== "STRING") ? (await textFiles.list()).directory : undefined;
     const result = await ai.generate({
       ...input,

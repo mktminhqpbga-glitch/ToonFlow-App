@@ -14,6 +14,7 @@ import { lockWorkspaceFiles, resolveWorkspacePath } from "@/utils/workspace/file
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { readPriceReference } from "@/utils/media/priceReference";
 import { completeTask, failTask } from "@/utils/aiChrome";
+import { assertProviderAvailable, isRetiredProvider } from "@/lib/retiredProviders";
 
 const maxRecordSize = 16 * 1024 * 1024;
 const maxBlobSize = 140 * 1024 * 1024;
@@ -392,7 +393,8 @@ async function load(cwd: string, taskId: string, key: string, owner?: AuthIdenti
 async function resumable(task: MediaTask) {
   const { checkpoint, state } = task.record;
   if (state !== "running" && state !== "interrupted") return false;
-  if (task.record.request?.providerId !== "aiChrome" && (checkpoint.providerData || checkpoint.assets?.length)) return true;
+  const providerId = task.record.request?.providerId;
+  if (providerId && providerId !== "aiChrome" && !isRetiredProvider(providerId) && (checkpoint.providerData || checkpoint.assets?.length)) return true;
   if (!checkpoint.assetCount || checkpoint.files?.length !== checkpoint.assetCount) return false;
   for (const file of checkpoint.files) {
     const { path } = await resolveWorkspacePath(task.record.cwd, file.path, true);
@@ -622,6 +624,7 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
   cwd = await realpath(cwd);
   const key = taskPath(cwd, taskId);
   const parsed = requestSchemas[mediaType].parse(request);
+  assertProviderAvailable(parsed.providerId);
   if (attachment.nodeId !== undefined) z.string().min(1).max(512).parse(attachment.nodeId);
   if (attachment.canvasPath !== undefined) {
     relativePathSchema.parse(attachment.canvasPath);

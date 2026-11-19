@@ -1,8 +1,8 @@
 import { copyFile, cp, mkdir, readFile, readdir, rename, unlink, writeAtomic, writeFile } from "@toonflow/file";
 import { resolve } from "node:path";
 
-export default async function initializePlugins(targetDirectory: string, sourceDirectory: string, fileFilter?: RegExp | readonly string[], revision?: string) {
-  const marker = resolve(targetDirectory, "initialized");
+export default async function initializePlugins(targetDirectory: string, sourceDirectory: string, fileFilter?: RegExp | readonly string[], revision?: string, markerName = "initialized") {
+  const marker = resolve(targetDirectory, markerName);
   const initialized = await readFile(marker, "utf8").catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return null;
     throw error;

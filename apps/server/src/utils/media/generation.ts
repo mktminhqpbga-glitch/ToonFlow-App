@@ -14,8 +14,7 @@ import { modelGateway } from "@/utils/multiTenant/gateway";
 import { chromeModels, runTask } from "@/utils/aiChrome";
 import { readReferences } from "@/utils/aiChrome/files";
 import { providerForChromeModel } from "@/utils/aiChrome/protocol";
-import { generateBridgeMedia, listBridgeMediaModels } from "@/utils/media/aiBridge";
-import { generateAiBrMedia, listAiBrMediaModels } from "@/utils/media/aiBr";
+import { assertProviderAvailable } from "@/lib/retiredProviders";
 
 const maxMediaSize = 100 * 1024 * 1024;
 export type MediaGenerationCheckpoint = {
@@ -84,7 +83,7 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       } : {}),
     } as MediaModel];
   }));
-  return [...installedModels, ...chromeModels(), ...await listBridgeMediaModels(), ...await listAiBrMediaModels()] as MediaModel[];
+  return [...installedModels, ...chromeModels()] as MediaModel[];
 }
 
 export async function readReference(cwd: string, reference: MediaReference, mediaType: string, signal?: AbortSignal): Promise<Extract<MediaInput, { type: "base64" }>> {
@@ -207,7 +206,8 @@ async function prepareRequest<T>(directory: string | undefined, mediaType: "imag
 async function configuredProvider(request: MediaGenerationRequest, mediaType: "image" | "video" | "audio", signal?: AbortSignal, directory?: string,
   saveTaskData?: (data: ProviderTaskData) => Promise<void>, resume = false, modelRouteCipher?: string) {
   if (modelGateway.enabled() || modelRouteCipher) {
-    const { upstream } = await modelGateway.resolve(mediaType, request.providerId, request.modelId, modelRouteCipher, request);
+    const { upstream, route } = await modelGateway.resolve(mediaType, request.providerId, request.modelId, modelRouteCipher, request);
+    assertProviderAvailable(route.providerId);
     const provider = await loadMediaProviderSource(upstream.source, upstream.config, signal, undefined, directory, saveTaskData, upstream.cloud);
     return { provider, request: { ...request, providerId: provider.id, modelId: upstream.upstreamModelId } };
   }
@@ -235,7 +235,8 @@ async function preparePriceRequest(directory: string | undefined, mediaType: "im
 
 export async function getMediaPrice(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest, signal?: AbortSignal) {
   signal?.throwIfAborted();
-  if ((request.providerId === "aiChrome" || request.providerId === "aiBridge" || request.providerId === "aiBr") && !modelGateway.enabled()) return null;
+  assertProviderAvailable(request.providerId);
+  if (request.providerId === "aiChrome" && !modelGateway.enabled()) return null;
   if (modelGateway.enabled()) {
     const quote = await modelGateway.quoteRequest(mediaType, request.providerId, request.modelId, request);
     return { ...quote, price: `${quote.amount} ${quote.currency}`, tips: translateMessage("平台售价，按实际用量结算") };
@@ -299,6 +300,7 @@ async function executeMedia(
   if (checkpoint?.assetCount && saved.size === checkpoint.assetCount && [...saved.keys()].every(index => index >= 0 && index < checkpoint.assetCount!)) {
     return Array.from({ length: checkpoint.assetCount }, (_, index) => saved.get(index)!);
   }
+  assertProviderAvailable(request.providerId);
   let finish = () => {};
   const resumeAssets = async () => {
     const { provider } = await configuredProvider(request, mediaType, signal, directory, data => task!.save({ providerData: data }), true, modelRouteCipher);
@@ -314,50 +316,7 @@ async function executeMedia(
   try {
     signal?.throwIfAborted();
     let assets: MediaAsset[] | undefined;
-    if (request.providerId === "aiBr") {
-      if (modelGateway.enabled() || modelRouteCipher || !task || mediaType === "audio")
-        invalid("AI-Br chỉ cho phép tạo ảnh/video với tác vụ bền vững trong MacFlow cục bộ.");
-      const resumeData = checkpoint?.providerData;
-      if (task.resume && resumeData?.transport !== "aiBr")
-        invalid("Không có mã tác vụ Cloud AI-Br phù hợp để khôi phục; không tự gửi lại prompt.");
-      let dispatched = !!task.resume;
-      try {
-        assets = await generateAiBrMedia({ directory, request, kind: mediaType, signal,
-          readReference,
-          clientRequestId: task.taskId,
-          resumeData: task.resume ? resumeData : undefined,
-          saveTask: data => task.save({ providerData: data as ProviderTaskData }),
-          beforeSubmit: async () => {
-            await task.save({ providerData: { transport: "aiBr", stage: "submitting", clientRequestId: task.taskId, kind: mediaType } });
-            dispatched = true;
-            markSubmitted();
-          },
-        });
-      } catch (cause) {
-        if (!dispatched && cause && typeof cause === "object") notSubmittedFailures.add(cause);
-        throw cause;
-      }
-    } else if (request.providerId === "aiBridge") {
-      if (modelGateway.enabled() || modelRouteCipher || !task || mediaType === "audio")
-        invalid("AI-Bridge chỉ cho phép tạo ảnh/video từ MacFlow cục bộ với tác vụ bền vững.");
-      if (task.resume || checkpoint?.providerData)
-        invalid("Không tự gửi lại AI-Bridge khi tác vụ chưa xác định. Hãy xem tab AI trước khi chủ động gửi tác vụ mới.");
-      let submitted = false;
-      try {
-        assets = await generateBridgeMedia({
-          directory, request, kind: mediaType, signal,
-          readReference,
-          beforeSubmit: async () => {
-            await task.save({ providerData: { transport: "aiBridge", requestId: task.taskId, stage: "submitting", kind: mediaType } });
-            submitted = true;
-            markSubmitted();
-          },
-        });
-      } catch (cause) {
-        if (!submitted && cause && typeof cause === "object") notSubmittedFailures.add(cause);
-        throw cause;
-      }
-    } else if (request.providerId === "aiChrome") {
+    if (request.providerId === "aiChrome") {
       if (modelGateway.enabled() || modelRouteCipher || !task || !providerForChromeModel(request.modelId)
         || request.modelId === "museImage" && mediaType !== "image") invalid("AI chrome cần tác vụ bền vững ở chế độ độc lập và mô hình hợp lệ.");
       if (task.resume || checkpoint?.providerData) invalid("Tác vụ Chrome đã gián đoạn; kiểm tra tab trước khi chủ động tạo yêu cầu mới.");

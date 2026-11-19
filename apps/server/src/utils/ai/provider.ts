@@ -5,6 +5,7 @@ import conf from "@/utils/conf";
 import { findModelContextLimits } from "@/utils/ai/modelContextLimits";
 import { validateHeaderName, validateHeaderValue } from "node:http";
 import { z } from "zod";
+import { isRetiredProvider } from "@/lib/retiredProviders";
 
 export const providerHeadersSchema = z.record(
   z.string().refine(name => {
@@ -67,7 +68,8 @@ export function getAccountProvider() {
 export function getConfiguredProviders() {
   const providers = conf.get("settings", {}).customProviders;
   const account = getAccountProvider();
-  return [...(account ? [account] : []), ...(Array.isArray(providers) ? providers.filter(item => typeof item?.id !== "string" || item.id.toLowerCase() !== "toonflow") : [])];
+  return [...(account ? [account] : []), ...(Array.isArray(providers) ? providers.filter(item =>
+    typeof item?.id !== "string" || item.id.toLowerCase() !== "toonflow" && !isRetiredProvider(item.id)) : [])];
 }
 
 const builtinModels: Model<KnownApi>[] = getBuiltinProviders().flatMap(provider => getBuiltinModels(provider));

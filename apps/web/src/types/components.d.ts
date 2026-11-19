@@ -15,7 +15,6 @@ declare module 'vue' {
     Account: typeof import('./../components/settings/panels/account/index.vue')['default']
     AccountChart: typeof import('./../components/settings/panels/account/accountChart.vue')['default']
     Agent: typeof import('./../components/agent/index.vue')['default']
-    AiBridge: typeof import('./../components/settings/panels/aiBridge/index.vue')['default']
     AiChrome: typeof import('./../components/settings/panels/aiChrome/index.vue')['default']
     AttachmentList: typeof import('./../components/agent/attachmentList.vue')['default']
     AttachmentPreview: typeof import('./../components/agent/attachmentPreview.vue')['default']

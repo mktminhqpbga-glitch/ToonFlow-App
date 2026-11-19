@@ -1,3 +1,4 @@
+import { assertProviderAvailable, isRetiredProvider } from "@/lib/retiredProviders";
 import { t, translateMessage, validationOptions } from "@/lib/i18n";
 
 import { createHash } from "node:crypto";
@@ -353,6 +354,7 @@ async function readProvider(path: string, fileName: string) {
 }
 
 export async function getMediaProvider(id: string) {
+  assertProviderAvailable(id);
   if (!providerIdSchema.safeParse(id).success) invalid("供应商 ID 无效");
   const path = await directory();
   if (!path) invalid("请先在媒体模型设置中添加供应商", 404);
@@ -378,7 +380,8 @@ export async function listMediaProviders() {
   const path = await directory();
   if (!path) return [];
   const files = await readdir(path, { withFileTypes: true });
-  return Promise.all(files.filter(file => file.isFile() && mediaProviderFileSchema.safeParse(file.name).success)
+  return Promise.all(files.filter(file => file.isFile() && mediaProviderFileSchema.safeParse(file.name).success
+    && !isRetiredProvider(file.name.slice(0, -3)))
     .sort((left, right) => left.name.localeCompare(right.name)).map(async file => {
       let current = { fileName: file.name, id: file.name.slice(0, -3), source: "", revision: "" };
       try {
@@ -395,6 +398,7 @@ export async function listMediaProviders() {
 export async function addMediaProvider(source: string, signal?: AbortSignal) {
   signal?.throwIfAborted();
   const result = validateMediaProviderSource(source);
+  assertProviderAvailable(result.id);
   if (result.id.toLowerCase() === "toonflow") invalid("Toonflow 供应商由账号与余额管理，请登录后刷新");
   const { fileName } = result;
   const path = join((await directory(true))!, fileName);
@@ -539,6 +543,7 @@ export async function loadMediaProviderSource(source: string, config: Record<str
   saveTaskData?: (data: ProviderTaskData) => Promise<void>, platformAccount = false) {
   signal?.throwIfAborted();
   const { id, value } = parseProvider(source);
+  assertProviderAvailable(id);
   if (platformAccount && id !== "toonflow") invalid("账号媒体供应商 ID 必须为 toonflow", 403);
   if (id === "toonflow") {
     if (!platformAccount) {
