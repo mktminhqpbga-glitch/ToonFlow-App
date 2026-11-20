@@ -87,6 +87,7 @@ export interface MediaModel {
   type: "image" | "video" | "audio";
   mode?: unknown;
   imageSizes?: string[];
+  localImageSizing?: boolean;
   imageRatios?: string[];
   durationResolutionMap?: { duration: number[]; resolution: string[] }[];
   referenceLimits?: { maxReferences: number; maxReferenceBytes: number; allowedMimeTypes: string[] };

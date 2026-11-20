@@ -34,7 +34,7 @@ export function useImageModelForm(data: Ref<{ model: string; other: Record<strin
   watch(model, choice => {
     if (!choice) return;
     // ACT: 现有Độ phân giải使用 K 单位；出现其他单位时再统一换算，未知名称排在数值选项之后。
-    if (!sizeOptions.value.includes(data.value.size)) data.value.size = sizeOptions.value.toSorted((left, right) =>
+    if (!sizeOptions.value.includes(data.value.size)) data.value.size = choice.localImageSizing ? "auto" : sizeOptions.value.toSorted((left, right) =>
       (Number.parseFloat(left) || Infinity) - (Number.parseFloat(right) || Infinity)
     )[0]!;
     if (!ratioOptions.value.includes(data.value.ratio)) data.value.ratio = ratioOptions.value.includes("16:9") ? "16:9" : ratioOptions.value[0]!;

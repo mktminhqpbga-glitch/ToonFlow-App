@@ -6,7 +6,7 @@ import { mediaProviders, type Provider, type ProviderTaskData } from "@toonflow/
 import type { GeneratedMedia, MediaGenerationRequest, MediaModel, MediaReference } from "@toonflow/tools-scaffold/runtime";
 import conf from "@/utils/conf";
 import { getAccountProvider } from "@/utils/ai/provider";
-import { getMediaProvider, listMediaProviders, loadMediaProviderSource } from "@/utils/media/provider";
+import { createMediaTools, getMediaProvider, listMediaProviders, loadMediaProviderSource } from "@/utils/media/provider";
 import { lockWorkspaceFiles, resolveWorkspacePath, writeWorkspaceFile } from "@/utils/workspace/files";
 import { beginGeneration, getProviderPrice } from "@/utils/media/billing";
 import { detectMimeType, readPriceReference } from "@/utils/media/priceReference";
@@ -20,6 +20,8 @@ import { discoverMac2Api, getConnection } from "@/utils/mac2Api/connection";
 import { generateMac2Api, Mac2ApiRejected, resumeMac2Api } from "@/utils/mac2Api/tasks";
 
 const maxMediaSize = 100 * 1024 * 1024;
+const museImageOutputSizes = new Map([["1K", 1024], ["2K", 2048], ["4K", 4096]]);
+const mediaTools = createMediaTools();
 export type MediaGenerationCheckpoint = {
   providerData?: ProviderTaskData;
   assets?: Extract<MediaAsset, { type: "url" }>[];
@@ -67,6 +69,10 @@ function imageOptions(value: unknown, pattern: RegExp) {
   return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string" && item.length <= 64 && item === item.trim() && pattern.test(item)))] : undefined;
 }
 
+function hasMuseImageOutputSizes(providerId: string, modelId: string) {
+  return (providerId === "muse2Api" && modelId === "muse-image") || (providerId === "mac2ApiMuse" && modelId === "muse/image");
+}
+
 export async function listMediaModels(): Promise<MediaModel[]> {
   if (modelGateway.enabled()) return modelGateway.catalog(["image", "video", "audio"]);
   const installedProviders = await listMediaProviders();
@@ -74,6 +80,8 @@ export async function listMediaModels(): Promise<MediaModel[]> {
   const installedModels = installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => provider.models.flatMap(model => {
     if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
     const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
+    const imageSizes = imageOptions(Array.isArray(model.imageSizes) ? model.imageSizes : builtIn?.imageSizes, /^[^\u0000-\u001f\u007f]+$/);
+    const localImageSizing = model.type === "image" && hasMuseImageOutputSizes(provider.id, model.id);
     return [{
       providerId: provider.id, providerLabel: provider.label, modelId: model.id, label: model.label, type: model.type,
       supportsPrice: "supportsPrice" in provider && provider.supportsPrice === true,
@@ -81,7 +89,8 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       mode: model.mode, durationResolutionMap: model.durationResolutionMap, audio: model.audio,
       ...(model.type === "audio" ? { voices: model.voices } : {}),
       ...(model.type === "image" ? {
-        imageSizes: imageOptions(Array.isArray(model.imageSizes) ? model.imageSizes : builtIn?.imageSizes, /^[^\u0000-\u001f\u007f]+$/),
+        imageSizes: localImageSizing ? [...new Set(["auto", ...museImageOutputSizes.keys(), ...(imageSizes ?? [])])] : imageSizes,
+        ...(localImageSizing ? { localImageSizing } : {}),
       } : {}),
       ...(model.type !== "audio" ? {
         imageRatios: imageOptions(Array.isArray(model.imageRatios) ? model.imageRatios : builtIn?.imageRatios, /^[1-9]\d{0,3}:[1-9]\d{0,3}$/),
@@ -172,6 +181,20 @@ async function assetBytes(asset: MediaAsset, mediaType: "image" | "video" | "aud
   mimeType = detectMimeType(bytes, mimeType);
   if (!mimeType.startsWith(`${mediaType}/`) || !mediaExtensions[mimeType]) invalid("生成结果不是支持的图片、视频或音频格式");
   return { bytes, mimeType };
+}
+
+async function resizeImageOutput(content: Awaited<ReturnType<typeof assetBytes>>, edge: number, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  const input = { ...content, type: "binary" as const, data: content.bytes };
+  const { width, height } = await mediaTools.inspectImage(input);
+  if (Math.max(width, height) === edge) return content;
+  signal?.throwIfAborted();
+  const output = await mediaTools.resizeImage(input, width >= height ? { width: edge } : { height: edge });
+  signal?.throwIfAborted();
+  if (output.type !== "binary" || !output.data.byteLength || output.data.byteLength > maxMediaSize) {
+    invalid("Không thể đổi độ phân giải ảnh hoặc tệp kết quả vượt 100 MB.");
+  }
+  return { bytes: output.data, mimeType: output.mimeType };
 }
 
 function resumableAssets(assets: MediaAsset[], mediaType: "image" | "video" | "audio") {
@@ -304,6 +327,9 @@ async function executeMedia(
   signal?.throwIfAborted();
   if (!request.prompt.trim()) invalid("请输入生成提示词");
   const modelRouteCipher = task?.modelRouteCipher;
+  const museOutput = mediaType === "image" && !modelRouteCipher && hasMuseImageOutputSizes(request.providerId, request.modelId);
+  const outputEdge = museOutput ? museImageOutputSizes.get(request.size ?? "") : undefined;
+  const providerRequest = outputEdge || (museOutput && request.size === "auto") ? { ...request, size: undefined } : request;
   const directory = await realpath(cwd);
   const outputDirectory = request.outputDirectory ?? "assets/generated";
   await resolveWorkspacePath(directory, outputDirectory, true);
@@ -354,7 +380,7 @@ async function executeMedia(
         assets = await resumeMac2Api(checkpoint.providerData, task.taskId, save, signal);
       } else {
         if (checkpoint?.providerData) invalid("Tác vụ đã có mã yêu cầu. Hãy dùng Khôi phục để tra cứu.");
-        const parameters = await prepareRequest(directory, mediaType, request, readReference, signal);
+        const parameters = await prepareRequest(directory, mediaType, providerRequest, readReference, signal);
         if (parameters.type === "audio") invalid("mac2API không hỗ trợ tác vụ âm thanh.");
         try {
           assets = await generateMac2Api(request.providerId, mediaType, task.taskId, parameters, save, signal);
@@ -397,7 +423,7 @@ async function executeMedia(
     } else if (task?.resume) {
       assets = checkpoint?.assets ?? await resumeAssets();
     } else {
-      const { provider, request: upstreamRequest } = await configuredProvider(request, mediaType, signal, directory,
+      const { provider, request: upstreamRequest } = await configuredProvider(providerRequest, mediaType, signal, directory,
         task ? data => task.save({ providerData: data }) : undefined, false, modelRouteCipher);
       const generate = mediaType === "image" ? provider.generateImage : mediaType === "video" ? provider.generateVideo : provider.generateAudio;
       if (typeof generate !== "function") invalid(t`此供应商不支持${translateMessage({ image: "图片", video: "视频", audio: "音频" }[mediaType])}生成`);
@@ -432,7 +458,7 @@ async function executeMedia(
         await task!.save({ assets: resumableAssets(assets, mediaType) });
         content = await assetBytes(assets[index]!, mediaType, signal);
       }
-      const { bytes, mimeType } = content;
+      const { bytes, mimeType } = outputEdge ? await resizeImageOutput(content, outputEdge, signal) : content;
       signal?.throwIfAborted();
       const output = await resolveWorkspacePath(directory, outputDirectory, true);
       const release = lockWorkspaceFiles([output.path]);

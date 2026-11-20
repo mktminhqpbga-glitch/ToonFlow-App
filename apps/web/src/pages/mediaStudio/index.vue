@@ -62,8 +62,9 @@
               <div v-if="ratioOptions.length"><label class="fieldLabel">Tỷ lệ khung hình</label>
                 <el-select v-model="ratio" class="fullWidth" placeholder="Mặc định của mô hình" clearable><el-option v-for="item in ratioOptions" :key="item" :label="item" :value="item" /></el-select>
               </div>
-              <div v-if="sizeOptions.length"><label class="fieldLabel">Kích thước</label>
+              <div v-if="sizeOptions.length"><label class="fieldLabel">Độ phân giải</label>
                 <el-select v-model="size" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in sizeOptions" :key="item" :label="item" :value="item" /></el-select>
+                <p v-if="model.localImageSizing" class="fieldHint">MacFlow đổi kích thước theo cạnh dài. Auto giữ kích thước gốc.</p>
               </div>
               <div v-if="durationOptions.length"><label class="fieldLabel">Thời lượng</label>
                 <el-select v-model="duration" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in durationOptions" :key="item" :label="`${item} giây`" :value="item" /></el-select>

@@ -141,7 +141,7 @@ function parseTaskData(value: unknown, config: Record<string, unknown>): Provide
   return data;
 }
 
-function createMediaTools(fetcher: typeof fetch = fetch): ProviderTools["media"] {
+export function createMediaTools(fetcher: typeof fetch = fetch): ProviderTools["media"] {
   async function bytes(input: MediaInput) {
     if (input.type === "base64") return Buffer.from(input.data.replace(/^data:[^;]+;base64,/, ""), "base64");
     if (input.type === "binary") return Buffer.from(input.data);
