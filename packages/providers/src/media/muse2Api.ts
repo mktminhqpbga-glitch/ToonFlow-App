@@ -287,6 +287,16 @@ async function generate(context: MuseContext, kind: MuseKind, payload: ProviderT
       };
     }
   }
+  const duration = requestPayload.duration;
+  if (kind === "video" && typeof duration === "number" && (protocol === "vip0014" || duration > 60)) {
+    // ACT: Go ignores duration when building the prompt and rejects values over 10.
+    // Python 0.4 accepts the field through 60. Beyond the API range, keep the request in the prompt.
+    requestPayload = {
+      ...requestPayload,
+      prompt: `${requestPayload.prompt}\n\nThời lượng mong muốn là ${duration} giây. Nếu chỉ có các thời lượng cố định, hãy tạo và đính kèm clip gần nhất.`,
+    };
+    if (duration > (protocol === "vip0014" ? 10 : 60)) delete requestPayload.duration;
+  }
   const task: MuseTask = {
     transport: "muse2Api", kind, serviceUrl: connection(context).baseUrl,
     protocol,
@@ -302,12 +312,18 @@ export default {
   id: "muse2Api",
   label: "Muse2API (Python / Go)",
   icon: "",
-  version: "1.0.0",
-  readme: "Tự nhận diện Muse2API Python 0.4.0 hoặc Go vip0014 qua /healthz; giữ Base URL và API Key hiện có. Python 0.4.0: ảnh nhận 1–4 ảnh tham chiếu qua trường image, video chỉ nhận một ảnh đầu; không tự gửi lại yêu cầu Python nếu mất task ID. Không dùng cookie hoặc mật khẩu quản trị ở đây.",
+  version: "1.0.1",
+  readme: "Tự nhận diện Muse2API Python 0.4.0 hoặc Go vip0014 qua /healthz; giữ Base URL và API Key hiện có. Python 0.4.0: ảnh nhận 1–4 ảnh tham chiếu qua trường image, video chỉ nhận một ảnh đầu. Thời lượng video là mục tiêu gửi đến Muse. Số giây thực tế phụ thuộc clip trả về. Không tự gửi lại yêu cầu Python nếu mất task ID.",
   rules,
   models: [
     { id: "muse-image", label: "Muse Image", type: "image", mode: ["text", "singleImage", "multiReference"], imageSizes: ["auto"], imageRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"] },
-    { id: "muse-video", label: "Muse Video (~10s, 720p)", type: "video", mode: ["text", "singleImage", ["imageReference:4"]], audio: true, durationResolutionMap: [{ duration: [10], resolution: ["720p"] }] },
+    {
+      id: "muse-video", label: "Muse Video (720p)", type: "video", mode: ["text", "singleImage", ["imageReference:4"]], audio: true,
+      rules: [{
+        type: "input", field: "museVideoDuration", title: "Thời lượng mong muốn (giây)", value: "", required: false,
+        props: { type: "number", min: 1, step: 1, placeholder: "Theo mô tả hoặc mặc định của Muse" },
+      }],
+    },
   ] satisfies ProviderModel[],
   async generateImage(request: ImageRequest): Promise<MediaAsset[]> {
     if (request.model !== "muse-image") throw new Error("Model ảnh Muse2API phải là muse-image.");
@@ -325,7 +341,13 @@ export default {
     if (request.model !== "muse-video") throw new Error("Model video Muse2API phải là muse-video.");
     if (!request.prompt.trim()) throw new Error("Hãy nhập prompt tạo video.");
     if (request.lastFrame || request.videos?.length || request.audios?.length) throw new Error("Muse2API chỉ nhận ảnh tham chiếu; chưa hỗ trợ khung cuối/video/audio đầu vào.");
-    if (request.duration !== undefined && request.duration !== 10) throw new Error("Muse2API tạo một đoạn video mặc định khoảng 10 giây; không hỗ trợ điều khiển thời lượng.");
+    const override = request.other?.museVideoDuration;
+    const value = typeof override === "string" ? override.trim() : override;
+    const duration = value == null || value === "" ? request.duration ?? undefined
+      : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
+    if (duration !== undefined && (typeof duration !== "number" || !Number.isSafeInteger(duration) || duration < 1)) {
+      throw Object.assign(new Error("Thời lượng video phải là số nguyên dương (giây). Tác vụ chưa được gửi."), { code: "MEDIA_TASK_FAILED" });
+    }
     if (request.generateAudio === false || request.watermark !== undefined) throw new Error("Muse2API không có công tắc âm thanh/watermark.");
     const prompt = request.prompt.replace(/\{\{ref (\d+)\}\}/g, (marker, number: string) => {
       const order = (request as VideoRequest & { referenceOrder?: ({ type: string; index?: number })[] }).referenceOrder;
@@ -337,7 +359,8 @@ export default {
       return `ảnh tham chiếu ${ref.index! + 1 + (request.firstFrame ? 1 : 0)}`;
     });
     return generate(this, "video", {
-      model: request.model, prompt, duration: 10, aspect_ratio: request.ratio ?? "", resolution: request.resolution ?? "720p",
+      model: request.model, prompt, ...(duration !== undefined ? { duration } : {}),
+      aspect_ratio: request.ratio ?? "", resolution: request.resolution ?? "720p",
       images: await references(this, [...(request.firstFrame ? [request.firstFrame] : []), ...(request.images ?? [])]),
     });
   },
