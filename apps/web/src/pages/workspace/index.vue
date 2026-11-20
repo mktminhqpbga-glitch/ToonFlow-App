@@ -408,6 +408,7 @@ function saveDocumentNode(directory: string, canvasPath: string, nodeId: string,
 
 <style scoped lang="scss">
 .workspacePage {
+  --workspaceMenuWidth: 128px;
   position: relative;
   width: 100%;
   height: 100dvh;
@@ -443,6 +444,7 @@ function saveDocumentNode(directory: string, canvasPath: string, nodeId: string,
     top: 15px;
     left: 15px;
     z-index: 5;
+    width: var(--workspaceMenuWidth);
   }
 
   .workspaceTools {
@@ -477,6 +479,15 @@ function saveDocumentNode(directory: string, canvasPath: string, nodeId: string,
         padding: 0 2px;
         line-height: 22px;
         font-weight: 500;
+      }
+    }
+
+    @container workspaceTools (max-width: 560px) {
+      .panelSwitcher {
+        right: 15px;
+        left: auto;
+        max-width: calc(100% - var(--workspaceMenuWidth) - 38px);
+        transform: none;
       }
     }
 

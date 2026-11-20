@@ -812,11 +812,12 @@ defineExpose({ getCanvases, peekCanvases, initialized, addCanvas, switchCanvas, 
 
 <style lang="scss" scoped>
 .canvasMenuPanel.vue-flow__panel {
-  left: 0;
+  --canvasMenuStart: calc(var(--workspaceMenuWidth) + 8px);
+  left: var(--canvasMenuStart);
   display: flex;
   align-items: center;
   gap: 12px;
-  max-width: calc(50% - 90px);
+  max-width: calc(50% - 110px - var(--canvasMenuStart));
 }
 
 .balanceMenuPanel.vue-flow__panel {
@@ -847,6 +848,18 @@ defineExpose({ getCanvases, peekCanvases, initialized, addCanvas, switchCanvas, 
   .balanceMenuPanel.vue-flow__panel {
     top: 50px;
     max-width: calc(100% - 30px);
+  }
+}
+
+@container canvasWorkspace (max-width: 800px) {
+  .canvasMenuPanel.vue-flow__panel {
+    top: 42px;
+    left: 0;
+    max-width: calc(100% - 30px);
+  }
+
+  .balanceMenuPanel.vue-flow__panel {
+    top: 84px;
   }
 }
 
@@ -922,7 +935,6 @@ defineExpose({ getCanvases, peekCanvases, initialized, addCanvas, switchCanvas, 
 }
 
 .canvasMenu {
-  margin-left: 76px;
   min-width: 0;
 
   .menuContent {
