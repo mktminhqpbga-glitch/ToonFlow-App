@@ -81,9 +81,9 @@ Chat của bản vip0014 hiện chuyển ảnh thành nhãn `[图片]`, không g
 
 Trong **Cài đặt → mô hình media**, chọn **Muse2API (vip0014)** và lưu Base URL/API key. Adapter được cài sẵn khi server khởi động; nếu đã có trong danh sách, cấu hình trực tiếp thay vì thêm trùng.
 
-- `muse-image`: văn bản → ảnh hoặc chỉnh ảnh với 1–4 ảnh tham chiếu, một kết quả mỗi tác vụ. Chưa hỗ trợ mask.
+- `muse-image`: văn bản → ảnh hoặc chỉnh ảnh, một kết quả mỗi tác vụ. Kết nối bản [mac2API](https://github.com/mktminhqpbga-glitch/mac2API/tree/feat/mac2api-client-contract) đã cập nhật bằng Base URL của dịch vụ và khóa `m2c_…` để dùng tối đa 20 ảnh. Adapter đọc giới hạn máy chủ tại `/capabilities`. Các bản Python 0.4.0 và Go vip0014 hiện có hỗ trợ tối đa 4 ảnh.
 - `muse-video`: văn bản → video hoặc 1–4 ảnh tham chiếu; ảnh đầu là tham chiếu bắt đầu. Chưa hỗ trợ khung cuối, video/audio tham chiếu.
-- Ảnh tham chiếu: PNG/JPEG/GIF/WebP, tối đa 10 MiB mỗi ảnh, tổng 24 MiB. MacFlow chuyển byte thành data URL, không yêu cầu Muse truy cập đường dẫn local hoặc URL private của MacFlow. Upstream có thể nén ảnh trước khi gửi vào giao thức Muse.
+- Ảnh tham chiếu: PNG/JPEG/GIF/WebP, tối đa 10 MiB mỗi ảnh. Tổng dung lượng tối đa 100 MiB khi dùng luồng nhiều ảnh của mac2API, 24 MiB cho luồng cũ. MacFlow chuyển byte thành data URL theo thứ tự đã chọn.
 - Ảnh: kích thước `auto`; tỷ lệ được chuyển thành `aspect_ratio`. Upstream diễn đạt yêu cầu bằng prompt, không bảo đảm chính xác số pixel.
 - Video: nhập số giây ở **Thời lượng mong muốn (giây)** trong cài đặt node. Adapter chuyển thời lượng vào mô tả khi API của dịch vụ giới hạn tham số `duration`. Mỗi tác vụ trả một clip với thời lượng Muse hỗ trợ. Mặc định yêu cầu 720p và dùng âm thanh của Muse.
 - Tệp trả về được backend MacFlow tải bằng Bearer key rồi lưu vào workspace. Không cần bật `MUSE2API_PUBLIC_MEDIA` và không đưa API key vào URL media.

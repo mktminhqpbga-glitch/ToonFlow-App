@@ -15,9 +15,12 @@ const rules = [
   },
 ] as const;
 
+const maxImageReferences = 20;
+const maxLegacyReferences = 4;
+
 type MuseContext = ProviderContext<ProviderConfig<typeof rules>>;
 type MuseKind = "image" | "video";
-type MuseProtocol = "python04" | "python04alias" | "vip0014";
+type MuseProtocol = "python04" | "python04alias" | "vip0014" | "mac2api";
 type MuseTask = {
   transport: "muse2Api";
   kind: MuseKind;
@@ -114,9 +117,40 @@ async function jsonRequest(context: MuseContext, path: string, payload?: Provide
     redirect: "error",
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(context.tool.errorMessage(data) || `Muse2API: HTTP ${response.status}`);
+  if (!response.ok) {
+    throw Object.assign(new Error(context.tool.errorMessage(data) || `Muse2API: HTTP ${response.status}`), { status: response.status });
+  }
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Muse2API trả về JSON không hợp lệ.");
   return data;
+}
+
+async function imageProtocol(context: MuseContext, count: number): Promise<MuseProtocol | undefined> {
+  if (count > maxImageReferences) {
+    throw Object.assign(new Error(`Chọn tối đa ${maxImageReferences} ảnh tham chiếu cho một tác vụ tạo ảnh.`), { code: "MEDIA_TASK_FAILED" });
+  }
+  if (count <= maxLegacyReferences && !context.config.apiKey.trim().startsWith("m2c_")) return undefined;
+  let capability;
+  try {
+    capability = await jsonRequest(context, "/capabilities");
+  } catch (cause) {
+    context.signal?.throwIfAborted();
+    const message = count > maxLegacyReferences
+      ? "Để gửi hơn 4 ảnh, hãy dùng máy chủ mac2API hỗ trợ nhiều ảnh và khóa người dùng m2c_."
+      : "Chưa xác minh được khả năng tạo ảnh của mac2API. Hãy kiểm tra Base URL và khóa người dùng m2c_.";
+    throw Object.assign(new Error(`${message} Tác vụ chưa được gửi.`, { cause }),
+      { code: "MEDIA_TASK_FAILED" });
+  }
+  const model = Array.isArray(capability.models) && capability.models.find(item => item?.id === "muse-image");
+  if (capability.contractVersion !== 1 || capability.features?.idempotency !== true || !model || !Number.isInteger(model.maxReferences)) {
+    throw Object.assign(new Error("Máy chủ chưa xác nhận giới hạn ảnh tham chiếu của mô-đun. Tác vụ chưa được gửi."), { code: "MEDIA_TASK_FAILED" });
+  }
+  if (count > model.maxReferences) {
+    throw Object.assign(new Error(`Máy chủ mac2API cho phép tối đa ${model.maxReferences} ảnh tham chiếu. Tác vụ chưa được gửi.`), { code: "MEDIA_TASK_FAILED" });
+  }
+  if (model.ready !== true) {
+    throw Object.assign(new Error("Mô-đun ảnh mac2API chưa sẵn sàng. Hãy kiểm tra tài khoản Muse. Tác vụ chưa được gửi."), { code: "MEDIA_TASK_FAILED" });
+  }
+  return "mac2api";
 }
 
 async function readBytes(response: Response, limit: number) {
@@ -146,8 +180,10 @@ async function readBytes(response: Response, limit: number) {
   return bytes;
 }
 
-async function references(context: MuseContext, inputs: MediaInput[]) {
-  if (inputs.length > 4) throw new Error("Muse2API hỗ trợ tối đa 4 ảnh tham chiếu.");
+async function references(context: MuseContext, inputs: MediaInput[], limit: number, maxTotalMiB = 24) {
+  if (inputs.length > limit) {
+    throw Object.assign(new Error(`Chọn tối đa ${limit} ảnh tham chiếu. Tác vụ chưa được gửi.`), { code: "MEDIA_TASK_FAILED" });
+  }
   const result: string[] = [];
   let total = 0;
   for (const input of inputs) {
@@ -166,7 +202,10 @@ async function references(context: MuseContext, inputs: MediaInput[]) {
       throw new Error("Ảnh tham chiếu phải là PNG/JPEG/GIF/WebP, tối đa 10 MiB mỗi ảnh.");
     }
     total += bytes.byteLength;
-    if (total > 24 * 1024 * 1024) throw new Error("Tổng ảnh tham chiếu Muse2API không được vượt 24 MiB.");
+    if (total > maxTotalMiB * 1024 * 1024) {
+      throw Object.assign(new Error(`Tổng ảnh tham chiếu Muse2API không được vượt ${maxTotalMiB} MiB. Tác vụ chưa được gửi.`),
+        { code: "MEDIA_TASK_FAILED" });
+    }
     result.push(`data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`);
   }
   return result;
@@ -181,7 +220,7 @@ function wait(context: MuseContext) {
   });
 }
 
-async function resultMedia(context: MuseContext, kind: MuseKind, data: Record<string, any>): Promise<MediaAsset[]> {
+async function resultMedia(context: MuseContext, kind: MuseKind, data: Record<string, any>, protocol?: MuseProtocol): Promise<MediaAsset[]> {
   const task = data.task ?? data;
   const result = task.result ?? {};
   const item = Array.isArray(result.data) ? result.data[0] : Array.isArray(data.data) ? data.data[0] : undefined;
@@ -197,7 +236,8 @@ async function resultMedia(context: MuseContext, kind: MuseKind, data: Record<st
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name) || name.includes("..")) throw new Error("Tên tệp Muse2API không hợp lệ.");
   const { baseUrl, headers } = connection(context);
   // Chỉ tải từ dịch vụ đã cấu hình; không gửi Bearer sang URL do kết quả cung cấp.
-  const response = await context.tool.fetch(`${baseUrl}/media/${encodeURIComponent(name)}`, {
+  const mediaBase = protocol === "mac2api" ? baseUrl.replace(/\/muse\/v1$/, "/v1") : baseUrl;
+  const response = await context.tool.fetch(`${mediaBase}/media/${encodeURIComponent(name)}`, {
     headers, signal: requestSignal(context, 120000), redirect: "error",
   });
   if (!response.ok) throw new Error(context.tool.errorMessage(await response.json().catch(() => null)) || `Tải kết quả Muse2API: HTTP ${response.status}`);
@@ -215,7 +255,10 @@ async function pollTask(context: MuseContext, task: MuseTask): Promise<MediaAsse
     context.signal?.throwIfAborted();
     const data = await jsonRequest(context, `${path}${encodeURIComponent(task.taskId!)}`);
     const status = String(data.status ?? data.task?.status ?? "").toLowerCase();
-    if (["completed", "succeeded"].includes(status)) return resultMedia(context, task.kind, data);
+    if (["completed", "succeeded"].includes(status)) return resultMedia(context, task.kind, data, task.protocol);
+    if (status === "interrupted" && task.protocol === "mac2api") {
+      throw new Error(`Chưa rõ kết quả tác vụ ${task.taskId}. Hãy kiểm tra mục Tác vụ của mac2API.`);
+    }
     if (["failed", "cancelled", "canceled"].includes(status)) {
       if (/cdp connection closed/i.test(String(data.error?.message ?? ""))) {
         throw Object.assign(new Error(`Muse2API mất kết nối CDP khi xử lý tác vụ ${task.taskId}. Tác vụ trên Muse2API đã thất bại; hãy khôi phục Chrome/driver của Muse2API rồi kiểm tra trạng thái trước khi chủ động gửi tác vụ mới.`), { code: "MEDIA_TASK_FAILED" });
@@ -232,7 +275,19 @@ async function pollTask(context: MuseContext, task: MuseTask): Promise<MediaAsse
 
 async function submitTask(context: MuseContext, task: MuseTask): Promise<MediaAsset[]> {
   const imagePath = task.protocol === "python04" ? "/images/generations" : "/images/tasks";
-  const data = await jsonRequest(context, task.kind === "image" ? imagePath : "/videos", task.payload!, task.idempotencyKey);
+  let data;
+  try {
+    data = await jsonRequest(context, task.kind === "image" ? imagePath : "/videos", task.payload!, task.idempotencyKey);
+  } catch (cause) {
+    if (task.protocol === "mac2api" && (cause as { status?: unknown })?.status === 429) {
+      throw Object.assign(cause as Error, { code: "MEDIA_TASK_FAILED" });
+    }
+    throw cause;
+  }
+  return followReceipt(context, task, data);
+}
+
+async function followReceipt(context: MuseContext, task: MuseTask, data: Record<string, any>): Promise<MediaAsset[]> {
   const taskId = data.task_id ?? data.id;
   if (typeof taskId !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(taskId)) throw new Error("Muse2API chưa trả mã tác vụ hợp lệ; hãy kiểm tra trang quản trị trước khi gửi lại.");
   const saved: MuseTask = { transport: "muse2Api", kind: task.kind, serviceUrl: task.serviceUrl, idempotencyKey: task.idempotencyKey, protocol: task.protocol, taskId };
@@ -240,11 +295,11 @@ async function submitTask(context: MuseContext, task: MuseTask): Promise<MediaAs
   return pollTask(context, saved);
 }
 
-async function generate(context: MuseContext, kind: MuseKind, payload: ProviderTaskData) {
+async function generate(context: MuseContext, kind: MuseKind, payload: ProviderTaskData, detectedProtocol?: MuseProtocol) {
   context.signal?.throwIfAborted();
   // Không submit khi driver đã mất CDP. Kiểm tra này không bảo đảm driver sẽ
   // luôn ổn trong lúc tạo; tác vụ đã submit vẫn chỉ được theo dõi theo ID cũ.
-  const protocol = await assertServiceReady(context);
+  const protocol = detectedProtocol ?? await assertServiceReady(context);
   let requestPayload = payload;
   if (protocol === "python04") {
     const images = Array.isArray(payload.images) ? payload.images as string[] : [];
@@ -312,8 +367,8 @@ export default {
   id: "muse2Api",
   label: "Muse2API (Python / Go)",
   icon: "",
-  version: "1.0.1",
-  readme: "Tự nhận diện Muse2API Python 0.4.0 hoặc Go vip0014 qua /healthz; giữ Base URL và API Key hiện có. Python 0.4.0: ảnh nhận 1–4 ảnh tham chiếu qua trường image, video chỉ nhận một ảnh đầu. Thời lượng video là mục tiêu gửi đến Muse. Số giây thực tế phụ thuộc clip trả về. Không tự gửi lại yêu cầu Python nếu mất task ID.",
+  version: "1.0.2",
+  readme: "Tạo ảnh với tối đa 20 ảnh tham chiếu khi kết nối mac2API đã cập nhật bằng khóa người dùng m2c_. Tự nhận diện Muse2API Python 0.4.0 hoặc Go vip0014 cho quy trình cũ. Python 0.4.0: ảnh nhận tối đa 4 ảnh qua trường image, video nhận một ảnh đầu. Thời lượng video là mục tiêu gửi đến Muse. Không tự gửi lại yêu cầu Python nếu mất task ID.",
   rules,
   models: [
     { id: "muse-image", label: "Muse Image", type: "image", mode: ["text", "singleImage", "multiReference"], imageSizes: ["auto"], imageRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"] },
@@ -331,11 +386,15 @@ export default {
     if (request.mask) throw new Error("Muse2API chưa hỗ trợ mask; hãy dùng chỉnh sửa bằng ảnh tham chiếu và prompt.");
     if (!request.prompt.trim()) throw new Error("Hãy nhập prompt tạo ảnh.");
     if (request.quality || request.outputFormat) throw new Error("Muse2API không hỗ trợ tham số quality/outputFormat.");
+    const images = request.images ?? [];
+    const protocol = await imageProtocol(this, images.length);
     return generate(this, "image", {
       model: request.model, prompt: request.prompt, n: 1, response_format: "url",
       size: request.size ?? "auto", aspect_ratio: request.ratio ?? "",
-      images: await references(this, request.images ?? []),
-    });
+      images: protocol === "mac2api"
+        ? await references(this, images, maxImageReferences, 100)
+        : await references(this, images, maxLegacyReferences),
+    }, protocol);
   },
   async generateVideo(request: VideoRequest): Promise<MediaAsset[]> {
     if (request.model !== "muse-video") throw new Error("Model video Muse2API phải là muse-video.");
@@ -361,7 +420,7 @@ export default {
     return generate(this, "video", {
       model: request.model, prompt, ...(duration !== undefined ? { duration } : {}),
       aspect_ratio: request.ratio ?? "", resolution: request.resolution ?? "720p",
-      images: await references(this, [...(request.firstFrame ? [request.firstFrame] : []), ...(request.images ?? [])]),
+      images: await references(this, [...(request.firstFrame ? [request.firstFrame] : []), ...(request.images ?? [])], maxLegacyReferences),
     });
   },
   async resumeTask(data: ProviderTaskData): Promise<MediaAsset[]> {
@@ -371,6 +430,10 @@ export default {
     }
     const task = data as MuseTask;
     if (typeof task.taskId === "string" && /^[a-zA-Z0-9_-]{1,200}$/.test(task.taskId)) return pollTask(this, task);
+    if (task.protocol === "mac2api") {
+      const receipt = await jsonRequest(this, "/tasks/by-request", undefined, task.idempotencyKey);
+      return followReceipt(this, task, receipt);
+    }
     if (task.protocol === "python04" || task.protocol === "python04alias") throw new Error(
       "Muse2API Python không xác nhận Idempotency-Key. Chưa có task ID: hãy kiểm tra /admin/tasks trên đúng dịch vụ trước khi tạo tác vụ mới; không tự gửi lại."
     );
