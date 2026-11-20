@@ -34,7 +34,7 @@
           <el-button size="small" type="primary" :icon="IconUpload" :loading="installing" @click="pluginFileInput?.click()">
             Cài plugin từ máy
           </el-button>
-          <input ref="pluginFileInput" type="file" :accept="agentMarketEnabled ? '.umd.js,.tool.js,.agent.zip,.zip,.md,.tar,.tar.gz,.tgz' : '.umd.js,.tool.js,.zip,.md,.tar,.tar.gz,.tgz'" hidden @change="installFile" />
+          <input ref="pluginFileInput" type="file" accept=".js,.zip,.md,.tar,.gz,.tgz" hidden @change="installFile" />
           <template v-if="activeTab === 'installed' && agentMarketEnabled && selectedType === 'agent'">
             <el-button size="small" :icon="IconLink" :disabled="loading || !canManageAgents" @click="agentConnectVisible = true">Kết nối Agent từ xa</el-button>
             <el-button size="small" :icon="IconSettings" :disabled="loading || !canManageAgents" @click="a2aSettingsVisible = true">Dịch vụ A2A</el-button>
