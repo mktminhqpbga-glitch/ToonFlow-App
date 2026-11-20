@@ -24,22 +24,20 @@
         </form>
         <div class="marketActions">
           <el-button
+            v-if="accountToken"
             size="small"
             type="primary"
             plain
             :icon="IconCloudUpload"
-            :disabled="!accountToken"
-            :title="accountToken ? 'Đăng plugin lên chợ' : 'Hãy đăng nhập ở mục Tài khoản và số dư'"
+            title="Đăng plugin lên chợ Toonflow"
             @click="openUpload()">Tải plugin lên</el-button>
-          <template v-if="activeTab === 'installed'">
-            <el-button size="small" type="primary" :icon="IconUpload" :loading="installing" aria-label="Cài plugin từ máy" @click="pluginFileInput?.click()">
-              Cài plugin
-            </el-button>
-            <input ref="pluginFileInput" type="file" :accept="agentMarketEnabled ? '.umd.js,.tool.js,.agent.zip,.zip,.md,.tar,.tar.gz,.tgz' : '.umd.js,.tool.js,.zip,.md,.tar,.tar.gz,.tgz'" hidden @change="installFile" />
-            <template v-if="agentMarketEnabled && selectedType === 'agent'">
-              <el-button size="small" :icon="IconLink" :disabled="loading || !canManageAgents" @click="agentConnectVisible = true">Kết nối Agent từ xa</el-button>
-              <el-button size="small" :icon="IconSettings" :disabled="loading || !canManageAgents" @click="a2aSettingsVisible = true">Dịch vụ A2A</el-button>
-            </template>
+          <el-button size="small" type="primary" :icon="IconUpload" :loading="installing" @click="pluginFileInput?.click()">
+            Cài plugin từ máy
+          </el-button>
+          <input ref="pluginFileInput" type="file" :accept="agentMarketEnabled ? '.umd.js,.tool.js,.agent.zip,.zip,.md,.tar,.tar.gz,.tgz' : '.umd.js,.tool.js,.zip,.md,.tar,.tar.gz,.tgz'" hidden @change="installFile" />
+          <template v-if="activeTab === 'installed' && agentMarketEnabled && selectedType === 'agent'">
+            <el-button size="small" :icon="IconLink" :disabled="loading || !canManageAgents" @click="agentConnectVisible = true">Kết nối Agent từ xa</el-button>
+            <el-button size="small" :icon="IconSettings" :disabled="loading || !canManageAgents" @click="a2aSettingsVisible = true">Dịch vụ A2A</el-button>
           </template>
         </div>
       </div>
@@ -63,7 +61,7 @@
           </button>
         </div>
         <div class="filterOptions">
-          <div class="personalFilters" role="group" aria-label="Plugin của tôi">
+          <div v-if="accountToken" class="personalFilters" role="group" aria-label="Plugin của tôi">
             <button class="filterButton" type="button" :aria-pressed="selectedType === 'collection'" @click="selectedType = 'collection'">Yêu thích</button>
             <button class="filterButton" type="button" :aria-pressed="selectedType === 'my'" @click="selectedType = 'my'">Của tôi</button>
           </div>
@@ -82,7 +80,6 @@
         </el-alert>
         <p v-if="checkingPluginExistence" class="listStatus" role="status">Đang kiểm tra plugin có trên chợ hay chưa…</p>
       </template>
-      <el-alert v-else-if="!accountToken" class="loadError" title="Hãy đăng nhập tài khoản Toonflow trong mục Tài khoản và số dư để khám phá và lưu plugin yêu thích." type="info" :closable="false" showIcon />
       <el-alert v-else-if="marketError" class="loadError" :title="marketError" type="error" :closable="false" showIcon>
         <el-button size="small" @click="marketRefreshKey++">Thử lại</el-button>
       </el-alert>
@@ -161,7 +158,7 @@
               @click="openResubmit(plugin)">{{ plugin.state === 1 ? 'Cập nhật phiên bản' : plugin.state === 2 ? 'Chỉnh sửa và gửi lại' : 'Đang chờ duyệt' }}</el-button>
             <el-text v-if="installLabel(plugin) === 'Đã cài'" type="info" size="small">Đã cài</el-text>
             <el-popconfirm
-              v-else-if="pluginTypes[plugin.type].path && plugin.url && plugin.fileName"
+              v-else-if="pluginTypes[plugin.type].path && plugin.fileName && (plugin.url || plugin.key === videoScriptPlugin.key)"
               :title="`${translate(installLabel(plugin))}${pluginTypes[plugin.type].label}“${plugin.displayName}”（${plugin.fileName}）？`"
               width="280"
               :confirmButtonText="translate(installLabel(plugin))"
@@ -281,7 +278,7 @@
         </el-card>
       </div>
       <p v-if="activeTab === 'installed' ? loading : marketLoading" class="listStatus" role="status">Đang tải plugin…</p>
-      <p v-else-if="!visiblePlugins.length && (isMarketTab ? accountToken && !marketError : !visibleLoadErrors.length)" class="listStatus">
+      <p v-else-if="!visiblePlugins.length && (isMarketTab ? !marketError : !visibleLoadErrors.length)" class="listStatus">
         {{ activeTab === "installed" ? "Không có plugin đã cài nào phù hợp" : selectedType === "collection" ? "Không có plugin yêu thích nào phù hợp" : selectedType === "my" ? "Không có plugin đã đăng nào phù hợp" : "Không tìm thấy plugin phù hợp" }}
       </p>
       <el-pagination
@@ -395,6 +392,17 @@ const pluginTypes = {
   agent: { label: "Agent", path: agentMarketEnabled ? "agents" : null, icon: IconSparkles2, tagType: "danger" },
 } as const;
 const tabs = { get discover() { return translate("发现插件"); }, get installed() { return translate("已安装"); }, mcp: "MCP", ffmpeg: "FFmpeg" } as const;
+const videoScriptPlugin: Plugin = {
+  key: "macFlow:videoScriptNote",
+  type: "node",
+  name: "videoScriptNote",
+  displayName: "Video → Kịch bản",
+  author: "MacFlow",
+  version: "1.0.0",
+  fileName: "videoScriptNote.umd.js",
+  description: "Thả video mẫu vào Canvas và chuyển bố cục từng cảnh thành kịch bản cho sản phẩm mới.",
+  readme: "Thêm node **Video → Kịch bản** vào Canvas. Thả video, nhập thông tin sản phẩm mới và chọn mô hình AI hiểu ảnh hoặc video. Bạn có thể chỉnh sửa và sao chép kịch bản từ node.",
+};
 const activeTab = ref<keyof typeof tabs>("discover");
 const isMarketTab = computed(() => activeTab.value === "discover");
 const marketPage = ref(1);
@@ -499,8 +507,9 @@ const visibleLoadErrors = computed(() =>
     .map(([, message]) => message)
 );
 const visiblePlugins = computed(() => {
-  if (isMarketTab.value) return marketPlugins.value;
-  return filteredInstalledPlugins.value.filter(
+  if (isMarketTab.value && accountToken.value) return marketPlugins.value;
+  const plugins = isMarketTab.value ? [videoScriptPlugin] : filteredInstalledPlugins.value;
+  return plugins.filter(
     (plugin) =>
       (selectedType.value === "all" || plugin.type === selectedType.value) &&
       [plugin.name, plugin.displayName, plugin.author, plugin.description].some((value) =>
@@ -578,7 +587,10 @@ function hasMissingConfig(plugin: Plugin) {
   });
 }
 
-watch([activeTab, accountToken], () => { marketPage.value = 1; });
+watch([activeTab, accountToken], ([, token]) => {
+  marketPage.value = 1;
+  if (!token && (selectedTypes.value.discover === "my" || selectedTypes.value.discover === "collection")) selectedTypes.value.discover = "all";
+});
 
 watch(
   () => [visible, activeTab.value, selectedTypes.value.discover, marketPage.value, appliedQuery.value, marketRefreshKey.value, accountToken.value],
@@ -801,15 +813,21 @@ async function deletePlugin(plugin: Plugin) {
 
 async function installMarketPlugin(plugin: Plugin) {
   const path = pluginTypes[plugin.type].path;
-  if (!path || !plugin.url || !plugin.fileName || loading.value || pendingPlugins.value.has(plugin.key) || deletingPlugins.value.has(plugin.key)) return;
+  const bundledVideoScript = plugin.key === videoScriptPlugin.key;
+  if (!path || !plugin.fileName || (!bundledVideoScript && !plugin.url) || loading.value || pendingPlugins.value.has(plugin.key) || deletingPlugins.value.has(plugin.key)) return;
   const action = installLabel(plugin);
   if (action === "Đã cài") return;
   pendingPlugins.value.add(plugin.key);
   try {
-    const { data } = await axios.post(`/api/${path}/install`, { url: plugin.url, fileName: plugin.fileName, version: plugin.version }, { headers: requestHeaders });
-    if (data.code !== 200) throw new Error(data.message || "Cài plugin thất bại");
-    window.dispatchEvent(new CustomEvent("toonflow:plugin-installed", { detail: { type: plugin.type, name: data.data.name } }));
-    if (plugin.type === "ext") window.dispatchEvent(new CustomEvent("toonflow:ext-updated", { detail: { name: data.data.name } }));
+    if (bundledVideoScript) {
+      const { default: source } = await import("../../../../../../../plugins/videoScriptNote.umd.js?raw");
+      await installPluginFile("node", new File([source], plugin.fileName));
+    } else {
+      const { data } = await axios.post(`/api/${path}/install`, { url: plugin.url, fileName: plugin.fileName, version: plugin.version }, { headers: requestHeaders });
+      if (data.code !== 200) throw new Error(data.message || "Cài plugin thất bại");
+      window.dispatchEvent(new CustomEvent("toonflow:plugin-installed", { detail: { type: plugin.type, name: data.data.name } }));
+      if (plugin.type === "ext") window.dispatchEvent(new CustomEvent("toonflow:ext-updated", { detail: { name: data.data.name } }));
+    }
     ElMessage.success(action === "Cập nhật" ? `Đã cập nhật ${plugin.displayName}` : `Đã cài đặt ${plugin.displayName}`);
   } catch (error) {
     ElMessage.error(errorMessage(error, "Cài plugin thất bại, vui lòng thử lại"));
