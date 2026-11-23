@@ -21,7 +21,10 @@
           <h1>{{ kind === "image" ? "Xưởng tạo ảnh" : "Xưởng tạo video" }}</h1>
           <p>Biến mô tả thành {{ kind === "image" ? "hình ảnh" : "video" }} bằng mô hình đã cài trong MacFlow.</p>
         </div>
-        <el-button :icon="IconRefresh" :loading="modelsLoading || historyLoading" @click="refreshAll">Làm mới</el-button>
+        <div class="studioHeaderActions">
+          <el-button type="primary" plain :icon="IconGitBranch" :disabled="!directory" @click="flowSetupVisible = true">Thiết lập luồng</el-button>
+          <el-button :icon="IconRefresh" :loading="modelsLoading || historyLoading" @click="refreshAll">Làm mới</el-button>
+        </div>
       </header>
 
       <el-alert v-if="!directory" type="warning" :closable="false" showIcon>
@@ -153,6 +156,8 @@
       </div>
     </main>
 
+    <studioFlowSetup v-if="flowSetupVisible && directory" :key="directory" v-model="flowSetupVisible" :kind="kind"
+      :directory="directory" :mediaModels="models" />
     <settings v-model="settingsVisible" ref="settingsRef" />
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
       <assetLibrary v-model="assetPickerVisible" expanded :canSelect="canSelectAsset" :selecting="referenceBusy" @select="selectAsset" />
@@ -161,12 +166,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import axios from "axios";
 import {
-  IconAlertCircle, IconDownload, IconFolderPlus, IconHistory, IconLayoutDashboard, IconLoader2,
+  IconAlertCircle, IconDownload, IconFolderPlus, IconGitBranch, IconHistory, IconLayoutDashboard, IconLoader2,
   IconRefresh, IconSparkles, IconX,
 } from "@tabler/icons-vue";
 import { readNodeModels, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
@@ -192,6 +197,7 @@ type StudioQueueStatus = { limit: number; running: number; queued: number };
 const pendingStorageKey = "macflow.mediaStudio.pending.v1";
 
 const props = defineProps<{ kind: "image" | "video" }>();
+const studioFlowSetup = defineAsyncComponent(() => import("./studioFlowSetup.vue"));
 const router = useRouter();
 const route = useRoute();
 const workspaceStore = useWorkspaceStore();
@@ -199,6 +205,7 @@ const directory = computed(() => workspaceStore.project?.directory ?? "");
 const files = useWorkspaceFiles(directory);
 const models = ref<NodeMediaModel[]>([]);
 const modelsLoading = ref(false);
+const flowSetupVisible = ref(false);
 const modelKey = ref("");
 const prompt = ref("");
 const ratio = ref("");
@@ -699,6 +706,7 @@ onBeforeUnmount(() => {
     p { margin: 0; color: var(--el-text-color-secondary); font-size: 14px; }
     .studioEyebrow { font-size: 11px; letter-spacing: .16em; font-weight: 700; color: var(--el-color-primary); }
   }
+  .studioHeaderActions { display: flex; flex-wrap: wrap; gap: 8px; :deep(.el-button) { margin-left: 0; } }
   .studioColumns { display: grid; grid-template-columns: minmax(320px, 440px) minmax(0, 1fr); align-items: start; gap: 22px; margin-top: 20px; }
   :deep(.el-card) { border-radius: 16px; }
   :deep(.el-card__header) { padding: 19px 22px; }
@@ -740,4 +748,5 @@ onBeforeUnmount(() => {
 @keyframes studioSpin { to { transform: rotate(360deg); } }
 @media (max-width: 1080px) { .mediaStudio { grid-template-columns: 68px minmax(0, 1fr); .studioSidebar { padding: 15px 6px; .studioBrand { justify-content: center; padding: 3px 0 20px; strong { display: none; } } .studioNavigation a { font-size: 0; justify-content: center; padding: 12px; } .studioSidebarFooter { .workspaceName { display: none; } :deep(.el-button) { font-size: 0; } } } .studioColumns { grid-template-columns: minmax(0, 1fr); } } }
 @media (max-width: 600px) { .mediaStudio { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); .studioSidebar { padding: 8px 12px; flex-direction: row; align-items: center; justify-content: space-between; border-right: 0; border-bottom: 1px solid var(--el-border-color-light); .studioBrand { display: none; } .studioNavigation { display: flex; gap: 3px; a { font-size: 0; padding: 10px; } } .studioSidebarFooter { margin: 0; } } .studioMain { padding: 18px 12px; } .studioColumns { gap: 13px; } :deep(.el-card__body) { padding: 16px; } } }
+@media (max-width: 600px) { .mediaStudio .studioHeader { flex-wrap: wrap; } }
 </style>
