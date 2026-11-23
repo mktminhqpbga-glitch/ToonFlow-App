@@ -7,7 +7,7 @@ Commit nhập: `6086cdffceb704a632eca143dd16cd461a78cdac`.
 
 Theo yêu cầu chủ dự án, đã gỡ desktop Electrobun, mobile Android/HarmonyOS, startup và update server dành cho desktop; tách số phiên bản sang `appVersion.ts`. Các kiểu dữ liệu tương thích dùng chung được giữ lại. Tài liệu tác giả bên dưới có thể mô tả các bản native đã gỡ. Hai thư mục trong `../References/` giữ nguyên.
 
-Chạy từ `MacFlow/`:
+Chạy từ thư mục gốc `ToonFlow-App`.
 
 ```bash
 bun install --frozen-lockfile
@@ -16,6 +16,9 @@ bun run start:server
 ```
 
 Phát triển: `bun run dev` (frontend và backend).
+
+- [Quy trình phát triển MacFlow với Codex, tạo plugin và node](docs/macFlowDevelopment.md)
+- [Kết quả rà soát MacFlow và các hạng mục cần hoàn thiện](docs/macFlowAudit.md)
 
 Muse2API: tích hợp riêng bản [vip0014/muse2api](https://github.com/vip0014/muse2api), gồm chat văn bản, ảnh và video; xem [cài đặt và cấu hình Muse2API](docs/muse2Api.md). Luồng AI chrome vẫn hoạt động riêng.
 

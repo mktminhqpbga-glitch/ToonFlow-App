@@ -29,22 +29,22 @@
     "packages/ext/*"
   ],
   "scripts": {
-    "dev": "bun run --filter '@toonflow/web' --filter '@toonflow/server' dev",
-    "dev:web": "bun run --filter '@toonflow/web' dev",
-    "dev:server": "bun run --filter '@toonflow/server' dev",
-    "dev:plugins": "NODE_ENV=dev bun run --filter './packages/tools/*' --filter './packages/nodes/*' --filter './packages/ext/*' build",
+    "dev": "bun run --parallel dev:web dev:server",
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:server": "bun run --cwd apps/server dev",
+    "dev:plugins": "NODE_ENV=dev bun scripts/runWorkspaces.ts build packages/nodes packages/tools packages/ext",
     "start:chromeRelay": "bun build/chromeRelay/index.js",
     "dev:chromeRelay": "bun apps/server/src/chromeRelay/index.ts",
     "start:server": "bun run --cwd apps/server start",
     "build:server": "bun apps/server/scripts/buildStandalone.ts",
-    "build": "bun run build:tools && bun run build:ext && bun run --filter '@toonflow/web' --filter '@toonflow/server' build",
-    "build:nodes": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/nodes'), { recursive: true, force: true });\" && NODE_ENV=production bun run --filter './packages/nodes/*' build",
+    "build": "bun run build:tools && bun run build:ext && bun scripts/runWorkspaces.ts build apps",
+    "build:nodes": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/nodes'), { recursive: true, force: true });\" && NODE_ENV=production bun scripts/runWorkspaces.ts build packages/nodes",
     "create:ext": "bun packages/extScaffold/create.ts",
-    "build:ext": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/ext'), { recursive: true, force: true });\" && NODE_ENV=production bun run --filter './packages/ext/*' build",
-    "build:mcp": "bun run --filter '@toonflow/mcp' build",
-    "build:teams": "NODE_ENV=production bun run --filter './packages/teams/*' build",
-    "typecheck": "bun run --filter '@toonflow/*' typecheck",
-    "build:tools": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/tools'), { recursive: true, force: true });\" && NODE_ENV=production bun run --filter './packages/tools/*' build"
+    "build:ext": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/ext'), { recursive: true, force: true });\" && NODE_ENV=production bun scripts/runWorkspaces.ts build packages/ext",
+    "build:mcp": "bun run --cwd packages/mcp build",
+    "build:teams": "NODE_ENV=production bun scripts/runWorkspaces.ts build packages/teams",
+    "typecheck": "bun scripts/runWorkspaces.ts typecheck",
+    "build:tools": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/tools'), { recursive: true, force: true });\" && NODE_ENV=production bun scripts/runWorkspaces.ts build packages/tools"
   },
   "devDependencies": {
     "@toonflow/file": "workspace:*",

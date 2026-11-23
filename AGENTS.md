@@ -1,5 +1,10 @@
 本规范适用于整个仓库。
 
+## MacFlow 开发入口
+
+- 在 `feat/macflow-media-studios` 修改界面、媒体工坊、插件或节点时，先读 [MacFlow 开发指南](docs/macFlowDevelopment.md)，再核对当前分支的 SDK 和相关源码。指南包含界面参考、插件模板、数据约定和验证命令。
+- 参考 [MacFlow 审查报告](docs/macFlowAudit.md) 核对已验证的行为和后续事项，按用户要求的阶段实施。
+
 ## 多租户开发规范
 
 - 涉及多租户的设计、开发、修复及迁移时，必须先读取 [.agent/multiTenantContext.md](.agent/multiTenantContext.md) 中的需求共识与交接说明，再遵循 [.agent/multiTenant.md](.agent/multiTenant.md) 中的开发规则；接手时不得仅凭当前局部任务重新解释产品目标。

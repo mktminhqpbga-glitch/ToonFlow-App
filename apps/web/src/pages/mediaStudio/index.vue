@@ -100,6 +100,7 @@
                 <el-option v-for="limit in 10" :key="limit" :value="limit" :label="String(limit)" />
               </el-select>
               <p class="fieldHint" role="status">{{ queueRunning }} đang chạy · {{ queueWaiting }} đang chờ</p>
+              <p v-if="queueError" class="taskError" role="status">{{ queueError }}</p>
             </div>
             <div class="studioSubmit">
               <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting" :disabled="!canSubmit" @click="submitTask">
@@ -115,9 +116,13 @@
             <template #header><div class="studioCardHeading"><span><icon-photo-scan v-if="kind === 'image'" :size="19" /><icon-player-play v-else :size="19" /> Kết quả</span><el-tag size="small">{{ tasks.length }} tác vụ</el-tag></div></template>
             <div v-if="latestTask" class="resultCard">
               <div class="resultMeta"><el-tag :type="statusTag(latestTask.state)" size="small">{{ statusText(latestTask) }}</el-tag><span>{{ formatDate(latestTask.createdAt) }}</span></div>
-              <div v-if="fileOf(latestTask)" class="mediaPreview">
-                <img v-if="kind === 'image' && previewUrls[fileOf(latestTask)!.path]" :src="previewUrls[fileOf(latestTask)!.path]" alt="Ảnh vừa tạo" />
-                <video v-else-if="kind === 'video' && previewUrls[fileOf(latestTask)!.path]" :src="previewUrls[fileOf(latestTask)!.path]" controls playsinline preload="metadata" />
+              <div v-if="selectedMedia" class="mediaPreview">
+                <div v-if="previewError" class="previewLoading" role="status">
+                  <icon-alert-circle :size="22" /><span>{{ previewError }}</span>
+                  <el-button size="small" @click="previewRefresh++">Tải lại bản xem trước</el-button>
+                </div>
+                <img v-else-if="kind === 'image' && previewUrl" :src="previewUrl" alt="Ảnh kết quả" @error="previewDecodeFailed" />
+                <video v-else-if="kind === 'video' && previewUrl" :src="previewUrl" controls playsinline preload="metadata" @error="previewDecodeFailed" />
                 <div v-else class="previewLoading"><icon-loader-2 :size="26" /> Đang tải file từ workspace…</div>
               </div>
               <div v-else class="resultPlaceholder">
@@ -224,14 +229,16 @@ const submitting = ref(false);
 const submitError = ref("");
 const historyLoading = ref(false);
 const historyError = ref("");
+const queueError = ref("");
 const queueLimit = ref(1);
 const queueRunning = ref(0);
 const queueWaiting = ref(0);
 const queueLimitSaving = ref(false);
 const statusBusy = ref(false);
 const cancelling = ref(false);
-const previewUrls = ref<Record<string, string>>({});
-const mediaLeases = new Map<string, { release: () => void }>();
+const previewUrl = ref("");
+const previewError = ref("");
+const previewRefresh = ref(0);
 let historySequence = 0;
 let scopeVersion = 0;
 let timer: ReturnType<typeof setInterval> | undefined;
@@ -267,6 +274,7 @@ const resolutionOptions = computed(() => [...new Set((model.value?.durationResol
 const canSubmit = computed(() => !!directory.value && !!prompt.value.trim() && !!model.value && !submitting.value
   && !modelsLoading.value && !referenceBusy.value && (!requestedModelKey.value || modelKey.value === requestedModelKey.value));
 const latestTask = computed(() => tasks.value.find(task => task.taskId === selectedTaskId.value) ?? tasks.value[0]);
+const selectedMedia = computed(() => latestTask.value && fileOf(latestTask.value));
 const orderedTasks = computed(() => [
   ...tasks.value.filter(task => task.state === "running"),
   ...tasks.value.filter(task => task.state === "queued").sort((left, right) => (left.createdAt ?? 0) - (right.createdAt ?? 0)),
@@ -425,8 +433,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     cache: "no-store", signal: AbortSignal.timeout(15000), ...options,
     headers: { "x-toonflow-workspace": "1", ...(options?.body ? { "Content-Type": "application/json" } : {}), ...options?.headers },
   });
-  const result = await response.json() as { code: number; message: string; data: T };
-  if (!response.ok || result.code !== 200) throw Object.assign(new Error(describeError(result.message) || `HTTP ${response.status}`), { status: response.status });
+  const result = await response.json().catch(() => null) as { code: number; message: string; data: T } | null;
+  if (!result || result.code === undefined) throw Object.assign(new Error(`Máy chủ trả phản hồi không đọc được (HTTP ${response.status}).`), { status: response.status });
+  if (!response.ok || result.code !== 200) throw Object.assign(new Error(describeError(result.message)), { status: response.status });
   return result.data;
 }
 function updateQueue(queue?: StudioQueueStatus) {
@@ -470,7 +479,6 @@ async function loadHistory() {
     for (const item of fromSession) if (known.has(item.taskId)) forgetPendingId(item.taskId);
     tasks.value = [...localPending, ...unresolved, ...data.entries].sort((left, right) => (right.createdAt ?? 0) - (left.createdAt ?? 0));
     if (!tasks.value.some(task => task.taskId === selectedTaskId.value)) selectedTaskId.value = tasks.value[0]?.taskId ?? "";
-    void fillPreviews();
   } catch (cause) { if (sequence === historySequence) historyError.value = messageOf(cause); }
   finally { if (sequence === historySequence) historyLoading.value = false; }
 }
@@ -489,6 +497,7 @@ async function refreshStatuses(resume = false) {
       }) : Promise.resolve([]),
     ]);
     if (version !== scopeVersion) return;
+    queueError.value = "";
     let changed = updateQueue(queue.queue);
     if (resume && items[0]?.state === "interrupted" && (queueWaiting.value || queueRunning.value >= queueLimit.value)) {
       ElMessage.info("Hãy đợi hàng chờ có chỗ trống trước khi khôi phục tác vụ.");
@@ -500,9 +509,8 @@ async function refreshStatuses(resume = false) {
       Object.assign(task, item);
     }
     if (changed) void loadHistory();
-    else void fillPreviews();
   } catch (cause) {
-    if (version === scopeVersion) historyError.value = `Không thể cập nhật hàng chờ: ${messageOf(cause)}`;
+    if (version === scopeVersion) queueError.value = `Không thể cập nhật hàng chờ: ${messageOf(cause)}`;
   }
   finally { statusBusy.value = false; }
 }
@@ -518,20 +526,23 @@ async function cancelTask(task: StudioTask) {
   } catch (cause) { if (version === scopeVersion) ElMessage.error(messageOf(cause)); }
   finally { cancelling.value = false; }
 }
-async function fillPreviews() {
-  for (const task of tasks.value) {
-    const file = fileOf(task);
-    if (!file || mediaLeases.has(file.path) || !directory.value) continue;
-    const lease = files.acquireUrl(file.path, file.mimeType);
-    mediaLeases.set(file.path, lease);
-    try { const url = await lease.url; if (mounted && mediaLeases.get(file.path) === lease) previewUrls.value = { ...previewUrls.value, [file.path]: url }; }
-    catch (cause) { if (mounted && mediaLeases.get(file.path) === lease) historyError.value = `Không đọc được media đã lưu: ${messageOf(cause)}`; }
-  }
-}
-function clearPreviews() {
-  for (const lease of mediaLeases.values()) lease.release();
-  mediaLeases.clear();
-  previewUrls.value = {};
+watch([directory, () => selectedMedia.value?.path, () => selectedMedia.value?.mimeType, previewRefresh],
+  ([workspace, path, mimeType], _previous, onCleanup) => {
+    previewUrl.value = "";
+    previewError.value = "";
+    if (!workspace || !path) return;
+    const lease = files.acquireUrl(path, mimeType);
+    let active = true;
+    onCleanup(() => { active = false; lease.release(); });
+    void lease.url.then(url => {
+      if (active) previewUrl.value = url;
+    }, () => {
+      if (active) previewError.value = "Không đọc được tệp kết quả trong dự án.";
+    });
+  });
+
+function previewDecodeFailed() {
+  if (previewUrl.value) previewError.value = "Trình duyệt không mở được định dạng hoặc nội dung tệp kết quả.";
 }
 async function refreshAll() { await Promise.all([loadModels(), loadHistory()]); await refreshStatuses(); }
 async function submitTask() {
@@ -588,17 +599,19 @@ async function submitTask() {
       return;
     }
     const status = (cause as { status?: number })?.status;
-    if ([400, 401, 403, 404, 405, 413, 415, 422, 429].includes(status ?? 0)) {
+    const rejected = status !== undefined && [400, 401, 403, 404, 405, 413, 415, 422, 429].includes(status);
+    if (rejected) {
       forgetPendingId(taskId);
       task.state = "failed";
-      task.result = { code: status!, message: messageOf(cause), data: null };
+      task.result = { code: status, message: messageOf(cause), data: null };
     } else {
       task.state = "interrupted";
       task.resumable = true;
     }
     if (version !== scopeVersion) return;
+    const detail = messageOf(cause);
     submitError.value = status === 429 ? "Quá nhiều tác vụ (HTTP 429). Hãy chờ và kiểm tra tác vụ hiện tại trước khi tạo tiếp."
-      : `${messageOf(cause)}. ${status ? "Tác vụ bị từ chối." : "Chưa xác nhận trạng thái gửi. Không tự gửi lại; hãy kiểm tra mac2API → Tác vụ."}`;
+      : rejected ? detail : `Chưa xác nhận được tác vụ ${taskId}. Hãy kiểm tra ID này trong lịch sử trước khi gửi lại. ${detail}`;
   } finally {
     submitting.value = false;
     if (mounted && version === scopeVersion) {
@@ -655,11 +668,11 @@ watch([() => props.kind, directory, () => currentUser.value?.id], async () => {
   selectedTaskId.value = "";
   submitError.value = "";
   historyError.value = "";
+  queueError.value = "";
   historyLoading.value = false;
   queueLimit.value = 1;
   queueRunning.value = 0;
   queueWaiting.value = 0;
-  clearPreviews();
   clearReferences();
   modelKey.value = "";
   resetModelOptions();
@@ -675,7 +688,6 @@ onBeforeUnmount(() => {
   scopeVersion++;
   historySequence++;
   if (timer) clearInterval(timer);
-  clearPreviews();
   clearReferences();
   // ACT: Không abort task server khi đổi xưởng; ID và tiến độ được lưu server để khôi phục.
 });
