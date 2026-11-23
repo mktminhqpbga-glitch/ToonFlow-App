@@ -398,10 +398,10 @@ const videoScriptPlugin: Plugin = {
   name: "videoScriptNote",
   displayName: "Video → Kịch bản",
   author: "MacFlow",
-  version: "1.0.0",
+  version: "1.0.1",
   fileName: "videoScriptNote.umd.js",
   description: "Thả video mẫu vào Canvas và chuyển bố cục từng cảnh thành kịch bản cho sản phẩm mới.",
-  readme: "Thêm node **Video → Kịch bản** vào Canvas. Thả video, nhập thông tin sản phẩm mới và chọn mô hình AI hiểu ảnh hoặc video. Bạn có thể chỉnh sửa và sao chép kịch bản từ node.",
+  readme: "Thêm node **Video → Kịch bản** vào Canvas. Thả video, nhập thông tin sản phẩm mới và chọn mô hình AI hiểu ảnh hoặc video. Chế độ Video dùng FFmpeg để nén tệp lớn. Bạn có thể chỉnh sửa và sao chép kịch bản từ node.",
 };
 const activeTab = ref<keyof typeof tabs>("discover");
 const isMarketTab = computed(() => activeTab.value === "discover");
