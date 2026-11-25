@@ -7,6 +7,7 @@ Tài liệu này áp dụng cho nhánh `feat/macflow-media-studios` của `mktmi
 | Nhu cầu | Điểm vào | Mẫu để đọc |
 | --- | --- | --- |
 | Thêm màn hình, nút, hộp thoại hoặc mục cài đặt | `apps/web/src/pages`, `apps/web/src/components/settings`, `apps/web/src/router/index.ts` | Hai xưởng dùng chung [`mediaStudio/index.vue`](../apps/web/src/pages/mediaStudio/index.vue) với `kind` từ router. |
+| Chạy Huobao Drama tách biệt, nối mô hình và Kho MacFlow | `services/huobaoDrama`, `apps/server/src/utils/huobao` | [Chạy Huobao Drama với MacFlow](huobaoDrama.md). |
 | Phân cảnh phim ngắn và chuyển prompt sang xưởng | `apps/web/src/pages/shortDrama` và `apps/web/src/lib/studioPromptTransfer.ts` | [Phim ngắn và nhập dữ liệu Huobao](shortDrama.md). |
 | Dựng video sản phẩm từ ảnh và lời thoại | `apps/web/src/pages/mediaStudio/clipForgeStudio.vue` và `clipForgeApi.ts` | [Xưởng video sản phẩm với ClipForge](clipForge.md). |
 | Thêm node có giao diện trên Canvas | `packages/nodes/<tênNode>` cho node tích hợp, hoặc dự án plugin trong workspace cho tệp cài riêng | [`textNode`](../packages/nodes/textNode), [`videoScriptNote`](../plugins/videoScriptNote), [`nodeScaffold`](../packages/nodeScaffold/readme.md). |

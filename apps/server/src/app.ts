@@ -128,6 +128,7 @@ export async function createApp({
 
   const router = await import("@/router");
   router.default(app);
+  app.use("/api/huobao", (await import("@/utils/huobao")).default);
   const [{ createMcpRouter }, { getMcpTools, runInMcpRequest }, { authorizeMcp }, { skillResources }] = await Promise.all([
     import("@toonflow/mcp"),
     import("@/utils/mcp/tools"),

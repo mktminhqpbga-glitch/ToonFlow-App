@@ -32,3 +32,5 @@ apps/updateServer/build
 **/*.keychain-db
 .DS_Store
 Thumbs.db
+
+services/huobaoDrama/upstream

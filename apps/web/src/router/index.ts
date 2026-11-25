@@ -31,6 +31,10 @@ const router = createRouter({
     },
     {
       path: "/shortDrama",
+      component: () => import("@/pages/shortDrama/huobaoLaunch.vue"),
+    },
+    {
+      path: "/shortDrama/storyboard",
       component: () => import("@/pages/shortDrama/index.vue"),
     },
     {

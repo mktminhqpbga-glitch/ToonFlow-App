@@ -1,0 +1,27 @@
+services:
+  toonflow:
+    environment:
+      TOONFLOW_HUOBAO_ORIGIN: http://huobaoDrama:5679
+      TOONFLOW_HUOBAO_PUBLIC_URL: ${MACFLOW_HUOBAO_PUBLIC_URL:-http://127.0.0.1:5679}
+      TOONFLOW_HUOBAO_MACFLOW_ORIGIN: http://toonflow:3000
+      TOONFLOW_HUOBAO_TOKEN: ${MACFLOW_HUOBAO_TOKEN:-}
+      TOONFLOW_HUOBAO_PROJECT: ${MACFLOW_HUOBAO_PROJECT:-myProject}
+      TOONFLOW_HUOBAO_TEXT: ${MACFLOW_HUOBAO_TEXT:-}
+      TOONFLOW_HUOBAO_IMAGE: ${MACFLOW_HUOBAO_IMAGE:-}
+      TOONFLOW_HUOBAO_VIDEO: ${MACFLOW_HUOBAO_VIDEO:-}
+  huobaoDrama:
+    image: macflow/huobao-drama:4.0.12
+    build:
+      context: ./services/huobaoDrama
+      dockerfile: containerFile
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5679:5679"
+    environment:
+      PUBLIC_BASE_URL: http://huobaoDrama:5679
+    volumes:
+      - huobaoDramaData:/app/data
+
+volumes:
+  huobaoDramaData:

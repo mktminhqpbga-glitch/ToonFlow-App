@@ -1,0 +1,43 @@
+FROM node:22-bookworm-slim AS frontend
+WORKDIR /build
+COPY upstream/frontend ./frontend
+COPY upstream/backend/src ./backend/src
+COPY prepareLocale.cjs vietnamese.json ./
+RUN node prepareLocale.cjs /build
+WORKDIR /build/frontend
+RUN node -e "const fs=require('node:fs'); const p=require('./package-lock.json'); for(const entry of Object.values(p.packages)) delete entry.resolved; fs.writeFileSync('package-lock.json', JSON.stringify(p));" \
+    && npm ci --no-audit --no-fund --registry=https://registry.npmjs.org \
+    && npm run generate
+
+FROM node:22-bookworm AS backend
+WORKDIR /build/backend
+COPY upstream/backend/package.json upstream/backend/package-lock.json ./
+RUN node -e "const fs=require('node:fs'); const p=require('./package-lock.json'); for(const entry of Object.values(p.packages)) delete entry.resolved; fs.writeFileSync('package-lock.json', JSON.stringify(p));" \
+    && npm ci --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org \
+    && npm rebuild better-sqlite3
+
+FROM node:22-bookworm-slim
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ffmpeg ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+ENV NODE_ENV=production \
+    HUOBAO_VERSION=4.0.12-macflow \
+    PORT=5679 \
+    FFMPEG_BIN=/usr/bin/ffmpeg \
+    FFPROBE_BIN=/usr/bin/ffprobe \
+    HUOBAO_DATA_DIR=/app/data \
+    SQLITE_PATH=/app/data/huobao.sqlite3 \
+    WORKSPACE_PATH=/app/data/workspace \
+    FRONTEND_DIST=/app/frontend-dist
+COPY --from=backend /build/backend/node_modules ./backend/node_modules
+COPY --from=frontend /build/backend/src ./backend/src
+COPY --from=frontend /build/frontend/.output/public ./frontend-dist
+COPY upstream/backend/package.json upstream/backend/tsconfig.json ./backend/
+COPY upstream/backend/workspace ./workspace-template
+COPY upstream/docker/entrypoint.sh ./entrypoint.sh
+COPY upstream/LICENSE ./huobaoLicense
+RUN chmod +x ./entrypoint.sh && mkdir -p /app/data
+VOLUME ["/app/data"]
+EXPOSE 5679
+ENTRYPOINT ["./entrypoint.sh"]

@@ -208,11 +208,14 @@ function resumableAssets(assets: MediaAsset[], mediaType: "image" | "video" | "a
   }) : undefined;
 }
 
+export function supportsVideoReferenceOrder(providerId: string) {
+  return ["toonflow", "apiMart", "metaso", "compshare", "muse2Api"].includes(providerId) || isMac2ApiProvider(providerId);
+}
+
 async function prepareRequest<T>(directory: string | undefined, mediaType: "image" | "video" | "audio", request: MediaGenerationRequest,
   read: (cwd: string, reference: MediaReference, type: string, signal?: AbortSignal) => Promise<T>, signal?: AbortSignal) {
   // ACT: 仅向已适配引用映射的内置供应商传递，其他第三方适配器仍接收原有公共参数。
-  const referenceOrder = mediaType === "video" && (["toonflow", "apiMart", "metaso", "compshare", "muse2Api"].includes(request.providerId)
-    || isMac2ApiProvider(request.providerId)) ? request.referenceOrder : undefined;
+  const referenceOrder = mediaType === "video" && supportsVideoReferenceOrder(request.providerId) ? request.referenceOrder : undefined;
   if (referenceOrder) {
     const media = { image: request.images, video: request.videos, audio: request.audios };
     for (const [index, reference] of referenceOrder.entries()) {
