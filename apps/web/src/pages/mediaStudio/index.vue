@@ -20,13 +20,19 @@
         <div>
           <div class="studioEyebrow">MACFLOW STUDIO / {{ kind === "image" ? "IMAGE" : "VIDEO" }}</div>
           <h1>{{ kind === "image" ? "Xưởng tạo ảnh" : "Xưởng tạo video" }}</h1>
-          <p>Biến mô tả thành {{ kind === "image" ? "hình ảnh" : "video" }} bằng mô hình đã cài trong MacFlow.</p>
+          <p v-if="showClipForge">Dựng MP4 từ ảnh sản phẩm và lời thoại tiếng Việt.</p>
+          <p v-else>Biến mô tả thành {{ kind === "image" ? "hình ảnh" : "video" }} bằng mô hình đã cài trong MacFlow.</p>
         </div>
-        <div class="studioHeaderActions">
+        <div v-if="!showClipForge" class="studioHeaderActions">
           <el-button type="primary" plain :icon="IconGitBranch" :disabled="!directory" @click="flowSetupVisible = true">Thiết lập luồng</el-button>
           <el-button :icon="IconRefresh" :loading="modelsLoading || historyLoading" @click="refreshAll">Làm mới</el-button>
         </div>
       </header>
+
+      <nav v-if="kind === 'video'" class="videoModes" aria-label="Cách tạo video">
+        <el-button :type="showClipForge ? 'default' : 'primary'" :plain="!showClipForge" :aria-pressed="!showClipForge" @click="switchClipForge(false)">Tạo video bằng AI</el-button>
+        <el-button :type="showClipForge ? 'primary' : 'default'" :plain="showClipForge" :aria-pressed="showClipForge" @click="switchClipForge(true)">Video sản phẩm · ClipForge</el-button>
+      </nav>
 
       <el-alert v-if="!directory" type="warning" :closable="false" showIcon>
         <template #title>Chưa có dự án làm việc</template>
@@ -34,7 +40,9 @@
         <router-link to="/home">Mở Tổng quan</router-link>
       </el-alert>
 
-      <div class="studioColumns">
+      <clipForgeStudio v-if="kind === 'video' && directory && clipForgeOpened" v-show="showClipForge" :key="directory" :directory="directory" :active="showClipForge" />
+
+      <div v-show="!showClipForge" class="studioColumns">
         <section class="studioComposer" aria-label="Tạo nội dung">
           <el-card shadow="never">
             <template #header><div class="studioCardHeading"><span><icon-sparkles :size="19" /> Tạo {{ kind === "image" ? "ảnh mới" : "video mới" }}</span><el-tag size="small" type="info">1 kết quả / tác vụ</el-tag></div></template>
@@ -205,8 +213,16 @@ const pendingStorageKey = "macflow.mediaStudio.pending.v1";
 
 const props = defineProps<{ kind: "image" | "video" }>();
 const studioFlowSetup = defineAsyncComponent(() => import("./studioFlowSetup.vue"));
+const clipForgeStudio = defineAsyncComponent(() => import("./clipForgeStudio.vue"));
 const router = useRouter();
 const route = useRoute();
+const showClipForge = computed(() => props.kind === "video" && route.query.studio === "clipForge");
+const clipForgeOpened = ref(showClipForge.value);
+watch(showClipForge, active => { if (active) clipForgeOpened.value = true; });
+
+function switchClipForge(active: boolean) {
+  void router.replace({ query: { ...route.query, studio: active ? "clipForge" : undefined } });
+}
 const workspaceStore = useWorkspaceStore();
 const directory = computed(() => workspaceStore.project?.directory ?? "");
 const files = useWorkspaceFiles(directory);
@@ -722,6 +738,7 @@ onBeforeUnmount(() => {
     .studioEyebrow { font-size: 11px; letter-spacing: .16em; font-weight: 700; color: var(--el-color-primary); }
   }
   .studioHeaderActions { display: flex; flex-wrap: wrap; gap: 8px; :deep(.el-button) { margin-left: 0; } }
+  .videoModes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; :deep(.el-button) { margin-left: 0; } }
   .studioColumns { display: grid; grid-template-columns: minmax(320px, 440px) minmax(0, 1fr); align-items: start; gap: 22px; margin-top: 20px; }
   :deep(.el-card) { border-radius: 16px; }
   :deep(.el-card__header) { padding: 19px 22px; }
