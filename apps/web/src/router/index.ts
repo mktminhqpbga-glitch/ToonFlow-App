@@ -30,6 +30,10 @@ const router = createRouter({
       props: { kind: "video" },
     },
     {
+      path: "/shortDrama",
+      component: () => import("@/pages/shortDrama/index.vue"),
+    },
+    {
       path: "/canvas",
       redirect: "/workspace",
     },

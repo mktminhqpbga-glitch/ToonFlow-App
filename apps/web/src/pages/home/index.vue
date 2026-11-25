@@ -25,6 +25,10 @@
           <icon-video :size="18" aria-hidden="true" />
           <span class="sidebarText">Xưởng tạo video</span>
         </button>
+        <button class="sidebarItem" type="button" aria-label="Phim ngắn" title="Phim ngắn" @click="router.push('/shortDrama')">
+          <icon-movie :size="18" aria-hidden="true" />
+          <span class="sidebarText">Phim ngắn</span>
+        </button>
         <hr v-if="currentUser?.role !== 'user'" class="sidebarDivider" />
         <button v-if="currentUser?.role !== 'user'" class="sidebarItem" :class="{ active: assetsVisible }" type="button" aria-label="Thư viện tài nguyên" title="Thư viện tài nguyên" aria-haspopup="dialog" :aria-expanded="assetsVisible" @click="assetsVisible = true">
           <icon-library-photo :size="18" aria-hidden="true" />

@@ -7,6 +7,7 @@
         <router-link to="/workspace"><icon-layout-dashboard :size="18" /> Canvas</router-link>
         <router-link to="/image" :class="{ active: kind === 'image' }"><icon-photo :size="18" /> Xưởng tạo ảnh</router-link>
         <router-link to="/video" :class="{ active: kind === 'video' }"><icon-video :size="18" /> Xưởng tạo video</router-link>
+        <router-link to="/shortDrama"><icon-movie :size="18" /> Phim ngắn</router-link>
       </nav>
       <div class="studioSidebarFooter">
         <span v-if="workspaceStore.project" class="workspaceName" :title="workspaceStore.project.directory"><icon-folder :size="16" /> {{ workspaceStore.project.name }}</span>
@@ -184,6 +185,7 @@ import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser } from "@/stores/multiTenant";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
+import { takeStudioPrompt } from "@/lib/studioPromptTransfer";
 import settings from "@/components/settings/index.vue";
 import assetLibrary from "@/pages/workspace/panels/canvas/components/assetLibrary.vue";
 import logoUrl from "@toonflow/assets/logo.svg";
@@ -680,6 +682,7 @@ watch([() => props.kind, directory, () => currentUser.value?.id], async () => {
 }, { immediate: false });
 onMounted(() => {
   mounted = true;
+  prompt.value = takeStudioPrompt(directory.value, props.kind) ?? prompt.value;
   void refreshAll();
   timer = setInterval(() => { if (document.visibilityState !== "hidden") void refreshStatuses(); }, 3000);
 });

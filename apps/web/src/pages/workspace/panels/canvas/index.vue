@@ -1107,18 +1107,19 @@ async function importPendingStudioMedia() {
     || !canvasReady.value || !canvasId.value || !availableNodes.value.some(node => node.type === `remote-${pending.mediaType}Node`)) return;
   importingStudioMedia = true;
   try {
-    const bytes = await useWorkspaceFiles(directory).read(pending.path);
+    const file = "text" in pending
+      ? new File([pending.text], pending.name, { type: "text/markdown" })
+      : new File([await useWorkspaceFiles(directory).read(pending.path)], pending.path.split("/").at(-1) ?? `studio.${pending.mediaType === "image" ? "png" : "mp4"}`, { type: pending.mimeType });
     if (pendingStudioMediaForCanvas() !== pending || project.value?.directory !== directory || canvasController.signal.aborted) return;
-    const name = pending.path.split("/").at(-1) ?? `studio.${pending.mediaType === "image" ? "png" : "mp4"}`;
     const position = pastePosition() ?? { x: 0, y: 0 };
     let imported = 0;
     await canvasHistory.batch(async () => {
-      const ids = await importCanvasFiles([new File([bytes], name, { type: pending.mimeType })], position, {
+      const ids = await importCanvasFiles([file], position, {
         directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow,
       });
       imported = ids.length;
     });
-    if (!imported) throw new Error("Không thể đưa tệp vào Canvas; vui lòng kiểm tra node ảnh/video.");
+    if (!imported) throw new Error("Không thể đưa tệp vào Canvas. Hãy kiểm tra node tương ứng đã được bật.");
     clearStudioMediaForCanvas(pending);
     ElMessage.success("Đã đưa kết quả từ xưởng vào Canvas hiện tại.");
   } catch (cause) {
