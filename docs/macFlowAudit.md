@@ -56,3 +56,17 @@ Sau tải lại trang: ...
 ```
 
 Ảnh chụp kèm thông báo đầy đủ giúp đối chiếu nhanh hơn. Chia sẻ ID tác vụ, mã HTTP và nội dung đã lọc thông tin riêng tư. Hướng dẫn dành cho lần sửa tiếp theo nằm ở [Phát triển MacFlow với Codex](macFlowDevelopment.md).
+
+## 6. Rà soát ổn định ngày 26/11/2026
+
+| Khu vực | Đã sửa |
+| --- | --- |
+| Mở ứng dụng và chuyển trang | Danh sách mô hình tải riêng sau khi mở giao diện. Trang lỗi có nút thử lại, kể cả khi một tệp giao diện tải thất bại. Yêu cầu kiểm tra cài đặt và dự án có thời gian chờ giới hạn. |
+| Kết nối dịch vụ | Trạng thái kết nối và bước khắc phục hiện bằng tiếng Việt. Chi tiết kỹ thuật nằm trong mục mở rộng. Khi lưu bị từ chối, giá trị vừa nhập còn trên biểu mẫu để chỉnh lại. |
+| Xưởng ảnh và video | Khôi phục ý tưởng, lựa chọn và ảnh tham chiếu sau khi tải lại hoặc mở lại tab trên cùng trình duyệt. Từng yêu cầu ảnh/video đã gửi tiếp tục được lưu ở máy chủ. Kiểm tra lại theo mã cũ nếu mất phản hồi gửi. |
+| Xử lý theo đợt | Bản ghi tiến độ hỏng chỉ ảnh hưởng đến yêu cầu đó. Hai xưởng có nút **Chạy lại** ngay ở kết quả lỗi, dùng lại nội dung ban đầu. Quyền truy cập dự án và tác vụ tiếp tục được kiểm tra. |
+| Phim ngắn và video từ ảnh sản phẩm | Phục hồi bản nháp phân cảnh, ảnh và lời thoại đã chọn trong trình duyệt. Nếu bản phân cảnh đã lưu bị sửa ở cửa sổ khác, MacFlow giữ bản nháp để người dùng tải xuống và ngăn ghi đè. |
+
+Đã build bản máy chủ và kiểm tra kiểu cả 48 workspace. Bộ kiểm tra máy chủ đạt 60 bài, Muse2API Python đạt 196 bài, bộ kiểm tra Go của Gemini Web To API chạy thành công ở chế độ cục bộ. Đã kiểm tra cú pháp tiện ích Chrome và dịch vụ Python.
+
+Chromium dùng dự án thử và dịch vụ AI cục bộ để đi từ Tổng quan qua Cài đặt, Xưởng ảnh, Xưởng video và bảng phân cảnh. Đã thử trên màn rộng và màn hẹp, gồm địa chỉ kết nối sai, tệp ảnh sai định dạng, lưu bản nháp, mất phản hồi khi gửi, lỗi hạn mức, chạy lại một mục, tải ảnh và mở lại video đã hoàn thành. Máy chủ dịch vụ thật, tài khoản thật, ứng dụng desktop và các nút chuyên sâu ngoài các luồng này cần nghiệm thu riêng.

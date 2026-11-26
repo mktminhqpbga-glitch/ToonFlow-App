@@ -38,9 +38,11 @@ export const settingsStorage = {
     if (stores && Object.hasOwn(stores, key)) return JSON.stringify(stores[key]);
     if (publicWeb.value) return null;
     // ACT: 只迁移当前来源可读取的旧缓存，保留原值；不同端口的 localStorage 不能互读。
-    const value = localStorage.getItem(key);
-    if (value !== null) settingsStorage.setItem(key, value);
-    return value;
+    try {
+      const value = localStorage.getItem(key);
+      if (value !== null) settingsStorage.setItem(key, value);
+      return value;
+    } catch { return null; }
   },
   setItem(key: string, value: string) {
     settings.value.stores = { ...(settings.value.stores as Record<string, unknown> | undefined), [key]: JSON.parse(value) };
@@ -188,17 +190,17 @@ subscribeNodeModels(type => {
 
 export async function loadSettings() {
   if (settingsReady) return;
-  const { data, headers } = await axios.get("/api/settings/get", { headers: { "Cache-Control": "no-cache", "x-toonflow-workspace": "1" } });
+  const { data, headers } = await axios.get("/api/settings/get", { headers: { "Cache-Control": "no-cache", "x-toonflow-workspace": "1" }, timeout: 15000 });
   if (settingsReady) return;
-  if (data.code !== 200 || !data.data || typeof data.data !== "object" || Array.isArray(data.data)) {
-    throw new Error("读取设置失败");
+  if (data?.code !== 200 || !data.data || typeof data.data !== "object" || Array.isArray(data.data)) {
+    throw new Error("Không đọc được cài đặt. Hãy mở lại MacFlow.");
   }
   settings.value = data.data;
   settingsRevision = headers["x-toonflow-settings-revision"] === undefined ? undefined : Number(headers["x-toonflow-settings-revision"]);
-  await refreshModelChoices();
   // 等初始化引发的监听执行完，再允许自动保存。
   await nextTick();
   settingsReady = true;
+  void refreshModelChoices().catch(() => {});
   void refreshToonflowProvider();
 }
 
@@ -214,7 +216,7 @@ export function saveSettings(update?: (current: Record<string, unknown>) => Reco
     const requestedProviders = providerFields.map(field => JSON.stringify(requestedSettings[field]));
     const requestedNodeMenu = JSON.stringify(((patch?.general ?? settings.value.general) as { nodeMenu?: unknown } | undefined)?.nodeMenu);
     const { data, headers } = await axios.put<{ code: number; data: { customProviders?: CustomProvider[]; mediaProviderConfigs?: Record<string, unknown>; toonflowProvider?: CustomProvider | null; nodeMenu?: StoredNodeMenuItem[] | null; aiModels?: ResolvedAiModel[]; multiTenantEnabled?: boolean } | null }>(
-      "/api/settings/save", { settings: requestedSettings, ...(settingsRevision === undefined ? {} : { expectedRevision: settingsRevision }) }, { signal, headers: { "x-toonflow-workspace": "1" } },
+      "/api/settings/save", { settings: requestedSettings, ...(settingsRevision === undefined ? {} : { expectedRevision: settingsRevision }) }, { signal, timeout: 20000, headers: { "x-toonflow-workspace": "1" } },
     );
     signal?.throwIfAborted();
     if (data.code !== 200) throw new Error("保存设置失败");
@@ -263,7 +265,7 @@ watch(settings, () => {
   if (!settingsReady || applyingSettings) return;
   void saveSettings().catch(error => {
     ElMessage.error(axios.isAxiosError(error) && error.response?.status === 409
-      ? "设置已更新，请重新读取后保存" : "设置保存失败，请稍后重试");
+      ? "Cài đặt đã thay đổi ở cửa sổ khác. Hãy tải lại trước khi chỉnh tiếp." : "Chưa lưu được cài đặt. Hãy kiểm tra kết nối rồi thử lại.");
   });
 }, { deep: true, flush: "sync" });
 

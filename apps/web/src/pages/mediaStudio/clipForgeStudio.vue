@@ -2,9 +2,12 @@
   <div class="clipForgeStudio">
     <el-card class="clipForgeConnection" shadow="never">
       <div class="connectionGrid">
-        <label class="clipField"><span>Địa chỉ ClipForge</span>
-          <el-input v-model="address" :disabled="busy" placeholder="http://127.0.0.1:3457" @input="online = ''" />
-        </label>
+        <details>
+          <summary>Cài đặt nâng cao</summary>
+          <label class="clipField"><span>Địa chỉ kết nối</span>
+            <el-input v-model="address" :disabled="busy" placeholder="http://127.0.0.1:3457" @input="online = ''" />
+          </label>
+        </details>
         <el-button :icon="IconPlugConnected" :loading="action === 'connect'" :disabled="busy" @click="connect">Kiểm tra kết nối</el-button>
         <a href="https://github.com/xixihhhh/clipforge/releases" target="_blank" rel="noopener noreferrer">Tải ClipForge <icon-external-link :size="15" /></a>
       </div>
@@ -51,7 +54,7 @@
           <video v-if="composition?.videoUrl" :key="composition.videoUrl" :src="composition.videoUrl" controls playsinline preload="metadata" aria-label="Video sản phẩm từ ClipForge" />
           <el-alert v-if="composition?.failedVoiceSegments" type="warning" :closable="false" showIcon
             :title="`ClipForge bỏ qua giọng đọc ở ${composition.failedVoiceSegments} đoạn. Bạn vẫn có thể tải MP4 và xem phụ đề.`" />
-          <p v-if="receipt?.compositionId" class="clipId">ID lượt dựng <code>{{ receipt.compositionId }}</code></p>
+          <details v-if="receipt?.compositionId" class="clipId"><summary>Thông tin lượt dựng</summary><code>{{ receipt.compositionId }}</code></details>
           <p v-if="receipt?.savedPath" class="clipStatus" role="status">Đã lưu MP4 trong dự án.</p>
           <div class="clipActions">
             <el-button v-if="receipt?.projectId" :icon="IconRefresh" :loading="checking" :disabled="busy" @click="refreshResult(true)">Kiểm tra tiến độ</el-button>
@@ -74,6 +77,7 @@ import { IconDownload, IconExternalLink, IconFolderPlus, IconLayoutDashboard, Ic
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from "vue";
 import { useRouter } from "vue-router";
 import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
+import { currentUser } from "@/stores/multiTenant";
 import useWorkspaceFiles, { type TextSnapshot } from "@/lib/workspaceFiles";
 import { checkClipForge, clipForgeOrigin, clipForgeReceiptPath, composeClipForge, downloadClipForgeMp4, parseClipForgeReceipt,
   prepareClipForge, readClipForgeComposition, validateClipForgeImage, type ClipForgeOptions, type ClipForgeReceipt } from "./clipForgeApi";
@@ -92,6 +96,9 @@ const resolution = ref<ClipForgeOptions["resolution"]>("720p");
 const voice = ref("vi-VN-HoaiMyNeural");
 const image = shallowRef<File>();
 const imageInput = ref<HTMLInputElement>();
+const imageLoading = ref(false);
+const sourceImage = ref<{ path: string; name: string; mimeType: string }>();
+const draftKey = "macflow.productVideo.draft:" + JSON.stringify([currentUser.value?.id ?? "standalone", props.directory]);
 const photoUrl = ref("");
 const receipt = shallowRef<ClipForgeReceipt>();
 const composition = shallowRef<Awaited<ReturnType<typeof readClipForgeComposition>>>(null);
@@ -103,7 +110,7 @@ const notice = ref<{ type: "error" | "warning" | "success"; text: string }>();
 let snapshot: TextSnapshot | undefined;
 let timer: ReturnType<typeof setInterval> | undefined;
 
-const busy = computed(() => loading.value || !!action.value);
+const busy = computed(() => loading.value || imageLoading.value || !!action.value);
 const isFollowing = computed(() => {
   const stage = receipt.value?.stage;
   return (stage === "awaiting" || stage === "accepted") && composition.value?.status !== "done" && composition.value?.status !== "failed";
@@ -152,7 +159,7 @@ async function loadReceipt() {
     const value = parseClipForgeReceipt(saved.text);
     snapshot = saved;
     receipt.value = value;
-    address.value = value.origin;
+    if (!localStorageHasDraft) address.value = value.origin;
   } catch (error) {
     if (!lifetime.signal.aborted && workspaceCode(error) !== "ENOENT") { loadFailed.value = true; showError(error); }
   } finally { loading.value = false; }
@@ -172,13 +179,58 @@ async function connect() {
   finally { action.value = undefined; }
 }
 
-function selectImage(event: Event) {
+let localStorageHasDraft = false;
+async function restoreDraft() {
+  try {
+    const data = JSON.parse(localStorage.getItem(draftKey) ?? "null");
+    if (!data || typeof data !== "object") return;
+    localStorageHasDraft = true;
+    if (typeof data.address === "string") address.value = data.address.slice(0, 2048);
+    if (typeof data.title === "string") title.value = data.title.slice(0, 120);
+    if (typeof data.description === "string") description.value = data.description.slice(0, 1500);
+    if (typeof data.script === "string") script.value = data.script.slice(0, 1500);
+    if (["9:16", "16:9", "1:1"].includes(data.ratio)) ratio.value = data.ratio;
+    if (["720p", "1080p"].includes(data.resolution)) resolution.value = data.resolution;
+    if (["", "vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"].includes(data.voice)) voice.value = data.voice;
+    const photo = data.sourceImage;
+    if (photo && /^studioClipPhoto[0-9a-f]{32}\.(png|jpg|webp)$/.test(photo.path) && typeof photo.name === "string"
+      && ["image/png", "image/jpeg", "image/webp"].includes(photo.mimeType)) {
+      imageLoading.value = true;
+      const file = new File([await files.read(photo.path)], photo.name, { type: photo.mimeType });
+      validateClipForgeImage(file);
+      sourceImage.value = photo;
+      image.value = file;
+    }
+  } catch (error) { showError(error); }
+  finally { imageLoading.value = false; }
+}
+
+watch(() => ({
+  address: address.value, title: title.value, description: description.value, script: script.value,
+  ratio: ratio.value, resolution: resolution.value, voice: voice.value, sourceImage: sourceImage.value,
+}), draft => {
+  if (loading.value || imageLoading.value) return;
+  try { localStorage.setItem(draftKey, JSON.stringify(draft)); }
+  catch { notice.value = { type: "warning", text: "Chưa lưu được bản nháp trên máy. Hãy giữ trang mở để tiếp tục." }; }
+}, { flush: "sync" });
+
+async function selectImage(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
-  if (!file) return;
-  try { validateClipForgeImage(file); image.value = file; notice.value = undefined; }
-  catch (error) { showError(error); }
+  if (!file || busy.value) return;
+  try {
+    validateClipForgeImage(file);
+    imageLoading.value = true;
+    const extension = file.type === "image/jpeg" ? "jpg" : file.type.slice(6);
+    const path = "studioClipPhoto" + crypto.randomUUID().replaceAll("-", "") + "." + extension;
+    await files.write(path, file, true, AbortSignal.any([lifetime.signal, AbortSignal.timeout(60000)]));
+    imageLoading.value = false;
+    sourceImage.value = { path, name: file.name.slice(0, 300), mimeType: file.type };
+    image.value = file;
+    notice.value = undefined;
+  } catch (error) { showError(error); }
+  finally { imageLoading.value = false; }
 }
 
 async function renderVideo() {
@@ -277,6 +329,7 @@ watch(image, (file, _previous, cleanup) => {
 });
 watch(() => props.active, active => { if (active) void refreshResult(); });
 onMounted(() => {
+  void restoreDraft();
   void loadReceipt();
   timer = setInterval(() => { if (props.active && document.visibilityState !== "hidden") void refreshResult(); }, 3500);
 });

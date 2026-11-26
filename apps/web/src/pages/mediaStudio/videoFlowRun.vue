@@ -14,10 +14,10 @@
       <el-card v-if="!run" shadow="never">
         <template #header><h2>Đầu vào chung</h2></template>
         <div class="flowFields">
-          <label for="flowPrompts">Danh sách prompt</label>
+          <label for="flowPrompts">Danh sách ý tưởng</label>
           <el-input id="flowPrompts" v-model="draft.prompts" type="textarea" :rows="7" :maxlength="promptLimit"
             placeholder="[Cảnh giới thiệu sản phẩm]&#10;[Cảnh hướng dẫn sử dụng]" />
-          <p class="hint">Mỗi cặp [ ] là một mục. Luồng xử lý theo thứ tự đã nhập.</p>
+          <p class="hint">Đặt mỗi ý tưởng trong một cặp [ ]. MacFlow xử lý theo thứ tự bạn nhập.</p>
           <div v-for="group in photoGroups" :key="group.key" class="photoGroup">
             <label :for="group.key">{{ group.label }}</label>
             <input :id="group.key" type="file" :accept="Object.keys(imageExtensions).join(',')" multiple :disabled="uploading"
@@ -48,7 +48,7 @@
           <p v-if="!run" class="hint">Tách prompt → Dựng kịch bản → Tạo khung hình đầu → Tạo video</p>
           <p v-if="draftError && !run" class="error" role="alert">{{ draftError }}</p>
           <details>
-            <summary>Nâng cao</summary>
+            <summary>Cài đặt nâng cao</summary>
             <div class="advanced">
               <template v-if="!run">
                 <label for="flowTemplate">Mẫu luồng</label>
@@ -223,7 +223,7 @@ const hasPending = computed(() => !!run.value?.items.some(item => {
 }));
 
 type FlowState = StepProgress["state"];
-const stateNames: Record<FlowState, string> = { waiting: "Đang chờ", queued: "Trong hàng chờ", running: "Đang chạy", done: "Hoàn tất", review: "Chờ duyệt", error: "Lỗi", interrupted: "Gián đoạn" };
+const stateNames: Record<FlowState, string> = { waiting: "Đang chờ", queued: "Trong hàng chờ", running: "Đang chạy", done: "Hoàn thành", review: "Chờ duyệt", error: "Lỗi", interrupted: "Gián đoạn" };
 const stateType = { waiting: "info", queued: "warning", running: "warning", done: "success", review: "warning", error: "danger", interrupted: "danger" } as const;
 function stateLabel(state: FlowState) { return !working.value && (state === "running" || state === "queued") ? "Cần tiếp tục" : stateNames[state]; }
 function isError(item: FlowItem, stage: FlowStage) { return ["error", "interrupted"].includes(item.stages[stage].state); }
@@ -303,7 +303,7 @@ async function startBatch() {
   try {
     const prompts = splitFlowPrompts(draft.value.prompts);
     if (draft.value.templateId && !templates.value.some(template => template.id === draft.value.templateId)) {
-      throw new Error("Mẫu đã chọn không còn khả dụng. Hãy chọn lại mẫu trong phần Nâng cao.");
+      throw new Error("Mẫu đã chọn không còn khả dụng. Hãy chọn lại mẫu trong phần Cài đặt nâng cao.");
     }
     const template = selectedTemplate.value;
     const missing = modelKinds.find(kind => {
@@ -311,7 +311,7 @@ async function startBatch() {
       const available = modelsFor(kind.key);
       return key ? !available.some(model => getNodeModelKey(model) === key) : !available.length;
     });
-    if (missing) throw new Error("Chưa có mô hình " + missing.label + " phù hợp. Hãy chọn trong phần Nâng cao hoặc cài đặt mô hình.");
+    if (missing) throw new Error("Chưa có mô hình " + missing.label + " phù hợp. Hãy chọn trong phần Cài đặt nâng cao hoặc cài đặt mô hình.");
     selectedId.value = "";
     await start(makeVideoRun(draft.value, template, prompts));
   } catch (error) { actionError.value = videoFlowError(error); }

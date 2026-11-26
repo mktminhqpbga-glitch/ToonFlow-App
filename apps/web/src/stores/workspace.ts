@@ -19,10 +19,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   async function addProject(path: string, name?: string, signal?: AbortSignal, previousDirectory = path) {
     const { data } = await axios.get<{ code: number; data?: { directory: string }; message?: string }>("/api/workspaces/check", {
-      params: { directory: path }, headers: { "x-toonflow-workspace": "1" }, signal,
+      params: { directory: path }, headers: { "x-toonflow-workspace": "1" }, timeout: 15000, signal,
     });
     signal?.throwIfAborted();
-    if (data.code !== 200 || !data.data?.directory) throw new Error(data.message || "工作目录校验失败");
+    if (data?.code !== 200 || !data.data?.directory) throw new Error(data?.message || "Không mở được thư mục dự án. Hãy kiểm tra lại đường dẫn.");
     const checkedDirectory = data.data.directory;
     const existing = projectList.value.find(project => project.directory === previousDirectory)
       ?? projectList.value.find(project => project.directory === checkedDirectory);

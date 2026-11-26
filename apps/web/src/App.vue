@@ -2,10 +2,12 @@
   <el-config-provider :locale="elementLocale">
     <config-provider :globalConfig="tdesignLocale">
       <router-view v-slot="{ Component: currentComponent }">
-        <transition name="el-fade-in" mode="out-in">
-          <component :is="currentComponent" />
-        </transition>
+        <pageRecovery :key="route.path"><component :is="currentComponent" /></pageRecovery>
       </router-view>
+      <el-alert v-if="navigationError || offline" class="connectionNotice" :title="navigationError ? 'Chưa mở được trang mới. Hãy thử tải lại.' : 'Đang mất kết nối. Tác vụ đã gửi vẫn được theo dõi khi kết nối trở lại.'" type="warning"
+        :closable="false" showIcon>
+        <el-button v-if="navigationError" size="small" @click="reloadPage">Tải lại trang</el-button>
+      </el-alert>
       <loadingPage v-model:visible="workspaceStore.projectLoadingVisible" v-model:drawn="workspaceStore.projectLoadingDrawn" :active="workspaceStore.projectLoading" />
       <ffmpegRequired v-if="currentUser?.role !== 'user'" />
       <updateBox
@@ -41,6 +43,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, shallowRef, watch, watchEffect } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessage, useZIndex } from "element-plus";
 import { elementLocales } from "@toonflow/i18n/elementPlus";
 import { ConfigProvider, type GlobalConfigProvider } from "tdesign-vue-next";
@@ -60,6 +63,7 @@ import { saveSettings, settings, uiSettings } from "@/stores/settings";
 import { desktopUpdateSnapshot, stopDesktopUpdateObservation } from "@/stores/desktopUpdate";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser } from "@/stores/multiTenant";
+import pageRecovery from "@/components/pageRecovery.vue";
 import loadingPage from "@/components/loadingPage.vue";
 import { useMcpControl } from "@/lib/mcpControl";
 import ffmpegRequired from "@/components/settings/ffmpegRequired.vue";
@@ -68,6 +72,21 @@ import "element-plus/theme-chalk/dark/css-vars.css";
 
 if (currentUser.value?.role !== "user") useMcpControl();
 const workspaceStore = useWorkspaceStore();
+const route = useRoute();
+const router = useRouter();
+const navigationError = ref(false);
+const offline = ref(!navigator.onLine);
+const updateOnline = () => { offline.value = !navigator.onLine; };
+window.addEventListener("online", updateOnline);
+window.addEventListener("offline", updateOnline);
+const stopNavigationError = router.onError(error => { console.error("Không mở được trang MacFlow", error); navigationError.value = true; });
+watch(() => route.path, () => { navigationError.value = false; });
+function reloadPage() { window.location.reload(); }
+onBeforeUnmount(() => {
+  window.removeEventListener("online", updateOnline);
+  window.removeEventListener("offline", updateOnline);
+  stopNavigationError();
+});
 
 // ACT: TDesign 缺少的语言使用英语基底，聊天控件由应用字典补齐。
 const tdesignLocales = {
@@ -160,6 +179,8 @@ html {
   background-color: var(--el-bg-color);
   color: var(--el-text-color-primary);
 }
+
+.connectionNotice { position: fixed; inset-inline-end: .65rem; bottom: .65rem; width: min(25rem, calc(100% - 1.3rem)); z-index: 3000; }
 
 .installFailureContent {
   .failureMessage {

@@ -13,9 +13,9 @@ export const useHelloStore = defineStore("hello", () => {
     } catch {
       // ACT: 旧缓存不可读时仍可从已配置的模型恢复；桌面随机端口之间无法迁移 localStorage。
     }
-    if (previouslyCompleted || customProviders.value.some(provider => typeof provider.apiKey === "string" && provider.apiKey.trim() && provider.models.length))
-      await complete();
-    return completed.value;
+    if (!previouslyCompleted && !customProviders.value.some(provider => typeof provider.apiKey === "string" && provider.apiKey.trim() && provider.models.length)) return false;
+    void complete().catch(() => {}); // Thông tin cũ đủ để vào trang Tổng quan kể cả khi lưu tạm thời thất bại.
+    return true;
   }
 
   async function complete() {

@@ -4,7 +4,7 @@ import { kindLabels, getFlowIssues, studioFlowSchema, type StepKind, type Studio
 export const flowId = "video_factory_sequential_flow";
 export const flowStages = ["prepare", "script", "frame", "video"] as const;
 export type FlowStage = typeof flowStages[number];
-export const stageLabels = { prepare: "Tách prompt", script: "Dựng kịch bản", frame: "Tạo khung hình đầu", video: "Tạo video" };
+export const stageLabels = { prepare: "Tách ý tưởng", script: "Dựng kịch bản", frame: "Tạo khung hình đầu", video: "Tạo video" };
 export const runPath = ".macflowVideoFlow.json";
 export const runMaxBytes = 12 * 1024 * 1024;
 export const promptLimit = 100000;

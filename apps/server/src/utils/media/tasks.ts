@@ -426,8 +426,8 @@ function publicData(task: MediaTask) {
 }
 
 async function snapshot(task: MediaTask, owner?: AuthIdentity | null) {
-  const { taskId, state, nodeId, canvasPath, result, cancelDisposition } = task.record;
-  return { taskId, state, resumable: await resumable(task), nodeId, canvasPath,
+  const { taskId, state, nodeId, canvasPath, result, cancelDisposition, updatedAt } = task.record;
+  return { taskId, state, updatedAt, resumable: await resumable(task), nodeId, canvasPath,
     ...(owner?.role === "user" ? {} : { providerData: publicData(task) }), ...(result ? { result } : {}),
     ...(cancelDisposition ? { cancelDisposition } : {}) };
 }
@@ -690,11 +690,28 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
   return studioType ? locked(studioQueueKey(ownerKey, studioType), submit) : submit();
 }
 
+export async function retryStudio(cwd: string, previousTaskId: string, taskId: string, owner?: AuthIdentity | null, authorize?: (providerId: string) => void) {
+  requireOwner(owner);
+  if (previousTaskId.toLowerCase() === taskId.toLowerCase()) invalid("Lần chạy lại cần mã tác vụ mới.");
+  cwd = await realpath(cwd);
+  const key = taskPath(cwd, previousTaskId);
+  const record = await locked(key, async () => {
+    const task = await load(cwd, previousTaskId, key, owner);
+    if (!task?.record.studioQueue || !task.record.request || task.record.ownerUserId !== (owner?.role === "user" ? owner.id : undefined)) {
+      invalid("Không tìm thấy tác vụ có thể chạy lại trong dự án này.", 404);
+    }
+    if (task.record.state !== "failed") invalid("Tác vụ chưa xác nhận thất bại. Hãy kiểm tra tiến độ trước.", 409);
+    return { mediaType: studioMediaTypeSchema.parse(task.record.mediaType), request: task.record.request };
+  });
+  authorize?.(record.request.providerId);
+  return start(cwd, taskId, record.mediaType, record.request, {}, owner, true);
+}
+
 export async function status(cwd: string, taskIds: string[], resume = false, owner?: AuthIdentity | null) {
   requireOwner(owner);
   cwd = await realpath(cwd);
   await restoreStudioQueues(cwd, owner);
-  return Promise.all(taskIds.map(taskId => {
+  const results = await Promise.allSettled(taskIds.map(taskId => {
     const key = taskPath(cwd, taskId);
     return locked(key, async () => {
       const task = await load(cwd, taskId, key, owner);
@@ -736,6 +753,12 @@ export async function status(cwd: string, taskIds: string[], resume = false, own
       return snapshot(task, owner);
     });
   }));
+  return results.map((item, index) => {
+    if (item.status === "fulfilled") return item.value;
+    if ([401, 403].includes((item.reason as { status?: number } | null)?.status ?? 0)) throw item.reason;
+    return { taskId: taskIds[index]!, state: "interrupted" as const, resumable: false, statusUnavailable: true,
+      result: error<GeneratedMedia[]>("Chưa đọc được tiến độ của tác vụ này. Hãy kiểm tra lại sau.", null, 503) };
+  });
 }
 
 export async function cancel(cwd: string, taskIds: string[], owner?: AuthIdentity | null) {

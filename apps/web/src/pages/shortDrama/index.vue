@@ -31,7 +31,9 @@
       </el-alert>
 
       <template v-else-if="ready">
-        <el-alert v-if="message" class="notice" :title="message.text" :type="message.type" :closable="false" showIcon />
+        <el-alert v-if="message" class="notice" :title="message.text" :type="message.type" :closable="false" showIcon>
+          <el-button v-if="draftConflict" size="small" :disabled="busy" @click="openSavedBoard">Mở bản đã lưu trong dự án</el-button>
+        </el-alert>
         <div class="workArea">
           <el-card class="scriptCard" shadow="never">
             <template #header><h2><icon-file-text :size="20" /> Kịch bản</h2></template>
@@ -102,7 +104,7 @@
           </el-card>
         </div>
         <footer class="outputBar">
-          <span class="muted" role="status">{{ dirty ? "Có thay đổi chưa lưu" : "Bảng phân cảnh trong dự án" }}</span>
+          <span class="muted" role="status">{{ dirty ? (draftStored ? "Đã lưu nháp trên máy" : "Có thay đổi chưa lưu") : "Bảng phân cảnh trong dự án" }}</span>
           <div class="buttonRow">
             <el-button :icon="IconDownload" :disabled="busy || !hasContent" @click="downloadBoard">Tải Markdown</el-button>
             <el-button type="primary" plain :icon="IconLayoutDashboard" :disabled="busy || !hasContent" @click="sendToCanvas">Đưa vào Canvas</el-button>
@@ -145,6 +147,7 @@ import { queueStudioPrompt } from "@/lib/studioPromptTransfer";
 import saveFile from "@/lib/saveFile";
 import useWorkspaceFiles, { type TextSnapshot } from "@/lib/workspaceFiles";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { currentUser } from "@/stores/multiTenant";
 import { dramaPath, emptyBoard, huobaoStoryboardUrl, importByteLimit, importHuobaoScenes, newScene, readDramaBoard,
   readGeneratedScenes, readTranslatedScene, sceneLimit, scriptLimit, splitSystemPrompt, storyboardMarkdown, translateSystemPrompt, type DramaScene } from "./shortDrama";
 
@@ -190,7 +193,34 @@ function errorText(error: unknown) {
 function errorCode(error: unknown) {
   return axios.isAxiosError<{ data?: { code?: string } }>(error) ? error.response?.data?.data?.code : undefined;
 }
-function markDirty() { dirty.value = true; }
+const draftKey = (target: string) => "macflow.storyboard.draft:" + JSON.stringify([currentUser.value?.id ?? "standalone", target]);
+const draftStored = ref(false);
+const draftConflict = ref(false);
+let draftBase = "";
+function markDirty() {
+  dirty.value = true;
+  try {
+    localStorage.setItem(draftKey(directory.value), JSON.stringify({
+      revision: draftConflict.value ? draftBase : snapshot?.revision ?? "", text: JSON.stringify(board.value), activeId: activeId.value,
+    }));
+    draftStored.value = true;
+  } catch { draftStored.value = false; }
+}
+
+function restoreDraft(target: string) {
+  try {
+    const entry = JSON.parse(localStorage.getItem(draftKey(target)) ?? "null") as { revision: string; text: string; activeId?: string } | null;
+    if (!entry || typeof entry.text !== "string") return;
+    const recovered = readDramaBoard(entry.text);
+    if (JSON.stringify(recovered) === JSON.stringify(board.value)) return;
+    draftBase = typeof entry.revision === "string" ? entry.revision : "";
+    draftConflict.value = draftBase !== (snapshot?.revision ?? "");
+    board.value = recovered;
+    activeId.value = recovered.scenes.find(scene => scene.id === entry.activeId)?.id ?? recovered.scenes[0]?.id ?? "";
+    dirty.value = draftStored.value = true;
+    if (draftConflict.value) message.value = { type: "info", text: "Dự án đã đổi ở cửa sổ khác. Bạn có thể tải bản nháp này để giữ nội dung." };
+  } catch { /* Nội dung dự án vẫn mở được nếu bản nháp cũ hỏng. */ }
+}
 
 async function loadBoard() {
   const target = directory.value;
@@ -201,7 +231,7 @@ async function loadBoard() {
   message.value = undefined;
   loadError.value = "";
   loading.value = !!target;
-  dirty.value = false;
+  dirty.value = draftStored.value = draftConflict.value = false;
   board.value = emptyBoard();
   activeId.value = "";
   if (!target) return;
@@ -212,17 +242,32 @@ async function loadBoard() {
     snapshot = saved;
     activeId.value = board.value.scenes[0]?.id ?? "";
     loadedDirectory.value = target;
+    restoreDraft(target);
   } catch (error) {
     if (version !== loadVersion) return;
-    if (errorCode(error) === "ENOENT") loadedDirectory.value = target;
+    if (errorCode(error) === "ENOENT") { loadedDirectory.value = target; restoreDraft(target); }
     else loadError.value = `Không mở được bảng phân cảnh. ${errorText(error)}`;
   } finally {
     if (version === loadVersion) loading.value = false;
   }
 }
 
+async function openSavedBoard() {
+  const target = directory.value;
+  const accepted = await ElMessageBox.confirm("Bạn có thể tải bản nháp trước để giữ nội dung. Mở bản đã lưu sẽ bỏ bản nháp đang sửa trên máy này.",
+    "Mở bản đã lưu?", { confirmButtonText: "Mở bản đã lưu", cancelButtonText: "Giữ bản nháp" }).then(() => true, () => false);
+  if (!accepted || target !== directory.value) return;
+  try { localStorage.removeItem(draftKey(target)); }
+  catch { return; }
+  await loadBoard();
+}
+
 async function saveBoard() {
   if (!ready.value || busy.value) return false;
+  if (draftConflict.value) {
+    message.value = { type: "error", text: "Dự án đã đổi ở cửa sổ khác. Hãy tải bản nháp đang mở để giữ nội dung của bạn." };
+    return false;
+  }
   if (!dirty.value) return true;
   const target = directory.value;
   const version = loadVersion;
@@ -241,7 +286,12 @@ async function saveBoard() {
     }
     if (version !== loadVersion) return false;
     snapshot = saved;
-    dirty.value = false;
+    dirty.value = draftStored.value = false;
+    try {
+      const key = draftKey(target);
+      const draft = JSON.parse(localStorage.getItem(key) ?? "null");
+      if (draft?.text === JSON.stringify(board.value)) localStorage.removeItem(key);
+    } catch { /* Đã lưu thành công vào dự án. */ }
     message.value = { type: "success", text: "Đã lưu bảng phân cảnh trong dự án." };
     return true;
   } catch (error) {
@@ -318,7 +368,7 @@ async function runModel(kind: "split" | "translate", prompt: string, accept: (te
   message.value = undefined;
   try {
     const answer = await ai.generate({ ...getNodeModelIdentity(model), directory: directory.value, prompt,
-      systemPrompt: kind === "split" ? splitSystemPrompt : translateSystemPrompt, signal: owner.signal });
+      systemPrompt: kind === "split" ? splitSystemPrompt : translateSystemPrompt, signal: AbortSignal.any([owner.signal, AbortSignal.timeout(120000)]) });
     owner.signal.throwIfAborted();
     if (version === loadVersion) accept(answer.text);
   } catch (error) {
@@ -402,7 +452,7 @@ onMounted(() => void loadModels());
 onScopeDispose(() => { loadVersion++; generation.value?.abort(); });
 onBeforeRouteLeave(async () => {
   if (action.value) return false;
-  if (!dirty.value) return true;
+  if (!dirty.value || draftStored.value) return true;
   return ElMessageBox.confirm("Bảng phân cảnh còn thay đổi chưa lưu.", "Rời trang Phim ngắn?",
     { type: "warning", confirmButtonText: "Rời trang", cancelButtonText: "Tiếp tục chỉnh" }).then(() => true, () => false);
 });

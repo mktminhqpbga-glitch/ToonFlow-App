@@ -5,7 +5,7 @@ import { buildFlowPrompt, flowFileSchema, type FlowItem, type FlowMediaFile, typ
 type MediaStatus = {
   taskId: string;
   state: "queued" | "running" | "interrupted" | "succeeded" | "failed" | "cancelled";
-  resumable?: boolean;
+  resumable?: boolean; statusUnavailable?: boolean;
   result?: { code: number; message?: string; data?: FlowMediaFile[] | null };
 };
 export class VideoFlowTaskError extends Error {
@@ -97,7 +97,7 @@ export async function finishFlowMedia(directory: string, attempt: MediaAttempt, 
     signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
   }).then(result => {
     const value = result.find(task => task.taskId === attempt.id);
-    if (!value) throw new Error("Máy chủ trả thiếu trạng thái tác vụ.");
+    if (!value || value.statusUnavailable) throw new Error("Chưa kiểm tra được tiến độ của tác vụ này.");
     return value;
   });
   async function submit() {
@@ -149,7 +149,7 @@ export async function finishFlowMedia(directory: string, attempt: MediaAttempt, 
         return file.data;
       }
       if (state === "failed" || state === "cancelled") {
-        throw new VideoFlowTaskError(state === "cancelled" ? "Tác vụ đã bị hủy. Bạn có thể chạy lại bước này." : describeStudioError(result?.message));
+        throw new VideoFlowTaskError(state === "cancelled" ? "Tác vụ đã bị hủy. Bạn có thể chạy lại bước này." : describeStudioError(result?.message, result?.code));
       }
       if (state === "interrupted") {
         if (result?.code === 404) {
@@ -158,7 +158,7 @@ export async function finishFlowMedia(directory: string, attempt: MediaAttempt, 
             throw new VideoFlowTaskError("Máy chủ chưa thấy tác vụ. Bấm “Kiểm tra lại” để dùng lại mã đã lưu." + (submissionIssue ? " " + submissionIssue : ""), true);
           }
         } else if (!resumable) {
-          throw new VideoFlowTaskError("Chưa xác nhận được kết quả từ nhà cung cấp. " + describeStudioError(result?.message), true, true);
+          throw new VideoFlowTaskError("Chưa xác nhận được kết quả từ nhà cung cấp. " + describeStudioError(result?.message, result?.code), true, true);
         } else {
           tryResume = true;
           resumeSince ||= Date.now();

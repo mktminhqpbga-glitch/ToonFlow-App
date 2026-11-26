@@ -136,8 +136,9 @@ export async function listStudioHistory(directory: string, owner?: AuthIdentity 
   if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink())
     throw Object.assign(new Error("Thư mục lịch sử tác vụ không hợp lệ."), { status: 409 });
   const taskFiles = await readdir(root, { withFileTypes: true });
-  const candidates = await Promise.all(taskFiles.filter(entry => entry.isFile() && /^task[a-f0-9]{32}\.json$/.test(entry.name))
+  const scanned = await Promise.allSettled(taskFiles.filter(entry => entry.isFile() && /^task[a-f0-9]{32}\.json$/.test(entry.name))
     .map(async entry => ({ name: entry.name, updatedAt: (await lstat(join(root, entry.name))).mtimeMs })));
+  const candidates = scanned.flatMap(item => item.status === "fulfilled" ? [item.value] : []);
   candidates.sort((left, right) => right.updatedAt - left.updatedAt);
   const limit = options.limit ?? 50;
   const offset = options.offset ?? 0;

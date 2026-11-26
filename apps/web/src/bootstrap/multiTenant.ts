@@ -10,7 +10,14 @@ import { currentUser, publicWeb, hostWeb } from "@/stores/multiTenant";
 
 export async function initializeMultiTenant(): Promise<{ session: UserSession; app: App<Element> | undefined }> {
   const hostWindow = window as Window & { toonflowHostReady?: Promise<void> };
-  await hostWindow.toonflowHostReady;
+  if (hostWindow.toonflowHostReady) {
+    let timer: ReturnType<typeof setTimeout>;
+    try {
+      await Promise.race([hostWindow.toonflowHostReady, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Chưa kết nối được với máy chạy MacFlow.")), 15000);
+      })]);
+    } finally { clearTimeout(timer!); }
+  }
   const session = await http<UserSession>({ method: "GET", url: "/api/multiTenant/user/session", headers: { "Accept-Language": locale.value } });
   currentUser.value = session.user;
   publicWeb.value = session.publicWeb;

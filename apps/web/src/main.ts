@@ -12,7 +12,7 @@ import { createCreationApp } from "@/bootstrap/creation";
 import { actualPlatform } from "@/lib/platform";
 import { getMissingBrowserFeatures } from "@/lib/browserCapabilities";
 import { publicWeb } from "@/stores/multiTenant";
-import { detectLocale, locale, setLocale, translate } from "@toonflow/i18n/vue";
+import { locale, setLocale, translate } from "@toonflow/i18n/vue";
 
 // Khi chưa tải cài đặt của người dùng, hiển thị tiếng Việt mặc định.
 // Nếu người dùng đã chọn "Hệ thống" hoặc một ngôn ngữ khác, cấu hình sau đó sẽ ghi đè.
@@ -31,7 +31,7 @@ async function notifyDesktopReady(failed = false) {
   const response = await fetch("/api/desktop/ready", {
     method: "POST",
     headers: { "x-toonflow-desktop": "1", "Content-Type": "application/json", "Accept-Language": locale.value },
-    body: JSON.stringify({ failed }),
+    body: JSON.stringify({ failed }), signal: AbortSignal.timeout(12000),
   });
   if (!response.ok) throw new Error((await response.json()).message || `Không thể thông báo trạng thái sẵn sàng cho desktop (HTTP ${response.status})`);
 }
@@ -48,9 +48,13 @@ async function initialize() {
   await nextTick();
   // ACT: 隐藏的 WebView 不依赖 requestAnimationFrame；等待首页挂载和页面资源就绪。
   if (document.readyState !== "complete") {
-    await new Promise<void>((resolve) => window.addEventListener("load", () => resolve(), { once: true }));
+    await new Promise<void>(resolve => {
+      const ready = () => { clearTimeout(timer); window.removeEventListener("load", ready); resolve(); };
+      const timer = setTimeout(ready, 12000);
+      window.addEventListener("load", ready, { once: true });
+    });
   }
-  await notifyDesktopReady();
+  await notifyDesktopReady().catch(error => console.error("Không xác nhận được trạng thái mở ứng dụng", error));
 }
 
 void initialize().catch(async (error) => {
@@ -63,7 +67,7 @@ void initialize().catch(async (error) => {
     disconnecting.value = true;
     recoveryError.value = "";
     try {
-      const response = await fetch("/api/connection/disconnect", { method: "POST", headers: { "x-toonflow-workspace": "1" } });
+      const response = await fetch("/api/connection/disconnect", { method: "POST", headers: { "x-toonflow-workspace": "1" }, signal: AbortSignal.timeout(15000) });
       if (!response.ok) throw new Error((await response.json()).message || "Không thể chuyển lại sang chế độ trên máy; hãy thử lại");
       if ((await response.json()).restart === "mobile") window.location.href = "toonflow://restart";
     } catch (cause) {
@@ -75,7 +79,7 @@ void initialize().catch(async (error) => {
     render: () => h(ElResult, {
       icon: "error",
       title: requiresWebView2Update ? translate("需要更新 WebView2") : requiresMobileWebViewUpdate ? "Cần cập nhật trình duyệt hệ thống" : translate("启动失败"),
-      subTitle: error instanceof Error ? error.message : translate("无法加载应用，请重试。"),
+      subTitle: requiresWebView2Update || requiresMobileWebViewUpdate ? (error as Error).message : "Chưa mở được MacFlow. Hãy kiểm tra kết nối với máy đang chạy ứng dụng rồi thử lại.",
     }, {
       extra: () => [h(ElButton, {
         type: "primary",
