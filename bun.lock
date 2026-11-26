@@ -654,7 +654,7 @@
     },
     "packages/nodes/videoMergeNode": {
       "name": "@toonflow/node-video-merge",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@tabler/icons-vue": "^3.46.0",
       },

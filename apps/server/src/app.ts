@@ -71,7 +71,7 @@ export async function createApp({
     // ACT: 更新旧版安装中的内置模型选择器，保留自定义节点和节点配置。
     if (pluginRevision === undefined) {
       await initializePlugins(nodeDirectory, nodesRoot, modelPickerNodes, "1", "modelPickerRevision");
-      await initializePlugins(nodeDirectory, nodesRoot, ["videoMergeNode.umd.js"], undefined, "videoMergeNodeInitialized");
+      await initializePlugins(nodeDirectory, nodesRoot, ["videoMergeNode.umd.js"], "2", "videoMergeNodeRevision");
     }
   }
   if (dataDirectory && extRoot) {
