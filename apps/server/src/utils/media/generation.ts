@@ -76,27 +76,37 @@ function hasMuseImageOutputSizes(providerId: string, modelId: string) {
 export async function listMediaModels(): Promise<MediaModel[]> {
   if (modelGateway.enabled()) return modelGateway.catalog(["image", "video", "audio"]);
   const installedProviders = await listMediaProviders();
+  const configs = record(conf.get("settings", {}).mediaProviderConfigs);
   installedProviders.sort((left, right) => Number(right.id === "toonflow") - Number(left.id === "toonflow"));
-  const installedModels = installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => provider.models.flatMap(model => {
-    if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
-    const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
-    const imageSizes = imageOptions(Array.isArray(model.imageSizes) ? model.imageSizes : builtIn?.imageSizes, /^[^\u0000-\u001f\u007f]+$/);
-    const localImageSizing = model.type === "image" && hasMuseImageOutputSizes(provider.id, model.id);
-    return [{
-      providerId: provider.id, providerLabel: provider.label, modelId: model.id, label: model.label, type: model.type,
-      supportsPrice: "supportsPrice" in provider && provider.supportsPrice === true,
-      rules: model.rules,
-      mode: model.mode, durationResolutionMap: model.durationResolutionMap, audio: model.audio,
-      ...(model.type === "audio" ? { voices: model.voices } : {}),
-      ...(model.type === "image" ? {
-        imageSizes: localImageSizing ? [...new Set(["auto", ...museImageOutputSizes.keys(), ...(imageSizes ?? [])])] : imageSizes,
-        ...(localImageSizing ? { localImageSizing } : {}),
-      } : {}),
-      ...(model.type !== "audio" ? {
-        imageRatios: imageOptions(Array.isArray(model.imageRatios) ? model.imageRatios : builtIn?.imageRatios, /^[1-9]\d{0,3}:[1-9]\d{0,3}$/),
-      } : {}),
-    } as MediaModel];
-  }));
+  const installedModels = installedProviders.filter(provider => provider.id !== "toonflow" || !!getAccountProvider()).flatMap(provider => {
+    const config = record(configs[provider.id]);
+    const secrets = provider.rules.filter(rule => typeof rule.field === "string" && (record(rule.props).type === "password" || rule.field === "apiKey"));
+    const configured = !secrets.length || secrets.some(rule => {
+      const value = config[rule.field as string] ?? rule.value;
+      return typeof value === "string" && !!value.trim();
+    });
+    return provider.models.flatMap(model => {
+      if (model.type !== "image" && model.type !== "video" && model.type !== "audio") return [];
+      const builtIn = (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === model.id);
+      const imageSizes = imageOptions(Array.isArray(model.imageSizes) ? model.imageSizes : builtIn?.imageSizes, /^[^\u0000-\u001f\u007f]+$/);
+      const localImageSizing = model.type === "image" && hasMuseImageOutputSizes(provider.id, model.id);
+      return [{
+        providerId: provider.id, providerLabel: provider.label, modelId: model.id, label: model.label, type: model.type,
+        configured,
+        supportsPrice: "supportsPrice" in provider && provider.supportsPrice === true,
+        rules: model.rules,
+        mode: model.mode, durationResolutionMap: model.durationResolutionMap, audio: model.audio,
+        ...(model.type === "audio" ? { voices: model.voices } : {}),
+        ...(model.type === "image" ? {
+          imageSizes: localImageSizing ? [...new Set(["auto", ...museImageOutputSizes.keys(), ...(imageSizes ?? [])])] : imageSizes,
+          ...(localImageSizing ? { localImageSizing } : {}),
+        } : {}),
+        ...(model.type !== "audio" ? {
+          imageRatios: imageOptions(Array.isArray(model.imageRatios) ? model.imageRatios : builtIn?.imageRatios, /^[1-9]\d{0,3}:[1-9]\d{0,3}$/),
+        } : {}),
+      } as MediaModel];
+    });
+  });
   const models = await Promise.all(installedModels.map(async model => {
     const { providerId } = model;
     if (!isMac2ApiProvider(providerId)) return model;
@@ -108,7 +118,7 @@ export async function listMediaModels(): Promise<MediaModel[]> {
       && item.provider === mac2ApiProviders[providerId].upstream);
     if (discovery.capabilities && !capability) return undefined;
     const modes = capability?.modes?.map(mode => mode.startsWith("imageReference:") ? [mode] : mode);
-    return { ...model, mode: modes ?? model.mode, referenceLimits: {
+    return { ...model, configured: capability?.ready ?? true, mode: modes ?? model.mode, referenceLimits: {
       maxReferences: capability?.maxReferences ?? (model.providerId === "mac2ApiMuse" ? 4 : 1),
       maxReferenceBytes: capability?.maxReferenceBytes ?? maxLegacyReferenceBytes,
       allowedMimeTypes: capability?.allowedMimeTypes ?? imageMimeTypes,

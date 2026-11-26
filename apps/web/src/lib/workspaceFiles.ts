@@ -113,10 +113,10 @@ export default function useWorkspaceFiles(directory?: MaybeRefOrGetter<string | 
     return data.data;
   }
 
-  async function writeTextSnapshot(path: string, text: string, snapshot: Pick<TextSnapshot, "revision" | "encoding">) {
+  async function writeTextSnapshot(path: string, text: string, snapshot: Pick<TextSnapshot, "revision" | "encoding">, signal?: AbortSignal) {
     const directory = getDirectory();
     const { data } = await client.put<{ data: { revision: string } }>("/write", text, {
-      params: { directory, path, expectedRevision: snapshot.revision, encoding: snapshot.encoding },
+      params: { directory, path, expectedRevision: snapshot.revision, encoding: snapshot.encoding }, signal,
       headers: { "Content-Type": "application/octet-stream" },
     });
     invalidateUrls(directory, path);
@@ -158,8 +158,8 @@ export default function useWorkspaceFiles(directory?: MaybeRefOrGetter<string | 
     invalidateUrls(directory, path);
   }
 
-  async function mkdir(path: string) {
-    await client.post("/mkdir", { directory: getDirectory(), path });
+  async function mkdir(path: string, signal?: AbortSignal) {
+    await client.post("/mkdir", { directory: getDirectory(), path }, { signal });
   }
 
   // ACT: 当前目录逐次读取；跨 await 或防抖的操作传入目录字符串，固定本次目标。

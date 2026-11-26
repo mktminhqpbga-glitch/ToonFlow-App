@@ -693,6 +693,7 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
 export async function status(cwd: string, taskIds: string[], resume = false, owner?: AuthIdentity | null) {
   requireOwner(owner);
   cwd = await realpath(cwd);
+  await restoreStudioQueues(cwd, owner);
   return Promise.all(taskIds.map(taskId => {
     const key = taskPath(cwd, taskId);
     return locked(key, async () => {

@@ -22,14 +22,14 @@ const stepSchema = z.object({
   options: z.object({ ratio: z.string().optional(), size: z.string().optional(), duration: z.number().positive().optional(), resolution: z.string().optional() }),
 });
 
-const flowSchema = z.object({ id: z.uuid(), name: z.string(), nextStep: z.number().int().positive(), steps: z.array(stepSchema) })
+export const studioFlowSchema = z.object({ id: z.uuid(), name: z.string(), nextStep: z.number().int().positive(), steps: z.array(stepSchema) })
   .refine(flow => new Set(flow.steps.map(step => step.id)).size === flow.steps.length
     && flow.steps.every(step => Number(step.id.slice(4)) < flow.nextStep));
-const librarySchema = z.object({ version: z.literal(1), templates: z.array(flowSchema) })
+const librarySchema = z.object({ version: z.literal(1), templates: z.array(studioFlowSchema) })
   .refine(library => new Set(library.templates.map(flow => flow.id)).size === library.templates.length);
 
 export type FlowStep = z.infer<typeof stepSchema>;
-export type StudioFlow = z.infer<typeof flowSchema>;
+export type StudioFlow = z.infer<typeof studioFlowSchema>;
 export type StepKind = FlowStep["kind"];
 export type StudioKind = Exclude<StepKind, "text">;
 export const flowLibraryPath = ".macflowStudioFlows.json";

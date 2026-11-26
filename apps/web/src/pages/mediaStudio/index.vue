@@ -20,7 +20,8 @@
         <div>
           <div class="studioEyebrow">MACFLOW STUDIO / {{ kind === "image" ? "IMAGE" : "VIDEO" }}</div>
           <h1>{{ kind === "image" ? "Xưởng tạo ảnh" : "Xưởng tạo video" }}</h1>
-          <p v-if="showClipForge">Dựng MP4 từ ảnh sản phẩm và lời thoại tiếng Việt.</p>
+          <p v-if="showVideoFlow">Chạy từng prompt từ kịch bản, khung hình đầu đến video.</p>
+          <p v-else-if="showClipForge">Dựng MP4 từ ảnh sản phẩm và lời thoại tiếng Việt.</p>
           <p v-else>Biến mô tả thành {{ kind === "image" ? "hình ảnh" : "video" }} bằng mô hình đã cài trong MacFlow.</p>
         </div>
         <div v-if="!showClipForge" class="studioHeaderActions">
@@ -30,8 +31,9 @@
       </header>
 
       <nav v-if="kind === 'video'" class="videoModes" aria-label="Cách tạo video">
-        <el-button :type="showClipForge ? 'default' : 'primary'" :plain="!showClipForge" :aria-pressed="!showClipForge" @click="switchClipForge(false)">Tạo video bằng AI</el-button>
-        <el-button :type="showClipForge ? 'primary' : 'default'" :plain="showClipForge" :aria-pressed="showClipForge" @click="switchClipForge(true)">Video sản phẩm · ClipForge</el-button>
+        <el-button :type="studioMode === 'single' ? 'primary' : 'default'" :plain="studioMode !== 'single'" :aria-pressed="studioMode === 'single'" @click="switchStudio('single')">Tạo video bằng AI</el-button>
+        <el-button :type="showVideoFlow ? 'primary' : 'default'" :plain="!showVideoFlow" :aria-pressed="showVideoFlow" @click="switchStudio('flow')">Tự động theo luồng</el-button>
+        <el-button :type="showClipForge ? 'primary' : 'default'" :plain="!showClipForge" :aria-pressed="showClipForge" @click="switchStudio('clipForge')">Video sản phẩm · ClipForge</el-button>
       </nav>
 
       <el-alert v-if="!directory" type="warning" :closable="false" showIcon>
@@ -42,7 +44,10 @@
 
       <clipForgeStudio v-if="kind === 'video' && directory && clipForgeOpened" v-show="showClipForge" :key="directory" :directory="directory" :active="showClipForge" />
 
-      <div v-show="!showClipForge" class="studioColumns">
+      <videoFlowRun v-if="kind === 'video' && directory && videoFlowOpened" v-show="showVideoFlow" :key="JSON.stringify([directory, ownerId])"
+        :directory="directory" :ownerId="ownerId" :catalogRevision="flowCatalogRevision" @settings="openMediaSettings" />
+
+      <div v-show="studioMode === 'single'" class="studioColumns">
         <section class="studioComposer" aria-label="Tạo nội dung">
           <el-card shadow="never">
             <template #header><div class="studioCardHeading"><span><icon-sparkles :size="19" /> Tạo {{ kind === "image" ? "ảnh mới" : "video mới" }}</span><el-tag size="small" type="info">1 kết quả / tác vụ</el-tag></div></template>
@@ -141,7 +146,7 @@
                 <span>{{ statusText(latestTask) }}</span>
               </div>
               <div class="taskInfo"><small>ID tác vụ</small><code>{{ latestTask.taskId }}</code></div>
-              <p v-if="latestTask.result && latestTask.result.code !== 200" class="taskError">{{ describeError(latestTask.result.message) }}</p>
+              <p v-if="latestTask.result && latestTask.result.code !== 200" class="taskError">{{ describeStudioError(latestTask.result.message) }}</p>
               <p v-if="latestTask.state === 'interrupted'" class="fieldHint">Chỉ kiểm tra/khôi phục ID này, không gửi yêu cầu tạo mới. Nếu chưa rõ trạng thái, kiểm tra mac2API → Tác vụ.</p>
               <el-button v-if="latestTask.state === 'queued' || latestTask.state === 'running'" type="danger" plain
                 :loading="cancelling" @click="cancelTask(latestTask)">Hủy tác vụ</el-button>
@@ -171,7 +176,7 @@
     </main>
 
     <studioFlowSetup v-if="flowSetupVisible && directory" :key="directory" v-model="flowSetupVisible" :kind="kind"
-      :directory="directory" :mediaModels="models" />
+      :directory="directory" :mediaModels="models" @saved="flowCatalogRevision++" />
     <settings v-model="settingsVisible" ref="settingsRef" />
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
       <assetLibrary v-model="assetPickerVisible" expanded :canSelect="canSelectAsset" :selecting="referenceBusy" @select="selectAsset" />
@@ -197,6 +202,7 @@ import { takeStudioPrompt } from "@/lib/studioPromptTransfer";
 import settings from "@/components/settings/index.vue";
 import assetLibrary from "@/pages/workspace/panels/canvas/components/assetLibrary.vue";
 import logoUrl from "@toonflow/assets/logo.svg";
+import { describeStudioError, requestStudio } from "./studioRequests";
 
 type MediaFile = { path: string; mimeType: string; mediaType: "image" | "video" };
 type StudioTask = {
@@ -214,14 +220,24 @@ const pendingStorageKey = "macflow.mediaStudio.pending.v1";
 const props = defineProps<{ kind: "image" | "video" }>();
 const studioFlowSetup = defineAsyncComponent(() => import("./studioFlowSetup.vue"));
 const clipForgeStudio = defineAsyncComponent(() => import("./clipForgeStudio.vue"));
+const videoFlowRun = defineAsyncComponent(() => import("./videoFlowRun.vue"));
 const router = useRouter();
 const route = useRoute();
-const showClipForge = computed(() => props.kind === "video" && route.query.studio === "clipForge");
+const studioMode = computed(() => {
+  if (props.kind !== "video") return "single";
+  return route.query.studio === "clipForge" ? "clipForge" : route.query.studio === "flow" ? "flow" : "single";
+});
+const showClipForge = computed(() => studioMode.value === "clipForge");
+const showVideoFlow = computed(() => studioMode.value === "flow");
 const clipForgeOpened = ref(showClipForge.value);
+const videoFlowOpened = ref(showVideoFlow.value);
+const flowCatalogRevision = ref(0);
+const ownerId = computed(() => currentUser.value?.id ?? "standalone");
 watch(showClipForge, active => { if (active) clipForgeOpened.value = true; });
+watch(showVideoFlow, active => { if (active) videoFlowOpened.value = true; });
 
-function switchClipForge(active: boolean) {
-  void router.replace({ query: { ...route.query, studio: active ? "clipForge" : undefined } });
+function switchStudio(mode: "single" | "flow" | "clipForge") {
+  void router.replace({ query: { ...route.query, studio: mode === "single" ? undefined : mode } });
 }
 const workspaceStore = useWorkspaceStore();
 const directory = computed(() => workspaceStore.project?.directory ?? "");
@@ -269,7 +285,8 @@ const requestedModelKey = computed(() => {
     ? modelKeyOf({ providerId, modelId }) : "";
 });
 const availableModels = computed(() => models.value.filter(item => item.type === props.kind)
-  .sort((left, right) => Number(!!right.referenceLimits) - Number(!!left.referenceLimits)
+  .sort((left, right) => Number(right.configured !== false) - Number(left.configured !== false)
+    || Number(!!right.referenceLimits) - Number(!!left.referenceLimits)
     || Number(right.providerId.startsWith("mac2Api")) - Number(left.providerId.startsWith("mac2Api"))));
 const model = computed(() => availableModels.value.find(item => modelKeyOf(item) === modelKey.value));
 const modes = computed<string[]>(() => {
@@ -310,13 +327,6 @@ function statusTag(state: StudioTask["state"]) {
   return ({ queued: "info", running: "warning", interrupted: "info", succeeded: "success", failed: "danger", cancelled: "info" } as const)[state];
 }
 function formatDate(value?: number) { return value ? new Date(value).toLocaleString("vi-VN") : "Chưa rõ thời gian"; }
-function describeError(value?: string) {
-  if (!value) return "Không có chi tiết lỗi từ nhà cung cấp.";
-  if (/参考素材上传未确认|reference.*upload.*not.confirmed/i.test(value)) {
-    return "Muse chưa xác nhận ảnh tham chiếu (0/1). Đã dừng trước khi gửi yêu cầu tạo nội dung.";
-  }
-  return value;
-}
 function fileOf(task: StudioTask): MediaFile | undefined {
   if (task.state !== "succeeded" || task.result?.code !== 200) return;
   return task.result.data?.find(item => item.mediaType === props.kind && !!item.path);
@@ -446,16 +456,6 @@ async function selectAsset(entry: AssetEntry) {
   finally { referenceBusy.value = false; }
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    cache: "no-store", signal: AbortSignal.timeout(15000), ...options,
-    headers: { "x-toonflow-workspace": "1", ...(options?.body ? { "Content-Type": "application/json" } : {}), ...options?.headers },
-  });
-  const result = await response.json().catch(() => null) as { code: number; message: string; data: T } | null;
-  if (!result || result.code === undefined) throw Object.assign(new Error(`Máy chủ trả phản hồi không đọc được (HTTP ${response.status}).`), { status: response.status });
-  if (!response.ok || result.code !== 200) throw Object.assign(new Error(describeError(result.message)), { status: response.status });
-  return result.data;
-}
 function updateQueue(queue?: StudioQueueStatus) {
   if (!queue) return false;
   if (!queueLimitSaving.value) queueLimit.value = queue.limit;
@@ -468,7 +468,7 @@ async function saveQueueLimit(limit: number) {
   const version = scopeVersion;
   queueLimitSaving.value = true;
   try {
-    const result = await request<{ limit: number }>("/api/mediaStudio/queueLimit", {
+    const result = await requestStudio<{ limit: number }>("/api/mediaStudio/queueLimit", {
       method: "PUT", body: JSON.stringify({ mediaType: props.kind, limit }),
     });
     if (version === scopeVersion) queueLimit.value = result.limit;
@@ -485,7 +485,7 @@ async function loadHistory() {
   historyLoading.value = true;
   historyError.value = "";
   try {
-    const data = await request<{ entries: StudioTask[] }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}&includeActive=1`);
+    const data = await requestStudio<{ entries: StudioTask[] }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}&includeActive=1`);
     if (sequence !== historySequence) return;
     const known = new Set(data.entries.map(item => item.taskId));
     const fromSession = readPendingIds().filter(item => item.directory === directory.value
@@ -509,8 +509,8 @@ async function refreshStatuses(resume = false) {
   try {
     const taskIds = active.slice(0, 100).map(item => item.taskId);
     const [queue, items] = await Promise.all([
-      request<{ queue?: StudioQueueStatus }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}&queueOnly=1`),
-      taskIds.length ? request<StudioTask[]>("/api/ai/media/tasks/status", {
+      requestStudio<{ queue?: StudioQueueStatus }>(`/api/mediaStudio/list?directory=${encodeURIComponent(directory.value)}&mediaType=${props.kind}&queueOnly=1`),
+      taskIds.length ? requestStudio<StudioTask[]>("/api/ai/media/tasks/status", {
         method: "POST", body: JSON.stringify({ directory: directory.value, taskIds, ...(resume ? { resume: true } : {}) }),
       }) : Promise.resolve([]),
     ]);
@@ -537,7 +537,7 @@ async function cancelTask(task: StudioTask) {
   const version = scopeVersion;
   cancelling.value = true;
   try {
-    await request("/api/ai/media/tasks/cancel", {
+    await requestStudio("/api/ai/media/tasks/cancel", {
       method: "POST", body: JSON.stringify({ directory: directory.value, taskIds: [task.taskId] }), signal: AbortSignal.timeout(30000),
     });
     if (version === scopeVersion) await loadHistory();
@@ -608,7 +608,7 @@ async function submitTask() {
     tasks.value.unshift(task);
     selectedTaskId.value = taskId;
     submittingRequest = true;
-    const result = await request<{ taskId: string }>("/api/ai/media/generate", { method: "POST", body: JSON.stringify(input), signal: AbortSignal.timeout(30000) });
+    const result = await requestStudio<{ taskId: string }>("/api/ai/media/generate", { method: "POST", body: JSON.stringify(input), signal: AbortSignal.timeout(30000) });
     if (result.taskId !== taskId) throw new Error("Máy chủ trả ID tác vụ khác ID đã lưu. Cần kiểm tra thủ công trước khi tiếp tục.");
     forgetPendingId(taskId);
   } catch (cause) {

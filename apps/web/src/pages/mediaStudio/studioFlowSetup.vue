@@ -148,7 +148,7 @@ import { flowInputs, flowLibraryPath, getFlowIssues, kindLabels, makeFlowStep, m
 
 type FlowMediaModel = Pick<NodeMediaModel, "type" | "providerId" | "providerLabel" | "modelId" | "routeId" | "label" | "imageRatios" | "imageSizes" | "durationResolutionMap">;
 const props = defineProps<{ modelValue: boolean; directory: string; kind: StudioKind; mediaModels: FlowMediaModel[] }>();
-const emit = defineEmits<{ "update:modelValue": [visible: boolean] }>();
+const emit = defineEmits<{ "update:modelValue": [visible: boolean]; saved: [] }>();
 const files = useWorkspaceFiles(props.directory);
 const lifetime = new AbortController();
 const draft = ref(makeStarterFlow(props.kind));
@@ -244,7 +244,10 @@ async function saveTemplate() {
       snapshot = await files.readTextSnapshot(flowLibraryPath, { signal: lifetime.signal });
       templates.value = parseFlowLibrary(snapshot.text);
     }
-    if (!lifetime.signal.aborted) setDraft(template, selectedId.value);
+    if (!lifetime.signal.aborted) {
+      setDraft(template, selectedId.value);
+      emit("saved");
+    }
   } catch (error) {
     if (lifetime.signal.aborted) return;
     const code = errorCode(error);
