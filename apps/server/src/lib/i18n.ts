@@ -46,7 +46,11 @@ export function translateError(error: unknown): string {
     if (values === undefined || (values && typeof values === "object" && !Array.isArray(values)
       && [Object.prototype, null].includes(Object.getPrototypeOf(values)))) return translateMessage(descriptor as MessageDescriptor);
   }
-  return translateMessage(error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message : String(error));
+  const message = error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message : String(error);
+  if (/^账号代理请求失败\s*[(（]\s*ProxyError\s*[)）]\s*(?:[;；:：]|$)/i.test(message.trim())) {
+    return translateMessage("模型服务的账号代理连接失败（ProxyError）。请在服务的账号设置中检查代理地址、端口和认证信息。确认原任务状态后再重试。");
+  }
+  return translateMessage(message);
 }
 
 export function t(strings: TemplateStringsArray, ...values: unknown[]): string {

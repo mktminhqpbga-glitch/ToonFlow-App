@@ -521,6 +521,7 @@
   "打组": "Nhóm lại",
   "代理端口": "Cổng proxy",
   "代理端口必须为 1 到 65535 的整数": "Cổng proxy phải là số nguyên từ 1 đến 65535",
+  "模型服务的账号代理连接失败（ProxyError）。请在服务的账号设置中检查代理地址、端口和认证信息。确认原任务状态后再重试。": "Dịch vụ mô hình gặp lỗi khi kết nối qua proxy của tài khoản (ProxyError). Mở phần tài khoản trong dịch vụ để kiểm tra địa chỉ, cổng và thông tin xác thực proxy. Kiểm tra trạng thái tác vụ cũ trước khi gửi lại.",
   "代理连接测试失败": "Kiểm tra kết nối proxy thất bại",
   "代理模式": "Chế độ proxy",
   "代理配置无效，请检查代理地址、端口和认证信息": "Cấu hình proxy không hợp lệ, hãy kiểm tra địa chỉ, cổng và thông tin xác thực",

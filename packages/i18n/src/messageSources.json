@@ -4423,6 +4423,9 @@
   "网络设置操作失败": [
     "apps/web/src/components/settings/panels/network/index.vue"
   ],
+  "模型服务的账号代理连接失败（ProxyError）。请在服务的账号设置中检查代理地址、端口和认证信息。确认原任务状态后再重试。": [
+    "apps/server/src/lib/i18n.ts"
+  ],
   "代理连接测试失败": [
     "apps/web/src/components/settings/panels/network/index.vue"
   ],

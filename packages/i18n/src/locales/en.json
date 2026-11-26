@@ -521,6 +521,7 @@
   "打组": "Group",
   "代理端口": "Proxy port",
   "代理端口必须为 1 到 65535 的整数": "The proxy port must be an integer between 1 and 65535",
+  "模型服务的账号代理连接失败（ProxyError）。请在服务的账号设置中检查代理地址、端口和认证信息。确认原任务状态后再重试。": "The model service could not connect through the account's proxy (ProxyError). Check the proxy address, port, and credentials in the service's account settings. Check the original task's status before retrying.",
   "代理连接测试失败": "Proxy connection test failed",
   "代理模式": "Proxy mode",
   "代理配置无效，请检查代理地址、端口和认证信息": "Invalid proxy configuration. Check the proxy address, port, and credentials.",
