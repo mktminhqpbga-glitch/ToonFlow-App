@@ -332,7 +332,11 @@ async function executeMedia(
   const modelRouteCipher = task?.modelRouteCipher;
   const museOutput = mediaType === "image" && !modelRouteCipher && hasMuseImageOutputSizes(request.providerId, request.modelId);
   const outputEdge = museOutput ? museImageOutputSizes.get(request.size ?? "") : undefined;
-  const providerRequest = outputEdge || (museOutput && request.size === "auto") ? { ...request, size: undefined } : request;
+  const providerRequest = outputEdge || (museOutput && request.size === "auto") ? {
+    ...request,
+    size: undefined,
+    ...(outputEdge ? { prompt: `${request.prompt}\n\nĐộ phân giải ảnh mong muốn: ${request.size} (cạnh dài ${outputEdge} px).` } : {}),
+  } : request;
   const directory = await realpath(cwd);
   const outputDirectory = request.outputDirectory ?? "assets/generated";
   await resolveWorkspacePath(directory, outputDirectory, true);

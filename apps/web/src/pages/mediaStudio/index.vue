@@ -76,7 +76,7 @@
               </div>
               <div v-if="sizeOptions.length"><label class="fieldLabel">Độ phân giải</label>
                 <el-select v-model="size" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in sizeOptions" :key="item" :label="item" :value="item" /></el-select>
-                <p v-if="model.localImageSizing" class="fieldHint">MacFlow đổi kích thước theo cạnh dài. Auto giữ kích thước gốc.</p>
+                <p v-if="model.localImageSizing" class="fieldHint">Muse nhận độ phân giải trong prompt. MacFlow lưu ảnh theo cạnh dài đã chọn. Auto giữ kích thước gốc.</p>
               </div>
               <div v-if="durationOptions.length"><label class="fieldLabel">Thời lượng</label>
                 <el-select v-model="duration" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in durationOptions" :key="item" :label="`${item} giây`" :value="item" /></el-select>

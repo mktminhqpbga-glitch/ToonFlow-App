@@ -12,7 +12,7 @@
       <el-radio-group v-model="size" class="sizeOptions" :disabled="disabled" aria-label="Độ phân giải ảnh">
         <el-radio-button v-for="item in sizes" :key="item" :value="item">{{ item }}</el-radio-button>
       </el-radio-group>
-      <p v-if="model?.localImageSizing" class="sizeHint">1K, 2K và 4K là độ dài cạnh lớn nhất sau khi MacFlow đổi kích thước. Auto giữ kích thước gốc.</p>
+      <p v-if="model?.localImageSizing" class="sizeHint">Muse nhận lựa chọn 1K, 2K hoặc 4K trong prompt. MacFlow lưu ảnh theo cạnh dài đã chọn. Auto giữ kích thước gốc.</p>
       <div class="sectionLabel">Tỉ lệ</div>
       <div class="ratioOptions" role="group" aria-label="Tỉ lệ ảnh">
         <el-button
