@@ -33,6 +33,9 @@
           <el-input id="flowSharedScript" v-model="draft.sharedScript" type="textarea" :rows="3" :maxlength="contextLimit" />
           <label for="flowProduct">Mô tả sản phẩm <small>Tùy chọn</small></label>
           <el-input id="flowProduct" v-model="draft.product" type="textarea" :rows="2" :maxlength="contextLimit" />
+          <div class="flowActions">
+            <el-button size="small" :disabled="uploading" @click="profilesVisible = true">Hồ sơ sản phẩm</el-button>
+          </div>
         </div>
       </el-card>
 
@@ -45,7 +48,7 @@
             <option value="automatic">Tự động sau khi có khung hình đầu</option>
             <option value="review">Duyệt khung hình đầu trước khi tạo video</option>
           </select>
-          <p v-if="!run" class="hint">Tách prompt → Dựng kịch bản → Tạo khung hình đầu → Tạo video</p>
+          <p v-if="!run" class="hint">Tách ý tưởng → Dựng kịch bản → Tạo khung hình đầu → Tạo video</p>
           <p v-if="draftError && !run" class="error" role="alert">{{ draftError }}</p>
           <details>
             <summary>Cài đặt nâng cao</summary>
@@ -94,13 +97,26 @@
 
       <el-card v-if="run" shadow="never" class="runItems">
         <template #header><h2>Từng mục trong đợt</h2></template>
+        <div v-if="availableClips.length" class="clipActions">
+          <div class="flowActions">
+            <el-button v-if="availableClips.length > 1" size="small" text @click="toggleAllClips">
+              {{ selectedClips.length === availableClips.length ? "Bỏ chọn tất cả" : "Chọn tất cả clip hoàn thành" }}
+            </el-button>
+            <el-button size="small" type="primary" :loading="transferring" :disabled="selectedClips.length < 2 || busy || !!saveError" @click="sendToMerge">
+              Đưa {{ selectedClips.length }} clip vào Ghép video
+            </el-button>
+          </div>
+          <p class="hint">Chọn ít nhất hai clip. MacFlow đưa phiên bản đang dùng của mỗi cảnh vào bảng vẽ theo thứ tự bên dưới.</p>
+        </div>
         <div class="itemLayout">
           <div class="itemList" aria-label="Danh sách mục">
-            <button v-for="(item, index) in run.items" :key="item.id" type="button" class="itemButton" :aria-pressed="currentItem?.id === item.id"
-              @click="selectedId = item.id">
-              <strong>{{ index + 1 }}. {{ item.prompt || 'Prompt trống' }}</strong>
-              <el-tag size="small" :type="stateType[itemState(item)]">{{ stateLabel(itemState(item)) }}</el-tag>
-            </button>
+            <div v-for="(item, index) in run.items" :key="item.id" class="itemChoice">
+              <input v-if="flowOutput(item, 'video')" v-model="mergeIds" :value="item.id" type="checkbox" :aria-label="'Chọn clip cảnh ' + (index + 1)" />
+              <button type="button" class="itemButton" :aria-pressed="currentItem?.id === item.id" @click="selectedId = item.id">
+                <strong>{{ index + 1 }}. {{ item.prompt || 'Ý tưởng trống' }}</strong>
+                <el-tag size="small" :type="stateType[itemState(item)]">{{ stateLabel(itemState(item)) }}</el-tag>
+              </button>
+            </div>
           </div>
           <section v-if="currentItem" class="itemDetail" :aria-label="'Các bước của mục ' + (run.items.indexOf(currentItem) + 1)">
             <ol class="stageList">
@@ -124,47 +140,96 @@
                   <details open><summary>Xem kịch bản</summary><p class="contentText">{{ currentItem.script }}</p></details>
                   <el-button size="small" :loading="downloading === 'script'" @click="downloadScript">Tải kịch bản</el-button>
                 </template>
-                <template v-if="stage === 'frame' && currentItem.frame">
+                <div v-if="(stage === 'frame' || stage === 'video') && versionsFor(currentItem, stage).length" class="versionPicker">
+                  <label :for="'flowVersion' + stage">{{ stage === 'frame' ? 'Khung hình đang dùng' : 'Video đang dùng' }}</label>
+                  <select :id="'flowVersion' + stage" :value="currentItem.preferred?.[stage] ?? ''" :disabled="busy || !!saveError"
+                    @change="chooseVersion(currentItem, stage, $event)">
+                    <option value="">Bản gốc</option>
+                    <option v-for="variant in versionsFor(currentItem, stage)" :key="variant.id" :value="variant.id">
+                      {{ versionLabel(currentItem, variant) }}
+                    </option>
+                  </select>
+                </div>
+                <template v-if="stage === 'frame' && frameOutput">
                   <div class="preview">
                     <img v-if="previews.frame" :src="previews.frame" alt="Khung hình đầu" @error="previewUnavailable('frame')" />
                     <p v-else class="hint">{{ previewErrors.frame || "Đang mở ảnh…" }}</p>
                   </div>
-                  <el-button size="small" :loading="downloading === 'image'" @click="downloadMedia(currentItem.frame)">Tải ảnh</el-button>
+                  <el-button size="small" :loading="downloading === 'image'" @click="downloadMedia(frameOutput)">Tải ảnh</el-button>
                 </template>
                 <template v-if="stage === 'video'">
                   <el-button v-if="currentItem.stages.video.state === 'review' && run.input.mode === 'review'" type="primary" size="small"
                     :disabled="busy || !!saveError" @click="approve([currentItem])">Duyệt ảnh và tạo video</el-button>
-                  <template v-if="currentItem.video">
+                  <template v-if="videoOutput">
                     <div class="preview">
                       <video v-if="previews.video" :src="previews.video" controls playsinline preload="metadata" aria-label="Video kết quả" @error="previewUnavailable('video')" />
                       <p v-else class="hint">{{ previewErrors.video || "Đang mở video…" }}</p>
                     </div>
-                    <el-button type="primary" size="small" :loading="downloading === 'video'" @click="downloadMedia(currentItem.video)">Tải video</el-button>
+                    <el-button type="primary" size="small" :loading="downloading === 'video'" @click="downloadMedia(videoOutput)">Tải video</el-button>
                   </template>
                 </template>
               </li>
             </ol>
+            <details v-if="currentItem.stages.video.state === 'done'" :key="currentItem.id" class="variantPanel">
+              <summary>Làm lại cảnh</summary>
+              <div class="flowFields">
+                <label for="flowAdjustment">Điều chỉnh cho cảnh này <small>Tùy chọn</small></label>
+                <el-input id="flowAdjustment" v-model="adjustment" type="textarea" :rows="2" :maxlength="2000"
+                  placeholder="Ví dụ: dùng ánh sáng tự nhiên, quay cận cảnh sản phẩm" />
+                <div class="flowActions">
+                  <el-button size="small" :disabled="variantDisabled" @click="rerender(currentItem, 'frame', adjustment.trim())">Tạo lại khung hình</el-button>
+                  <el-button size="small" :disabled="variantDisabled" @click="rerender(currentItem, 'video', adjustment.trim())">Tạo lại video từ khung đang dùng</el-button>
+                </div>
+                <p class="hint">{{ (currentItem.variants?.length ?? 0) >= variantLimit
+                  ? 'Cảnh này đã đủ ' + variantLimit + ' lần tạo lại.'
+                  : 'Bản gốc được giữ lại. Chọn phiên bản đang dùng ở bước Khung hình hoặc Video để xem và sử dụng kết quả mới.' }}</p>
+                <ul v-if="currentItem.variants?.length" class="variantList">
+                  <li v-for="variant in currentItem.variants" :key="variant.id" class="flowFields">
+                    <div class="stageHeading">
+                      <strong>{{ variant.kind === "frame" ? "Khung hình" : "Video" }} · {{ versionLabel(currentItem, variant) }}</strong>
+                      <el-tag size="small" :type="stateType[variant.progress.state]">{{ stateLabel(variant.progress.state) }}</el-tag>
+                    </div>
+                    <p v-if="variant.adjustment" class="hint">{{ variant.adjustment }}</p>
+                    <p v-if="variant.progress.message" class="error" role="status">{{ variant.progress.message }}</p>
+                    <div class="flowActions">
+                      <el-button v-if="isProgressError(variant.progress)" size="small" plain :disabled="busy || !!saveError"
+                        @click="retryVariant(currentItem, variant)">{{ variant.progress.state === "interrupted" ? "Kiểm tra lại" : "Chạy lại bản này" }}</el-button>
+                      <el-button v-if="isProgressError(variant.progress) && variant.progress.attempt?.replaceable" size="small" text :disabled="busy || !!saveError"
+                        @click="replaceVariantTask(currentItem, variant)">Tạo tác vụ mới</el-button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </details>
           </section>
         </div>
       </el-card>
     </div>
+    <productProfiles v-if="profilesVisible" v-model="profilesVisible" :directory="directory" :initialProduct="{ description: draft.product, photos: draft.products }"
+      :availablePhotos="imageLimit - draft.references.length" @apply="applyProductProfile" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onScopeDispose, reactive, ref, shallowRef, watch } from "vue";
 import { ElMessageBox } from "element-plus";
+import { isNavigationFailure, useRouter } from "vue-router";
 import { getNodeModelKey, readNodeModels, type NodeAiModel, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
 import saveFile from "@/lib/saveFile";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
+import { clearStudioMediaForCanvas, queueStudioMediaForCanvas, type StudioMediaTransfer } from "@/lib/mediaStudioTransfer";
 import { flowLibraryPath, makeStarterFlow, parseFlowLibrary, type StudioFlow } from "./studioFlows";
-import { contextLimit, emptyFlowInput, flowStages, imageByteLimit, imageExtensions, imageLimit, isVideoFlowTemplate, makeVideoRun,
-  promptLimit, readFlowInput, splitFlowPrompts, stageLabels, type FlowItem, type FlowMediaFile, type FlowStage, type StepProgress, type VideoFlowMode } from "./videoFlow";
+import productProfiles from "./productProfiles.vue";
+import { appendFlowPhotos, type ProductProfile } from "./productProfiles";
+import { canResumeProgress, contextLimit, emptyFlowInput, flowOutput, flowStages, imageExtensions, imageLimit, isVideoFlowTemplate, makeVideoRun,
+  promptLimit, readFlowInput, splitFlowPrompts, stageLabels, variantLimit, type FlowItem, type FlowMediaFile, type FlowOutputKind,
+  type FlowStage, type FlowVariant, type StepProgress, type VideoFlowMode } from "./videoFlow";
 import { supportsFlowPhotos, videoImageMode } from "./videoFlowTasks";
 import { fileErrorCode, useVideoFlowRun, videoFlowError } from "./useVideoFlowRun";
 
 const props = defineProps<{ directory: string; ownerId: string; catalogRevision: number }>();
 const emit = defineEmits<{ settings: [] }>();
+const router = useRouter();
 const files = useWorkspaceFiles(props.directory);
 const draftKey = "macflow.videoFlow.draft.v1:" + JSON.stringify([props.ownerId, props.directory]);
 const lifetime = new AbortController();
@@ -188,6 +253,12 @@ const templates = shallowRef<StudioFlow[]>([]);
 const catalogLoading = ref(false);
 const catalogError = ref("");
 const uploading = ref(false);
+const profilesVisible = ref(false);
+
+function applyProductProfile(profile: ProductProfile) {
+  draft.value.product = profile.description.trim() || profile.name;
+  draft.value.products = [...profile.photos];
+}
 
 const starter = makeStarterFlow("video");
 const selectedTemplate = computed(() => run.value?.template ?? templates.value.find(template => template.id === draft.value.templateId) ?? starter);
@@ -203,19 +274,62 @@ function modelsFor(kind: ModelKind) {
     || Number(!!right.referenceLimits) - Number(!!left.referenceLimits));
 }
 
-const { run, busy, working, loadRun, loadError, saveError, operationError, persist, start, resume, retry, approve, setMode, selectRunModel, pause }
+const { run, busy, working, loadRun, loadError, saveError, operationError, persist, start, resume, retry, approve, setMode, selectRunModel,
+  pause, rerender, retryVariant, selectVariant }
   = useVideoFlowRun(props.directory, modelsFor);
 const selectedId = ref("");
 const repairPrompt = ref("");
+const adjustment = ref("");
 const currentItem = computed(() => run.value?.items.find(item => item.id === selectedId.value) ?? run.value?.items[0]);
-watch(currentItem, item => { repairPrompt.value = item?.prompt ?? ""; });
+watch(currentItem, item => { repairPrompt.value = item?.prompt ?? ""; adjustment.value = ""; });
+const frameOutput = computed(() => currentItem.value && flowOutput(currentItem.value, "frame"));
+const videoOutput = computed(() => currentItem.value && flowOutput(currentItem.value, "video"));
+const variantDisabled = computed(() => busy.value || catalogLoading.value || !!saveError.value || (currentItem.value?.variants?.length ?? 0) >= variantLimit);
+const mergeIds = ref<string[]>([]);
+watch(() => run.value?.id, () => { mergeIds.value = []; });
+const transferring = ref(false);
+const availableClips = computed(() => (run.value?.items ?? []).flatMap((item, index) => {
+  const video = flowOutput(item, "video");
+  return video ? [{ id: item.id, path: video.path, mimeType: video.mimeType, name: `Cảnh ${index + 1} · ${item.prompt.slice(0, 100)}` }] : [];
+}));
+const selectedClips = computed(() => availableClips.value.filter(clip => mergeIds.value.includes(clip.id)));
+function toggleAllClips() {
+  mergeIds.value = selectedClips.value.length === availableClips.value.length ? [] : availableClips.value.map(clip => clip.id);
+}
+async function sendToMerge() {
+  if (transferring.value || selectedClips.value.length < 2) return;
+  transferring.value = true;
+  actionError.value = "";
+  const pending: StudioMediaTransfer = { directory: props.directory, mediaType: "videoMerge", clips: selectedClips.value };
+  queueStudioMediaForCanvas(pending);
+  try {
+    if (isNavigationFailure(await router.push("/workspace"))) throw new Error("Không mở được bảng vẽ của dự án.");
+  } catch (error) {
+    clearStudioMediaForCanvas(pending);
+    actionError.value = videoFlowError(error);
+  } finally { transferring.value = false; }
+}
+function versionsFor(item: FlowItem, kind: FlowOutputKind) {
+  return item.variants?.filter(variant => variant.kind === kind && variant.file && variant.progress.state === "done") ?? [];
+}
+function versionLabel(item: FlowItem, variant: FlowVariant) {
+  return "Bản " + ((item.variants?.filter(candidate => candidate.kind === variant.kind).indexOf(variant) ?? 0) + 2);
+}
+function chooseVersion(item: FlowItem, kind: FlowOutputKind, event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const id = select.value;
+  select.value = item.preferred?.[kind] ?? "";
+  void selectVariant(item, kind, id);
+}
 const preparingNew = ref(false);
 const reviews = computed(() => run.value?.items.filter(item => item.stages.video.state === "review") ?? []);
 const completed = computed(() => run.value?.items.filter(item => item.stages.video.state === "done").length ?? 0);
-const failed = computed(() => run.value?.items.filter(item => flowStages.some(stage => isError(item, stage))).length ?? 0);
+const failed = computed(() => run.value?.items.filter(item => flowStages.some(stage => isError(item, stage)) ||
+  item.variants?.some(variant => isProgressError(variant.progress))).length ?? 0);
 const percentage = computed(() => run.value ? Math.round(100 * run.value.items.reduce((count, item) =>
   count + flowStages.filter(stage => item.stages[stage].state === "done").length, 0) / (run.value.items.length * flowStages.length)) : 0);
 const hasPending = computed(() => !!run.value?.items.some(item => {
+  if (item.variants?.some(variant => canResumeProgress(variant.progress))) return true;
   const stage = flowStages.find(step => item.stages[step].state !== "done");
   if (!stage || isError(item, stage)) return false;
   const progress = item.stages[stage];
@@ -226,8 +340,12 @@ type FlowState = StepProgress["state"];
 const stateNames: Record<FlowState, string> = { waiting: "Đang chờ", queued: "Trong hàng chờ", running: "Đang chạy", done: "Hoàn thành", review: "Chờ duyệt", error: "Lỗi", interrupted: "Gián đoạn" };
 const stateType = { waiting: "info", queued: "warning", running: "warning", done: "success", review: "warning", error: "danger", interrupted: "danger" } as const;
 function stateLabel(state: FlowState) { return !working.value && (state === "running" || state === "queued") ? "Cần tiếp tục" : stateNames[state]; }
-function isError(item: FlowItem, stage: FlowStage) { return ["error", "interrupted"].includes(item.stages[stage].state); }
-function itemState(item: FlowItem) { return flowStages.map(stage => item.stages[stage].state).find(state => state !== "done") ?? "done"; }
+function isProgressError(progress: StepProgress) { return progress.state === "error" || progress.state === "interrupted"; }
+function isError(item: FlowItem, stage: FlowStage) { return isProgressError(item.stages[stage]); }
+function itemState(item: FlowItem) {
+  return flowStages.map(stage => item.stages[stage].state).find(state => state !== "done")
+    ?? item.variants?.find(variant => variant.progress.state !== "done")?.progress.state ?? "done";
+}
 
 async function loadCatalog() {
   if (catalogLoading.value) return;
@@ -278,19 +396,7 @@ async function addPhotos(kind: PhotoKind, event: Event) {
     if (draft.value.references.length + draft.value.products.length + picked.length > imageLimit) {
       throw new Error("Chọn tối đa " + imageLimit + " ảnh chung cho một đợt.");
     }
-    if (picked.some(file => !Object.hasOwn(imageExtensions, file.type) || !file.size || file.size > imageByteLimit)) {
-      throw new Error("Chọn ảnh JPEG, PNG, WebP, GIF hoặc AVIF tối đa 20 MiB mỗi tệp.");
-    }
-    await files.mkdir("assets", AbortSignal.any([lifetime.signal, AbortSignal.timeout(15_000)])).catch(error => {
-      if (fileErrorCode(error) !== "EEXIST") throw error;
-    });
-    for (const file of picked) {
-      lifetime.signal.throwIfAborted();
-      const path = "assets/videoFlow" + crypto.randomUUID() + "." + imageExtensions[file.type];
-      await files.write(path, file, true, AbortSignal.any([lifetime.signal, AbortSignal.timeout(60_000)]));
-      lifetime.signal.throwIfAborted();
-      draft.value[kind].push({ name: file.name.slice(0, 300), mimeType: file.type, bytes: file.size, path });
-    }
+    await appendFlowPhotos(files, picked, draft.value[kind], lifetime.signal);
   } catch (error) {
     if (!lifetime.signal.aborted) actionError.value = "Chưa lưu đủ ảnh. " + videoFlowError(error);
   } finally { uploading.value = false; }
@@ -320,10 +426,15 @@ async function startBatch() {
 function retryStage(item: FlowItem, stage: FlowStage) {
   void retry(item, stage, stage === "prepare" ? { prompt: repairPrompt.value.trim() } : undefined);
 }
-async function replaceTask(item: FlowItem, stage: FlowStage) {
-  const accepted = await ElMessageBox.confirm("Hãy kiểm tra mã tác vụ cũ ở nhà cung cấp trước. Nếu tác vụ cũ vẫn chạy, tạo tác vụ mới có thể sinh kết quả trùng hoặc phát sinh phí.",
+function confirmReplacement() {
+  return ElMessageBox.confirm("Hãy kiểm tra tác vụ cũ trước. Nếu tác vụ cũ vẫn chạy, tạo tác vụ mới có thể sinh kết quả trùng hoặc phát sinh phí.",
     "Tạo tác vụ mới?", { confirmButtonText: "Tạo tác vụ mới", cancelButtonText: "Quay lại", type: "warning" }).then(() => true, () => false);
-  if (accepted) await retry(item, stage, { newTask: true });
+}
+async function replaceTask(item: FlowItem, stage: FlowStage) {
+  if (await confirmReplacement()) await retry(item, stage, { newTask: true });
+}
+async function replaceVariantTask(item: FlowItem, variant: FlowVariant) {
+  if (await confirmReplacement()) await retryVariant(item, variant, true);
 }
 
 async function confirmApproveAll() {
@@ -347,7 +458,7 @@ async function prepareNext() {
 const previews = reactive({ frame: "", video: "" });
 const previewErrors = reactive({ frame: "", video: "" });
 for (const key of ["frame", "video"] as const) {
-  watch(() => currentItem.value?.[key], (file, _previous, onCleanup) => {
+  watch(key === "frame" ? frameOutput : videoOutput, (file, _previous, onCleanup) => {
     previews[key] = previewErrors[key] = "";
     if (!file) return;
     const lease = files.acquireUrl(file.path, file.mimeType);
@@ -395,7 +506,7 @@ h2 { font-size: 16px; margin: 0; }
 .flowFields label small, .hint { color: var(--el-text-color-secondary); font-weight: normal; }
 .hint, .error { margin: 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .error { color: var(--el-color-danger); }
-.flowFields select { width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; color: var(--el-text-color-primary); background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 6px; font: inherit; }
+.flowFields select, .versionPicker select { width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; color: var(--el-text-color-primary); background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 6px; font: inherit; }
 .photoGroup { display: grid; gap: 7px; padding: 8px 10px; border: 1px solid var(--el-border-color-light); border-radius: 8px; }
 .photoGroup input { max-width: 100%; font: inherit; }
 .photoList { margin: 0; padding: 0; list-style: none; }
@@ -407,6 +518,16 @@ h2 { font-size: 16px; margin: 0; }
 summary { cursor: pointer; color: var(--el-text-color-regular); font-size: 13px; }
 .itemLayout { display: grid; align-items: start; grid-template-columns: minmax(150px, 1fr) minmax(0, 2.2fr); gap: 16px; }
 .itemList { display: grid; max-height: 470px; overflow: auto; gap: 6px; padding: 3px; }
+.itemChoice { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.itemChoice input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--el-color-primary); }
+.itemChoice .itemButton { flex: 1; min-width: 0; }
+.clipActions, .versionPicker, .itemDetail { display: grid; min-width: 0; gap: 8px; }
+.clipActions { margin-bottom: 12px; }
+.versionPicker { width: 100%; font-size: 13px; }
+.variantPanel { padding: 11px; border: 1px solid var(--el-border-color-light); border-radius: 10px; }
+.variantPanel > .flowFields { margin-top: 10px; }
+.variantList { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.variantList li { border-top: 1px solid var(--el-border-color-light); padding-top: 8px; }
 .itemButton { text-align: left; display: grid; justify-items: start; gap: 5px; border-radius: 8px; padding: 8px; color: inherit; background: var(--el-bg-color); border: 1px solid var(--el-border-color-light); cursor: pointer; }
 .itemButton strong { width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .itemButton[aria-pressed="true"] { border-color: var(--el-color-primary); background: var(--el-color-primary-light-9); }

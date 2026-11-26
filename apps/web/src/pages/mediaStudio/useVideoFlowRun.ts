@@ -3,8 +3,8 @@ import { computed, onScopeDispose, ref } from "vue";
 import { findNodeModel, getNodeModelIdentity, useNodeAi, type NodeAiModel, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
 import useWorkspaceFiles, { type TextSnapshot } from "@/lib/workspaceFiles";
 import { describeStudioError } from "./studioRequests";
-import { buildFlowPrompt, contextLimit, flowStages, readVideoRun, runMaxBytes, runPath,
-  type FlowItem, type FlowStage, type VideoFlowMode, type VideoFlowRun } from "./videoFlow";
+import { buildFlowPrompt, canResumeProgress, contextLimit, flowOutput, flowStages, readVideoRun, runMaxBytes, runPath, variantLimit,
+  type FlowItem, type FlowOutputKind, type FlowStage, type FlowVariant, type StepProgress, type VideoFlowMode, type VideoFlowRun } from "./videoFlow";
 import { finishFlowMedia, makeMediaRequest, VideoFlowTaskError } from "./videoFlowTasks";
 
 const kindForStage = { script: "text", frame: "image", video: "video" } as const;
@@ -15,8 +15,10 @@ export function fileErrorCode(error: unknown) {
 }
 
 export function videoFlowError(error: unknown) {
+  if (error instanceof VideoFlowTaskError) return error.message;
   if (axios.isAxiosError<{ message?: string }>(error)) {
-    return error.response?.data?.message || "Không kết nối được với máy chủ MacFlow. Hãy thử lại.";
+    if (!error.response) return "Không kết nối được với máy chủ MacFlow. Hãy thử lại.";
+    return describeStudioError(error.response.data?.message, error.response.status);
   }
   if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
     return "Đã quá thời gian chờ phản hồi. Hãy kiểm tra kết nối rồi thử lại.";
@@ -49,6 +51,11 @@ export function useVideoFlowRun(directory: string, modelsFor: (kind: "text" | "i
         maxBytes: runMaxBytes, signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(15_000)]),
       });
       const stored = readVideoRun(saved.text);
+      for (const item of stored.items) {
+        for (const progress of Object.values(item.stages)) {
+          if (progress.state === "done") delete progress.attempt;
+        }
+      }
       if (!lifetime.signal.aborted) { snapshot = saved; run.value = stored; }
     } catch (error) {
       if (!lifetime.signal.aborted && fileErrorCode(error) !== "ENOENT") {
@@ -95,13 +102,59 @@ export function useVideoFlowRun(directory: string, modelsFor: (kind: "text" | "i
     } finally { saving.value = false; }
   }
 
-  async function processStage(batch: VideoFlowRun, item: FlowItem, stage: FlowStage, signal: AbortSignal) {
-    const progress = item.stages[stage];
+  async function renderMedia(batch: VideoFlowRun, item: FlowItem, stage: FlowOutputKind, progress: StepProgress, signal: AbortSignal, variant?: FlowVariant) {
+    const existing = !!progress.attempt;
+    if (!progress.attempt) {
+      const kind = kindForStage[stage];
+      const step = batch.template.steps[stage === "frame" ? 1 : 2]!;
+      const modelKey = batch.input.models[kind] || step.model;
+      const models = modelsFor(kind) as NodeMediaModel[];
+      const model = modelKey ? findNodeModel(models, modelKey) : models[0];
+      if (!model) throw new Error("Chưa có mô hình phù hợp cho bước này. Hãy chọn lại trong phần Nâng cao.");
+      const source = variant?.kind === "video" ? { ...item, frame: variant.sourceFrame } : item;
+      progress.attempt = { id: crypto.randomUUID(), request: makeMediaRequest(batch, source, model, kind, variant?.adjustment) };
+      progress.state = "queued";
+      if (!await persist()) throw new Error(saveError.value);
+      signal.throwIfAborted();
+    }
+    return finishFlowMedia(directory, progress.attempt, existing, signal, async state => {
+      if (progress.state === state) return;
+      progress.state = state;
+      if (!await persist()) throw new Error(saveError.value);
+    });
+  }
+
+  async function updateProgress(progress: StepProgress, signal: AbortSignal, action: () => Promise<void>) {
     progress.state = "running";
     progress.message = undefined;
     if (!await persist()) return false;
     signal.throwIfAborted();
     try {
+      await action();
+      signal.throwIfAborted();
+      progress.state = "done";
+      delete progress.attempt;
+    } catch (error) {
+      signal.throwIfAborted();
+      if (saveError.value) return false;
+      if (progress.attempt) {
+        progress.attempt.uncertain = !(error instanceof VideoFlowTaskError) || error.uncertain;
+        progress.attempt.replaceable = error instanceof VideoFlowTaskError && error.replaceable;
+      }
+      progress.state = progress.attempt?.uncertain ? "interrupted" : "error";
+      progress.message = videoFlowError(error).slice(0, 2000);
+    }
+    return persist();
+  }
+
+  function processVariant(batch: VideoFlowRun, item: FlowItem, variant: FlowVariant, signal: AbortSignal) {
+    return updateProgress(variant.progress, signal, async () => {
+      variant.file = await renderMedia(batch, item, variant.kind, variant.progress, signal, variant);
+    });
+  }
+
+  function processStage(batch: VideoFlowRun, item: FlowItem, stage: FlowStage, signal: AbortSignal) {
+    return updateProgress(item.stages[stage], signal, async () => {
       if (stage === "prepare") {
         if (!item.prompt.trim()) throw new Error("Prompt trong cặp [ ] này đang trống. Nhập nội dung cho mục rồi chạy lại bước này.");
       } else if (stage === "script") {
@@ -127,40 +180,9 @@ export function useVideoFlowRun(directory: string, modelsFor: (kind: "text" | "i
         if (!text || text.length > contextLimit) throw new Error("Mô hình trả kịch bản rỗng hoặc quá dài. Hãy thử chạy lại bước này.");
         item.script = text;
       } else {
-        const existing = !!progress.attempt;
-        if (!progress.attempt) {
-          const kind = kindForStage[stage];
-          const step = batch.template.steps[stage === "frame" ? 1 : 2]!;
-          const modelKey = batch.input.models[kind] || step.model;
-          const models = modelsFor(kind) as NodeMediaModel[];
-          const model = modelKey ? findNodeModel(models, modelKey) : models[0];
-          if (!model) throw new Error("Chưa có mô hình phù hợp cho bước này. Hãy chọn lại trong phần Nâng cao.");
-          progress.attempt = { id: crypto.randomUUID(), request: makeMediaRequest(batch, item, model, kind) };
-          progress.state = "queued";
-          if (!await persist()) return false;
-          signal.throwIfAborted();
-        }
-        const file = await finishFlowMedia(directory, progress.attempt, existing, signal, async state => {
-          if (progress.state === state) return;
-          progress.state = state;
-          if (!await persist()) throw new Error(saveError.value);
-        });
-        if (stage === "frame") item.frame = file;
-        else item.video = file;
+        item[stage] = await renderMedia(batch, item, stage, item.stages[stage], signal);
       }
-      signal.throwIfAborted();
-      progress.state = "done";
-    } catch (error) {
-      signal.throwIfAborted();
-      if (saveError.value) return false;
-      if (progress.attempt) {
-        progress.attempt.uncertain = !(error instanceof VideoFlowTaskError) || error.uncertain;
-        progress.attempt.replaceable = error instanceof VideoFlowTaskError && error.replaceable;
-      }
-      progress.state = progress.attempt?.uncertain ? "interrupted" : "error";
-      progress.message = videoFlowError(error).slice(0, 2000);
-    }
-    return persist();
+    });
   }
 
   async function processItems(batch: VideoFlowRun, items: FlowItem[], signal: AbortSignal) {
@@ -211,7 +233,45 @@ export function useVideoFlowRun(directory: string, modelsFor: (kind: "text" | "i
 
   function resume() {
     return perform(async signal => {
-      if (run.value) await processItems(run.value, run.value.items, signal);
+      const batch = run.value;
+      if (!batch) return;
+      await processItems(batch, batch.items, signal);
+      if (saveError.value) return;
+      for (const item of batch.items) {
+        for (const variant of item.variants ?? []) {
+          signal.throwIfAborted();
+          if (canResumeProgress(variant.progress) && !await processVariant(batch, item, variant, signal)) return;
+        }
+      }
+    });
+  }
+
+  function rerender(item: FlowItem, kind: FlowOutputKind, adjustment: string) {
+    return perform(async signal => {
+      if (!run.value || item.stages.video.state !== "done") return;
+      const variants = item.variants ?? (item.variants = []);
+      if (variants.length >= variantLimit) return;
+      const sourceFrame = kind === "video" ? flowOutput(item, "frame") : undefined;
+      if (kind === "video" && !sourceFrame) return;
+      variants.push({ id: crypto.randomUUID(), kind, adjustment, sourceFrame, progress: { state: "waiting" } });
+      await processVariant(run.value, item, variants[variants.length - 1]!, signal);
+    });
+  }
+
+  function retryVariant(item: FlowItem, variant: FlowVariant, newTask = false) {
+    return perform(async signal => {
+      if (!run.value || !["error", "interrupted"].includes(variant.progress.state)) return;
+      if (newTask && !variant.progress.attempt?.replaceable) return;
+      if (!variant.progress.attempt?.uncertain || newTask) delete variant.progress.attempt;
+      await processVariant(run.value, item, variant, signal);
+    });
+  }
+
+  function selectVariant(item: FlowItem, kind: FlowOutputKind, id: string) {
+    return perform(async () => {
+      if (id && !item.variants?.some(variant => variant.kind === kind && variant.id === id && variant.file && variant.progress.state === "done")) return;
+      item.preferred = { ...item.preferred, [kind]: id || undefined };
+      await persist();
     });
   }
 
@@ -260,5 +320,6 @@ export function useVideoFlowRun(directory: string, modelsFor: (kind: "text" | "i
 
   onScopeDispose(() => lifetime.abort());
   return { run, busy, working, loadRun, loadError, saveError, operationError, persist, start, resume, retry, approve, setMode, selectRunModel,
+    rerender, selectVariant, retryVariant,
     pause: () => execution?.abort() };
 }

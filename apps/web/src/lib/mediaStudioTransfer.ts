@@ -3,7 +3,8 @@ export type StudioMediaTransfer = {
   path: string;
   mimeType: string;
   mediaType: "image" | "video";
-} | { directory: string; mediaType: "text"; text: string; name: string };
+} | { directory: string; mediaType: "text"; text: string; name: string }
+  | { directory: string; mediaType: "videoMerge"; clips: { path: string; mimeType: string; name: string }[] };
 
 let pendingMedia: StudioMediaTransfer | undefined;
 

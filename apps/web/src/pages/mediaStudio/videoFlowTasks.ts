@@ -33,11 +33,11 @@ export function videoImageMode(model: NodeMediaModel): VideoFlowRequest["mode"] 
   return undefined;
 }
 
-export function makeMediaRequest(run: VideoFlowRun, item: FlowItem, model: NodeMediaModel, kind: "image" | "video"): VideoFlowRequest {
+export function makeMediaRequest(run: VideoFlowRun, item: FlowItem, model: NodeMediaModel, kind: "image" | "video", adjustment = ""): VideoFlowRequest {
   const step = run.template.steps[kind === "image" ? 1 : 2]!;
   const { ratio, size, duration, resolution } = step.options;
   const request: VideoFlowRequest = {
-    mediaType: kind, providerId: model.providerId, modelId: model.modelId, prompt: buildFlowPrompt(run, item, kind),
+    mediaType: kind, providerId: model.providerId, modelId: model.modelId, prompt: buildFlowPrompt(run, item, kind, adjustment),
   };
   if (ratio) {
     if (!model.imageRatios?.includes(ratio)) throw new Error("Mô hình đã chọn không nhận tỷ lệ khung hình trong mẫu luồng.");
@@ -124,7 +124,8 @@ export async function finishFlowMedia(directory: string, attempt: MediaAttempt, 
       throw new VideoFlowTaskError(error.message);
     }
     item = undefined;
-    submissionIssue = error instanceof Error ? error.message : "";
+    submissionIssue = error instanceof StudioRequestError ? error.message
+      : describeStudioError(error instanceof Error ? error.message : undefined);
   }
   let offlineSince: number | undefined;
   let missingSince = 0;

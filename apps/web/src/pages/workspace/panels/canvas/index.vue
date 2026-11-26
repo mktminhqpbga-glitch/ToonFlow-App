@@ -1104,18 +1104,61 @@ async function importPendingStudioMedia() {
   const pending = pendingStudioMediaForCanvas();
   const directory = project.value?.directory;
   if (!pending || importingStudioMedia || !directory || pending.directory !== directory || !props.active
-    || !canvasReady.value || !canvasId.value || !availableNodes.value.some(node => node.type === `remote-${pending.mediaType}Node`)) return;
+    || !canvasReady.value || !canvasId.value) return;
+  const type = `remote-${pending.mediaType}Node`;
+  if (!availableNodes.value.some(node => node.type === type)) {
+    if (pending.mediaType === "videoMerge" && availableNodes.value.length) {
+      ElMessage.error("Hãy bật node Ghép video rồi chọn lại các clip trong Xưởng video.");
+      clearStudioMediaForCanvas(pending);
+    }
+    return;
+  }
+  const signal = canvasController.signal;
+  const isCurrent = () => pendingStudioMediaForCanvas() === pending && project.value?.directory === directory && props.active && !signal.aborted;
   importingStudioMedia = true;
   try {
+    if (pending.mediaType === "videoMerge") {
+      const position = pastePosition() ?? { x: 0, y: 0 };
+      const workspaceFiles = useWorkspaceFiles(directory);
+      const folders = new Map<string, string[]>();
+      for (const clip of pending.clips) {
+        const slash = clip.path.lastIndexOf("/");
+        const folder = slash < 0 ? "" : clip.path.slice(0, slash);
+        const names = folders.get(folder) ?? [];
+        names.push(clip.path.slice(slash + 1));
+        folders.set(folder, names);
+      }
+      const deadline = AbortSignal.any([signal, AbortSignal.timeout(15_000)]);
+      await Promise.all([...folders].map(async ([folder, names]) => {
+        const listing = await workspaceFiles.list(folder, deadline).catch(() => undefined);
+        const found = new Set(listing?.entries.filter(entry => entry.type === "file").map(entry => entry.name));
+        if (names.some(name => !found.has(name))) throw new Error("Không mở được một số clip trong dự án. Hãy kiểm tra lại video đã chọn trong Xưởng video.");
+      }));
+      if (!isCurrent()) return;
+      await canvasHistory.batch(async () => {
+        const id = crypto.randomUUID();
+        flow.removeSelectedElements();
+        addNodes({ id, type, position, data: {
+          label: "Ghép video",
+          mergeUploads: pending.clips.map(clip => ({ url: clip.path, mimeType: clip.mimeType, name: clip.name })),
+        } });
+        await nextTick();
+        const added = findNode(id);
+        if (added) flow.addSelectedNodes([added]);
+      });
+      clearStudioMediaForCanvas(pending);
+      ElMessage.success("Đã đưa " + pending.clips.length + " clip vào node Ghép video.");
+      return;
+    }
     const file = "text" in pending
       ? new File([pending.text], pending.name, { type: "text/markdown" })
       : new File([await useWorkspaceFiles(directory).read(pending.path)], pending.path.split("/").at(-1) ?? `studio.${pending.mediaType === "image" ? "png" : "mp4"}`, { type: pending.mimeType });
-    if (pendingStudioMediaForCanvas() !== pending || project.value?.directory !== directory || canvasController.signal.aborted) return;
+    if (!isCurrent()) return;
     const position = pastePosition() ?? { x: 0, y: 0 };
     let imported = 0;
     await canvasHistory.batch(async () => {
       const ids = await importCanvasFiles([file], position, {
-        directory, availableNodes: availableNodes.value, signal: canvasController.signal, flow,
+        directory, availableNodes: availableNodes.value, signal, flow,
       });
       imported = ids.length;
     });
@@ -1123,7 +1166,10 @@ async function importPendingStudioMedia() {
     clearStudioMediaForCanvas(pending);
     ElMessage.success("Đã đưa kết quả từ xưởng vào Canvas hiện tại.");
   } catch (cause) {
-    if (!canvasController.signal.aborted) ElMessage.error(cause instanceof Error ? cause.message : "Không thể đưa kết quả từ xưởng vào Canvas");
+    if (isCurrent()) {
+      ElMessage.error(cause instanceof Error ? cause.message : "Không thể đưa kết quả từ xưởng vào Canvas");
+      if (pending.mediaType === "videoMerge") clearStudioMediaForCanvas(pending);
+    }
   } finally { importingStudioMedia = false; }
 }
 

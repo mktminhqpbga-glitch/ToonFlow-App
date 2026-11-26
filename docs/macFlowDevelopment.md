@@ -10,6 +10,7 @@ Tài liệu này áp dụng cho nhánh `feat/macflow-media-studios` của `mktmi
 | Chạy Huobao Drama tách biệt, nối mô hình và Kho MacFlow | `services/huobaoDrama`, `apps/server/src/utils/huobao` | [Chạy Huobao Drama với MacFlow](huobaoDrama.md). |
 | Phân cảnh phim ngắn và chuyển prompt sang xưởng | `apps/web/src/pages/shortDrama` và `apps/web/src/lib/studioPromptTransfer.ts` | [Phim ngắn và nhập dữ liệu Huobao](shortDrama.md). |
 | Dựng video sản phẩm từ ảnh và lời thoại | `apps/web/src/pages/mediaStudio/clipForgeStudio.vue` và `clipForgeApi.ts` | [Xưởng video sản phẩm với ClipForge](clipForge.md). |
+| Chạy nhiều cảnh, giữ phiên bản và chọn clip ghép | `apps/web/src/pages/mediaStudio/videoFlowRun.vue` và `useVideoFlowRun.ts` | Thao tác theo từng cảnh. Dùng cùng ảnh và kịch bản, chọn rõ bản video sẽ đưa sang node Ghép video. |
 | Thêm node có giao diện trên Canvas | `packages/nodes/<tênNode>` cho node tích hợp, hoặc dự án plugin trong workspace cho tệp cài riêng | [`textNode`](../packages/nodes/textNode), [`videoScriptNote`](../plugins/videoScriptNote), [`nodeScaffold`](../packages/nodeScaffold/readme.md). |
 | Thêm thao tác Agent có thể gọi | `packages/tools/<tênCôngCụ>` hoặc plugin công cụ trong workspace | [`askUser`](../packages/tools/askUser/src/index.ts), [`toolScaffold`](../packages/toolScaffold/readme.md). |
 | Dạy Agent một quy trình hoặc mẫu đầu ra | Một kỹ năng có `SKILL.md` | [`workflow`](../packages/skills/workflow/SKILL.md). |
@@ -18,6 +19,8 @@ Tài liệu này áp dụng cho nhánh `feat/macflow-media-studios` của `mktmi
 | Sửa luồng tác vụ phía máy chủ | `apps/server/src/routes`, `apps/server/src/utils`, `apps/server/src/lib` | [`mediaStudio/list.ts`](../apps/server/src/routes/mediaStudio/list.ts), [`ai/media/generate.ts`](../apps/server/src/routes/ai/media/generate.ts). |
 
 `research/` chứa mã tham khảo. `services/` chứa dịch vụ tích hợp riêng. Khi lỗi xuất hiện ở MacFlow, bắt đầu bằng luồng từ thao tác người dùng đến backend MacFlow rồi đối chiếu phản hồi upstream. Xác nhận chính xác ranh giới xảy ra lỗi trước khi thay đổi một dịch vụ tích hợp.
+
+Trong **Xưởng tạo video → Tự động theo luồng**, mở **Hồ sơ sản phẩm** để lưu hoặc lấy lại ảnh và mô tả cho dự án. Có thể mở cùng hồ sơ trong **Kho tài nguyên**. Khi một cảnh đã có video, mở **Làm lại cảnh**, nhập điều chỉnh, rồi tạo lại khung hình hoặc video. Chọn phiên bản muốn dùng ngay ở bước Khung hình hoặc Video. Tích ít nhất hai cảnh rồi bấm **Đưa clip vào Ghép video** để chỉnh thứ tự, âm thanh và phụ đề trên Canvas. **Tổng quan** hiển thị đợt gần nhất của dự án đang mở.
 
 ## 2. Tạo node cài riêng ngay trong MacFlow
 

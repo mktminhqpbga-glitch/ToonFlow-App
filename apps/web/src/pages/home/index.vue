@@ -90,6 +90,7 @@
                 </template>
               </el-card>
               <p v-if="!workspaceDirectory" class="workspaceHint" role="status">Hãy chọn thư mục trống để làm thư mục làm việc. Canvas và tài nguyên sẽ được lưu tại đây.</p>
+              <videoFlowReminder v-if="project?.directory" :directory="project.directory" />
             </div>
           </section>
           <section class="projectList" data-home-section="projects" aria-labelledby="projectListTitle">
@@ -125,7 +126,7 @@
         </el-main>
       </div>
     </el-scrollbar>
-    <assetLibraryDialog v-if="currentUser?.role !== 'user'" v-model="assetsVisible" />
+    <assetLibraryDialog v-if="currentUser?.role !== 'user'" v-model="assetsVisible" :directory="project?.directory" />
     <settings v-model="settingsVisible" />
     <mobileConnect v-if="!publicWeb" v-model="mobileConnectVisible" />
     <workspacePicker ref="relocationPicker" hideTrigger />
@@ -161,6 +162,7 @@ import http from "@/lib/http";
 import { waitForControlValue } from "@/lib/mcpControl";
 import settings from "@/components/settings/index.vue";
 import assetLibraryDialog from "./assetLibraryDialog.vue";
+import videoFlowReminder from "./videoFlowReminder.vue";
 import bg from "./bg.vue";
 import explore from "./explore.vue";
 import projectCard from "./projectCard.vue";
