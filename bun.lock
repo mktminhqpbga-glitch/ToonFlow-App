@@ -652,6 +652,26 @@
         "vue": "^3.5.42",
       },
     },
+    "packages/nodes/videoMergeNode": {
+      "name": "@toonflow/node-video-merge",
+      "version": "1.0.0",
+      "dependencies": {
+        "@tabler/icons-vue": "^3.46.0",
+      },
+      "devDependencies": {
+        "@toonflow/node-shared": "workspace:*",
+        "@toonflow/node-video": "workspace:*",
+        "@toonflow/nodes-scaffold": "workspace:*",
+        "typescript": "~6.0.3",
+        "vite": "^8.2.2",
+        "vue-tsc": "^3.3.11",
+      },
+      "peerDependencies": {
+        "@vue-flow/core": "^1.48.2",
+        "element-plus": "^2.14.5",
+        "vue": "^3.5.42",
+      },
+    },
     "packages/nodes/videoNode": {
       "name": "@toonflow/node-video",
       "version": "2.0.0",
@@ -1540,6 +1560,8 @@
     "@toonflow/node-video": ["@toonflow/node-video@workspace:packages/nodes/videoNode"],
 
     "@toonflow/node-video-generation": ["@toonflow/node-video-generation@workspace:packages/nodes/videoGenerationNode"],
+
+    "@toonflow/node-video-merge": ["@toonflow/node-video-merge@workspace:packages/nodes/videoMergeNode"],
 
     "@toonflow/nodes-scaffold": ["@toonflow/nodes-scaffold@workspace:packages/nodeScaffold"],
 
@@ -3070,6 +3092,8 @@
     "@toonflow/node-video/typescript": ["typescript@6.0.3", "https://registry.npmmirror.com/typescript/-/typescript-6.0.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "@toonflow/node-video-generation/typescript": ["typescript@6.0.3", "https://registry.npmmirror.com/typescript/-/typescript-6.0.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "@toonflow/node-video-merge/typescript": ["typescript@6.0.3", "https://registry.npmmirror.com/typescript/-/typescript-6.0.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "@toonflow/nodes-scaffold/typescript": ["typescript@6.0.3", "https://registry.npmmirror.com/typescript/-/typescript-6.0.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
