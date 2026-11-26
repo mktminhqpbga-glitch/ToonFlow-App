@@ -1,0 +1,214 @@
+"""Draft one content brief per product from approved reference scenes."""
+
+from __future__ import annotations
+
+import asyncio
+import io
+import json
+from typing import Any, Protocol
+
+import httpx
+from baml_py import Image as BamlImage
+from baml_py.baml_py import BamlError
+from loguru import logger
+from PIL import Image
+
+from ai_content.domains.marketing.products.adapters.baml_client import types as baml_types
+from ai_content.domains.marketing.products.adapters.baml_client.async_client import b
+from ai_content.domains.marketing.products.adapters.baml_registry import build_client_registry
+from ai_content.domains.marketing.products.keyframe_check import _image
+
+_CONCURRENCY = 2
+_DOWNLOAD_TIMEOUT = 30
+_MAX_PRODUCT_PHOTOS = 3
+# The brief reads the look, the label and the outfit, not every pixel: a smaller picture costs
+# fewer input tokens. The image model still gets the full-size photos.
+_PHOTO_EDGE = 512
+# A brief of 6 shots takes 2 to 4 minutes to write; a call that stays silent longer is an error.
+_CALL_SECONDS = 360
+
+
+class BriefGenerationError(RuntimeError):
+    """The model could not produce a brief."""
+
+
+class BriefUnavailable(RuntimeError):
+    """The product is not ready for a brief; the message says what to do first."""
+
+
+def earlier_videos(briefs: list[dict[str, Any]]) -> str:
+    """The scripts of a product's earlier videos, so a new brief can be different from them."""
+    return "\n\n".join(
+        f"{number}. {brief.get('title', '')} (place: {brief.get('scene', '')})\n{brief.get('script', '')}"
+        for number, brief in enumerate(briefs, 1)
+    )
+
+
+class _BamlBriefClient(Protocol):
+    async def DraftContentBrief(
+        self,
+        product_json: str,
+        user_idea: str,
+        shot_count: int,
+        product_images: list[BamlImage],
+        with_person: bool,
+        person_images: list[BamlImage],
+        rules: str,
+        earlier_videos: str,
+    ) -> baml_types.ContentBrief: ...
+
+
+def _small_image(content: bytes) -> BamlImage:
+    picture = Image.open(io.BytesIO(content)).convert("RGB")
+    picture.thumbnail((_PHOTO_EDGE, _PHOTO_EDGE))
+    buffer = io.BytesIO()
+    picture.save(buffer, "JPEG", quality=80)
+    return _image(buffer.getvalue())
+
+
+def _clean_text(text: str) -> str:
+    """A seller's text without its odd spaces and blank lines, which only cost tokens."""
+    lines = (" ".join(line.split()) for line in text.splitlines())
+    return "\n".join(line for line in lines if line)
+
+
+def product_facts(product: dict[str, Any]) -> dict[str, Any]:
+    """Compact, grounded product facts the model may rely on."""
+    price = product.get("price") or {}
+    return {
+        "title": product.get("title"),
+        "categories": product.get("categories"),
+        "price_vnd": price.get("sale"),
+        "list_price_vnd": price.get("original"),
+        "discount": price.get("discount"),
+        "sold_count": product.get("sold_count"),
+        "rating": product.get("rating"),
+        "review_count": product.get("review_count"),
+        "specifications": dict(list((product.get("specifications") or {}).items())[:20]),
+        "variants": [v.get("variant") for v in (product.get("variants") or [])[:10]],
+        "description": _clean_text(product.get("description") or "")[:3_000],
+    }
+
+
+_DETAIL_LABELS = (
+    ("setting", "Setting"),
+    ("surface_and_props", "Props"),
+    ("lighting", "Light"),
+    ("color_palette", "Colors"),
+    ("style", "Style"),
+    ("camera", "Camera"),
+    ("people", "People"),
+    ("placement", "Product spot"),
+    ("fits_products", "Fits products"),
+    ("motion_ideas", "Motion ideas"),
+)
+
+
+def reference_search_text(image: dict[str, Any]) -> str:
+    """The short text a picture is found by: only what a shot's action can be compared with."""
+    screening = image.get("screening") or {}
+    return str(screening.get("description") or "") or reference_note(image)
+
+
+def reference_note(image: dict[str, Any]) -> str:
+    """Everything the review saw in the picture, as text the brief writer can compare."""
+    screening = image.get("screening") or {}
+    if screening.get("description"):
+        details = []
+        for key, label in _DETAIL_LABELS:
+            value = screening.get(key)
+            if isinstance(value, list):
+                value = ", ".join(str(item) for item in value)
+            if value:
+                details.append(f"{label}: {value}")
+        return " ".join([str(screening["description"]), *(f"{item}." for item in details)])
+    parts = [screening.get("scene_description"), screening.get("placement_note")]
+    return " ".join(part for part in parts if part)
+
+
+class ContentBriefWriter:
+    """Download reference images and ask the BAML model for a single brief."""
+
+    def __init__(self, client: _BamlBriefClient) -> None:
+        self._client = client
+
+    @classmethod
+    def from_settings(cls, *, base_url: str, api_key: str, model: str) -> ContentBriefWriter:
+        registry = build_client_registry(
+            name="ContentBrief",
+            base_url=base_url,
+            model=model,
+            api_key=api_key,
+            reasoning_effort="medium",
+            temperature=0.4,
+        )
+        return cls(b.with_options(client_registry=registry))
+
+    async def write(
+        self,
+        product: dict[str, Any],
+        user_idea: str,
+        http: httpx.AsyncClient | None = None,
+        shot_count: int = 1,
+        person_photos: list[bytes] | None = None,
+        rules: str = "",
+        earlier: str = "",
+    ) -> dict[str, Any]:
+        """Return the brief as a dict.
+
+        The model sees the first product photos and picks the ones the image model will use (reported
+        as urls). Reference photos are matched to the shots afterwards. With person photos the
+        storyboard follows that person; without them it shows no person.
+        """
+        semaphore = asyncio.Semaphore(_CONCURRENCY)
+        owned = http is None
+        http = http or httpx.AsyncClient(timeout=_DOWNLOAD_TIMEOUT, follow_redirects=True)
+
+        async def fetch(url: str) -> BamlImage | None:
+            async with semaphore:
+                try:
+                    response = await http.get(url)
+                    response.raise_for_status()
+                except httpx.HTTPError as error:
+                    logger.warning("Brief image download failed: {}", str(error)[:200])
+                    return None
+            return _small_image(response.content)
+
+        urls = [url for url in (product.get("images") or []) if url][:_MAX_PRODUCT_PHOTOS]
+        try:
+            downloaded = await asyncio.gather(*(fetch(url) for url in urls))
+        finally:
+            if owned:
+                await http.aclose()
+        photos = [
+            (url, photo) for url, photo in zip(urls, downloaded, strict=True) if photo is not None
+        ]
+        if not photos:
+            raise BriefGenerationError("None of the product photos could be downloaded")
+        arguments = (
+            json.dumps(product_facts(product), ensure_ascii=False, separators=(",", ":")),
+            user_idea.strip(),
+            shot_count,
+            [photo for _, photo in photos],
+            bool(person_photos),
+            [_small_image(photo) for photo in person_photos or []],
+            rules,
+            earlier,
+        )
+        try:
+            draft = await self._draft(arguments)
+        except (BamlError, TimeoutError) as error:
+            raise BriefGenerationError(str(error) or "The model did not answer in time") from error
+        brief = draft.model_dump()
+        if len(brief["shots"]) != shot_count:  # every shot is a 15 second clip: the length is the user's
+            raise BriefGenerationError(
+                f"The model wrote {len(brief['shots'])} shot(s) instead of {shot_count}"
+            )
+        numbers = dict.fromkeys(brief.pop("product_photo_numbers"))
+        chosen = [photos[number - 1][0] for number in numbers if 1 <= number <= len(photos)]
+        brief["product_photo_urls"] = chosen or [url for url, _ in photos]
+        return brief
+
+    async def _draft(self, arguments: tuple[Any, ...]) -> baml_types.ContentBrief:
+        """Ask for the brief once; an error or a silent call is the answer."""
+        return await asyncio.wait_for(self._client.DraftContentBrief(*arguments), _CALL_SECONDS)

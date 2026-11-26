@@ -1,0 +1,63 @@
+groups:
+  - name: aicontent-service-health
+    rules:
+      - alert: AicServiceDown
+        expr: up{job="aicontent-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is unavailable"
+          description: "Prometheus has not scraped {{ $labels.instance }} for two minutes."
+
+      - alert: AicApiHighErrorRate
+        expr: |
+          sum(rate(aic_http_requests_total{service="aicontent-api",status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(aic_http_requests_total{service="aicontent-api"}[5m])), 0.001)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API error rate is above 5%"
+          description: "The five-minute HTTP 5xx ratio has remained above the pilot threshold."
+
+      - alert: AicDependencyUnavailable
+        expr: aic_dependency_ready{service="aicontent-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.dependency }} is unavailable"
+          description: "The API readiness probe reports a failed runtime dependency."
+
+  - name: aicontent-artifact-health
+    rules:
+      - alert: AicArtifactPublicationFailures
+        expr: increase(aic_artifact_publications_total{outcome="failure"}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Artifact publication failed"
+          description: "At least one immutable artifact could not be published."
+
+  - name: aicontent-ai-health
+    rules:
+      - alert: AicAiHighFailureRate
+        expr: |
+          sum by (operation, model) (increase(aic_ai_requests_total{outcome="failure"}[15m]))
+          /
+          clamp_min(sum by (operation, model) (increase(aic_ai_requests_total[15m])), 1)
+          > 0.2
+          and
+          sum by (operation, model) (increase(aic_ai_requests_total[15m])) >= 5
+        for: 5m
+        labels:
+          severity: warning
+          owner: marketing-ai-operations
+          component: ai-runtime
+        annotations:
+          summary: "AI failure rate is above the pilot threshold"
+          description: "{{ $labels.operation }} on {{ $labels.model }} has exceeded a 20% failure rate with at least five calls."
+          runbook_url: "docs/runbooks/AI_MODEL_INCIDENTS.md"

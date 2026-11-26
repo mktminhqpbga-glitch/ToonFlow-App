@@ -1,0 +1,46 @@
+export type Shot = {
+  role: string;
+  description: string;
+  keyframe_prompt: string;
+  motion_prompt: string;
+  delivery?: "narrated" | "talking";
+  on_screen_text: string;
+  voiceover: string;
+};
+export type PostPackage = { captions: string[]; hashtags: string[]; product_url: string; ai_label_reminder?: string };
+export type Brief = {
+  title: string;
+  script?: string;
+  shots?: Shot[];
+  post_package?: PostPackage;
+  with_person?: boolean;
+  shot_references?: (string | null)[];
+};
+export type BriefRecord = { product_id: string; user_idea: string; brief: Brief; status: "draft" | "approved" };
+export type Keyframe = { shot_index: number; status: "ready" | "approved" | "rejected" | "failed"; attempts: number; error: string | null; qa_problem: string };
+export type Clip = { shot_index: number; status: "processing" | "ready" | "failed"; seconds: number; attempts: number; error: string | null; qa_problem: string };
+export type PipelineRun = { status: "idle" | "running" | "paused" | "failed" | "interrupted" | "done"; step: string; message: string };
+export type Product = {
+  product_id: string;
+  title: string | null;
+  url: string;
+  price: { sale: string | null };
+  sold_count: number | string | null;
+  rating: number | string | null;
+  seller: { name: string | null };
+  images: string[];
+  category?: string;
+};
+export type OutputItem = {
+  product_id: string;
+  title: string | null;
+  product_title: string | null;
+  image: string | null;
+  built_at: string | null;
+  seconds: number | null;
+  shots: number;
+  has_cover: boolean;
+};
+export type VideoInfo = { exists: boolean; voiceover: boolean; voice_id: string };
+export type RunEvent = { id: number; at: string; step: string; shot_index: number | null; status: string; message: string };
+export type Persona = { id: string; name: string; photos: number; attempts: number; default: boolean };

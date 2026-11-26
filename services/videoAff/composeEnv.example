@@ -1,0 +1,3 @@
+# Use hexadecimal values. Generate each independently with: openssl rand -hex 32
+VIDEO_AFF_DB_PASSWORD=
+MACFLOW_VIDEO_AFF_TOKEN=

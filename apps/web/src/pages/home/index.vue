@@ -29,6 +29,10 @@
           <icon-movie :size="18" aria-hidden="true" />
           <span class="sidebarText">Phim ngắn</span>
         </button>
+        <button v-if="!publicWeb" class="sidebarItem" type="button" aria-label="VideoAFF" title="VideoAFF" @click="router.push('/videoAff')">
+          <icon-shopping-bag :size="18" aria-hidden="true" />
+          <span class="sidebarText">VideoAFF</span>
+        </button>
         <hr v-if="currentUser?.role !== 'user'" class="sidebarDivider" />
         <button v-if="currentUser?.role !== 'user'" class="sidebarItem" :class="{ active: assetsVisible }" type="button" aria-label="Thư viện tài nguyên" title="Thư viện tài nguyên" aria-haspopup="dialog" :aria-expanded="assetsVisible" @click="assetsVisible = true">
           <icon-library-photo :size="18" aria-hidden="true" />

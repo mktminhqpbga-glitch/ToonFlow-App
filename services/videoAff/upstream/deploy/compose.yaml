@@ -1,0 +1,281 @@
+name: ai-content-automation
+
+x-python-environment: &python-environment
+  BAML_LOG: "OFF"
+  AIC_AI_CONFIG_DIR: /app/config
+  AIC_SCREENING_BASE_URL: ${AIC_SCREENING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+  AIC_SCREENING_API_KEY: ${AIC_SCREENING_API_KEY:-}
+  AIC_WRITER_MODEL: ${AIC_WRITER_MODEL:-}
+  AIC_REVIEW_MODEL: ${AIC_REVIEW_MODEL:-}
+  AIC_EMBEDDING_MODEL: ${AIC_EMBEDDING_MODEL:-}
+  AIC_TEXT_EMBEDDING_BASE_URL: ${AIC_TEXT_EMBEDDING_BASE_URL:-}
+  AIC_TEXT_EMBEDDING_API_KEY: ${AIC_TEXT_EMBEDDING_API_KEY:-}
+  AIC_TEXT_EMBEDDING_MODEL: ${AIC_TEXT_EMBEDDING_MODEL:-}
+  AIC_IMAGE_BASE_URL: ${AIC_IMAGE_BASE_URL:-}
+  AIC_IMAGE_API_KEY: ${AIC_IMAGE_API_KEY:-}
+  AIC_IMAGE_MODEL: ${AIC_IMAGE_MODEL:-}
+  AIC_IMAGE_API: ${AIC_IMAGE_API:-chat}
+  AIC_VIDEO_BASE_URL: ${AIC_VIDEO_BASE_URL:-}
+  AIC_VIDEO_API_KEY: ${AIC_VIDEO_API_KEY:-}
+  AIC_VIDEO_MODEL: ${AIC_VIDEO_MODEL:-}
+  AIC_VIDEO_FRAME_FIELDS: ${AIC_VIDEO_FRAME_FIELDS:-image}
+  AIC_TTS_BASE_URL: ${AIC_TTS_BASE_URL:-}
+  AIC_TTS_API_KEY: ${AIC_TTS_API_KEY:-}
+  AIC_TTS_MODEL: ${AIC_TTS_MODEL:-}
+  AIC_TTS_VOICE: ${AIC_TTS_VOICE:-}
+  AIC_TTS_SPEED: ${AIC_TTS_SPEED:-1.1}
+  AIC_CLIP_SPEED: ${AIC_CLIP_SPEED:-1.1}
+  AIC_DUPLICATE_SIMILARITY: ${AIC_DUPLICATE_SIMILARITY:-0.80}
+  AIC_AI_DATA_ROOT: /var/lib/aicontent/pilot
+  AIC_AI_DATABASE_URL: >-
+    postgresql+psycopg://${AIC_POSTGRES_USER:?set AIC_POSTGRES_USER}:${AIC_POSTGRES_PASSWORD:?set AIC_POSTGRES_PASSWORD}@postgres:5432/${AIC_POSTGRES_DB:?set AIC_POSTGRES_DB}
+  AIC_AI_OBJECT_STORAGE_BACKEND: s3
+  AIC_AI_S3_ENDPOINT_URL: http://object-storage:8333
+  AIC_AI_S3_BUCKET: ${AIC_AI_S3_BUCKET:-aicontent-ai-artifacts}
+  AIC_AI_S3_ACCESS_KEY: ${AIC_AI_S3_ACCESS_KEY:?set AIC_AI_S3_ACCESS_KEY}
+  AIC_AI_S3_SECRET_KEY: ${AIC_AI_S3_SECRET_KEY:?set AIC_AI_S3_SECRET_KEY}
+  AIC_BACKUP_OFFSITE_ENABLED: ${AIC_BACKUP_OFFSITE_ENABLED:-false}
+  AIC_BACKUP_S3_ENDPOINT_URL: ${AIC_BACKUP_S3_ENDPOINT_URL:-}
+  AIC_BACKUP_S3_BUCKET: ${AIC_BACKUP_S3_BUCKET:-}
+  AIC_BACKUP_S3_ACCESS_KEY: ${AIC_BACKUP_S3_ACCESS_KEY:-}
+  AIC_BACKUP_S3_SECRET_KEY: ${AIC_BACKUP_S3_SECRET_KEY:-}
+  AIC_BACKUP_S3_REGION: ${AIC_BACKUP_S3_REGION:-us-east-1}
+  AIC_BACKUP_S3_PREFIX: ${AIC_BACKUP_S3_PREFIX:-aicontent-backups}
+
+x-python-service: &python-service
+  image: ai-content-automation-python:local
+  build:
+    context: ..
+    dockerfile: deploy/docker/api.Dockerfile
+    target: runtime
+  environment:
+    <<: *python-environment
+  networks:
+    - internal
+  init: true
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  object-storage:
+    image: chrislusf/seaweedfs:4.29@sha256:d47c7ee99fcb951351d7194915f4e3a5ea604a8e8871183d713907dec4fb9bf5
+    environment:
+      AWS_ACCESS_KEY_ID: ${AIC_AI_S3_ACCESS_KEY:?set AIC_AI_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${AIC_AI_S3_SECRET_KEY:?set AIC_AI_S3_SECRET_KEY}
+      S3_BUCKET: ${AIC_AI_S3_BUCKET:-aicontent-ai-artifacts}
+    volumes:
+      - object_storage_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --output-document=-
+        - http://127.0.0.1:9333/cluster/status
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: ${AIC_POSTGRES_DB:?set AIC_POSTGRES_DB}
+      POSTGRES_USER: ${AIC_POSTGRES_USER:?set AIC_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AIC_POSTGRES_PASSWORD:?set AIC_POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${AIC_POSTGRES_BIND_ADDRESS:-127.0.0.1}:5432:5432"
+    networks:
+      - internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  migrate:
+    <<: *python-service
+    command:
+      - alembic
+      - upgrade
+      - head
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *python-service
+    environment:
+      <<: *python-environment
+    command:
+      - uvicorn
+      - ai_content.entrypoints.api.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    expose:
+      - "8000"
+    ports:
+      - "${AIC_DEBUG_BIND_ADDRESS:-127.0.0.1}:${AIC_DEBUG_API_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - api_scratch:/var/lib/aicontent
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).read()
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  frontend:
+    image: ai-content-automation-frontend:local
+    build:
+      context: ..
+      dockerfile: deploy/docker/frontend.Dockerfile
+      target: runtime
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${AIC_HTTP_BIND_ADDRESS:-127.0.0.1}:${AIC_HTTP_PORT:-8080}:8080"
+    volumes:
+      - ${AIC_NGINX_AUTH_CONF:-./nginx/auth.off.conf}:/etc/nginx/auth.d/auth.conf:ro
+      - ${AIC_NGINX_HTPASSWD:-./nginx/auth.off.conf}:/etc/nginx/htpasswd:ro
+    networks:
+      - internal
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --output-document=-
+        - http://127.0.0.1:8080/health/ready
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+  smoke:
+    <<: *python-service
+    command:
+      - python
+      - /app/deploy/scripts/smoke.py
+      - --base-url
+      - http://frontend:8080
+    depends_on:
+      frontend:
+        condition: service_healthy
+    profiles:
+      - tools
+
+  test:
+    image: ai-content-automation-test:local
+    build:
+      context: ..
+      dockerfile: deploy/docker/api.Dockerfile
+      target: test
+    working_dir: /app
+    volumes:
+      - ../src:/app/src:ro
+      - ../tests:/app/tests:ro
+      - ../config:/app/config:ro
+      - ../deploy:/app/deploy:ro
+      - ../baml_src:/app/baml_src:ro
+      - test_whisper_models:/models  # the speech model is downloaded once, not on every run
+    environment:
+      AIC_TEST_WHISPER_DIR: /models
+      AIC_AI_DATABASE_URL: postgresql+psycopg://test:test@test-postgres:5432/test
+      AIC_TEST_DATABASE_URL: postgresql+psycopg://test:test@test-postgres:5432/test
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    profiles:
+      - tools
+
+  # A disposable database for the tests: in memory, nothing is kept.
+  test-postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U test -d test]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    profiles:
+      - tools
+
+  maintenance:
+    image: ai-content-automation-maintenance:local
+    build:
+      context: ..
+      dockerfile: deploy/docker/api.Dockerfile
+      target: maintenance
+    environment:
+      <<: *python-environment
+    entrypoint:
+      - python
+      - -m
+      - ai_content.entrypoints.backup
+    command:
+      - --help
+    networks:
+      - internal
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      object-storage:
+        condition: service_healthy
+    volumes:
+      - ../.backups:/backups
+    profiles:
+      - tools
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  api_scratch:
+  object_storage_data:
+  postgres_data:
+  test_whisper_models:

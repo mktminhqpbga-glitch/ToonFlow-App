@@ -34,3 +34,5 @@ apps/updateServer/build
 Thumbs.db
 
 services/huobaoDrama/upstream
+
+services/videoAff/upstream

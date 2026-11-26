@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="logo">A</span>
+        <div>
+          <strong>AIC Collector <span id="version" class="version"></span></strong>
+          <small id="status">Sent 0 packages to the collector</small>
+        </div>
+      </div>
+      <label class="switch" title="Send data to the collector while you browse pages yourself">
+        <input type="checkbox" id="enabled" />
+        <span class="slider"></span>
+        <span class="switch-label">Collect while browsing</span>
+      </label>
+    </header>
+
+    <section class="card hero">
+      <h2>1. Send this product</h2>
+      <p class="hint">Open a product on TikTok Shop, wait for it to load, then press the button.</p>
+      <button id="send-one" class="primary">Send this product</button>
+      <div id="send-note" class="note"></div>
+      <a id="open-studio" class="primary" target="_blank" rel="noopener" hidden>Make a video from it</a>
+    </section>
+    <details class="card">
+      <summary>Collect many products (slower, you solve the captchas)</summary>
+      <p class="hint">Log in and solve any captcha on TikTok Shop first, then press a button below.</p>
+      <button id="crawl-all" class="primary">Collect everything: home page + 28 categories, then every product page</button>
+      <div class="hint">The tab count below is used for the categories and then for the product pages.</div>
+      <div class="row">
+        <label class="field">
+          <span>Tab song song</span>
+          <input type="number" id="auto-tabs" value="20" min="1" max="20" />
+        </label>
+      </div>
+      <div id="auto-note" class="note"></div>
+      <div id="walker-bar" class="bar" hidden><span></span></div>
+      <div id="walker" class="progress"></div>
+      <button id="stop" class="ghost danger">Stop</button>
+    </details>
+
+    <section class="card">
+      <h2>2. Pinterest reference images</h2>
+      <p class="hint">Log in to Pinterest first. Leave both boxes empty to collect everything.</p>
+      <div class="row">
+        <label class="field">
+          <span>Keywords</span>
+          <input type="number" id="pin-searches" min="1" max="200" placeholder="all" />
+        </label>
+        <label class="field">
+          <span>Images per keyword</span>
+          <input type="number" id="pin-images" min="10" max="2000" placeholder="all" />
+        </label>
+        <label class="field">
+          <span>Tabs at once</span>
+          <input type="number" id="pin-tabs" value="3" min="1" max="5" />
+        </label>
+      </div>
+      <button id="pins" class="primary">Collect Pinterest images for approved keywords</button>
+      <div id="pin-bar" class="bar" hidden><span></span></div>
+      <div id="pin-walker" class="progress"></div>
+      <button id="pin-stop" class="ghost danger" hidden>Stop</button>
+    </section>
+
+    <details class="card">
+      <summary>Manual</summary>
+      <button id="capture" class="secondary">Capture this page</button>
+    </details>
+
+    <details class="card">
+      <summary>Export data</summary>
+      <div class="row">
+        <button id="xlsx" class="secondary">Excel</button>
+        <button id="json" class="secondary">JSON</button>
+      </div>
+      <button id="media" class="secondary">Download images/videos to this computer</button>
+      <div id="media-status" class="note"></div>
+    </details>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,652 @@
+import asyncio
+import base64
+import io
+from types import SimpleNamespace
+
+import httpx
+import pytest
+from baml_py.baml_py import BamlClientError
+from PIL import Image
+from tests.pgstore import product_repository
+
+from ai_content.domains.marketing.products import service as service_module
+from ai_content.domains.marketing.products.briefing import (
+    BriefGenerationError,
+    BriefUnavailable,
+    ContentBriefWriter,
+    product_facts,
+)
+from ai_content.domains.marketing.products.reference_picker import (
+    ReferencePickerError,
+    ShotReferencePicker,
+)
+from ai_content.domains.marketing.products.references import ProfileGenerationError
+from ai_content.domains.marketing.products.service import ProductCatalogService
+
+PRODUCT_ID = "1730000000000000001"
+URL = f"https://shop.tiktok.com/vn/pdp/ao-thun/{PRODUCT_ID}"
+HTML = (
+    '<script>"product_info":{"status":1,"product_id":"1730000000000000001",'
+    '"title":"Áo thun","price":{"min_sku_price":"99000","currency":"VND"},'
+    '"images":[{"url_list":["https://img.example/1.jpg"]}],'
+    '"specifications":[{"name":"Chất liệu","value":"Cotton"}]}</script>'
+)
+PIN = {"image_url": "https://i.pinimg.com/236x/ab/cd/ef.jpg", "pin_url": "/pin/1/", "title": "a"}
+
+
+class _FakeWriter:
+    async def write(self, product, user_idea, shot_count=1, person_photos=None, rules="", earlier=""):
+        return {
+            "title": "Brief",
+            "scene": "Phòng giặt",
+            "shots": [{"role": "hook", "keyframe_prompt": "a hand applies lotion"}] * shot_count,
+        }
+
+
+async def _service(tmp_path, writer=None) -> ProductCatalogService:
+    repository = product_repository()
+    service = ProductCatalogService(repository, briefer=writer)
+    await service.ingest({"kind": "page", "url": URL, "html": HTML})
+    return service
+
+
+async def _make_reference_live(service: ProductCatalogService) -> str:
+    await service.ingest(
+        {"kind": "pinterest", "product_type": "áo thun", "query": "q", "pins": [PIN]}
+    )
+    [image] = await service.reference_images("pending", "áo thun")
+    await service.set_image_status(image["image_id"], "live")
+    return image["image_id"]
+
+
+async def test_brief_needs_a_selection_and_the_references_are_chosen_apart(tmp_path) -> None:
+    service = await _service(tmp_path, _FakeWriter())
+    assert await service.create_brief("missing") is None
+    with pytest.raises(BriefUnavailable, match="Select this product"):
+        await service.create_brief(PRODUCT_ID, person_photos=[b"face"])
+
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    record = await service.create_brief(PRODUCT_ID, "  ý tưởng của tôi ", person_photos=[b"face"])
+    assert record is not None
+    assert (record["status"], record["user_idea"]) == ("draft", "ý tưởng của tôi")
+    assert record["brief"]["selected_reference_ids"] == []  # the references come in their own step
+    with pytest.raises(BriefUnavailable, match="No usable reference image"):
+        await service.match_references(PRODUCT_ID)
+
+    await _make_reference_live(service)
+    with pytest.raises(BriefUnavailable, match="No text embedding model"):
+        await service.match_references(PRODUCT_ID)
+
+
+async def test_every_product_draws_from_the_same_references(tmp_path) -> None:
+    service = await _service(tmp_path, _FakeWriter())
+    await service._repository.select_product(PRODUCT_ID, "nước tẩy")
+    assert await service.create_brief(PRODUCT_ID, person_photos=[b"face"]) is not None
+    with pytest.raises(BriefUnavailable, match="No usable reference image"):
+        await service.match_references(PRODUCT_ID)
+
+    other = {"image_url": "https://i.pinimg.com/236x/12/34/56.jpg", "pin_url": "/pin/2/", "title": "b"}
+    for product_type, pin in (("áo thun", PIN), ("giày", other)):
+        await service.ingest({"kind": "pinterest", "product_type": product_type, "query": "q", "pins": [pin]})
+        [image] = await service.reference_images("pending", product_type)
+        await service.set_image_status(image["image_id"], "live")
+    # none of the references was crawled for this product's own type
+    assert len(await service._scene_pool()) == 2
+
+
+async def test_every_brief_has_a_person_so_the_photos_are_required(tmp_path) -> None:
+    service = await _service(tmp_path, _FakeWriter())
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _make_reference_live(service)
+    for photos in (None, []):
+        with pytest.raises(BriefUnavailable, match="photo of the person"):
+            await service.create_brief(PRODUCT_ID, person_photos=photos)
+    record = await service.create_brief(PRODUCT_ID, person_photos=[b"face"], persona_id="p1")
+    assert record is not None and record["brief"]["with_person"] is True
+    assert record["brief"]["persona_id"] == "p1"  # the video keeps this person for good
+
+
+async def test_brief_without_llm_reports_configuration_error(tmp_path) -> None:
+    service = await _service(tmp_path)
+    with pytest.raises(ProfileGenerationError, match="not configured"):
+        await service.create_brief(PRODUCT_ID, person_photos=[b"face"])
+
+
+async def test_brief_edits_keep_known_fields_and_can_be_approved(tmp_path) -> None:
+    service = await _service(tmp_path, _FakeWriter())
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _make_reference_live(service)
+    await service.create_brief(PRODUCT_ID, person_photos=[b"face"])
+
+    updated = await service.update_brief(
+        PRODUCT_ID, {"scene": "Ban công", "unknown": "x"}, "approved"
+    )
+    assert updated is not None and updated["status"] == "approved"
+    assert updated["brief"]["scene"] == "Ban công" and "unknown" not in updated["brief"]
+    assert [b["product_id"] for b in await service.list_briefs()] == [PRODUCT_ID]
+    assert await service.update_brief("missing", {}, "draft") is None
+
+
+async def test_changing_a_shot_reference_updates_the_chosen_list(tmp_path) -> None:
+    service = await _service(tmp_path, _FakeWriter())
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _make_reference_live(service)
+    await service.create_brief(PRODUCT_ID, person_photos=[b"face"])
+
+    updated = await service.update_brief(PRODUCT_ID, {"shot_references": ["a", None, "a", "b"]}, "draft")
+    assert updated is not None
+    assert updated["brief"]["shot_references"] == ["a", None, "a", "b"]
+    assert updated["brief"]["selected_reference_ids"] == ["a", "b"]
+
+
+class _FakeBamlClient:
+    def __init__(self, fail: bool = False, numbers: list[int] | None = None) -> None:
+        self.fail = fail
+        self.numbers = numbers if numbers is not None else [2, 2, 1, 40]
+        self.seen: list[tuple[int, list[str]]] = []
+        self.people: list[tuple[bool, int]] = []
+
+    async def DraftContentBrief(
+        self, product_json, user_idea, shot_count, product_images, with_person, person_images, rules, earlier_videos=""
+    ):
+        if self.fail:
+            raise BamlClientError("503", "503", "503")
+        self.seen.append(len(product_images))
+        self.people.append((with_person, len(person_images)))
+        return SimpleNamespace(
+            model_dump=lambda: {
+                "title": "T",
+                "product_photo_numbers": list(self.numbers),
+                "shots": [{}] * shot_count,
+            }
+        )
+
+
+def _picture(width: int = 40, height: int = 40) -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (width, height), "white").save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+def _photo_server(request: httpx.Request) -> httpx.Response:
+    if "gone" in request.url.path:
+        return httpx.Response(404)
+    return httpx.Response(200, content=_picture(), headers={"content-type": "image/png"})
+
+
+async def test_writer_maps_photo_numbers_to_urls() -> None:
+    product = {
+        "images": ["https://x/p1.jpg", "https://x/gone-p.jpg"]
+        + [f"https://x/p{i}.jpg" for i in range(3, 12)]
+    }
+    client = _FakeBamlClient()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_photo_server)) as http:
+        brief = await ContentBriefWriter(client).write(product, "", http)
+    # only the first three photos are used and one is gone: the model sees the other two
+    assert client.seen == [2]
+    assert "product_photo_numbers" not in brief and "selected_reference_ids" not in brief
+    # numbers count the photos the model saw: 2 is p3 because p2 is gone; repeats and 40 are dropped
+    assert brief["product_photo_urls"] == ["https://x/p3.jpg", "https://x/p1.jpg"]
+
+
+async def test_the_writer_gives_the_model_the_photos_of_the_person() -> None:
+    client = _FakeBamlClient()
+    product = {"images": ["https://x/p1.jpg"]}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_photo_server)) as http:
+        await ContentBriefWriter(client).write(product, "", http, person_photos=[_picture(), _picture()])
+        await ContentBriefWriter(client).write(product, "", http)
+    assert client.people == [(True, 2), (False, 0)]
+
+
+async def test_writer_uses_the_photos_it_showed_when_the_model_picks_none() -> None:
+    product = {"images": [f"https://x/p{i}.jpg" for i in range(1, 9)]}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_photo_server)) as http:
+        brief = await ContentBriefWriter(_FakeBamlClient(numbers=[])).write(product, "", http)
+    assert brief["product_photo_urls"] == [f"https://x/p{i}.jpg" for i in range(1, 4)]
+
+
+async def test_a_brief_with_the_wrong_number_of_shots_is_an_error() -> None:
+    class _TooMany(_FakeBamlClient):
+        async def DraftContentBrief(self, product_json, user_idea, shot_count, *rest):
+            return await super().DraftContentBrief(product_json, user_idea, shot_count + 1, *rest)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_photo_server)) as http:
+        with pytest.raises(BriefGenerationError, match="3 shot\\(s\\) instead of 2"):
+            await ContentBriefWriter(_TooMany()).write(
+                {"images": ["https://x/p1.jpg"]}, "", http, shot_count=2
+            )
+
+
+async def test_the_pictures_the_brief_reads_are_shrunk() -> None:
+    seen: list[tuple[int, int]] = []
+
+    class _Looks(_FakeBamlClient):
+        async def DraftContentBrief(
+            self, product_json, user_idea, shot_count, product_images, with_person, person_images, rules, earlier_videos=""
+        ):
+            for picture in [*product_images, *person_images]:
+                data = base64.b64decode(picture.as_base64()[0])
+                seen.append(Image.open(io.BytesIO(data)).size)
+            return await super().DraftContentBrief(
+                product_json, user_idea, shot_count, product_images, with_person, person_images, rules, earlier_videos
+            )
+
+    def big(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=_picture(1000, 2000))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(big)) as http:
+        await ContentBriefWriter(_Looks()).write(
+            {"images": ["https://x/p1.jpg"]}, "", http, person_photos=[_picture(1086, 1448)]
+        )
+    assert seen == [(256, 512), (384, 512)]
+
+
+async def test_writer_errors() -> None:
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_photo_server)) as http:
+        with pytest.raises(BriefGenerationError, match="could be downloaded"):
+            await ContentBriefWriter(_FakeBamlClient()).write(
+                {"images": ["https://x/gone.jpg"]}, "", http
+            )
+        with pytest.raises(BriefGenerationError):
+            await ContentBriefWriter(_FakeBamlClient(fail=True)).write(
+                {"images": ["https://x/ok.jpg"]}, "", http
+            )
+
+
+async def test_the_writer_asks_again_when_a_call_stalls_and_gives_up_after_three() -> None:
+    from ai_content.domains.marketing.products import briefing
+
+    class _Stalls:
+        def __init__(self, stalls: int) -> None:
+            self.stalls = stalls
+            self.calls = 0
+
+        async def DraftContentBrief(self, *arguments):
+            self.calls += 1
+            if self.calls <= self.stalls:
+                await asyncio.sleep(10)
+            return SimpleNamespace(
+                model_dump=lambda: {"title": "T", "product_photo_numbers": [1], "shots": [{}]}
+            )
+
+    product = {"images": ["https://x/ok.jpg"]}
+    original = briefing._CALL_SECONDS
+    briefing._CALL_SECONDS = 0.05
+    try:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(_photo_server)) as http:
+            hung = _Stalls(stalls=99)
+            with pytest.raises(BriefGenerationError):
+                await ContentBriefWriter(hung).write(product, "", http)
+            assert hung.calls == 1  # a silent call is an error, it is not asked again
+    finally:
+        briefing._CALL_SECONDS = original
+
+
+def test_product_facts_are_compact() -> None:
+    facts = product_facts(
+        {
+            "title": "T",
+            "price": {"sale": "99000"},
+            "specifications": {str(i): i for i in range(40)},
+            "variants": [{"variant": f"v{i}"} for i in range(30)],
+            "description": "d" * 5000,
+        }
+    )
+    assert facts["price_vnd"] == "99000"
+    assert len(facts["specifications"]) == 20 and len(facts["variants"]) == 10
+    assert len(facts["description"]) == 3000
+
+
+def test_product_facts_drop_the_odd_spaces_and_blank_lines_and_keep_the_price_drop() -> None:
+    facts = product_facts(
+        {
+            "price": {"sale": "146.263", "original": "190.586", "discount": "-23%"},
+            "description": "CÔNG DỤNG:\u202f\u202f\xa0\n\n  - Làm sạch\u202f\xa0da \n\n",
+        }
+    )
+    assert facts["description"] == "CÔNG DỤNG:\n- Làm sạch da"
+    assert (facts["price_vnd"], facts["list_price_vnd"], facts["discount"]) == (
+        "146.263",
+        "190.586",
+        "-23%",
+    )
+
+
+class _TwoShots:
+    async def write(self, product, user_idea, shot_count=1, person_photos=None, rules="", earlier=""):
+        prompts = ["a hand applies lotion", "sitting in a room", "standing in a room"]
+        shots = [{"role": "demo", "keyframe_prompt": prompts[i % 3]} for i in range(shot_count)]
+        return {"title": "T", "shots": shots}
+
+
+class _Embedder:
+    model = "m1"
+
+    def __init__(self) -> None:
+        self.calls: list[list[str]] = []
+
+    async def embed(self, texts):
+        self.calls.append(list(texts))
+        return [[1.0, 0.0] if "hand" in text else [0.0, 1.0] for text in texts]
+
+
+class _Picker:
+    def __init__(self) -> None:
+        self.seen: list[list[str]] = []
+
+    async def choose(self, product, shot, candidates):
+        self.seen.append([item["image_id"] for item in candidates])
+        return candidates[0]["image_id"] if candidates else None
+
+
+async def _two_described_references(service: ProductCatalogService) -> dict[str, str]:
+    pins = [
+        {"image_url": "https://i.pinimg.com/236x/aa/bb/1.jpg", "pin_url": "/pin/1/", "title": ""},
+        {"image_url": "https://i.pinimg.com/236x/aa/bb/2.jpg", "pin_url": "/pin/2/", "title": ""},
+    ]
+    await service.ingest(
+        {"kind": "pinterest", "product_type": "áo thun", "query": "q", "pins": pins}
+    )
+    found: dict[str, str] = {}
+    for image, text in zip(
+        await service.reference_images("pending", "áo thun"),
+        ("a hand holding a bottle", "a person in a bedroom"),
+        strict=True,
+    ):
+        review = {"usable": True, "description": text}
+        await service._repository.set_image_screening(image["image_id"], review, "live")
+        found[text] = image["image_id"]
+    return found
+
+
+async def test_each_shot_gets_the_reference_that_fits_it(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIC_CLIP_SPEED", "1.25")  # 45 seconds is 3 shots
+    service = await _service(tmp_path, _TwoShots())
+    embedder, picker = _Embedder(), _Picker()
+    service._text_embedder, service._reference_picker = embedder, picker
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    ids = await _two_described_references(service)
+    await service.create_brief(PRODUCT_ID, video_seconds=45, person_photos=[b"face"])
+    record = await service.match_references(PRODUCT_ID)
+    brief = record["brief"]
+    # the closest description comes first: the hand shot sees the hand picture first
+    hand, room = ids["a hand holding a bottle"], ids["a person in a bedroom"]
+    # every shot has one; the third has to repeat a picture because only two exist
+    assert brief["shot_references"][:2] == [hand, room] and brief["shot_references"][2] in (hand, room)
+    assert brief["selected_reference_ids"] == [hand, room]
+    # the descriptions were embedded once, then only the shots; a second match reuses them
+    assert [len(call) for call in embedder.calls] == [2, 3]
+    await service.match_references(PRODUCT_ID)
+    assert [len(call) for call in embedder.calls] == [2, 3, 3]
+
+
+class _SameTextEmbedder(_Embedder):
+    async def embed(self, texts):
+        return [[1.0, 0.0] for _ in texts]
+
+
+class _ProductLookEmbedder:
+    def __init__(self, fail: bool = False) -> None:
+        self.fail = fail
+
+    async def embed_many(self, images):
+        if self.fail:
+            raise RuntimeError("model missing")
+        return [[1.0, 0.0] for _ in images]
+
+
+async def _look_service(tmp_path, monkeypatch, fail: bool = False):
+    async def photos(urls, http=None):
+        return [b"photo" for _ in urls]
+
+    monkeypatch.setattr(service_module, "fetch_images", photos)
+    service = await _service(tmp_path, _TwoShots())
+    picker = _Picker()
+    service._text_embedder, service._reference_picker = _SameTextEmbedder(), picker
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    ids = await _two_described_references(service)
+    service._embedder = _ProductLookEmbedder(fail)
+    hand, room = ids["a hand holding a bottle"], ids["a person in a bedroom"]
+    await service._repository.set_fingerprint(hand, "0" * 16, [0.0, 1.0])
+    await service._repository.set_fingerprint(room, "0" * 16, [1.0, 0.0])
+    return service, picker, hand, room
+
+
+async def test_references_that_look_like_the_product_photos_rank_first(
+    tmp_path, monkeypatch
+) -> None:
+    service, picker, hand, room = await _look_service(tmp_path, monkeypatch)
+    await service.create_brief(PRODUCT_ID, video_seconds=30, person_photos=[b"face"])
+    await service.match_references(PRODUCT_ID)
+    # the texts tie, so the picture that looks like the product (the room) comes first
+    assert picker.seen[0] == [room, hand]
+
+
+async def test_references_fall_back_to_text_when_the_product_cannot_be_embedded(
+    tmp_path, monkeypatch
+) -> None:
+    service, picker, hand, room = await _look_service(tmp_path, monkeypatch, fail=True)
+    await service.create_brief(PRODUCT_ID, video_seconds=30, person_photos=[b"face"])
+    record = await service.match_references(PRODUCT_ID)
+    # nothing tells the two apart without the look of the product, so only the pair is certain
+    assert record is not None and set(picker.seen[0]) == {hand, room}
+
+
+async def test_shots_get_different_references_while_the_pool_has_enough(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIC_CLIP_SPEED", "1.25")  # 45 seconds is 3 shots
+    class _SameShots(_TwoShots):
+        async def write(self, product, user_idea, shot_count=1, person_photos=None, rules="", earlier=""):
+            brief = await super().write(product, user_idea, shot_count, person_photos)
+            for shot in brief["shots"]:
+                shot["keyframe_prompt"] = "a hand pours lotion"
+            return brief
+
+    service = await _service(tmp_path, _SameShots())
+    service._text_embedder, service._reference_picker = _Embedder(), _Picker()
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    ids = await _two_described_references(service)
+    await service.create_brief(PRODUCT_ID, video_seconds=45, person_photos=[b"face"])
+    record = await service.match_references(PRODUCT_ID)
+    first, second, third = record["brief"]["shot_references"]
+    assert first == ids["a hand holding a bottle"] and second == ids["a person in a bedroom"]
+    assert third is not None  # only two exist, so the last shot repeats one of them
+
+
+async def test_matching_stops_without_an_embedding_model(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AIC_CLIP_SPEED", "1.25")  # 45 seconds is 3 shots
+    service = await _service(tmp_path, _TwoShots())
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _two_described_references(service)
+    await service.create_brief(PRODUCT_ID, video_seconds=45, person_photos=[b"face"])
+    with pytest.raises(BriefUnavailable, match="No text embedding model"):
+        await service.match_references(PRODUCT_ID)
+    record = await service.get_brief(PRODUCT_ID)
+    assert record["brief"]["shot_references"] == [None, None, None]
+
+
+async def test_text_embedder_sends_batches_and_orders_the_vectors() -> None:
+    import json as jsonlib
+
+    from ai_content.domains.marketing.products.text_embedding import (
+        TextEmbedder,
+        TextEmbeddingError,
+    )
+
+    sizes: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = jsonlib.loads(request.content)
+        sizes.append(len(body["input"]))
+        rows = [{"index": i, "embedding": [float(len(t))]} for i, t in enumerate(body["input"])]
+        return httpx.Response(200, json={"data": rows[::-1]})
+
+    embedder = TextEmbedder("https://x/v1", "k", "m")
+    original = httpx.AsyncClient
+    httpx.AsyncClient = lambda **kw: original(transport=httpx.MockTransport(handler), **kw)  # type: ignore[assignment,misc]
+    try:
+        vectors = await embedder.embed(["a" * n for n in range(1, 71)])
+        assert sizes == [64, 6] and vectors[0] == [1.0] and vectors[69] == [70.0]
+        httpx.AsyncClient = lambda **kw: original(  # type: ignore[assignment,misc]
+            transport=httpx.MockTransport(lambda r: httpx.Response(500)), **kw
+        )
+        with pytest.raises(TextEmbeddingError):
+            await embedder.embed(["x"])
+    finally:
+        httpx.AsyncClient = original  # type: ignore[misc]
+
+
+def test_reference_note_prefers_the_description() -> None:
+    from ai_content.domains.marketing.products.briefing import reference_note
+
+    assert reference_note({"screening": {"description": "d", "scene_description": "old"}}) == "d"
+    assert (
+        reference_note({"screening": {"scene_description": "old", "placement_note": "p"}})
+        == "old p"
+    )
+    assert reference_note({}) == ""
+
+
+async def test_video_length_sets_one_shot_per_15_seconds_whatever_the_clip_speed(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("AIC_CLIP_SPEED", "1.25")
+    seen: list[int] = []
+
+    class _Counting(_FakeWriter):
+        async def write(self, product, user_idea, shot_count=1, person_photos=None, rules="", earlier=""):
+            seen.append(shot_count)
+            return await super().write(product, user_idea, shot_count, person_photos)
+
+    service = await _service(tmp_path, _Counting())
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _make_reference_live(service)
+    await service.create_brief(PRODUCT_ID, person_photos=[b"face"])
+    await service.create_brief(PRODUCT_ID, video_seconds=60, person_photos=[b"face"])
+    await service.create_brief(PRODUCT_ID, video_seconds=90, person_photos=[b"face"])
+    assert seen == [1, 4, 6]
+    with pytest.raises(BriefUnavailable, match="Video length"):
+        await service.create_brief(PRODUCT_ID, video_seconds=20, person_photos=[b"face"])
+
+
+async def test_the_brief_is_the_one_answer_of_the_model_with_no_check_of_its_content(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("AIC_CLIP_SPEED", "1.25")  # 30 seconds is still 2 shots
+    calls = []
+
+    class _Odd(_FakeWriter):
+        async def write(self, product, user_idea, shot_count=1, person_photos=None, rules="", earlier=""):
+            calls.append(shot_count)
+            return {"title": "T", "shots": [{"voiceover": "Sản phẩm tốt nhất"}] * 2}
+
+    service = await _service(tmp_path, _Odd())
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    record = await service.create_brief(PRODUCT_ID, video_seconds=30, person_photos=[b"face"])
+    # asked once, kept as written: the answer is not checked for its content
+    assert calls == [2] and len(record["brief"]["shots"]) == 2
+    assert "warnings" not in record["brief"]
+
+
+async def test_editing_the_script_flags_what_was_already_made_from_it(tmp_path) -> None:
+    repository = product_repository()
+    service = ProductCatalogService(repository)
+    shots = [
+        {"keyframe_prompt": "a", "motion_prompt": "m", "voiceover": "hello", "delivery": "talking"},
+        {"keyframe_prompt": "b", "motion_prompt": "n", "voiceover": "world", "delivery": "narrated"},
+    ]
+    await repository.save_brief("42", "", {"title": "t", "shots": shots}, "approved")
+    for index in range(2):
+        await repository.save_keyframe(
+            {
+                "product_id": "42",
+                "shot_index": index,
+                "status": "approved",
+                "prompt": "p",
+                "image_path": f"k{index}.jpg",
+                "attempts": 1,
+                "error": None,
+                "qa_problem": "",
+            }
+        )
+        await repository.save_clip(
+            {
+                "product_id": "42",
+                "shot_index": index,
+                "status": "ready",
+                "job_id": "j",
+                "job_model": "m",
+                "video_path": f"c{index}.mp4",
+                "seconds": 15,
+                "attempts": 1,
+                "error": None,
+                "qa_problem": "",
+            }
+        )
+    edited = [
+        {**shots[0], "voiceover": "hello there", "keyframe_prompt": "a  "},  # words only: its clip
+        {**shots[1], "voiceover": "a new line"},  # a narrated line is read later: nothing to flag
+    ]
+    await service.update_brief("42", {"shots": edited}, "approved")
+    keyframes = await repository.list_keyframes("42")
+    clips = await repository.list_clips("42")
+    assert [k["qa_problem"] for k in keyframes] == ["", ""]
+    assert [c["qa_problem"] for c in clips] == ["The script of this scene changed after it was filmed", ""]
+
+    moved = [{**edited[0], "keyframe_prompt": "another picture"}, edited[1]]
+    await service.update_brief("42", {"shots": moved}, "approved")
+    first = (await repository.list_keyframes("42"))[0]
+    assert first["status"] == "ready" and "image was made" in first["qa_problem"]
+    assert (await repository.list_keyframes("42"))[1]["status"] == "approved"
+
+
+async def test_the_run_log_says_when_no_reference_has_been_described(tmp_path) -> None:
+    service = await _service(tmp_path, _TwoShots())
+    service._text_embedder, service._reference_picker = _Embedder(), _Picker()
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _make_reference_live(service)  # live, but the review left no description on it
+    await service.create_brief(PRODUCT_ID, video_seconds=30, person_photos=[b"face"])
+    with pytest.raises(BriefUnavailable, match="has a description yet"):
+        await service.match_references(PRODUCT_ID)
+
+
+class _DownPicker:
+    async def choose(self, product, shot, candidates):
+        raise ReferencePickerError("connection refused")
+
+
+async def test_a_picker_that_cannot_be_reached_is_reported_not_counted_as_no_match(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("AIC_CLIP_SPEED", "1.25")
+    service = await _service(tmp_path, _TwoShots())
+    service._text_embedder, service._reference_picker = _Embedder(), _DownPicker()
+    await service._repository.select_product(PRODUCT_ID, "áo thun")
+    await _two_described_references(service)
+    await service.create_brief(PRODUCT_ID, video_seconds=30, person_photos=[b"face"])
+    with pytest.raises(BriefUnavailable, match="shot 1.*connection refused"):
+        await service.match_references(PRODUCT_ID)
+
+
+async def test_the_picker_sends_small_photos_and_only_the_kind_of_product() -> None:
+    sent: dict = {}
+
+    class _Client:
+        async def ChooseShotReference(self, product_json, shot_json, candidates):
+            sent.update(product=product_json, photos=candidates)
+            return SimpleNamespace(choice="ref_1")
+
+    big = io.BytesIO()
+    Image.new("RGB", (736, 1308), (200, 100, 50)).save(big, "JPEG")
+
+    def serve(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=big.getvalue())
+
+    product = {"title": "Kem", "categories": ["Beauty"], "description": "d" * 3000, "price": {}}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(serve)) as http:
+        chosen = await ShotReferencePicker(_Client()).choose(
+            product, {"role": "hook"}, [{"image_id": "a", "note": "n", "url": "https://x/a.jpg"}], http
+        )
+    assert chosen == "a"
+    assert sent["product"] == '{"title":"Kem","categories":["Beauty"]}'
+    photo = Image.open(io.BytesIO(base64.b64decode(sent["photos"][0].photo.as_base64()[0])))
+    assert max(photo.size) == 512

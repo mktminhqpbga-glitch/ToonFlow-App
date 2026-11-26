@@ -1,0 +1,108 @@
+services:
+  toonflow:
+    environment:
+      TOONFLOW_VIDEO_AFF_ORIGIN: http://videoAffWeb:8080
+      TOONFLOW_VIDEO_AFF_PUBLIC_URL: ${MACFLOW_VIDEO_AFF_PUBLIC_URL:-http://localhost:8080}
+      TOONFLOW_VIDEO_AFF_CALLBACK: http://toonflow:3000/api/videoAff/bridge/v1
+      TOONFLOW_VIDEO_AFF_TOKEN: ${MACFLOW_VIDEO_AFF_TOKEN:-}
+
+  videoAffDb:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: videoaff
+      POSTGRES_USER: videoaff
+      POSTGRES_PASSWORD: ${VIDEO_AFF_DB_PASSWORD:?set VIDEO_AFF_DB_PASSWORD}
+    volumes:
+      - videoAffDb:/var/lib/postgresql/data
+    networks: [videoAffPrivate]
+    healthcheck:
+      test: [CMD, pg_isready, -U, videoaff, -d, videoaff]
+      interval: 5s
+      timeout: 4s
+      retries: 15
+    restart: unless-stopped
+
+  videoAffMigrate:
+    image: macflow/videoaff-api:5d92bc0
+    build: &videoAffApiBuild
+      context: ./services/videoAff/upstream
+      dockerfile: deploy/docker/api.Dockerfile
+      target: runtime
+    environment:
+      AIC_AI_DATABASE_URL: &videoAffDatabase postgresql+psycopg://videoaff:${VIDEO_AFF_DB_PASSWORD:?set VIDEO_AFF_DB_PASSWORD}@videoAffDb:5432/videoaff
+    command: [alembic, upgrade, head]
+    depends_on:
+      videoAffDb:
+        condition: service_healthy
+    networks: [videoAffPrivate]
+
+  videoAffApi:
+    image: macflow/videoaff-api:5d92bc0
+    build: *videoAffApiBuild
+    init: true
+    restart: unless-stopped
+    depends_on:
+      videoAffMigrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      default:
+      videoAffPrivate:
+        aliases: [api]
+    volumes:
+      - videoAffMedia:/var/lib/aicontent
+    environment:
+      BAML_LOG: "OFF"
+      AIC_AI_DATABASE_URL: *videoAffDatabase
+      AIC_AI_OBJECT_STORAGE_BACKEND: filesystem
+      AIC_SCREENING_BASE_URL: ${AIC_SCREENING_BASE_URL:-http://toonflow:3000/api/videoAff/bridge/v1}
+      AIC_SCREENING_API_KEY: ${AIC_SCREENING_API_KEY:-${MACFLOW_VIDEO_AFF_TOKEN:-}}
+      AIC_WRITER_MODEL: ${AIC_WRITER_MODEL:-macflow-writer}
+      AIC_REVIEW_MODEL: ${AIC_REVIEW_MODEL:-macflow-review}
+      AIC_IMAGE_BASE_URL: ${AIC_IMAGE_BASE_URL:-http://toonflow:3000/api/videoAff/bridge/v1}
+      AIC_IMAGE_API_KEY: ${AIC_IMAGE_API_KEY:-${MACFLOW_VIDEO_AFF_TOKEN:-}}
+      AIC_IMAGE_MODEL: ${AIC_IMAGE_MODEL:-macflow-image}
+      AIC_IMAGE_API: ${AIC_IMAGE_API:-edits}
+      AIC_VIDEO_BASE_URL: ${AIC_VIDEO_BASE_URL:-http://toonflow:3000/api/videoAff/bridge/v1}
+      AIC_VIDEO_API_KEY: ${AIC_VIDEO_API_KEY:-${MACFLOW_VIDEO_AFF_TOKEN:-}}
+      AIC_VIDEO_MODEL: ${AIC_VIDEO_MODEL:-macflow-video}
+      AIC_VIDEO_FRAME_FIELDS: ${AIC_VIDEO_FRAME_FIELDS:-image}
+      AIC_TTS_BASE_URL: ${AIC_TTS_BASE_URL:-http://toonflow:3000/api/videoAff/bridge/v1}
+      AIC_TTS_API_KEY: ${AIC_TTS_API_KEY:-${MACFLOW_VIDEO_AFF_TOKEN:-}}
+      AIC_TTS_MODEL: ${AIC_TTS_MODEL:-macflow-audio}
+      AIC_TTS_VOICE: ${AIC_TTS_VOICE:-}
+      AIC_TEXT_EMBEDDING_BASE_URL: ${AIC_TEXT_EMBEDDING_BASE_URL:-}
+      AIC_TEXT_EMBEDDING_API_KEY: ${AIC_TEXT_EMBEDDING_API_KEY:-}
+      AIC_TEXT_EMBEDDING_MODEL: ${AIC_TEXT_EMBEDDING_MODEL:-}
+      AIC_EMBEDDING_MODEL: ${AIC_EMBEDDING_MODEL:-}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  videoAffWeb:
+    image: macflow/videoaff-web:5d92bc0
+    build:
+      context: ./services/videoAff/upstream
+      dockerfile: deploy/docker/frontend.Dockerfile
+      target: runtime
+    init: true
+    restart: unless-stopped
+    depends_on:
+      videoAffApi:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks: [default, videoAffPrivate]
+    volumes:
+      - ./services/videoAff/upstream/deploy/nginx/auth.off.conf:/etc/nginx/auth.d/auth.conf:ro
+
+networks:
+  videoAffPrivate:
+
+volumes:
+  videoAffDb:
+  videoAffMedia:

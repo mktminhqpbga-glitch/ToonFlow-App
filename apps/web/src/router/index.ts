@@ -34,6 +34,11 @@ const router = createRouter({
       component: () => import("@/pages/shortDrama/huobaoLaunch.vue"),
     },
     {
+      path: "/videoAff",
+      beforeEnter: () => publicWeb.value ? "/home" : true,
+      component: () => import("@/pages/videoAff/index.vue"),
+    },
+    {
       path: "/shortDrama/storyboard",
       component: () => import("@/pages/shortDrama/index.vue"),
     },
