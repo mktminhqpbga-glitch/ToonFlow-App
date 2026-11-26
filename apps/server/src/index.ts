@@ -22,6 +22,7 @@ const app = await createApp({
   skillsRoot: resolve(appDirectory, fromSource ? "packages/skills" : "build/skills"),
 });
 app.locals.aiChromeExtensionRoot = resolve(appDirectory, fromSource ? "packages/chromeExtension" : "build/chromeExtension");
+app.locals.videoAffRoot = resolve(appDirectory, "services/videoAff");
 const { initializeMcpRuntime } = await import("./utils/mcp/runtime");
 const { startMobileLinkRuntime } = await import("./utils/mobileLink");
 const { startMultiTenantRuntime } = await import("./utils/multiTenant");

@@ -8,12 +8,17 @@
         <p>Tạo video bán hàng từ sản phẩm, kịch bản và ảnh từng cảnh.</p>
       </div>
       <el-button v-if="status?.online" tag="a" type="primary" :href="status.publicUrl" target="_blank" rel="noopener noreferrer">Mở VideoAFF</el-button>
+      <el-button v-else-if="status?.canStart" type="primary" :loading="starting || status.local.phase === 'starting'"
+        @click="startHere">Khởi động VideoAFF</el-button>
     </header>
 
     <div v-if="status" class="statusBar">
-      <el-tag :type="status.online ? 'success' : 'warning'">{{ status.online ? "Đã kết nối" : "Chưa kết nối" }}</el-tag>
-      <span v-if="!status.online">Khởi động VideoAFF rồi kiểm tra lại.</span>
-      <el-button text :loading="loading" @click="refresh">Kiểm tra lại</el-button>
+      <el-tag :type="status.online ? 'success' : 'warning'">
+        {{ status.online ? "Đã kết nối" : status.local.phase === "starting" ? "Đang khởi động" : "Chưa kết nối" }}
+      </el-tag>
+      <span v-if="!status.online && status.local.message" :role="status.local.phase === 'error' ? 'alert' : 'status'">{{ status.local.message }}</span>
+      <span v-else-if="!status.online">{{ status.canStart ? "Bấm Khởi động VideoAFF để chạy ngay trên máy này." : "Mở VideoAFF trên máy đang chạy MacFlow rồi kiểm tra lại." }}</span>
+      <el-button text :loading="loading" :disabled="starting" @click="refresh">Kiểm tra lại</el-button>
       <a :href="guide" target="_blank" rel="noopener noreferrer">Hướng dẫn cài VideoAFF</a>
     </div>
     <div v-else class="statusBar">
@@ -25,7 +30,7 @@
 
     <el-card shadow="never">
       <template #header><h2>Mô hình từ MacFlow</h2></template>
-      <p v-if="!status?.bridgeReady" class="hint">Thiết lập mã kết nối theo hướng dẫn để VideoAFF dùng được mô hình trong MacFlow.</p>
+      <p v-if="!status?.bridgeReady" class="hint">{{ status?.canStart ? "Khởi động VideoAFF để chọn mô hình trong MacFlow." : "Thiết lập mã kết nối theo hướng dẫn để VideoAFF dùng được mô hình trong MacFlow." }}</p>
       <template v-else>
         <p class="hint">Chọn mô hình phù hợp cho từng bước. VideoAFF dùng mô hình đọc được ảnh để viết và kiểm tra cảnh, cùng mô hình nhận ảnh đầu để tạo clip 15 giây.</p>
         <div class="modelGrid">
@@ -98,7 +103,8 @@ const kinds = [
 type Kind = typeof kinds[number]["key"];
 type Selection = { providerId: string; modelId: string };
 type Model = Selection & { label: string; providerLabel: string };
-type Status = { publicUrl: string; online: boolean; bridgeReady: boolean; selections: Record<Kind, Selection | null> };
+type LocalStatus = { phase: "idle" | "starting" | "running" | "error"; message: string };
+type Status = { publicUrl: string; online: boolean; bridgeReady: boolean; canStart: boolean; local: LocalStatus; selections: Record<Kind, Selection | null> };
 type Entry = { path: string; type: "file" | "directory"; children?: Entry[] };
 type Person = { id: string; name: string };
 type Output = { id: string; name: string; hasCover: boolean };
@@ -111,6 +117,7 @@ const status = ref<Status>();
 const models = ref<Record<Kind, Model[]>>({ writer: [], review: [], image: [], video: [], audio: [] });
 const choices = reactive<Record<Kind, string>>({ writer: "", review: "", image: "", video: "", audio: "" });
 const loading = ref(false);
+const starting = ref(false);
 const saving = ref(false);
 const loadingLibrary = ref(false);
 const libraryError = ref("");
@@ -125,6 +132,7 @@ const photo = ref("");
 const video = ref("");
 const rights = ref(false);
 const modelKey = (model: Selection) => JSON.stringify([model.providerId, model.modelId]);
+let poll: ReturnType<typeof setTimeout> | undefined;
 
 function message(error: unknown) {
   return axios.isAxiosError<{ message?: string }>(error) && error.response?.data?.message
@@ -137,11 +145,13 @@ function showError(error: unknown) {
 
 async function refresh() {
   if (loading.value || saving.value) return;
+  clearTimeout(poll);
   loading.value = true;
   notice.value = undefined;
   try {
     const { data } = await client.get<{ data: Status }>("/status", config);
     status.value = data.data;
+    if (status.value.local.phase === "starting") return;
     if (status.value.online) void loadLibrary();
     if (status.value.bridgeReady) {
       const catalog = await client.get<{ data: Record<Kind, Model[]> }>("/models", config);
@@ -152,7 +162,22 @@ async function refresh() {
       }
     }
   } catch (error) { showError(error); }
-  finally { loading.value = false; }
+  finally {
+    loading.value = false;
+    if (!lifetime.signal.aborted && status.value?.local.phase === "starting") poll = setTimeout(() => void refresh(), 2000);
+  }
+}
+
+async function startHere() {
+  if (starting.value || !status.value?.canStart) return;
+  starting.value = true;
+  notice.value = undefined;
+  try {
+    const { data } = await client.post<{ data: { local: LocalStatus } }>("/local/start", undefined, config);
+    status.value.local = data.data.local;
+    await refresh();
+  } catch (error) { showError(error); }
+  finally { starting.value = false; }
 }
 
 async function saveModels() {
@@ -220,7 +245,7 @@ async function saveOutput(kind: "video" | "cover") {
 }
 
 onMounted(() => void refresh());
-onScopeDispose(() => lifetime.abort());
+onScopeDispose(() => { lifetime.abort(); clearTimeout(poll); });
 </script>
 
 <style scoped>

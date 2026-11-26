@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request, status
@@ -133,7 +134,8 @@ class DashboardStaticFiles(StaticFiles):
 
 def _mount_frontend(application: FastAPI) -> None:
     """Serve the production dashboard build when it exists."""
-    frontend_dir = Path(__file__).resolve().parents[4] / "frontend" / "dist"
+    dashboard_dir = os.environ.get("AIC_DASHBOARD_DIR")
+    frontend_dir = Path(dashboard_dir) if dashboard_dir else Path(__file__).resolve().parents[4] / "frontend" / "dist"
     if frontend_dir.is_dir():
         application.mount(
             "/dashboard",

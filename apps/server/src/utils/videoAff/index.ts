@@ -6,6 +6,7 @@ import { success } from "@/lib/responseFormat";
 import { detectMimeType } from "@/utils/media/priceReference";
 import { requireDirectModelAccess } from "@/utils/multiTenant/gateway";
 import bridge from "./bridge";
+import { localVideoAffAvailable, localVideoAffStatus, startLocalVideoAff } from "./local";
 import { configuredModels, fail, imageFormat, modelSelections, selectionSchema, videoAffModels,
   videoAffOrigin, videoAffPublicUrl, videoAffToken } from "./config";
 
@@ -57,12 +58,25 @@ router.use((_req, res, next) => {
 router.use("/bridge/v1", bridge);
 router.use((req, _res, next) => { u.mcpControl.assertAppRequest(req); next(); });
 
-router.get("/status", async (_req, res) => {
-  const publicUrl = videoAffPublicUrl();
-  const online = await videoAffRequest("/health/ready", undefined, 4000).then(async response => {
-    return z.object({ status: z.literal("ok") }).safeParse(await response.json()).success;
+function videoAffOnline() {
+  return videoAffRequest("/health/ready", undefined, 2500).then(async response => {
+    return z.object({ status: z.literal("ok"), service: z.literal("affiliate-content-api") }).safeParse(await response.json()).success;
   }).catch(() => false);
-  res.json(success({ publicUrl, online, bridgeReady: Boolean(videoAffToken()), selections: configuredModels() }));
+}
+
+router.get("/status", async (req, res) => {
+  const [online, canStart] = await Promise.all([
+    localVideoAffStatus().phase === "starting" ? false : videoAffOnline(),
+    localVideoAffAvailable(req),
+  ]);
+  res.json(success({ publicUrl: videoAffPublicUrl(), online, canStart, local: localVideoAffStatus(),
+    bridgeReady: Boolean(videoAffToken()), selections: configuredModels() }));
+});
+
+router.post("/local/start", async (req, res) => {
+  if (!await localVideoAffAvailable(req)) fail("Hãy mở MacFlow trực tiếp trên máy có mã nguồn VideoAFF để khởi động.", 403);
+  if (localVideoAffStatus().phase !== "starting" && !await videoAffOnline()) startLocalVideoAff(req);
+  res.status(202).json(success({ local: localVideoAffStatus() }));
 });
 
 router.get("/models", async (_req, res) => {

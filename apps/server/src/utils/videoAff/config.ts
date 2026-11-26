@@ -12,6 +12,13 @@ export const selectionSchema = z.object({
 }).refine(item => !["aiChrome", "toonflow"].includes(item.providerId));
 export const modelSelections = z.record(z.enum(videoAffModels), selectionSchema.nullable());
 export type ModelSelection = z.infer<typeof selectionSchema>;
+export const localVideoAffPort = 8000;
+const localVideoAffOrigin = `http://127.0.0.1:${localVideoAffPort}`;
+let localConnection: { callback: string; token: string } | undefined;
+
+export function setLocalVideoAffConnection(connection?: typeof localConnection) {
+  localConnection = connection;
+}
 
 export function fail(message: string, status = 400): never {
   throw Object.assign(new Error(message), { status });
@@ -26,20 +33,22 @@ function origin(value: string) {
 }
 
 export function videoAffOrigin() {
+  if (localConnection) return localVideoAffOrigin;
   return origin(process.env.TOONFLOW_VIDEO_AFF_ORIGIN || "http://127.0.0.1:8080");
 }
 
 export function videoAffPublicUrl() {
+  if (localConnection) return `${localVideoAffOrigin}/dashboard/`;
   return `${origin(process.env.TOONFLOW_VIDEO_AFF_PUBLIC_URL || "http://localhost:8080")}/dashboard/`;
 }
 
 export function videoAffToken() {
-  const token = process.env.TOONFLOW_VIDEO_AFF_TOKEN;
+  const token = localConnection?.token ?? process.env.TOONFLOW_VIDEO_AFF_TOKEN;
   return token && /^[A-Za-z0-9_-]{32,256}$/.test(token) ? token : undefined;
 }
 
 export function videoAffCallback() {
-  const value = URL.parse(process.env.TOONFLOW_VIDEO_AFF_CALLBACK || "http://127.0.0.1:3000/api/videoAff/bridge/v1");
+  const value = URL.parse(localConnection?.callback ?? (process.env.TOONFLOW_VIDEO_AFF_CALLBACK || "http://127.0.0.1:3000/api/videoAff/bridge/v1"));
   if (!value || origin(value.origin) !== value.origin || value.pathname !== "/api/videoAff/bridge/v1" ||
     value.username || value.password || value.search || value.hash) fail("Địa chỉ cầu nối VideoAFF không hợp lệ.", 503);
   return value.href;

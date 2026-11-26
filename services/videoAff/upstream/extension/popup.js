@@ -53,16 +53,26 @@ const tiktokText = (w) =>
 const pinterestText = (w) =>
   `${state(w)}: keywords ${w.done + w.failed}/${w.queue.length} | OK ${w.done} | failed ${w.failed}${w.detail ? `\nCollecting ${w.detail}` : `\n${w.note}`}`;
 
-const STUDIO = "http://localhost:8080/dashboard/studio";
+const studioOrigin = fetch("http://127.0.0.1:8000/dashboard/", { signal: AbortSignal.timeout(1200), redirect: "error" })
+  .then(async (response) => {
+    const isDashboard = response.ok && response.headers.get("content-type")?.includes("text/html")
+      && (await response.text()).includes("<title>VideoAFF</title>");
+    return isDashboard ? "http://127.0.0.1:8000" : "http://localhost:8080";
+  }).catch(() => "http://localhost:8080");
+let currentCapture;
 const showCapture = (capture) => {
   const note = document.getElementById("send-note");
   const link = document.getElementById("open-studio");
+  currentCapture = capture;
   link.hidden = true;
   if (!capture) return;
   if (capture.stored === "detail") {
     note.textContent = "Sent. The product is saved.";
-    link.href = `${STUDIO}/${capture.productId}`;
-    link.hidden = false;
+    void studioOrigin.then((origin) => {
+      if (currentCapture !== capture) return;
+      link.href = `${origin}/dashboard/studio/${capture.productId}`;
+      link.hidden = false;
+    });
   } else if (capture.stored === "ignored") {
     note.textContent = "This page has no product data. Open a product page, wait for it to load, then press the button again.";
   } else {

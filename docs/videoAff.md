@@ -1,10 +1,25 @@
 # VideoAFF trong MacFlow
 
-**Tổng quan → VideoAFF → Mở VideoAFF** mở xưởng bán hàng trong một tab riêng. Ứng dụng giữ các màn hình Sản phẩm, Kịch bản và từng cảnh, Video đã làm, Bộ nhớ AI và Thông báo của repo gốc. Kho dữ liệu, ảnh và clip làm việc của VideoAFF được lưu riêng.
+**Tổng quan → VideoAFF → Khởi động VideoAFF** chạy xưởng bán hàng ngay trên máy có MacFlow. Sau khi kết nối, bấm **Mở VideoAFF** để vào xưởng ở tab riêng. Kho dữ liệu, ảnh và clip làm việc của VideoAFF được lưu riêng.
 
 MacFlow chứa mã nguồn đầy đủ của [AI Content Automation tại commit `5d92bc0d93fb0e1eb3ae77aaf7e6954e749e459a`](https://github.com/vdat-18/ai-content-automation/tree/5d92bc0d93fb0e1eb3ae77aaf7e6954e749e459a) trong `services/videoAff/upstream`, gồm cả extension, mã máy chủ, dashboard và kiểm thử. Tên dashboard đã đổi thành VideoAFF. Phần tạo ảnh bìa bỏ qua các mốc sau khi video kết thúc để hỗ trợ video rất ngắn. Màn hình mở ứng dụng và nối Kho/Mô hình của MacFlow dùng tiếng Việt. Dashboard gốc dùng tiếng Anh và kịch bản do nó tạo dùng tiếng Việt. [Giấy phép MIT và ghi công](../services/videoAff/upstream/LICENSE)
 
-## Khởi động lần đầu với Docker
+## Chạy trực tiếp trên máy
+
+1. Với macOS dùng Homebrew, cài công cụ một lần. MacFlow tự khởi động PostgreSQL riêng cho VideoAFF. Trên Linux, cài các công cụ tương ứng và dùng PostgreSQL 17.
+
+   ```sh
+   brew install uv node pnpm postgresql@17 ffmpeg
+   ```
+
+2. Chạy MacFlow từ thư mục có mã nguồn như thường lệ. Mở MacFlow bằng `127.0.0.1` hoặc `localhost`, chọn **VideoAFF**, rồi bấm **Khởi động VideoAFF**. Lần đầu MacFlow tải thư viện Python và chuẩn bị giao diện. Khi thấy **Đã kết nối**, bấm **Mở VideoAFF**. Mã kết nối để dùng mô hình MacFlow được tạo tự động.
+3. VideoAFF luôn mở trên máy hiện tại ở `http://127.0.0.1:8000/dashboard/`. Khi MacFlow tắt, VideoAFF và cơ sở dữ liệu của nó cũng tắt. Bấm **Khởi động VideoAFF** lần sau để mở lại dữ liệu đã lưu.
+
+Dữ liệu chạy trực tiếp nằm ở `data/videoAff/` bên cạnh dữ liệu MacFlow, hoặc trong thư mục dữ liệu bạn đã đặt qua `TOONFLOW_DATA_DIR`. Bản native tạo kho PostgreSQL riêng. Các bộ dữ liệu từ Docker hoặc VideoAFF đã triển khai ở nơi khác cần nhập riêng nếu muốn chuyển sang chạy trực tiếp. Nếu chưa mở được, xem thông báo ngay trong MacFlow và nhật ký `videoAff/start.log` trong thư mục dữ liệu. Nếu cổng `8000` đang được sử dụng, hãy đóng dịch vụ đang giữ cổng hoặc kết nối tới dịch vụ VideoAFF đang chạy bằng cách ở cuối tài liệu.
+
+Để lấy sản phẩm TikTok Shop và ảnh Pinterest, vào `chrome://extensions` và chọn thư mục `services/videoAff/upstream/extension` bằng **Tải tiện ích đã giải nén**. Nếu đã cài từ trước, bấm **Tải lại** tiện ích để nút mở sản phẩm nhận đúng địa chỉ VideoAFF chạy trực tiếp. [Hướng dẫn tiện ích](../services/videoAff/upstream/extension/README.md)
+
+## Chạy bằng Docker
 
 1. Từ thư mục MacFlow, tạo hai mã riêng bằng lệnh dưới đây. Nếu đã có `.env.videoAff`, dùng lại tệp đó. Mật khẩu phải giữ nguyên khi khởi động lại dữ liệu PostgreSQL đã có.
 
@@ -35,7 +50,7 @@ MacFlow giữ khóa nhà cung cấp ở máy chủ. VideoAFF dùng mã kết n�
 
 Luồng gốc cần ít nhất một ảnh bối cảnh Pinterest đã qua kiểm tra trước khi tạo ảnh cảnh. Đặt `AIC_EMBEDDING_MODEL=dinov2-small` để VideoAFF nhận và loại ảnh trùng, rồi điền `AIC_TEXT_EMBEDDING_BASE_URL`, `AIC_TEXT_EMBEDDING_API_KEY` và `AIC_TEXT_EMBEDDING_MODEL` của dịch vụ OpenAI-compatible có chức năng tìm ảnh theo mô tả. Khởi động lại VideoAFF sau khi bổ sung những mục này. [Cấu hình đầy đủ của repo gốc](../services/videoAff/upstream/README.vi.md#c%E1%BA%A5u-h%C3%ACnh-ch%C3%ADnh-deployenvexample)
 
-Ở lần xuất video đầu tiên, máy chạy VideoAFF cần tải mô hình Whisper để căn thời điểm phụ đề theo lời đọc. Tệp tải được giữ trong vùng dữ liệu VideoAFF.
+Khi dùng bản chạy trực tiếp, đặt các biến trên trong `.env.videoAff` ở thư mục mã nguồn MacFlow. Sau khi sửa tệp này, mở lại MacFlow rồi bấm **Khởi động VideoAFF**. Ở lần xuất video đầu tiên, máy chạy VideoAFF cần tải mô hình Whisper để căn thời điểm phụ đề theo lời đọc. Tệp tải được giữ trong vùng dữ liệu VideoAFF.
 
 ## Dùng Kho và làm video
 
