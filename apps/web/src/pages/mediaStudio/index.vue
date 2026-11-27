@@ -59,29 +59,40 @@
               <p>Đã nhận prompt từ bảng phân cảnh. Nháp đang soạn vẫn ở ô ý tưởng.</p>
               <details><summary>Xem prompt từ phân cảnh</summary><p class="incomingText">{{ incomingPrompt }}</p></details>
               <div class="transferActions">
-                <el-button size="small" type="primary" :disabled="submitting" @click="applyIncomingPrompt">Dùng prompt của cảnh</el-button>
-                <el-button size="small" @click="incomingPrompt = ''">Giữ nháp hiện tại</el-button>
+                <el-button size="small" type="primary" :disabled="submitting" @click="overwriteVisible = true">Xem và thay nháp</el-button>
+                <el-button size="small" @click="keepCurrentPrompt">Giữ nháp hiện tại</el-button>
               </div>
             </section>
-            <el-button v-if="previousPrompt && previousPrompt !== prompt" class="restorePrompt" size="small" text :disabled="submitting"
-              @click="restorePreviousPrompt">Khôi phục nháp trước</el-button>
+            <el-button v-if="promptHistory[0] && promptHistory[0].prompt !== prompt" size="small" text :disabled="submitting"
+              @click="restorePrompt(promptHistory[0].prompt)">Hoàn tác</el-button>
+            <details v-if="promptHistory.length" class="promptTransfer">
+              <summary>Lịch sử nháp ({{ promptHistory.length }}/5)</summary>
+              <ul class="draftVersions">
+                <li v-for="(version, index) in promptHistory" :key="index">
+                  <details><summary>{{ version.savedAt ? formatDate(version.savedAt) : 'Nháp đã lưu trước đây' }}</summary>
+                    <p class="incomingText">{{ version.prompt }}</p>
+                  </details>
+                  <el-button size="small" :disabled="submitting || version.prompt === prompt" @click="restorePrompt(version.prompt)">Dùng bản này</el-button>
+                </li>
+              </ul>
+            </details>
 
             <p v-if="model" class="fieldHint">Đang dùng {{ model.label }}</p>
             <div v-if="kind === 'video' && model" class="studioOptions videoOptions">
               <div>
                 <label class="fieldLabel" for="studioDuration">Thời lượng video</label>
-                <el-select v-if="durationOptions.length" id="studioDuration" v-model="duration" class="fullWidth" placeholder="Mặc định"
+                <el-select v-if="durationOptions.length > 1" id="studioDuration" v-model="duration" class="fullWidth" placeholder="Mặc định"
                   clearable aria-label="Thời lượng video" @change="checkResolution">
                   <el-option v-for="item in durationOptions" :key="item" :label="`${item} giây`" :value="item" />
                 </el-select>
-                <p v-else class="fieldHint">Theo mặc định của mô hình</p>
+                <p v-else class="fieldHint">{{ durationOptions[0] ? `${durationOptions[0]} giây · Cố định theo mô hình` : 'Nhà cung cấp dùng thời lượng mặc định' }}</p>
               </div>
               <div>
                 <label class="fieldLabel" for="studioVideoSize">Độ phân giải video</label>
-                <el-select v-if="resolutionOptions.length" id="studioVideoSize" v-model="resolution" class="fullWidth" placeholder="Mặc định" clearable aria-label="Độ phân giải video">
+                <el-select v-if="resolutionOptions.length > 1" id="studioVideoSize" v-model="resolution" class="fullWidth" placeholder="Mặc định" clearable aria-label="Độ phân giải video">
                   <el-option v-for="item in resolutionOptions" :key="item" :label="item" :value="item" />
                 </el-select>
-                <p v-else class="fieldHint">Theo mặc định của mô hình</p>
+                <p v-else class="fieldHint">{{ resolutionOptions[0] ? `${resolutionOptions[0]} · Cố định theo mô hình` : 'Nhà cung cấp dùng độ phân giải mặc định' }}</p>
               </div>
             </div>
             <details class="studioAdvanced">
@@ -149,7 +160,7 @@
               <p v-if="!model?.supportsPrice" class="fieldHint">Chi phí thực tế theo nhà cung cấp đã kết nối.</p>
             </div>
             <div class="studioSubmit">
-              <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting || checkingVideoQuote" :disabled="!canSubmit" @click="submitTask">
+              <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting || checkingQuote" :disabled="!canSubmit" @click="submitTask">
                 {{ submitting ? "Đang thêm tác vụ…" : "Thêm vào hàng chờ" }}
               </el-button>
             </div>
@@ -183,7 +194,7 @@
               </details>
               <p v-if="latestTask.result && latestTask.result.code !== 200" class="taskError">{{ describeStudioError(latestTask.result.message, latestTask.result.code) }}</p>
               <p v-if="latestTask.state === 'interrupted'" class="fieldHint">Bấm Kiểm tra lại để tìm kết quả của yêu cầu đã gửi.</p>
-              <p v-if="kind === 'video' && latestTask.state === 'succeeded'" class="fieldHint">Xem khoản phí thực tế trong tài khoản của nhà cung cấp.</p>
+              <p v-if="latestTask.state === 'succeeded'" class="fieldHint">Chi phí thực tế · {{ costOf(latestTask) }}</p>
               <p v-if="latestTask.statusUnavailable" class="fieldHint" role="status">Chưa kiểm tra được kết quả. Hãy thử lại sau.</p>
               <el-button v-if="latestTask.state === 'queued' || latestTask.state === 'running'" type="danger" plain
                 :loading="cancelling" @click="cancelTask(latestTask)">Hủy tác vụ</el-button>
@@ -207,7 +218,10 @@
             <div v-if="tasks.length" class="taskList">
               <button v-for="task in orderedTasks" :key="task.taskId" type="button" class="taskRow" :class="{ selected: selectedTaskId === task.taskId }" @click="selectedTaskId = task.taskId">
                 <span class="taskIcon"><icon-photo v-if="kind === 'image'" :size="19" /><icon-video v-else :size="19" /></span>
-                <span class="taskDescription"><strong>{{ task.prompt || task.modelId || "Tác vụ tạo nội dung" }}</strong><small>{{ formatDate(task.createdAt) }}</small></span>
+                <span class="taskDescription"><strong>{{ task.prompt || task.modelId || "Tác vụ tạo nội dung" }}</strong>
+                  <small>{{ formatDate(task.createdAt) }}</small>
+                  <small v-if="task.state === 'succeeded'">Chi phí thực tế · {{ costOf(task) }}</small>
+                </span>
                 <el-tag :type="statusTag(task.state)" size="small">{{ statusText(task) }}</el-tag>
               </button>
             </div>
@@ -229,18 +243,29 @@
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
       <assetLibrary v-model="assetPickerVisible" expanded :canSelect="canSelectAsset" :selecting="referenceBusy" @select="selectAsset" />
     </el-dialog>
-    <el-dialog :modelValue="!!videoReview" title="Xác nhận tạo video" width="min(460px, calc(100vw - 24px))" appendToBody
-      @update:modelValue="value => { if (!value) videoReview = undefined; }">
-      <dl v-if="videoReview" class="videoReview">
-        <div><dt>Mô hình</dt><dd>{{ videoReview.label }}</dd></div>
-        <div><dt>Thời lượng</dt><dd>{{ videoReview.input.duration ? `${videoReview.input.duration} giây` : 'Mặc định của mô hình' }}</dd></div>
-        <div><dt>Độ phân giải</dt><dd>{{ videoReview.input.resolution || 'Mặc định của mô hình' }}</dd></div>
-        <div><dt>Chi phí dự kiến</dt><dd>{{ videoReview.quote || 'Chưa có báo giá' }}</dd></div>
-      </dl>
-      <p class="reviewHint">Nhà cung cấp quyết định phí thực tế khi xử lý video.</p>
+    <el-dialog v-if="incomingPrompt" v-model="overwriteVisible" title="Ghi đè nháp đang soạn?" width="min(520px, calc(100vw - 24px))"
+      appendToBody @close="keepCurrentPrompt">
+      <p>MacFlow sẽ thay nội dung đang soạn bằng prompt của cảnh. Nháp cũ được lưu vào lịch sử để bạn có thể hoàn tác.</p>
+      <details><summary>Xem prompt mới</summary><p class="incomingText">{{ incomingPrompt }}</p></details>
+      <p v-if="draftWarning" class="taskError" role="alert">{{ draftWarning }}</p>
       <template #footer>
-        <el-button @click="videoReview = undefined">Quay lại</el-button>
-        <el-button type="primary" @click="confirmVideo">Xác nhận thêm vào hàng chờ</el-button>
+        <el-button @click="keepCurrentPrompt">Giữ nháp cũ</el-button>
+        <el-button type="primary" :disabled="submitting" @click="applyIncomingPrompt">Ghi đè</el-button>
+      </template>
+    </el-dialog>
+    <el-dialog :modelValue="!!generationReview" :title="kind === 'image' ? 'Xác nhận tạo ảnh' : 'Xác nhận tạo video'" width="min(460px, calc(100vw - 24px))" appendToBody
+      @update:modelValue="value => { if (!value) generationReview = undefined; }">
+      <dl v-if="generationReview" class="generationReview">
+        <div><dt>Mô hình</dt><dd>{{ generationReview.label }}</dd></div>
+        <div v-if="kind === 'video'"><dt>Thời lượng</dt><dd>{{ generationReview.input.duration ? `${generationReview.input.duration} giây` : 'Mặc định của mô hình' }}</dd></div>
+        <div v-if="kind === 'video'"><dt>Độ phân giải</dt><dd>{{ generationReview.input.resolution || 'Mặc định của mô hình' }}</dd></div>
+        <div><dt>Chi phí dự kiến</dt><dd>{{ generationReview.price?.price || 'Chưa có báo giá' }}</dd></div>
+        <div><dt>Chi phí tối đa</dt><dd>{{ generationReview.price?.maximum || 'Nhà cung cấp chưa công bố' }}</dd></div>
+      </dl>
+      <p class="reviewHint">{{ generationReview?.reason || generationReview?.price?.tips || 'Chi phí thực tế theo nhà cung cấp.' }}</p>
+      <template #footer>
+        <el-button @click="generationReview = undefined">Quay lại</el-button>
+        <el-button type="primary" @click="confirmGeneration">Xác nhận thêm vào hàng chờ</el-button>
       </template>
     </el-dialog>
   </div>
@@ -255,7 +280,7 @@ import {
   IconAlertCircle, IconDownload, IconFolderPlus, IconGitBranch, IconHistory, IconLayoutDashboard, IconLoader2,
   IconRefresh, IconSparkles, IconX,
 } from "@tabler/icons-vue";
-import { createNodeRequestId, readNodeModels, useNodeAi, type NodeMediaModel, type NodeVideoRequest } from "@toonflow/nodes-scaffold/nodeAi";
+import { createNodeRequestId, readNodeModels, useNodeAi, type NodeMediaModel, type NodeMediaPrice, type NodeVideoRequest } from "@toonflow/nodes-scaffold/nodeAi";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser, publicWeb } from "@/stores/multiTenant";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
@@ -277,6 +302,7 @@ type StudioTask = {
   taskId: string; state: "queued" | "running" | "interrupted" | "succeeded" | "failed" | "cancelled";
   resumable?: boolean; statusUnavailable?: boolean; createdAt?: number; updatedAt?: number; prompt?: string; providerId?: string; modelId?: string;
   result?: { code: number; message: string; data: MediaFile[] | null };
+  billedCost?: { amount: string; currency: string };
   cancelDisposition?: "confirmed" | "requested" | "running" | "terminal" | "localOnly" | "notSent";
 };
 type ImageReference = { path: string; mimeType: string; name: string; preview: string; digest?: string; bytes: number; missing?: boolean; release: () => void };
@@ -324,10 +350,11 @@ const flowSetupVisible = ref(false);
 const modelKey = ref("");
 const prompt = ref("");
 const incomingPrompt = ref("");
-const previousPrompt = ref("");
+const promptHistory = ref<NonNullable<StudioDraft["promptHistory"]>>([]);
+const overwriteVisible = ref(false);
 const ai = useNodeAi();
-const checkingVideoQuote = ref(false);
-const videoReview = shallowRef<{ input: StudioSubmission; scope: number; label: string; quote?: string }>();
+const checkingQuote = ref(false);
+const generationReview = shallowRef<{ input: StudioSubmission; scope: number; label: string; price: NodeMediaPrice | null; reason?: string }>();
 const ratio = ref("");
 const size = ref("");
 const duration = ref<number | "">("");
@@ -423,8 +450,10 @@ const generationInput = computed(() => {
     if (size.value && sizeOptions.value.includes(size.value)) input.size = size.value;
     if (photos.length) input.images = photos;
   } else {
-    if (duration.value && durationOptions.value.includes(duration.value)) input.duration = duration.value;
-    if (resolution.value && resolutionOptions.value.includes(resolution.value)) input.resolution = resolution.value;
+    if (durationOptions.value.length === 1) input.duration = durationOptions.value[0];
+    else if (duration.value && durationOptions.value.includes(duration.value)) input.duration = duration.value;
+    if (resolutionOptions.value.length === 1) input.resolution = resolutionOptions.value[0];
+    else if (resolution.value && resolutionOptions.value.includes(resolution.value)) input.resolution = resolution.value;
     if (photos[0]) input.firstFrame = photos[0];
     if (current.providerId.startsWith("mac2Api")) input.mode = photos.length ? "singleImage" : "text";
     if (current.referenceLimits && photos.length > 1) {
@@ -454,6 +483,9 @@ function statusTag(state: StudioTask["state"]) {
   return ({ queued: "info", running: "warning", interrupted: "info", succeeded: "success", failed: "danger", cancelled: "info" } as const)[state];
 }
 function formatDate(value?: number) { return value ? new Date(value).toLocaleString("vi-VN") : "Chưa rõ thời gian"; }
+function costOf(task: StudioTask) {
+  return task.billedCost ? `${task.billedCost.amount} ${task.billedCost.currency}` : "Nhà cung cấp chưa trả số tiền đã tính.";
+}
 function fileOf(task: StudioTask): MediaFile | undefined {
   if (task.state !== "succeeded" || task.result?.code !== 200) return;
   return task.result.data?.find(item => item.mediaType === props.kind && !!item.path);
@@ -518,7 +550,8 @@ function restoreDraft() {
   const transferredPrompt = takeStudioPrompt(directory.value, props.kind);
   prompt.value = draft?.prompt ?? "";
   incomingPrompt.value = draft?.incomingPrompt ?? "";
-  previousPrompt.value = draft?.previousPrompt ?? "";
+  promptHistory.value = draft?.promptHistory ?? (draft?.previousPrompt ? [{ prompt: draft.previousPrompt, savedAt: 0 }] : []);
+  overwriteVisible.value = false;
   modelKey.value = draft?.modelKey ?? "";
   ratio.value = draft?.ratio ?? "";
   size.value = draft?.size ?? "";
@@ -540,6 +573,7 @@ function restoreDraft() {
   if (!transferredPrompt) return;
   if (prompt.value.trim()) {
     incomingPrompt.value = transferredPrompt === prompt.value ? "" : transferredPrompt;
+    overwriteVisible.value = !!incomingPrompt.value;
   } else {
     incomingPrompt.value = "";
     prompt.value = transferredPrompt;
@@ -547,12 +581,13 @@ function restoreDraft() {
   }
 }
 
-watch((): StudioDraft => ({
+const currentDraft = (): StudioDraft => ({
   prompt: prompt.value, modelKey: modelKey.value, ratio: ratio.value || "", size: size.value || "",
-  incomingPrompt: incomingPrompt.value || undefined, previousPrompt: previousPrompt.value || undefined,
+  incomingPrompt: incomingPrompt.value || undefined, promptHistory: promptHistory.value,
   duration: duration.value || "" as const, resolution: resolution.value || "", selectedTaskId: selectedTaskId.value,
   references: references.value.map(({ path, mimeType, name, digest, bytes }) => ({ path, mimeType, name, digest, bytes })),
-}), draft => {
+});
+watch(currentDraft, draft => {
   if (!mounted || !directory.value || restoringDraft) return;
   try { saveStudioBrowserState(browserKey.value, draft); }
   catch { draftWarning.value = "Trình duyệt chưa lưu được nội dung đang làm. Hãy giữ trang mở để tiếp tục."; }
@@ -560,18 +595,38 @@ watch((): StudioDraft => ({
 
 function applyIncomingPrompt() {
   if (!incomingPrompt.value || submitting.value) return;
-  previousPrompt.value = prompt.value;
-  prompt.value = incomingPrompt.value;
-  incomingPrompt.value = "";
-  ElMessage.success("Đã điền prompt của cảnh. Bạn có thể khôi phục nháp trước.");
+  if (replacePrompt(incomingPrompt.value, "")) {
+    overwriteVisible.value = false;
+    ElMessage.success("Đã dùng prompt của cảnh. Bấm Hoàn tác để lấy lại nháp cũ.");
+  }
 }
 
-function restorePreviousPrompt() {
-  if (!previousPrompt.value || submitting.value) return;
-  const current = prompt.value;
-  prompt.value = previousPrompt.value;
-  previousPrompt.value = current;
-  ElMessage.success("Đã khôi phục nháp trước.");
+function keepCurrentPrompt() {
+  overwriteVisible.value = false;
+  incomingPrompt.value = "";
+}
+
+function replacePrompt(next: string, incoming: string) {
+  const history = promptHistory.value.filter(version => version.prompt !== next && version.prompt !== prompt.value);
+  if (prompt.value.trim()) history.unshift({ prompt: prompt.value, savedAt: Date.now() });
+  const draft = { ...currentDraft(), prompt: next, incomingPrompt: incoming || undefined, promptHistory: history.slice(0, 5) };
+  try { saveStudioBrowserState(browserKey.value, draft); }
+  catch {
+    draftWarning.value = "Chưa lưu được lịch sử nháp trên máy. Nháp hiện tại vẫn được giữ.";
+    ElMessage.error(draftWarning.value);
+    return false;
+  }
+  restoringDraft = true;
+  promptHistory.value = draft.promptHistory;
+  prompt.value = next;
+  incomingPrompt.value = incoming;
+  restoringDraft = false;
+  draftWarning.value = "";
+  return true;
+}
+
+function restorePrompt(value: string) {
+  if (value !== prompt.value && !submitting.value && replacePrompt(value, incomingPrompt.value)) ElMessage.success("Đã khôi phục bản nháp.");
 }
 
 async function saveReference(file: File, version: number, existingPath?: string) {
@@ -767,28 +822,29 @@ async function refreshAll() { await Promise.all([loadModels(), loadHistory()]); 
 async function submitTask() {
   const input = generationInput.value;
   if (!canSubmit.value || !input) return;
-  if (props.kind === "image") {
-    void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: input }, directory.value);
-    return;
-  }
-  if (checkingVideoQuote.value || videoReview.value) return;
+  if (checkingQuote.value || generationReview.value) return;
   const scope = scopeVersion;
   const target = directory.value;
   const label = model.value?.label ?? input.modelId;
-  checkingVideoQuote.value = true;
+  checkingQuote.value = true;
   try {
-    const quote = model.value?.supportsPrice ? await ai.getMediaPrice({
-      ...input, directory: target, mediaType: "video", outputDirectory: generatedDirectory,
-    }, AbortSignal.timeout(7000)).catch(() => null) : null;
-    if (scope === scopeVersion && input === generationInput.value && canSubmit.value) videoReview.value = { input, scope, label, quote: quote?.price };
-  } finally { checkingVideoQuote.value = false; }
+    let price: NodeMediaPrice | null = null;
+    let reason = "Nhà cung cấp chưa hỗ trợ báo giá trước. Bạn có thể quay lại để kiểm tra bảng giá trước khi tạo.";
+    if (model.value?.supportsPrice) {
+      try {
+        price = await ai.getMediaPrice({ ...input, directory: target, mediaType: props.kind, outputDirectory: generatedDirectory }, AbortSignal.timeout(7000));
+        reason = price ? "" : "Nhà cung cấp chưa có báo giá cho thông số đã chọn.";
+      } catch { reason = "Chưa liên hệ được dịch vụ báo giá. Bạn có thể quay lại rồi thử lại."; }
+    }
+    if (scope === scopeVersion && input === generationInput.value && canSubmit.value) generationReview.value = { input, scope, label, price, reason };
+  } finally { checkingQuote.value = false; }
 }
 
-function confirmVideo() {
-  const review = videoReview.value;
-  videoReview.value = undefined;
+function confirmGeneration() {
+  const review = generationReview.value;
+  generationReview.value = undefined;
   if (!review || !canSubmit.value || review.scope !== scopeVersion || review.input !== generationInput.value) {
-    ElMessage.warning("Thông tin tạo video đã thay đổi. Hãy kiểm tra và xác nhận lại.");
+    ElMessage.warning("Thông tin tạo nội dung đã thay đổi. Hãy kiểm tra và xác nhận lại.");
     return;
   }
   void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: review.input }, directory.value);
@@ -894,7 +950,7 @@ watch(requestedModelKey, key => { if (key && !modelsLoading.value) void loadMode
 watch(browserKey, async () => {
   if (!mounted) return;
   scopeVersion++;
-  videoReview.value = undefined;
+  generationReview.value = undefined;
   savingLibraryTaskId.value = "";
   savedLibraryTaskId.value = "";
   savedLibraryVisible.value = false;
@@ -938,9 +994,11 @@ onBeforeUnmount(() => {
 .transferActions { display: flex; flex-wrap: wrap; gap: 6px; }
 .transferActions :deep(.el-button + .el-button) { margin-left: 0; }
 .videoOptions { margin-block: 10px; }
-.videoReview { display: grid; gap: 9px; margin: 0; }
-.videoReview div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; }
-.videoReview dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.generationReview { display: grid; gap: 9px; margin: 0; }
+.draftVersions { display: grid; gap: 9px; margin: 8px 0 0; padding: 0; list-style: none; }
+.draftVersions li { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.generationReview div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; }
+.generationReview dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .reviewHint { color: var(--el-text-color-regular); }
 .studioEstimate {
   display: flex;

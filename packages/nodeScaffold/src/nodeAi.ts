@@ -81,7 +81,7 @@ export type NodeImageResult = { path: string; mimeType: string; mediaType: "imag
 export type NodeVideoRequest = Omit<MediaGenerationRequest, "size"> & { directory: string; outputDirectory: string };
 export type NodeVideoResult = { path: string; mimeType: string; mediaType: "video" };
 export type NodeMediaPriceRequest = (NodeImageRequest & { mediaType: "image" }) | (NodeVideoRequest & { mediaType: "video" }) | (NodeAudioRequest & { mediaType: "audio" });
-export type NodeMediaPrice = { price: string; tips: string };
+export type NodeMediaPrice = { price: string; tips: string; maximum?: string };
 export type NodeAudioRequest = Pick<MediaGenerationRequest, "providerId" | "modelId" | "prompt" | "images" | "audios" | "voice" | "speed" | "volume" | "pitch" | "language" | "format" | "sampleRate" | "other"> & { directory: string; outputDirectory: string };
 export type NodeAudioResult = { path: string; mimeType: string; mediaType: "audio" };
 export type NodeAiRequest = {
@@ -139,6 +139,7 @@ export type NodeMediaTaskStatus = {
   providerData?: unknown;
   nodeId?: string;
   canvasPath?: string;
+  billedCost?: { amount: string; currency: string };
   result?: MediaTaskResult;
 };
 export type NodeMediaTaskOptions = {
@@ -354,7 +355,8 @@ export function useNodeAi(options: { onModelsChanged?: () => unknown } = {}) {
         body: JSON.stringify(input),
         signal: AbortSignal.timeout(15000),
       }).then(readResult<NodeMediaPrice | null>).then(price => {
-        if (price !== null && (!price || typeof price.price !== "string" || !price.price.trim() || typeof price.tips !== "string")) {
+        if (price !== null && (!price || typeof price.price !== "string" || !price.price.trim() || typeof price.tips !== "string"
+          || (price.maximum !== undefined && typeof price.maximum !== "string"))) {
           throw new Error("Định dạng dữ liệu giá trả về không hợp lệ");
         }
         pending.expires = hasReferences ? 0 : Date.now() + 30000;

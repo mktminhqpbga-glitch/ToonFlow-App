@@ -246,6 +246,8 @@ interface ProviderDefinition<TRules extends readonly ProviderFormRule[] = readon
 interface ProviderPrice {
   price: string;
   tips: string;
+  /** Văn bản giới hạn chi phí do nhà cung cấp công bố, nếu có. */
+  maximum?: string;
 }
 
 /** Metadata tài nguyên phục vụ báo giá; không có base64, binary, URL hay đường dẫn cục bộ. Bỏ trường chưa biết thay vì coi là 0. */

@@ -13,6 +13,7 @@ import { generateMedia, isMediaNotSubmitted, type MediaGenerationCheckpoint } fr
 import { lockWorkspaceFiles, resolveWorkspacePath } from "@/utils/workspace/files";
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { readPriceReference } from "@/utils/media/priceReference";
+import { readSettledMediaCost } from "@/utils/media/settledCost";
 import { completeTask, failTask } from "@/utils/aiChrome";
 import { assertProviderAvailable, isRetiredProvider } from "@/lib/retiredProviders";
 import { isMac2ApiProvider } from "@/utils/mac2Api/contract";
@@ -430,7 +431,9 @@ function publicData(task: MediaTask) {
 
 async function snapshot(task: MediaTask, owner?: AuthIdentity | null) {
   const { taskId, state, nodeId, canvasPath, result, cancelDisposition, updatedAt } = task.record;
+  const billedCost = state === "succeeded" ? await readSettledMediaCost(task.record) : undefined;
   return { taskId, state, updatedAt, resumable: await resumable(task), nodeId, canvasPath,
+    ...(billedCost ? { billedCost } : {}),
     ...(owner?.role === "user" ? {} : { providerData: publicData(task) }), ...(result ? { result } : {}),
     ...(cancelDisposition ? { cancelDisposition } : {}) };
 }

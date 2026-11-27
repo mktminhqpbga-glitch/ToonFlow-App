@@ -8,7 +8,7 @@
         <el-input v-model="baseUrl" maxlength="2048" placeholder="Dán địa chỉ do nơi cung cấp đưa cho bạn" :disabled="saving || loading" aria-label="Địa chỉ kết nối" />
       </el-form-item>
       <el-form-item label="Khóa kết nối">
-        <el-input v-model="apiKey" type="password" maxlength="520" autocomplete="new-password"
+        <el-input v-model="apiKey" type="password" showPassword maxlength="520" autocomplete="new-password"
           :placeholder="connection?.keySaved ? 'Khóa đã lưu' : 'Dán khóa kết nối'" :disabled="saving || loading" aria-label="Khóa kết nối" />
       </el-form-item>
       <el-button type="primary" nativeType="submit" :loading="saving" :disabled="loading || !baseUrl.trim()">Lưu kết nối</el-button>

@@ -145,7 +145,7 @@ export function readGeneratedScenes(text: string): DramaScene[] {
   const result = z.object({ scenes: z.array(sceneFields).min(1).max(sceneLimit) }).safeParse(modelJson(text));
   if (!result.success) throw new Error("Dữ liệu phân cảnh do AI trả về thiếu trường hoặc vượt giới hạn.");
   return result.data.scenes.map(scene => ({
-    ...newScene(), ...scene, duration: scene.duration || estimateSceneDuration(scene), durationEstimated: true,
+    ...newScene(), ...scene, duration: scene.duration > 0 ? Math.max(1, scene.duration) : estimateSceneDuration(scene), durationEstimated: true,
   }));
 }
 

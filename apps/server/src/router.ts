@@ -226,10 +226,11 @@ import route223 from "./routes/workspaces/files/mkdir";
 import route224 from "./routes/workspaces/files/read";
 import route225 from "./routes/workspaces/files/remove";
 import route226 from "./routes/workspaces/files/rename";
-import route227 from "./routes/workspaces/files/reveal";
-import route228 from "./routes/workspaces/files/write";
-import route229 from "./routes/workspaces/list";
-import route230 from "./routes/workspaces/selectDirectory";
+import route227 from "./routes/workspaces/files/restore";
+import route228 from "./routes/workspaces/files/reveal";
+import route229 from "./routes/workspaces/files/write";
+import route230 from "./routes/workspaces/list";
+import route231 from "./routes/workspaces/selectDirectory";
 
 export default (app: Express) => {
   app.use("/api/agent", route1);
@@ -458,8 +459,9 @@ export default (app: Express) => {
   app.use("/api/workspaces/files/read", route224);
   app.use("/api/workspaces/files/remove", route225);
   app.use("/api/workspaces/files/rename", route226);
-  app.use("/api/workspaces/files/reveal", route227);
-  app.use("/api/workspaces/files/write", route228);
-  app.use("/api/workspaces/list", route229);
-  app.use("/api/workspaces/selectDirectory", route230);
+  app.use("/api/workspaces/files/restore", route227);
+  app.use("/api/workspaces/files/reveal", route228);
+  app.use("/api/workspaces/files/write", route229);
+  app.use("/api/workspaces/list", route230);
+  app.use("/api/workspaces/selectDirectory", route231);
 }

@@ -100,7 +100,7 @@
               <div class="sceneHeader">
                 <div>
                   <h2><icon-movie :size="20" /> Phân cảnh <span class="sceneCount">{{ board.scenes.length }}</span></h2>
-                  <p class="hint sceneTotal">Tổng thời lượng {{ estimatedDurations ? 'khoảng ' : '' }}{{ durationText }}<span v-if="unknownDurations"> · {{ unknownDurations }} cảnh chưa có thời lượng</span></p>
+                  <p class="hint sceneTotal">Tổng thời lượng {{ estimatedDurations ? 'khoảng ' : '' }}{{ durationText }}<span v-if="unknownDurations" class="fieldError"> · {{ unknownDurations }} cảnh chưa có thời lượng</span></p>
                 </div>
                 <div class="buttonRow">
                   <el-button v-if="canEstimateDuration" :disabled="sceneListLocked || !!translation" @click="fillSceneDurations">Ước tính thời lượng còn thiếu</el-button>
@@ -144,7 +144,7 @@
                   <label class="dramaField"><span>Tên cảnh</span><el-input v-model="activeScene.title" :maxlength="200" :disabled="sceneLocked" @input="markDirty" /></label>
                   <label class="dramaField"><span>Thời lượng (giây)</span><el-input-number v-model="activeScene.duration" :min="0" :max="3600" :disabled="sceneLocked" @change="updateDuration" />
                     <small v-if="activeScene.durationEstimated" class="hint">Ước tính. Bạn có thể chỉnh theo nhịp dựng.</small>
-                    <small v-else-if="!activeScene.duration" class="hint">Cảnh này chưa có thời lượng.</small>
+                    <small v-else-if="!activeScene.duration" class="fieldError">Cảnh này chưa có thời lượng. Hãy nhập số giây.</small>
                   </label>
                 </div>
                 <label class="dramaField"><span>Mô tả cảnh và góc máy</span><el-input v-model="activeScene.description" type="textarea" :rows="3" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" /></label>
@@ -167,21 +167,27 @@
                 </div>
                 <div class="promptGrid">
                   <div class="promptPanel">
-                    <label class="dramaField"><span>Prompt ảnh</span><el-input v-model="activeScene.imagePrompt" type="textarea" :autosize="{ minRows: 3 }" :maxlength="10000" showWordLimit :disabled="sceneLocked" @input="markDirty" /></label>
+                    <label class="dramaField"><span>Prompt ảnh</span><el-input v-model="activeScene.imagePrompt" type="textarea" :autosize="{ minRows: 3, maxRows: 12 }" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" />
+                      <small class="hint">{{ activeScene.imagePrompt.length }} / 10.000 ký tự</small>
+                    </label>
+                    <details v-if="activeScene.imagePrompt.trim()" class="guide"><summary>Đọc toàn bộ prompt ảnh</summary><p class="promptReading">{{ activeScene.imagePrompt }}</p></details>
                     <el-button v-if="activeSceneHasReferences" plain :icon="IconPhoto" @click="switchView(true)">Mở Tạo ảnh theo cảnh</el-button>
                     <el-button v-else plain :icon="IconPhoto" :disabled="sceneLocked || !activeScene.imagePrompt.trim()" @click="openStudio('image')">Đưa sang Xưởng ảnh</el-button>
                     <small v-if="!activeScene.imagePrompt.trim()" class="hint">Nhập prompt ảnh để gửi sang xưởng.</small>
                   </div>
                   <div class="promptPanel">
-                    <label class="dramaField"><span>Prompt video</span><el-input v-model="activeScene.videoPrompt" type="textarea" :autosize="{ minRows: 3 }" :maxlength="10000" showWordLimit :disabled="sceneLocked" @input="markDirty" /></label>
+                    <label class="dramaField"><span>Prompt video</span><el-input v-model="activeScene.videoPrompt" type="textarea" :autosize="{ minRows: 3, maxRows: 12 }" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" />
+                      <small class="hint">{{ activeScene.videoPrompt.length }} / 10.000 ký tự</small>
+                    </label>
+                    <details v-if="activeScene.videoPrompt.trim()" class="guide"><summary>Đọc toàn bộ prompt video</summary><p class="promptReading">{{ activeScene.videoPrompt }}</p></details>
                     <el-button plain :icon="IconVideo" :disabled="sceneLocked || !activeScene.videoPrompt.trim()" @click="openStudio('video')">Đưa sang Xưởng video</el-button>
                     <small v-if="!activeScene.videoPrompt.trim()" class="hint">Nhập prompt video để gửi sang xưởng.</small>
                   </div>
                 </div>
                 <div class="buttonRow sceneActions">
                   <el-button :icon="IconLanguage" :disabled="!!translateDisabled" :aria-describedby="translateDisabled ? 'translateHelp' : undefined" @click="translateScene">Việt hóa cảnh</el-button>
-                  <el-button :icon="IconArrowLeft" title="Đưa cảnh lên trước" :disabled="!canReorder || activeIndex < 1" @click="moveActiveScene(-1)">Lên trước</el-button>
-                  <el-button :icon="IconArrowRight" title="Đưa cảnh xuống sau" :disabled="!canReorder || activeIndex === board.scenes.length - 1" @click="moveActiveScene(1)">Xuống sau</el-button>
+                  <el-button :icon="IconArrowLeft" :title="!canReorder ? 'Cần ít nhất hai cảnh và danh sách không lọc.' : activeIndex < 1 ? 'Đây là cảnh đầu tiên.' : 'Đưa cảnh lên trước'" :disabled="!canReorder || activeIndex < 1" @click="moveActiveScene(-1)">Lên trước</el-button>
+                  <el-button :icon="IconArrowRight" :title="!canReorder ? 'Cần ít nhất hai cảnh và danh sách không lọc.' : activeIndex === board.scenes.length - 1 ? 'Đây là cảnh cuối cùng.' : 'Đưa cảnh xuống sau'" :disabled="!canReorder || activeIndex === board.scenes.length - 1" @click="moveActiveScene(1)">Xuống sau</el-button>
                   <el-button plain type="danger" :disabled="sceneLocked" @click="removeScene">Bỏ cảnh</el-button>
                 </div>
                 <p v-if="translateDisabled && !translation" id="translateHelp" class="hint">{{ translateDisabled }}</p>
@@ -205,7 +211,7 @@
               <div class="buttonRow">
                 <el-button :icon="IconDownload" :loading="downloading" :disabled="!!exportDisabled || downloading" :aria-describedby="exportDisabled ? 'exportHelp' : undefined" @click="downloadBoard">Tải Markdown</el-button>
                 <el-button :icon="IconPrinter" :disabled="!!exportDisabled" :aria-describedby="exportDisabled ? 'exportHelp' : undefined" @click="printBoard">In hoặc lưu PDF</el-button>
-                <el-button type="primary" plain :icon="IconLayoutDashboard" :disabled="outputDisabled || !!action" :aria-describedby="outputDisabled ? 'outputHelp' : undefined" @click="sendToCanvas">Đưa vào Canvas</el-button>
+                <el-button type="primary" :icon="IconLayoutDashboard" :disabled="outputDisabled || !!action" :aria-describedby="outputDisabled ? 'outputHelp' : undefined" @click="sendToCanvas">Đưa vào Canvas</el-button>
               </div>
             </footer>
           </el-card>
@@ -219,7 +225,7 @@
         <label class="dramaField"><span>Địa chỉ Huobao</span><el-input v-model="huobaoAddress" placeholder="http://localhost:5679" :disabled="action === 'import'" /></label>
         <label class="dramaField"><span>ID tập</span><el-input v-model="huobaoEpisode" inputmode="numeric" placeholder="Ví dụ: 3" :disabled="action === 'import'" /></label>
         <p class="hint">Mở tập trong Huobao và xem ID trong địa chỉ hoặc thông tin tập. ID có thể khác số thứ tự của tập. <a :href="huobaoGuide" target="_blank" rel="noopener noreferrer">Xem hướng dẫn lấy ID và tệp JSON</a></p>
-        <p v-if="!huobaoEpisode.trim()" class="hint">Nhập ID tập để mở JSON của tập. Nếu đã có JSON, hãy chọn tệp hoặc dán nội dung ở bên dưới.</p>
+        <p v-if="!huobaoAddress.trim() || !huobaoEpisode.trim()" class="hint">Nhập địa chỉ Huobao và ID tập để mở JSON của tập. Nếu đã có JSON, hãy chọn tệp hoặc dán nội dung ở bên dưới.</p>
         <label class="dramaField"><span>Ghi chú nhập <small class="hint">Tùy chọn</small></span>
           <el-input v-model="importNotes" type="textarea" :rows="2" :maxlength="10000" :disabled="action === 'import'" placeholder="Ví dụ: Tập 3, bản dựng ngày 27/11" />
         </label>
@@ -230,10 +236,10 @@
             <el-input v-model="huobaoKey" type="password" autocomplete="off" :maxlength="2048" :disabled="action === 'import'" />
           </label>
           <p class="hint">Nếu máy chủ của bạn yêu cầu khóa, lấy khóa do người quản trị Huobao cấp. Máy chủ cần cho phép MacFlow gửi khóa. Khóa chỉ dùng cho lần nhập này.</p>
-          <el-button :disabled="!huobaoEpisode.trim() || !huobaoKey.trim() || action === 'import'" :loading="action === 'import'" @click="importWithKey">Nhập bằng khóa truy cập</el-button>
+          <el-button :disabled="!huobaoAddress.trim() || !huobaoEpisode.trim() || !huobaoKey.trim() || action === 'import'" :loading="action === 'import'" @click="importWithKey">Nhập bằng khóa truy cập</el-button>
         </details>
         <div class="buttonRow">
-          <el-button :disabled="!huobaoEpisode.trim() || action === 'import'" @click="openHuobaoJson">Mở JSON của tập</el-button>
+          <el-button :disabled="!huobaoAddress.trim() || !huobaoEpisode.trim() || action === 'import'" @click="openHuobaoJson">Mở JSON của tập</el-button>
           <el-button type="primary" :loading="action === 'import'" :disabled="!!action" @click="fileInput?.click()">Chọn tệp JSON</el-button>
         </div>
         <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="importFile" />
@@ -543,10 +549,7 @@ async function saveBoard(notify = false) {
     ElMessage.error("Dự án đã đổi ở cửa sổ khác. Hãy tải Markdown để giữ bản đang chỉnh.");
     return false;
   }
-  if (!dirty.value && snapshot) {
-    if (notify) ElMessage.success("Bảng phân cảnh đã được lưu.");
-    return true;
-  }
+  if (!notify && !dirty.value && snapshot) return true;
   const target = directory.value;
   const id = boardId.value;
   const version = loadVersion;
@@ -860,6 +863,15 @@ function undoRemove() {
   markDirty();
 }
 
+function undoOnShortcut(event: KeyboardEvent) {
+  if (!removedScene.value || sceneListLocked.value || board.value.scenes.length >= sceneLimit || event.defaultPrevented
+    || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "z") return;
+  const target = event.target;
+  if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], [role=dialog]")) return;
+  event.preventDefault();
+  undoRemove();
+}
+
 function thumbnailMime(path: string) {
   const extension = path.split(".").at(-1);
   return extension === "jpg" ? "image/jpeg" : `image/${extension}`;
@@ -987,11 +999,15 @@ watch(importVisible, visible => {
 watch(visibleScenes, scenes => {
   if (!scenes.some(({ scene }) => scene.id === activeId.value)) activeId.value = scenes[0]?.scene.id ?? "";
 });
-onMounted(() => void loadModels());
+onMounted(() => {
+  void loadModels();
+  window.addEventListener("keydown", undoOnShortcut);
+});
 onScopeDispose(() => {
   loadVersion++;
   boardListVersion++;
   generation.value?.controller.abort();
+  window.removeEventListener("keydown", undoOnShortcut);
   window.removeEventListener("afterprint", clearPrint);
 });
 
@@ -1034,7 +1050,7 @@ onBeforeRouteUpdate((to, from) => storyboardId(to.query.board) === storyboardId(
 .dramaField :deep(input::placeholder), .dramaField :deep(textarea::placeholder), .sceneFinder :deep(input::placeholder) { color: var(--el-text-color-regular); opacity: 1; }
 .modelGroup, .outputBar { margin-top: auto; padding-top: 13px; border-top: 1px solid var(--el-border-color-light); }
 .outputBar { display: grid; gap: 8px; }
-.sceneTimeline { display: flex; flex-wrap: wrap; gap: 6px; max-height: 172px; overflow-y: auto; padding: 3px 3px 8px; }
+.sceneTimeline { display: flex; flex-wrap: wrap; gap: 6px; max-height: 230px; overflow-y: auto; overflow-x: hidden; padding: 3px 3px 8px; }
 .sceneTab { display: flex; align-items: center; flex: 0 0 auto; max-width: min(205px, 100%); border: 1px solid var(--el-border-color); border-radius: 7px; background: var(--el-fill-color-lighter); color: var(--el-text-color-regular); }
 .sceneTab.active { border-color: var(--el-color-primary); background: var(--el-color-primary-light-9); color: var(--el-text-color-primary); }
 .sceneTab.dropTarget { box-shadow: -3px 0 var(--el-color-primary); }
@@ -1042,7 +1058,8 @@ onBeforeRouteUpdate((to, from) => storyboardId(to.query.board) === storyboardId(
 .sceneTab button:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: -2px; }
 .dragHandle { padding: 6px 0 6px 8px; cursor: grab; }
 .sceneIndex { padding: 2px 4px; border-radius: 4px; background: var(--el-bg-color); font-weight: 650; }
-.sceneTitle { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sceneTitle { min-width: 0; overflow-wrap: anywhere; text-align: start; }
+.promptReading { white-space: pre-wrap; overflow-wrap: anywhere; }
 .sceneFinder { display: grid; gap: 6px; }
 .sceneDetails, .promptGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .promptPanel, .scenePreview, .aiStatus, .undoBar { min-width: 0; padding: 10px; border-radius: 9px; background: var(--el-fill-color-light); }

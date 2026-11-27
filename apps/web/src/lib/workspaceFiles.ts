@@ -10,6 +10,13 @@ const client = axios.create({ baseURL: "/api/workspaces/files", timeout: 120000,
 registerApiLanguage(client);
 const fileUrls = new Map<string, { directory: string; path: string; url: Promise<string>; users: number; controller: AbortController }>();
 
+export async function restoreWorkspaceBackup(file: File) {
+  const { data } = await client.post<{ data: { directory: string } }>("/restore", file, {
+    headers: { "Content-Type": "application/octet-stream" }, timeout: 0,
+  });
+  return data.data.directory;
+}
+
 function cachePath(path: string) {
   return path.replaceAll("\\", "/").split("/").filter(part => part && part !== ".").join("/").toLowerCase();
 }

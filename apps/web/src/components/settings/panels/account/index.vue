@@ -98,7 +98,7 @@
           <div class="authLogo"><img :src="logoUrl" alt="Toonflow" /></div>
           <div class="authInfo">
             <h3>Toonflow</h3>
-            <p>Đăng nhập để xem số dư và lịch sử sử dụng dịch vụ Toonflow.</p>
+            <p>Chưa kết nối tài khoản. Đăng nhập để xem số dư và lịch sử sử dụng dịch vụ Toonflow.</p>
           </div>
           <el-segmented v-model="authTab" class="authTabs" :options="authOptions" :disabled="submitting" block aria-label="Đăng nhập hoặc đăng ký" />
         </header>

@@ -179,6 +179,7 @@ import { loadNodeComponent } from "./loadNodeComponent";
 import { useCanvasHistory } from "./useCanvasHistory";
 import { copyNodeToClipboard, copyNodesToClipboard, nodeClipboardCommand, readClipboardNodes } from "./nodeClipboard";
 import { remapNodeReferences } from "./canvasFiles";
+import { availableCanvasLabel, availableCanvasPosition } from "./canvasPlacement";
 import { readClipboardFiles, readClipboardText, writeClipboardImage } from "@/lib/clipboard";
 import nodeMenu from "./components/nodeMenu.vue";
 import remoteNode from "./components/remoteNode.vue";
@@ -1118,17 +1119,7 @@ function pastePosition() {
 function storyboardNodePosition() {
   const rect = canvasElement.value?.getBoundingClientRect();
   const position = rect ? screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }) : { x: 0, y: 0 };
-  const width = 240;
-  const height = 360;
-  const gap = 40;
-  const nodes = flow.getNodes.value.filter(node => !node.hidden
-    && node.computedPosition.x < position.x + width + gap
-    && node.computedPosition.x + (node.dimensions.width || width) > position.x - gap);
-  for (const node of nodes.sort((a, b) => a.computedPosition.y - b.computedPosition.y)) {
-    if (position.y + height + gap <= node.computedPosition.y) break;
-    position.y = Math.max(position.y, node.computedPosition.y + (node.dimensions.height || height) + gap);
-  }
-  return position;
+  return availableCanvasPosition(position, flow.getNodes.value);
 }
 
 async function pasteNodeAtCenter(command?: string) {
@@ -1205,7 +1196,7 @@ async function importPendingStudioMedia() {
       return;
     }
     const file = "text" in pending
-      ? new File([pending.text], pending.name, { type: "text/markdown" })
+      ? new File([pending.text], availableCanvasLabel(pending.name, flow.getNodes.value), { type: "text/markdown" })
       : new File([await useWorkspaceFiles(directory).read(pending.path)], pending.path.split("/").at(-1) ?? `studio.${pending.mediaType === "image" ? "png" : "mp4"}`, { type: pending.mimeType });
     if (!isCurrent()) return;
     const position = pending.mediaType === "text" ? storyboardNodePosition() : pastePosition() ?? { x: 0, y: 0 };

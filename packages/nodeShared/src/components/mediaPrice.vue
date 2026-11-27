@@ -21,9 +21,11 @@ const infoVisible = ref(false);
 const loading = ref(false);
 const error = ref("");
 const revision = ref(0);
-const priceLabel = computed(() => !props.supported ? "Nhà cung cấp chưa hỗ trợ báo giá trước. Bạn vẫn có thể tạo nội dung; chi phí thực tế theo nhà cung cấp." : loading.value ? "Đang tra cứu giá dự kiến" : error.value
-  ? `Tra cứu giá thất bại: ${error.value}. Kiểm tra cấu hình nhà cung cấp hoặc thử lại sau.`
-  : price.value ? price.value.tips : "Chưa có giá dự kiến cho mô hình và thông số này. Bạn vẫn có thể tạo nội dung; phí thực tế theo nhà cung cấp.");
+const noMaximum = "Chi phí tối đa chưa được nhà cung cấp công bố.";
+const priceLabel = computed(() => !props.supported ? `Nhà cung cấp chưa hỗ trợ báo giá trước. ${noMaximum}` : loading.value ? "Đang tra cứu giá dự kiến" : error.value
+  ? `Chưa tải được báo giá. Hãy kiểm tra kết nối rồi thử lại. ${noMaximum}`
+  : price.value ? [price.value.tips, price.value.maximum ? `Chi phí tối đa ${price.value.maximum}` : noMaximum].filter(Boolean).join("\n")
+    : `Chưa có giá dự kiến cho mô hình và thông số này. ${noMaximum}`);
 
 onScopeDispose(subscribeNodeModels(type => { if (type === "media") revision.value++; }));
 

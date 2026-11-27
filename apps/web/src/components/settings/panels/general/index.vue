@@ -96,11 +96,15 @@
     <section v-if="!publicWeb" class="settingSection" aria-labelledby="projectBackupTitle">
       <div class="settingHeader">
         <div class="settingInfo">
-          <h3 id="projectBackupTitle">Sao lưu dự án</h3>
+          <h3 id="projectBackupTitle">Sao lưu và khôi phục dự án</h3>
           <p class="description">{{ project ? `Dự án đang mở · ${project.name}` : "Hãy mở một dự án để sao lưu." }}</p>
-          <p class="description">Để dùng lại bản sao, giải nén tệp ZIP vào thư mục riêng trên máy đang chạy MacFlow. Vào Dự án, bấm Tạo dự án mới rồi chọn thư mục đã giải nén.</p>
+          <p class="description">Tệp ZIP chứa dữ liệu trong thư mục dự án. Khi khôi phục, MacFlow mở một bản dự án mới và giữ nguyên thư mục hiện tại.</p>
         </div>
-        <el-button size="small" :disabled="!project" :loading="exporting" @click="backupProject">Tải bản sao ZIP</el-button>
+        <div class="backupActions">
+          <el-button size="small" :disabled="!project || restoring" :loading="exporting" @click="backupProject">Sao lưu dữ liệu</el-button>
+          <el-button size="small" :disabled="exporting" :loading="restoring" @click="restoreInput?.click()">Khôi phục dữ liệu</el-button>
+        </div>
+        <input ref="restoreInput" type="file" accept=".zip,application/zip" hidden @change="restoreProject" />
       </div>
     </section>
     <nodeMenuSettings />
@@ -111,13 +115,15 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
+import axios from "axios";
 import { defaultUiSettings, generalSettings, uiSettings, updateGeneralSettings, updateUiSettings } from "@/stores/settings";
 import { publicWeb } from "@/stores/multiTenant";
 import { getNotificationPermission, requestNotificationPermission } from "@/lib/notification";
 import { actualPlatform } from "@/lib/platform";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { exportWorkspace } from "@/lib/exportWorkspace";
+import { restoreWorkspaceBackup } from "@/lib/workspaceFiles";
 import ui from "./ui.vue";
 import canvasShortcuts from "./canvasShortcuts.vue";
 import nodeMenuSettings from "./nodeMenuSettings.vue";
@@ -129,6 +135,8 @@ const requestingPermission = ref(false);
 const workspace = useWorkspaceStore();
 const project = computed(() => workspace.project);
 const exporting = ref(false);
+const restoring = ref(false);
+const restoreInput = ref<HTMLInputElement>();
 const lifetime = new AbortController();
 
 async function backupProject() {
@@ -139,6 +147,39 @@ async function backupProject() {
   } catch (cause) {
     if (!lifetime.signal.aborted) ElMessage.error(cause instanceof Error ? cause.message : "Không sao lưu được dự án.");
   } finally { exporting.value = false; }
+}
+
+async function restoreProject(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file || restoring.value || exporting.value) return;
+  if (!/\.zip$/i.test(file.name) || file.size > 1024 ** 3) {
+    ElMessage.warning("Hãy chọn tệp sao lưu ZIP tối đa 1 GB.");
+    return;
+  }
+  const current = project.value?.directory;
+  const accepted = await ElMessageBox.confirm(
+    `MacFlow sẽ mở bản sao từ “${file.name}” làm dự án hiện tại. Dữ liệu đang có vẫn nằm trong thư mục cũ.`,
+    "Khôi phục dữ liệu?", { confirmButtonText: "Khôi phục", cancelButtonText: "Hủy", type: "warning" },
+  ).then(() => true, () => false);
+  if (!accepted || lifetime.signal.aborted || restoring.value || current !== project.value?.directory) return;
+  restoring.value = true;
+  try {
+    const directory = await restoreWorkspaceBackup(file);
+    const name = `${file.name.slice(0, -4)} (khôi phục)`;
+    if (!lifetime.signal.aborted && current === project.value?.directory) {
+      await workspace.openProject(directory);
+      workspace.renameProject(directory, name);
+      ElMessage.success("Đã khôi phục và mở dự án.");
+    } else {
+      await workspace.addProject(directory, name);
+      ElMessage.success("Đã khôi phục dự án. Bạn có thể mở trong danh sách Dự án.");
+    }
+  } catch (cause) {
+    const message = axios.isAxiosError<{ message?: string }>(cause) ? cause.response?.data?.message : cause instanceof Error ? cause.message : undefined;
+    ElMessage.error(message || "Chưa khôi phục được dự án. Hãy kiểm tra tệp ZIP rồi thử lại.");
+  } finally { restoring.value = false; }
 }
 
 function refreshNotificationPermission() {
@@ -176,6 +217,8 @@ onBeforeUnmount(() => {
       gap: 12px;
 
       > .el-switch { flex-shrink: 0; }
+      .backupActions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .backupActions :deep(.el-button) { margin-left: 0; }
 
       .edgeColorControls {
         display: flex;

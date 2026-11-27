@@ -27,6 +27,10 @@
           <icon-library-photo :size="18" aria-hidden="true" />
           <span class="sidebarText">Thư viện tài nguyên</span>
         </button>
+        <button v-if="!publicWeb && currentUser?.role !== 'user'" class="sidebarItem" type="button" aria-label="Kho nhân vật tham chiếu" title="Kho nhân vật tham chiếu" aria-haspopup="dialog" @click="charactersVisible = true">
+          <icon-users :size="18" aria-hidden="true" />
+          <span class="sidebarText">Kho nhân vật</span>
+        </button>
       </nav>
       <div class="sidebarFooter">
         <button v-if="!publicWeb" class="sidebarItem deviceButton" :class="{ connected: deviceHubEnabled || mobileConnection.online === true }" type="button" :aria-label="mobileConnectionLabel" :title="mobileConnectionLabel" @click="mobileConnectVisible = true">
@@ -120,6 +124,7 @@
       </div>
     </el-scrollbar>
     <assetLibraryDialog v-if="currentUser?.role !== 'user'" v-model="assetsVisible" :directory="project?.directory" />
+    <characterLibrary v-if="charactersVisible" v-model="charactersVisible" />
     <settings v-model="settingsVisible" />
     <mobileConnect v-if="!publicWeb" v-model="mobileConnectVisible" />
     <workspacePicker ref="relocationPicker" hideTrigger />
@@ -165,6 +170,8 @@ import promptDiscovery from "./promptDiscovery.vue";
 
 const settingsVisible = ref(false);
 const assetsVisible = ref(false);
+const charactersVisible = ref(false);
+const characterLibrary = defineAsyncComponent(() => import("@/components/characterLibrary.vue"));
 const mobileConnectVisible = ref(false);
 const sidebarCollapsed = ref(false);
 const pageScroll = ref<ScrollbarInstance>();

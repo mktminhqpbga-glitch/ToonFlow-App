@@ -42,6 +42,7 @@
       </div>
     </div>
     <p v-if="generating" class="generationTime">Đang xử lý video · {{ elapsedSeconds }} giây</p>
+    <p v-else-if="completedCost && outputFile" class="generationTime">Chi phí thực tế · {{ completedCost }}</p>
     <template #bottom>
       <el-card class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
         <referenceItem
@@ -152,7 +153,7 @@ const actions = ref<InstanceType<typeof videoActions>>();
 const videoWidth = ref(0);
 let generationController: AbortController | undefined;
 const generationState = useNodeGeneration(outputs, () => generationController?.abort(), { ai });
-const { generating, elapsedSeconds, pendingRecovery, cancelling } = generationState;
+const { generating, elapsedSeconds, completedCost, pendingRecovery, cancelling } = generationState;
 let generation: Promise<void> | undefined;
 let modelsRequest: Promise<void> | undefined;
 watch(generating, value => { if (!value && !disposed && !deleting.value && !models.value.length) void loadModels().catch(error => showNodeError(error, "Lỗi tải mô hình")); });

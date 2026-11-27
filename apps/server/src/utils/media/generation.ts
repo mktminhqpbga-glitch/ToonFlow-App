@@ -299,7 +299,8 @@ export async function getMediaPrice(directory: string | undefined, mediaType: "i
   if (isMac2ApiProvider(request.providerId) && !modelGateway.enabled()) return null;
   if (modelGateway.enabled()) {
     const quote = await modelGateway.quoteRequest(mediaType, request.providerId, request.modelId, request);
-    return { ...quote, price: `${quote.amount} ${quote.currency}`, tips: translateMessage("平台售价，按实际用量结算") };
+    const maximum = `${quote.amount} ${quote.currency}`;
+    return { ...quote, price: maximum, maximum, tips: translateMessage("平台售价，按实际用量结算") };
   }
   const { provider } = await configuredProvider(request, mediaType, signal, directory);
   if (!provider.getPrice) return null;

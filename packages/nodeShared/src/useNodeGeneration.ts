@@ -20,6 +20,7 @@ export type NodeGenerationTask = {
   providerData?: unknown;
   recoveryData?: unknown;
   applied?: boolean;
+  billedCost?: NodeMediaTaskStatus["billedCost"];
 };
 
 type GenerationOptions = {
@@ -52,6 +53,12 @@ export function useNodeGeneration(outputs: Readonly<Ref<NodeOutputs>>, cancel: (
     onCleanup(() => clearInterval(timer));
   });
   const pendingRecovery = computed(() => !generating.value && needsRecovery());
+  const completedCost = computed(() => {
+    const task = savedData.value.mediaTask;
+    return task?.state === "succeeded" && task.applied
+      ? task.billedCost ? `${task.billedCost.amount} ${task.billedCost.currency}` : "Nhà cung cấp chưa trả số tiền đã tính."
+      : "";
+  });
   const getStatus = () => ({ status: status.value, outputs: outputs.value, ...(error.value ? { error: error.value } : {}),
     ...(savedData.value.mediaTask ? { task: { taskId: savedData.value.mediaTask.taskId, state: savedData.value.mediaTask.state, resumable: savedData.value.mediaTask.resumable } } : {}) });
 
@@ -94,11 +101,12 @@ export function useNodeGeneration(outputs: Readonly<Ref<NodeOutputs>>, cancel: (
         checkTask(task, context);
         if (value.nodeId && value.nodeId !== id) throw new Error("Tác vụ tạo nội dung không thuộc node hiện tại");
         if (value.canvasPath && value.canvasPath !== task.canvasPath) throw new Error("Tác vụ thuộc Canvas gốc khác");
-        const before = JSON.stringify([task.state, task.resumable, task.providerData]);
+        const before = JSON.stringify([task.state, task.resumable, task.providerData, task.billedCost]);
         if (value.state) task.state = value.state;
         if (value.resumable !== undefined) task.resumable = value.resumable;
         if (value.providerData !== undefined) task.providerData = value.providerData;
-        if (before !== JSON.stringify([task.state, task.resumable, task.providerData])) {
+        if (value.billedCost) task.billedCost = value.billedCost;
+        if (before !== JSON.stringify([task.state, task.resumable, task.providerData, task.billedCost])) {
           const current = getPersistence?.();
           if (!current) throw new Error("Canvas đã đóng, không thể lưu trạng thái tác vụ");
           await current.save(signal);
@@ -251,5 +259,5 @@ export function useNodeGeneration(outputs: Readonly<Ref<NodeOutputs>>, cancel: (
   }, { deep: true, flush: "sync" });
   onScopeDispose(() => lifetime.abort());
 
-  return { generating, elapsedSeconds, pendingRecovery, cancelling, run, generate, resume, cancel: cancelGeneration };
+  return { generating, elapsedSeconds, completedCost, pendingRecovery, cancelling, run, generate, resume, cancel: cancelGeneration };
 }

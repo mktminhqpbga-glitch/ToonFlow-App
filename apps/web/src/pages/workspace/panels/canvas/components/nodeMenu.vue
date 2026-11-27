@@ -99,6 +99,7 @@ import { filterNodeMenu, resolveNodeMenu } from "@toonflow/server/nodeMenu";
 import { getSelectionConnections } from "../selectionConnections";
 import { getSelectionRoots, getSelectionTree } from "../selectionNodes";
 import { arrangeSelection } from "../arrangeSelection";
+import { availableCanvasLabel, availableCanvasPosition } from "../canvasPlacement";
 import {
   IconClipboard,
   IconCopyPlus,
@@ -348,7 +349,8 @@ async function runCommand(command: unknown) {
   if (handle && flow.findNode(handle.node.id) !== handle.node) return;
   if (group.some(source => flow.findNode(source.id) !== source)) return;
   const id = crypto.randomUUID();
-  addNodes({ id, type: node.type, position: { ...nodePosition }, data: { label: node.label } });
+  const nodes = flow.getNodes.value;
+  addNodes({ id, type: node.type, position: availableCanvasPosition(nodePosition, nodes), data: { label: availableCanvasLabel(node.label, nodes) } });
   if (!handle && !group.length) {
     flow.removeSelectedElements();
     flow.nodesSelectionActive.value = false;

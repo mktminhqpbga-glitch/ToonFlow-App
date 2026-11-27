@@ -6,6 +6,7 @@ import { z } from "zod";
 import conf from "@/utils/conf";
 import { modelGateway } from "@/utils/multiTenant/gateway";
 import { resolveWorkspacePath } from "@/utils/workspace/files";
+import { readSettledMediaCost } from "@/utils/media/settledCost";
 import { isRetiredProvider } from "@/lib/retiredProviders";
 import { moneyPrinterProvider } from "./moneyPrinterTurbo";
 
@@ -18,6 +19,7 @@ const fileSchema = z.object({
 });
 const taskSchema = z.object({
   taskId: z.uuid(), cwd: z.string(), ownerUserId: z.uuid().optional(),
+  chargeId: z.string().min(1).max(128).optional(), chargeStatus: z.string().optional(),
   studioQueue: z.literal(true).optional(),
   mediaType: z.enum(["image", "video", "audio"]).optional(),
   state: z.enum(["queued", "running", "interrupted", "succeeded", "failed", "cancelled"]),
@@ -43,6 +45,7 @@ export type StudioTaskEntry = {
   prompt?: string;
   studioQueue?: true;
   resumable: boolean;
+  billedCost?: { amount: string; currency: string };
   cancelDisposition?: StudioTask["cancelDisposition"];
   result?: { code: number; message: string; data: z.infer<typeof fileSchema>[] | null };
 };
@@ -103,11 +106,12 @@ async function taskSummary(task: StudioTask): Promise<StudioTaskEntry> {
     && (providerId === moneyPrinterProvider && !modelGateway.enabled()
       || providerId !== "aiChrome" && (!providerId || !isRetiredProvider(providerId)) && (!!checkpoint?.providerData || !!checkpoint?.assets?.length)
       || await hasCompleteFiles(task));
+  const billedCost = task.state === "succeeded" ? await readSettledMediaCost(task) : undefined;
   return {
     taskId: task.taskId, mediaType: task.mediaType as "image" | "video", state: task.state,
     createdAt: task.createdAt, updatedAt: task.updatedAt,
     providerId: task.request?.providerId, modelId: task.request?.modelId,
-    prompt: task.request?.prompt, resumable, studioQueue: task.studioQueue,
+    prompt: task.request?.prompt, resumable, studioQueue: task.studioQueue, ...(billedCost ? { billedCost } : {}),
     ...(task.cancelDisposition ? { cancelDisposition: task.cancelDisposition } : {}),
     ...(task.result ? { result: { code: task.result.code, message: task.result.message,
       data: task.result.data?.filter(file => file.mediaType === task.mediaType) ?? null } } : {}),

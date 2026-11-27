@@ -12,14 +12,15 @@
     <button v-if="canOpenLibrary" type="button" title="Thư viện tài nguyên" aria-label="Thư viện tài nguyên" aria-haspopup="dialog" @click="libraryVisible = true">
       <icon-library-photo :size="18" aria-hidden="true" /> <span>Thư viện tài nguyên</span>
     </button>
-    <button v-if="canOpenLibrary && showCharacters" type="button" title="Kho nhân vật tham chiếu" aria-label="Kho nhân vật tham chiếu" aria-haspopup="dialog" @click="$emit('characters')">
+    <button v-if="canOpenLibrary && !publicWeb" type="button" title="Kho nhân vật tham chiếu" aria-label="Kho nhân vật tham chiếu" aria-haspopup="dialog" @click="openCharacters">
       <icon-users :size="18" aria-hidden="true" /> <span>Kho nhân vật</span>
     </button>
-    <button type="button" :title="settingsLabel" :aria-label="settingsLabel" aria-haspopup="dialog" @click="openSettings">
-      <icon-settings :size="18" aria-hidden="true" /> <span>{{ settingsLabel }}</span>
+    <button type="button" title="Cài đặt" aria-label="Cài đặt" aria-haspopup="dialog" @click="openSettings">
+      <icon-settings :size="18" aria-hidden="true" /> <span>Cài đặt</span>
     </button>
   </nav>
   <assetLibraryDialog v-if="libraryVisible" v-model="libraryVisible" :directory="workspaceStore.project?.directory" />
+  <characterLibrary v-if="charactersVisible" v-model="charactersVisible" />
   <settings v-if="settingsVisible" v-model="settingsVisible" />
 </template>
 
@@ -36,13 +37,18 @@ const props = withDefaults(defineProps<{ compact?: boolean; showCharacters?: boo
 const emit = defineEmits<{ characters: []; settings: [] }>();
 const settings = defineAsyncComponent(() => import("@/components/settings/index.vue"));
 const assetLibraryDialog = defineAsyncComponent(() => import("@/pages/home/assetLibraryDialog.vue"));
+const characterLibrary = defineAsyncComponent(() => import("@/components/characterLibrary.vue"));
 const route = useRoute();
 const workspaceStore = useWorkspaceStore();
 const libraryVisible = ref(false);
+const charactersVisible = ref(false);
 const settingsVisible = ref(false);
 const canOpenLibrary = computed(() => currentUser.value?.role !== "user");
 const links = computed(() => creationLinks.filter(item => !item.localOnly || !publicWeb.value));
-const settingsLabel = computed(() => props.modelSettings ? "Cài đặt mô hình" : "Cài đặt");
+function openCharacters() {
+  if (props.showCharacters) emit("characters");
+  else charactersVisible.value = true;
+}
 function openSettings() {
   if (props.modelSettings) emit("settings");
   else settingsVisible.value = true;

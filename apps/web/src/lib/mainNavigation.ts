@@ -3,8 +3,8 @@ import { IconBook, IconCompass, IconFolder, IconHome, IconLayoutDashboard, IconM
 export const homeSections = [
   { id: "home", label: "Trang chủ", icon: IconHome },
   { id: "projects", label: "Dự án", icon: IconFolder },
-  { id: "prompts", label: "Thư viện prompt", icon: IconBook },
-  { id: "explore", label: "Khám phá dự án", icon: IconCompass },
+  { id: "prompts", label: "Xem mục Thư viện prompt", icon: IconBook },
+  { id: "explore", label: "Xem mục Khám phá", icon: IconCompass },
 ];
 
 export const creationLinks = [
