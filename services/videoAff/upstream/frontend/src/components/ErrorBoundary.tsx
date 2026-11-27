@@ -7,9 +7,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
     if (!this.state.failed) return this.props.children;
     return (
       <section className="page" role="alert">
-        <h1>Something went wrong on this page</h1>
-        <p className="muted">Your work is safe. Reload the page to continue.</p>
-        <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => window.location.reload()}>Reload</button>
+        <h1>Trang này gặp sự cố</h1>
+        <p className="muted">Tải lại trang để tiếp tục.</p>
+        <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => window.location.reload()}>Tải lại</button>
       </section>
     );
   }

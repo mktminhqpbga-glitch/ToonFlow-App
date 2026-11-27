@@ -2,7 +2,7 @@
 
 **Tổng quan → VideoAFF** mở xưởng bán hàng ngay trong cửa sổ MacFlow. Khi dùng cục bộ, MacFlow tự khởi động VideoAFF lần đầu bạn mở mục này. Bấm **Mô hình và Kho** trên thanh trên cùng để chọn mô hình và chuyển tư liệu. Kho dữ liệu, ảnh và clip làm việc của VideoAFF được lưu riêng.
 
-MacFlow chứa mã nguồn đầy đủ của [AI Content Automation tại commit `5d92bc0d93fb0e1eb3ae77aaf7e6954e749e459a`](https://github.com/vdat-18/ai-content-automation/tree/5d92bc0d93fb0e1eb3ae77aaf7e6954e749e459a) trong `services/videoAff/upstream`, gồm cả extension, mã máy chủ, dashboard và kiểm thử. Tên dashboard đã đổi thành VideoAFF. Phần tạo ảnh bìa bỏ qua các mốc sau khi video kết thúc để hỗ trợ video rất ngắn. Màn hình mở ứng dụng và nối Kho/Mô hình của MacFlow dùng tiếng Việt. Dashboard gốc dùng tiếng Anh và kịch bản do nó tạo dùng tiếng Việt. [Giấy phép MIT và ghi công](../services/videoAff/upstream/LICENSE)
+MacFlow chứa mã nguồn đầy đủ của [AI Content Automation tại commit `5d92bc0d93fb0e1eb3ae77aaf7e6954e749e459a`](https://github.com/vdat-18/ai-content-automation/tree/5d92bc0d93fb0e1eb3ae77aaf7e6954e749e459a) trong `services/videoAff/upstream`, gồm cả extension, mã máy chủ, dashboard và kiểm thử. Tên dashboard đã đổi thành VideoAFF. Phần tạo ảnh bìa bỏ qua các mốc sau khi video kết thúc để hỗ trợ video rất ngắn. Giao diện VideoAFF và tiện ích Chrome dùng tiếng Việt. [Giấy phép MIT và ghi công](../services/videoAff/upstream/LICENSE)
 
 ## Chạy trực tiếp trên máy
 
@@ -17,7 +17,7 @@ MacFlow chứa mã nguồn đầy đủ của [AI Content Automation tại commi
 
 Dữ liệu chạy trực tiếp nằm ở `data/videoAff/` bên cạnh dữ liệu MacFlow, hoặc trong thư mục dữ liệu bạn đã đặt qua `TOONFLOW_DATA_DIR`. Bản native tạo kho PostgreSQL riêng. Các bộ dữ liệu từ Docker hoặc VideoAFF đã triển khai ở nơi khác cần nhập riêng nếu muốn chuyển sang chạy trực tiếp. Nếu chưa mở được, xem thông báo ngay trong MacFlow và nhật ký `videoAff/start.log` trong thư mục dữ liệu. Nếu cổng `8000` đang được sử dụng, hãy đóng dịch vụ đang giữ cổng hoặc kết nối tới dịch vụ VideoAFF đang chạy bằng cách ở cuối tài liệu.
 
-Để lấy sản phẩm TikTok Shop và ảnh Pinterest, vào `chrome://extensions` và chọn thư mục `services/videoAff/upstream/extension` bằng **Tải tiện ích đã giải nén**. Nếu đã cài từ trước, bấm **Tải lại** tiện ích. Sau khi gửi một sản phẩm, nút mở sản phẩm của tiện ích sẽ đi thẳng vào sản phẩm đó trong mục VideoAFF của MacFlow. [Hướng dẫn tiện ích](../services/videoAff/upstream/extension/README.md)
+Trong **VideoAFF → Sản phẩm**, bấm **Tải tiện ích Chrome** rồi giải nén `VideoAFF-Collector.zip`. Mở `chrome://extensions`, bật **Chế độ dành cho nhà phát triển**, chọn **Tải tiện ích đã giải nén** và mở thư mục `VideoAFF-Collector`. Mở trang sản phẩm TikTok Shop rồi bấm **Gửi sản phẩm này** trong tiện ích. Bấm **Tạo video từ sản phẩm** để mở sản phẩm đó trong VideoAFF của MacFlow. [Hướng dẫn tiện ích](../services/videoAff/upstream/extension/README.md)
 
 ## Chạy bằng Docker
 
@@ -38,7 +38,7 @@ Dữ liệu chạy trực tiếp nằm ở `data/videoAff/` bên cạnh dữ li�
    ```
 
 3. Mở MacFlow ở `http://localhost:3000`, rồi chọn **Tổng quan → VideoAFF**. MacFlow hiển thị xưởng từ `http://localhost:8080/dashboard/` trong cửa sổ hiện tại. Cổng `8000` dành cho tiện ích Chrome. Cả hai chỉ được công bố trên máy cục bộ. Hai vùng dữ liệu Docker của VideoAFF giữ dữ liệu PostgreSQL và tệp qua các lần khởi động. Nếu MacFlow dùng cổng khác, đặt địa chỉ MacFlow tại `MACFLOW_VIDEO_AFF_HOST_URL` để tiện ích mở đúng sản phẩm.
-4. Nếu dùng tiện ích lấy sản phẩm TikTok Shop và ảnh Pinterest, mở `chrome://extensions`, bật **Chế độ dành cho nhà phát triển**, chọn **Tải tiện ích đã giải nén** và chọn `services/videoAff/upstream/extension`. [Hướng dẫn tiện ích](../services/videoAff/upstream/extension/README.md)
+4. Cài tiện ích từ nút **Tải tiện ích Chrome** trên trang **Sản phẩm** theo các bước ở trên. [Hướng dẫn tiện ích](../services/videoAff/upstream/extension/README.md)
 
 Bộ Docker dùng lưu trữ tệp VideoAFF trên volume cục bộ. Repo gốc vẫn bao gồm cấu hình SeaweedFS, sao lưu và giám sát dành cho các cách triển khai khác.
 
@@ -54,7 +54,7 @@ Khi dùng bản chạy trực tiếp, đặt các biến trên trong `.env.video
 
 ## Dùng Kho và làm video
 
-1. Chọn sản phẩm đã thu thập trong VideoAFF. Trong **AI memory → Reference scenes**, kiểm tra ảnh bối cảnh lấy bằng tiện ích Chrome. Tạo hoặc chọn một người mẫu. Để dùng ảnh đã có trong MacFlow, mở **Mô hình và Kho**, chọn người mẫu và ảnh, xác nhận quyền sử dụng rồi bấm **Thêm ảnh vào VideoAFF**.
+1. Chọn sản phẩm đã thu thập trong VideoAFF. Trong **Bộ nhớ AI → Ảnh bối cảnh**, kiểm tra ảnh bối cảnh lấy bằng tiện ích Chrome. Tạo hoặc chọn một người mẫu. Để dùng ảnh đã có trong MacFlow, mở **Mô hình và Kho**, chọn người mẫu và ảnh, xác nhận quyền sử dụng rồi bấm **Thêm ảnh vào VideoAFF**.
 2. Viết ý tưởng và xem kịch bản. Duyệt ảnh cảnh đầu, sau đó duyệt ảnh từng cảnh. VideoAFF tạo clip và giọng đọc, ghép video dọc rồi soạn phần mô tả đăng bài.
 3. Khi hoàn thành, mở **Mô hình và Kho**. Chọn video và bấm **Lưu video** hoặc **Lưu ảnh bìa**. Bản sao nằm trong thư mục **VideoAFF** ở Kho MacFlow.
 

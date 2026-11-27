@@ -15,7 +15,7 @@ export function PageHead({ title, text, actions }: { title: string; text?: strin
 }
 
 export function Skeleton() {
-  return <div className="skeleton" aria-busy="true" aria-label="Loading" />;
+  return <div className="skeleton" aria-busy="true" aria-label="Đang tải" />;
 }
 
 export function Empty({ icon, title, text, children }: { icon: ReactNode; title: string; text: string; children?: ReactNode }) {
@@ -34,15 +34,15 @@ export function Spinner({ size = 16 }: { size?: number }) {
 }
 
 /** A problem in plain words; the technical detail stays one click away. */
-export function ErrorNote({ error }: { error: unknown }) {
+export function ErrorNote({ error, message }: { error: unknown; message?: string }) {
   if (!error) return null;
   const detail = error instanceof Error ? error.message : String(error);
   return (
     <div className="notice notice-error" role="alert">
       <div>
-        {friendlyMessage(error)}
+        {message ?? friendlyMessage(error)}
         <details>
-          <summary>Details</summary>
+          <summary>Chi tiết</summary>
           {detail.slice(0, 400)}
         </details>
       </div>

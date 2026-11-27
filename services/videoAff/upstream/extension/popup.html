@@ -10,76 +10,76 @@
       <div class="brand">
         <span class="logo">A</span>
         <div>
-          <strong>AIC Collector <span id="version" class="version"></span></strong>
-          <small id="status">Sent 0 packages to the collector</small>
+          <strong>VideoAFF <span id="version" class="version"></span></strong>
+          <small id="status">Đã gửi 0 gói dữ liệu</small>
         </div>
       </div>
-      <label class="switch" title="Send data to the collector while you browse pages yourself">
+      <label class="switch" title="Gửi dữ liệu vào VideoAFF khi bạn duyệt trang.">
         <input type="checkbox" id="enabled" />
         <span class="slider"></span>
-        <span class="switch-label">Collect while browsing</span>
+        <span class="switch-label">Thu thập khi duyệt</span>
       </label>
     </header>
 
     <section class="card hero">
-      <h2>1. Send this product</h2>
-      <p class="hint">Open a product on TikTok Shop, wait for it to load, then press the button.</p>
-      <button id="send-one" class="primary">Send this product</button>
+      <h2>1. Gửi sản phẩm này</h2>
+      <p class="hint">Mở trang sản phẩm trên TikTok Shop, chờ tải xong rồi bấm nút bên dưới.</p>
+      <button id="send-one" class="primary">Gửi sản phẩm này</button>
       <div id="send-note" class="note"></div>
-      <a id="open-studio" class="primary" target="_blank" rel="noopener" hidden>Make a video from it</a>
+      <a id="open-studio" class="primary" target="_blank" rel="noopener" hidden>Tạo video từ sản phẩm</a>
     </section>
     <details class="card">
-      <summary>Collect many products (slower, you solve the captchas)</summary>
-      <p class="hint">Log in and solve any captcha on TikTok Shop first, then press a button below.</p>
-      <button id="crawl-all" class="primary">Collect everything: home page + 28 categories, then every product page</button>
-      <div class="hint">The tab count below is used for the categories and then for the product pages.</div>
+      <summary>Thu thập nhiều sản phẩm</summary>
+      <p class="hint">Đăng nhập TikTok Shop và hoàn thành bước xác minh nếu được yêu cầu. Sau đó bấm nút bên dưới.</p>
+      <button id="crawl-all" class="primary">Thu thập từ trang chủ và 28 danh mục, sau đó lấy thông tin từng sản phẩm</button>
+      <div class="hint">Số thẻ bên dưới áp dụng cho cả trang danh mục và trang sản phẩm.</div>
       <div class="row">
         <label class="field">
-          <span>Tab song song</span>
+          <span>Số thẻ mở cùng lúc</span>
           <input type="number" id="auto-tabs" value="20" min="1" max="20" />
         </label>
       </div>
       <div id="auto-note" class="note"></div>
       <div id="walker-bar" class="bar" hidden><span></span></div>
       <div id="walker" class="progress"></div>
-      <button id="stop" class="ghost danger">Stop</button>
+      <button id="stop" class="ghost danger">Dừng</button>
     </details>
 
     <section class="card">
-      <h2>2. Pinterest reference images</h2>
-      <p class="hint">Log in to Pinterest first. Leave both boxes empty to collect everything.</p>
+      <h2>2. Ảnh tham khảo trên Pinterest</h2>
+      <p class="hint">Đăng nhập Pinterest trước. Để trống hai ô đầu nếu muốn lấy tất cả.</p>
       <div class="row">
         <label class="field">
-          <span>Keywords</span>
-          <input type="number" id="pin-searches" min="1" max="200" placeholder="all" />
+          <span>Số từ khóa</span>
+          <input type="number" id="pin-searches" min="1" max="200" placeholder="Tất cả" />
         </label>
         <label class="field">
-          <span>Images per keyword</span>
-          <input type="number" id="pin-images" min="10" max="2000" placeholder="all" />
+          <span>Ảnh mỗi từ khóa</span>
+          <input type="number" id="pin-images" min="10" max="2000" placeholder="Tất cả" />
         </label>
         <label class="field">
-          <span>Tabs at once</span>
+          <span>Số thẻ mở cùng lúc</span>
           <input type="number" id="pin-tabs" value="3" min="1" max="5" />
         </label>
       </div>
-      <button id="pins" class="primary">Collect Pinterest images for approved keywords</button>
+      <button id="pins" class="primary">Lấy ảnh Pinterest theo từ khóa đã duyệt</button>
       <div id="pin-bar" class="bar" hidden><span></span></div>
       <div id="pin-walker" class="progress"></div>
-      <button id="pin-stop" class="ghost danger" hidden>Stop</button>
+      <button id="pin-stop" class="ghost danger" hidden>Dừng</button>
     </section>
 
     <details class="card">
-      <summary>Manual</summary>
-      <button id="capture" class="secondary">Capture this page</button>
+      <summary>Thu thập thủ công</summary>
+      <button id="capture" class="secondary">Gửi dữ liệu trang này</button>
     </details>
 
     <details class="card">
-      <summary>Export data</summary>
+      <summary>Xuất dữ liệu</summary>
       <div class="row">
         <button id="xlsx" class="secondary">Excel</button>
         <button id="json" class="secondary">JSON</button>
       </div>
-      <button id="media" class="secondary">Download images/videos to this computer</button>
+      <button id="media" class="secondary">Lưu ảnh và video vào VideoAFF</button>
       <div id="media-status" class="note"></div>
     </details>
     <script src="popup.js"></script>

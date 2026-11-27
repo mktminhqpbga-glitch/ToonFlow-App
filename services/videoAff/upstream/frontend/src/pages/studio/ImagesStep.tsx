@@ -5,17 +5,17 @@ import { Link } from "react-router-dom";
 import { ErrorNote, Spinner } from "../../components/ui";
 import { useLightbox } from "../../hooks/useLightbox";
 import { API, useClips, useStartPipeline } from "../../hooks/useStudio";
-import { checkNote, friendlyStep, imagesApproved, isUnchecked, runStopped } from "../../lib/studio";
+import { checkNote, friendlyStep, imagesApproved, isUnchecked, runStopped, runStoppedMessage } from "../../lib/studio";
 import { pilotApi } from "../../services/pilotApi";
 import { postJson, putJson } from "../../services/http";
 import type { BriefRecord, Keyframe, PipelineRun } from "../../types/studio";
 
 const ROLE_LABEL: Record<string, string> = {
-  hook: "Opening",
-  problem: "The problem",
-  demo: "Show the product",
-  benefit: "The benefit",
-  call_to_action: "Call to buy",
+  hook: "Mở đầu",
+  problem: "Vấn đề",
+  demo: "Giới thiệu sản phẩm",
+  benefit: "Lợi ích",
+  call_to_action: "Kêu gọi mua hàng",
 };
 
 export function ImagesStep({ productId, record, frames, run, hasVideo = false, making = false, makingVideo = false }: { productId: string; record: BriefRecord; frames: Keyframe[]; run: PipelineRun | undefined; hasVideo?: boolean; making?: boolean; makingVideo?: boolean }) {
@@ -66,11 +66,11 @@ export function ImagesStep({ productId, record, frames, run, hasVideo = false, m
   if (frames.length === 0) {
     return (
       <div className="card pad stack" style={{ maxWidth: 640 }}>
-        <h1 style={{ fontSize: 24 }}>No images yet</h1>
+        <h1 style={{ fontSize: 24 }}>Chưa có ảnh</h1>
         <ol className="stack" style={{ margin: 0, paddingLeft: 18, gap: 6 }}>{shots.map((shot, index) => <li key={index} className="small">{shot.voiceover}</li>)}</ol>
-        <p className="muted">The AI creates one picture for every scene of your script. It takes about 8 minutes and you can leave the page.</p>
-        {run && runStopped(run) && <div className="notice notice-warn" role="alert"><div>The last run stopped. {run.message}</div></div>}
-        <button className="btn btn-primary btn-lg" style={{ alignSelf: "flex-start" }} disabled={start.isPending} onClick={() => start.mutate({ until: "images" })}>{start.isPending ? "Starting…" : "Create the images"}</button>
+        <p className="muted">AI tạo một ảnh cho mỗi cảnh. Tác vụ mất khoảng 8 phút và vẫn tiếp tục nếu bạn rời trang.</p>
+        {run && runStopped(run) && <ErrorNote error={run.message || new Error("Lần chạy trước đã dừng.")} message={runStoppedMessage(run)} />}
+        <button className="btn btn-primary btn-lg" style={{ alignSelf: "flex-start" }} disabled={start.isPending} onClick={() => start.mutate({ until: "images" })}>{start.isPending ? "Đang bắt đầu…" : "Tạo ảnh"}</button>
         <ErrorNote error={start.error} />
       </div>
     );
@@ -78,15 +78,15 @@ export function ImagesStep({ productId, record, frames, run, hasVideo = false, m
 
   const lightboxImages = shots.flatMap((shot, index) => {
     const frame = byShot.get(index);
-    return frame && frame.status !== "failed" ? [{ index, src: `${API}/${productId}/keyframes/${index}/image?v=${frame.attempts}`, label: `Scene ${index + 1}` }] : [];
+    return frame && frame.status !== "failed" ? [{ index, src: `${API}/${productId}/keyframes/${index}/image?v=${frame.attempts}`, label: `Cảnh ${index + 1}` }] : [];
   });
 
   return (
     <>
-      <header className="page-head"><div><h1>Look at each scene and approve</h1><p>Approve the scenes you like. If one is not right, tell the AI what is wrong. It fixes the scene and avoids that mistake next time.</p></div></header>
+      <header className="page-head"><div><h1>Xem và duyệt từng cảnh</h1><p>Duyệt các cảnh bạn thấy phù hợp. Nếu cần chỉnh, hãy mô tả điểm cần sửa để AI tạo lại cảnh và ghi nhớ cho lần sau.</p></div></header>
       <div className="studio-cols">
         <div className="studio-main">
-          {!masterApproved && byShot.has(0) && <div className="notice"><div>Approve scene 1 first. The other scenes are made to match it.</div></div>}
+          {!masterApproved && byShot.has(0) && <div className="notice"><div>Duyệt cảnh 1 trước. VideoAFF dùng cảnh này làm mẫu cho các cảnh còn lại.</div></div>}
           <ErrorNote error={review.error ?? redo.error ?? recheck.error ?? remakeClip.error ?? acceptClip.error ?? recheckClip.error} />
           <div className="shot-grid">
             {shots.map((shot, index) => {
@@ -102,48 +102,48 @@ export function ImagesStep({ productId, record, frames, run, hasVideo = false, m
               return (
                 <article key={index} className={`card shot-card${isApproved ? " approved" : ""}`}>
                   <div className="media">
-                    {clip?.status === "ready" ? <video src={`${API}/${productId}/clips/${index}/video?v=${clip.attempts}`} poster={src ?? undefined} controls playsInline preload="metadata" aria-label={`Clip of scene ${index + 1}`} /> : src ? <img src={src} alt={`Scene ${index + 1}`} {...lightbox.zoom(lightboxImages, lightboxImages.findIndex((item) => item.index === index))} /> : <div className="empty">{frame?.error ? "This image could not be created." : "No image yet"}</div>}
-                    {filming && !busy && <div className="over"><Spinner size={28} />Filming this scene, about 4 minutes</div>}
-                    {busy && <div className="over"><Spinner size={28} />{waiting ? "Creating this scene, about 2 minutes" : "The AI is fixing this scene, about 2 minutes"}</div>}
-                    {isApproved && !busy && !clip && <span className="tag"><Check size={13} aria-hidden="true" />Approved</span>}
+                    {clip?.status === "ready" ? <video src={`${API}/${productId}/clips/${index}/video?v=${clip.attempts}`} poster={src ?? undefined} controls playsInline preload="metadata" aria-label={`Đoạn phim cảnh ${index + 1}`} /> : src ? <img src={src} alt={`Cảnh ${index + 1}`} {...lightbox.zoom(lightboxImages, lightboxImages.findIndex((item) => item.index === index))} /> : <div className="empty">{frame?.error ? "Chưa tạo được ảnh này." : "Chưa có ảnh"}</div>}
+                    {filming && !busy && <div className="over"><Spinner size={28} />Đang tạo đoạn phim cho cảnh này, khoảng 4 phút</div>}
+                    {busy && <div className="over"><Spinner size={28} />{waiting ? "Đang tạo ảnh cho cảnh này, khoảng 2 phút" : "AI đang chỉnh cảnh này, khoảng 2 phút"}</div>}
+                    {isApproved && !busy && !clip && <span className="tag"><Check size={13} aria-hidden="true" />Đã duyệt</span>}
                   </div>
                   <div className="body">
-                    <strong>{`Scene ${index + 1} · ${ROLE_LABEL[shot.role] ?? shot.role.replaceAll("_", " ")}`}</strong>
+                    <strong>{`Cảnh ${index + 1} · ${ROLE_LABEL[shot.role] ?? shot.role.replaceAll("_", " ")}`}</strong>
                     <p className="line">{`"${shot.voiceover}"`}</p>
                     {frame && !clip && <p className={frame.qa_problem ? "check-warn" : "check-ok"}>{checkNote(frame.qa_problem)}</p>}
-                    {clip?.status === "ready" && !clip.qa_problem && <p className="check-ok">The clip is ready.</p>}
-                    {clip?.status === "failed" && <p className="check-warn">{`This scene could not be filmed: ${clip.error ?? "the video job failed"}`}</p>}
-                    {clip?.status === "ready" && clip.qa_problem && <p className="check-warn">{isUnchecked(clip.qa_problem) ? clip.qa_problem : `The AI suggests a second look: ${clip.qa_problem}`}</p>}
+                    {clip?.status === "ready" && !clip.qa_problem && <p className="check-ok">Đoạn phim đã sẵn sàng.</p>}
+                    {clip?.status === "failed" && <ErrorNote error={clip.error || new Error("Tác vụ gặp sự cố.")} message="Chưa tạo được đoạn phim cho cảnh này. Bạn có thể bấm Tạo lại đoạn phim." />}
+                    {clip?.status === "ready" && clip.qa_problem && <p className="check-warn">{isUnchecked(clip.qa_problem) ? clip.qa_problem : `AI đề nghị kiểm tra lại: ${clip.qa_problem}`}</p>}
                     {clipNeedsLook(index) && (
                       <div className="stack" style={{ gap: 8 }}>
-                        <span className="muted small">Filming a scene again costs one more clip.</span>
+                        <span className="muted small">Tạo lại cảnh dùng thêm một lượt tạo đoạn phim.</span>
                         <div className="row">
-                          <button className="btn btn-sm" style={{ flex: 1 }} disabled={clipBusy} onClick={() => remakeClip.mutate(index)}>{remakeClip.isPending && remakeClip.variables === index ? <><Spinner size={14} />Starting…</> : "Film again"}</button>
-                          {clip?.status === "ready" && <button className="btn btn-ok btn-sm" style={{ flex: 1 }} disabled={clipBusy} onClick={() => acceptClip.mutate(index)}>Use it as it is</button>}
+                          <button className="btn btn-sm" style={{ flex: 1 }} disabled={clipBusy} onClick={() => remakeClip.mutate(index)}>{remakeClip.isPending && remakeClip.variables === index ? <><Spinner size={14} />Đang bắt đầu…</> : "Tạo lại đoạn phim"}</button>
+                          {clip?.status === "ready" && <button className="btn btn-ok btn-sm" style={{ flex: 1 }} disabled={clipBusy} onClick={() => acceptClip.mutate(index)}>Dùng bản hiện tại</button>}
                         </div>
-                        {clip?.status === "ready" && isUnchecked(clip.qa_problem) && <button className="btn btn-sm" disabled={recheckClip.isPending} onClick={() => recheckClip.mutate(index)}>Check again</button>}
+                        {clip?.status === "ready" && isUnchecked(clip.qa_problem) && <button className="btn btn-sm" disabled={recheckClip.isPending} onClick={() => recheckClip.mutate(index)}>Kiểm tra lại</button>}
                       </div>
                     )}
-                    {frame && isUnchecked(frame.qa_problem) && !busy && <button className="btn btn-sm" disabled={recheck.isPending} onClick={() => recheck.mutate(index)}>{recheck.isPending && recheck.variables === index ? <><Spinner size={14} />Checking…</> : "Check again"}</button>}
+                    {frame && isUnchecked(frame.qa_problem) && !busy && <button className="btn btn-sm" disabled={recheck.isPending} onClick={() => recheck.mutate(index)}>{recheck.isPending && recheck.variables === index ? <><Spinner size={14} />Đang kiểm tra…</> : "Kiểm tra lại"}</button>}
                     {open ? (
                       <div className="stack" style={{ gap: 8 }}>
-                        <label className="field" htmlFor={`note-${index}`}>What is not right?</label>
-                        <textarea id={`note-${index}`} className="input" rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="For example: faint marks on the cheek, the arm looks too long" />
+                        <label className="field" htmlFor={`note-${index}`}>Điểm nào cần chỉnh?</label>
+                        <textarea id={`note-${index}`} className="input" rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Ví dụ: Có vệt mờ trên má, cánh tay trông quá dài." />
                         <div className="row">
-                          <button className="btn btn-primary btn-sm" disabled={!note.trim() || redo.isPending} onClick={() => { redo.mutate({ index, text: note.trim() }); setNoteFor(null); setNote(""); }}>Fix this scene</button>
-                          <button className="btn btn-sm" onClick={() => setNoteFor(null)}>Cancel</button>
+                          <button className="btn btn-primary btn-sm" disabled={!note.trim() || redo.isPending} onClick={() => { redo.mutate({ index, text: note.trim() }); setNoteFor(null); setNote(""); }}>Chỉnh cảnh này</button>
+                          <button className="btn btn-sm" onClick={() => setNoteFor(null)}>Hủy</button>
                         </div>
-                        <span className="muted small">The AI turns this into a rule that applies to every next video.</span>
+                        <span className="muted small">AI dùng góp ý này để tạo quy tắc cho các video tiếp theo.</span>
                       </div>
                     ) : clip ? null : frame && frame.status !== "failed" && !busy ? (
                       <div className="row">
-                        <button className={isApproved ? "btn btn-sm" : "btn btn-ok btn-sm"} style={{ flex: 1 }} disabled={locked || review.isPending || (index > 0 && !masterApproved && !isApproved)} onClick={() => review.mutate({ index, status: isApproved ? "ready" : "approved" })}>{isApproved ? "Undo approval" : "Approve"}</button>
-                        <button className="btn btn-sm" style={{ flex: 1 }} disabled={locked || (index > 0 && !masterApproved)} onClick={() => { setNoteFor(index); setNote(""); }}>Not right</button>
+                        <button className={isApproved ? "btn btn-sm" : "btn btn-ok btn-sm"} style={{ flex: 1 }} disabled={locked || review.isPending || (index > 0 && !masterApproved && !isApproved)} onClick={() => review.mutate({ index, status: isApproved ? "ready" : "approved" })}>{isApproved ? "Bỏ duyệt" : "Duyệt"}</button>
+                        <button className="btn btn-sm" style={{ flex: 1 }} disabled={locked || (index > 0 && !masterApproved)} onClick={() => { setNoteFor(index); setNote(""); }}>Cần chỉnh</button>
                       </div>
                     ) : !busy && (
-                      <button className="btn btn-sm" disabled={redo.isPending || (index > 0 && !masterApproved)} onClick={() => redo.mutate({ index, text: "" })}><RefreshCw size={14} aria-hidden="true" />Try again</button>
+                      <button className="btn btn-sm" disabled={redo.isPending || (index > 0 && !masterApproved)} onClick={() => redo.mutate({ index, text: "" })}><RefreshCw size={14} aria-hidden="true" />Thử lại</button>
                     )}
-                    {learned.includes(index) && !busy && <span className="check-ok">Saved as a rule. The AI will avoid this in the next videos.</span>}
+                    {learned.includes(index) && !busy && <span className="check-ok">Đã lưu quy tắc để AI áp dụng cho các video sau.</span>}
                   </div>
                 </article>
               );
@@ -151,42 +151,42 @@ export function ImagesStep({ productId, record, frames, run, hasVideo = false, m
           </div>
         </div>
 
-        <aside className="studio-side" aria-label="Progress">
+        <aside className="studio-side" aria-label="Tiến độ">
           <div className="card pad stack">
             <h2>{record.brief.title}</h2>
-            <p><strong>{`${approved} of ${shots.length}`}</strong> scenes approved</p>
-            <div className="progress ok" role="progressbar" aria-valuenow={approved} aria-valuemin={0} aria-valuemax={shots.length} aria-label="Scenes approved"><div style={{ width: `${shots.length ? (approved / shots.length) * 100 : 0}%` }} /></div>
+            <p><strong>{`${approved}/${shots.length}`}</strong> cảnh đã duyệt</p>
+            <div className="progress ok" role="progressbar" aria-valuenow={approved} aria-valuemin={0} aria-valuemax={shots.length} aria-label="Số cảnh đã duyệt"><div style={{ width: `${shots.length ? (approved / shots.length) * 100 : 0}%` }} /></div>
             {making ? (
-              <div className="row" role="status" aria-live="polite" style={{ gap: 10 }}><Spinner size={18} /><strong>Creating the other scenes…</strong></div>
+              <div className="row" role="status" aria-live="polite" style={{ gap: 10 }}><Spinner size={18} /><strong>Đang tạo các cảnh còn lại…</strong></div>
             ) : makingVideo ? (
               <div className="row" role="status" aria-live="polite" style={{ gap: 10 }}><Spinner size={18} /><strong>{`${friendlyStep(run?.step ?? "")}…`}</strong></div>
             ) : masterApproved && frames.length < shots.length && (
-              <button className="btn btn-primary btn-lg btn-block" disabled={start.isPending} onClick={() => start.mutate({ until: "images" })}>{start.isPending ? "Starting…" : "Create the other scenes"}</button>
+              <button className="btn btn-primary btn-lg btn-block" disabled={start.isPending} onClick={() => start.mutate({ until: "images" })}>{start.isPending ? "Đang bắt đầu…" : "Tạo các cảnh còn lại"}</button>
             )}
             {making ? (
-              <span className="muted small">This takes about 8 minutes. You can leave this page. We tell you when it is done.</span>
+              <span className="muted small">Quá trình mất khoảng 8 phút. Bạn có thể rời trang và sẽ nhận thông báo khi hoàn tất.</span>
             ) : makingVideo ? (
-              <span className="muted small">This takes about 10 minutes. You can leave this page. We tell you when it is done.</span>
+              <span className="muted small">Quá trình mất khoảng 10 phút. Bạn có thể rời trang và sẽ nhận thông báo khi hoàn tất.</span>
             ) : hasVideo ? (
-              <span className="muted small">Your video is ready below.</span>
+              <span className="muted small">Video đã sẵn sàng bên dưới.</span>
             ) : all && needsLook.length > 0 ? (
-              <button className="btn btn-lg btn-block" disabled>{`Look at scene ${needsLook[0] + 1} first`}</button>
+              <button className="btn btn-lg btn-block" disabled>{`Kiểm tra cảnh ${needsLook[0] + 1} trước`}</button>
             ) : all ? (
               <>
-                <button className="btn btn-primary btn-lg btn-block" disabled={start.isPending} onClick={() => start.mutate({ until: "video" })}>{start.isPending ? "Starting…" : "Make the video from these scenes"}</button>
-                <span className="muted small">Making the video takes about 10 minutes. You can leave the page.</span>
+                <button className="btn btn-primary btn-lg btn-block" disabled={start.isPending} onClick={() => start.mutate({ until: "video" })}>{start.isPending ? "Đang bắt đầu…" : "Dựng video từ các cảnh này"}</button>
+                <span className="muted small">Video thường mất khoảng 10 phút để dựng. Bạn có thể rời trang trong lúc chờ.</span>
               </>
             ) : (
-              <button className="btn btn-lg btn-block" disabled>Approve every scene to continue</button>
+              <button className="btn btn-lg btn-block" disabled>Duyệt tất cả cảnh để tiếp tục</button>
             )}
             <ErrorNote error={start.error} />
-            {run && runStopped(run) && needsLook.length === 0 && <div className="notice notice-warn" role="alert"><div>The last run stopped. {run.message}</div></div>}
+            {run && runStopped(run) && needsLook.length === 0 && <ErrorNote error={run.message || new Error("Lần chạy trước đã dừng.")} message={runStoppedMessage(run)} />}
           </div>
           {imageRules.length > 0 && (
             <div className="card pad stack">
-              <h3>The AI is following these rules for images</h3>
+              <h3>Quy tắc AI đang dùng khi tạo ảnh</h3>
               <ul className="stack" style={{ margin: 0, paddingLeft: 18, gap: 6 }}>{imageRules.map((rule) => <li key={rule.knowledge_id} className="small">{rule.title}</li>)}</ul>
-              <Link className="link" to="/memory">See and edit in AI memory</Link>
+              <Link className="link" to="/memory">Xem và chỉnh trong Bộ nhớ AI</Link>
             </div>
           )}
         </aside>

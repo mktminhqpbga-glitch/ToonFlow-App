@@ -11,9 +11,9 @@ const MANIFEST = "product_ad";
 type Asset = "brief" | "keyframe";
 
 const GROUPS = [
-  { asset: "brief", title: "Script and voice-over" },
-  { asset: "keyframe", title: "Images" },
-  { asset: "", title: "Other" },
+  { asset: "brief", title: "Kịch bản và lời đọc" },
+  { asset: "keyframe", title: "Ảnh" },
+  { asset: "", title: "Khác" },
 ];
 const STAGES: Record<Asset, CreativeKnowledgeStage[]> = {
   brief: ["preparation", "review"],
@@ -39,7 +39,7 @@ export function RulesTab() {
     pilotApi
       .bootstrapCreativeKnowledge("system", MANIFEST)
       .then(() => client.invalidateQueries({ queryKey: ["creative-knowledge"] }))
-      .catch(() => notify("The standard rules could not be loaded. Ask whoever looks after the server.", "error"));
+      .catch(() => notify("Không tải được quy tắc mặc định. Hãy thử tải lại trang.", "error"));
   }, [client, notify]);
 
   const { pending, active } = useMemo(() => {
@@ -77,7 +77,7 @@ export function RulesTab() {
     onSuccess: () => {
       setText("");
       setEditing(null);
-      notify("Saved. The AI will follow it from the next video.", "success");
+      notify("Đã lưu. AI sẽ áp dụng từ video tiếp theo.", "success");
       return refresh();
     },
   });
@@ -85,7 +85,7 @@ export function RulesTab() {
   const learn = useMutation({
     mutationFn: (file: File) => pilotApi.learnFromExampleAd(file),
     onSuccess: ({ rules }) => {
-      notify(`${rules.length} rule(s) found. Check them below and approve the ones you like.`, "success");
+      notify(`AI đề xuất ${rules.length} quy tắc. Xem và duyệt những quy tắc phù hợp ở bên dưới.`, "success");
       return refresh();
     },
   });
@@ -103,17 +103,17 @@ export function RulesTab() {
         <h3>{item.title}</h3>
         {isEditing ? (
           <>
-            <textarea aria-label="Rule text" value={editing.text} rows={5} onChange={(event) => setEditing({ id: editing.id, text: event.target.value })} />
+            <textarea aria-label="Nội dung quy tắc" value={editing.text} rows={5} onChange={(event) => setEditing({ id: editing.id, text: event.target.value })} />
             <div className="row">
-              <button className="btn btn-primary btn-sm" disabled={!editing.text.trim() || save.isPending} onClick={() => save.mutate({ item, content: editing.text.trim(), asset: "keyframe" })}>Save</button>
-              <button className="btn btn-sm" onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn btn-primary btn-sm" disabled={!editing.text.trim() || save.isPending} onClick={() => save.mutate({ item, content: editing.text.trim(), asset: "keyframe" })}>Lưu</button>
+              <button className="btn btn-sm" onClick={() => setEditing(null)}>Hủy</button>
             </div>
           </>
         ) : (
           <>
             {parts ? (
               <ul>
-                <li><span className="muted">When</span> {parts.when}</li>
+                <li><span className="muted">Khi</span> {parts.when}</li>
                 <li className="do"><Check size={14} aria-hidden="true" /> {parts.doText}</li>
                 {parts.dont && <li className="dont"><X size={14} aria-hidden="true" /> {parts.dont}</li>}
               </ul>
@@ -121,13 +121,13 @@ export function RulesTab() {
             <div className="row">
               {waiting ? (
                 <>
-                  <button className="btn btn-ok btn-sm" disabled={decide.isPending} onClick={() => decide.mutate({ ids: [item.knowledge_id], value: "approved" })}><Check size={14} aria-hidden="true" />Approve</button>
-                  <button className="btn btn-sm" disabled={decide.isPending} onClick={() => decide.mutate({ ids: [item.knowledge_id], value: "rejected" })}><X size={14} aria-hidden="true" />Reject</button>
+                  <button className="btn btn-ok btn-sm" disabled={decide.isPending} onClick={() => decide.mutate({ ids: [item.knowledge_id], value: "approved" })}><Check size={14} aria-hidden="true" />Duyệt</button>
+                  <button className="btn btn-sm" disabled={decide.isPending} onClick={() => decide.mutate({ ids: [item.knowledge_id], value: "rejected" })}><X size={14} aria-hidden="true" />Từ chối</button>
                 </>
               ) : (
                 <>
-                  <button className="btn btn-sm" onClick={() => setEditing({ id: item.knowledge_id, text: item.content })}><Pencil size={14} aria-hidden="true" />Edit</button>
-                  <button className="btn btn-sm" disabled={turnOff.isPending} onClick={() => turnOff.mutate(item.knowledge_id)}><Power size={14} aria-hidden="true" />Turn off</button>
+                  <button className="btn btn-sm" onClick={() => setEditing({ id: item.knowledge_id, text: item.content })}><Pencil size={14} aria-hidden="true" />Sửa</button>
+                  <button className="btn btn-sm" disabled={turnOff.isPending} onClick={() => turnOff.mutate(item.knowledge_id)}><Power size={14} aria-hidden="true" />Tắt</button>
                 </>
               )}
             </div>
@@ -141,26 +141,25 @@ export function RulesTab() {
     <div className="stack-lg">
       <form className="card pad stack" onSubmit={submit}>
         <label className="field">
-          Add a rule
-          <textarea value={text} rows={3} onChange={(event) => setText(event.target.value)} placeholder="For example: the person's skin must have no acne" />
+          Thêm quy tắc
+          <textarea value={text} rows={3} onChange={(event) => setText(event.target.value)} placeholder="Ví dụ: Làm sáng nhẹ khuôn mặt khi quay thiếu sáng." />
         </label>
         <div className="row">
-          <select className="input" style={{ width: "auto" }} value={asset} onChange={(event) => setAsset(event.target.value as Asset)} aria-label="What the rule is for">
-            <option value="keyframe">For images</option>
-            <option value="brief">For the script and voice-over</option>
+          <select className="input" style={{ width: "auto" }} value={asset} onChange={(event) => setAsset(event.target.value as Asset)} aria-label="Áp dụng quy tắc cho">
+            <option value="keyframe">Cho ảnh</option>
+            <option value="brief">Cho kịch bản và lời đọc</option>
           </select>
-          <button className="btn btn-primary" type="submit" disabled={!text.trim() || save.isPending}>{save.isPending ? <><Spinner size={14} />Saving…</> : "Add rule"}</button>
+          <button className="btn btn-primary" type="submit" disabled={!text.trim() || save.isPending}>{save.isPending ? <><Spinner size={14} />Đang lưu…</> : "Thêm quy tắc"}</button>
         </div>
       </form>
       <section className="card pad stack">
-        <h2>Learn from an example ad</h2>
+        <h2>Học từ video quảng cáo mẫu</h2>
         <p className="small muted">
-          Choose a video ad that sells well (MP4, up to 100 MB, 3 minutes). The AI describes how it is built:
-          the hook, the pace, where the text sits, the ending. It copies nothing from the ad, and the video is not
-          kept. Each finding waits for your OK below.
+          Chọn video quảng cáo mẫu (MP4, tối đa 100 MB và 3 phút). AI sẽ phân tích cách mở đầu, nhịp dựng, vị trí chữ và cách kết thúc.
+          Bạn có thể duyệt từng đề xuất bên dưới trước khi áp dụng. Video mẫu chỉ dùng để phân tích.
         </p>
         <label className="btn" style={{ width: "fit-content" }}>
-          {learn.isPending ? <><Spinner size={14} />Analysing…</> : <><Upload size={14} aria-hidden="true" />Choose a video</>}
+          {learn.isPending ? <><Spinner size={14} />Đang phân tích…</> : <><Upload size={14} aria-hidden="true" />Chọn video</>}
           <input
             type="file"
             accept="video/mp4,video/quicktime,video/webm"
@@ -179,9 +178,9 @@ export function RulesTab() {
       {pending.length > 0 && (
         <section className="card pad stack" style={{ borderColor: "var(--brand)" }}>
           <div className="row" style={{ justifyContent: "space-between" }}>
-            <h2>{pending.length === 1 ? "1 rule is waiting for your OK" : `${pending.length} rules are waiting for your OK`}</h2>
+            <h2>{pending.length === 1 ? "1 quy tắc chờ duyệt" : `${pending.length} quy tắc chờ duyệt`}</h2>
             <button className="btn btn-primary" disabled={decide.isPending} onClick={() => decide.mutate({ ids: pending.map((item) => item.knowledge_id), value: "approved" })}>
-              <Check size={15} aria-hidden="true" />{decide.isPending ? "Approving…" : "Approve all"}
+              <Check size={15} aria-hidden="true" />{decide.isPending ? "Đang duyệt…" : "Duyệt tất cả"}
             </button>
           </div>
           <div className="rule-grid">{pending.map((item) => card(item, true))}</div>
@@ -200,7 +199,7 @@ export function RulesTab() {
           </section>
         );
       })}
-      {!knowledge.isLoading && pending.length === 0 && active.length === 0 && <p className="muted">No rules yet. Add the first one above.</p>}
+      {!knowledge.isLoading && pending.length === 0 && active.length === 0 && <p className="muted">Chưa có quy tắc. Bạn có thể thêm quy tắc ở trên.</p>}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AIC Collector (research)",
+  "name": "VideoAFF – Thu thập sản phẩm",
   "version": "0.8.3",
-  "description": "Captures product and review data from pages in your own Chrome and sends it to a local collector. Pauses for you at any security check or login.",
+  "description": "Gửi thông tin sản phẩm và ảnh tham khảo từ Chrome vào VideoAFF trên máy của bạn.",
   "permissions": ["storage", "notifications"],
   "host_permissions": [
     "https://shop.tiktok.com/*",
@@ -11,7 +11,7 @@
     "http://127.0.0.1:8000/*"
   ],
   "background": { "service_worker": "background.js" },
-  "action": { "default_popup": "popup.html", "default_title": "AIC Collector" },
+  "action": { "default_popup": "popup.html", "default_title": "VideoAFF" },
   "content_scripts": [
     {
       "matches": ["https://shop.tiktok.com/*", "https://www.tiktok.com/*"],

@@ -16,15 +16,15 @@ export function Lightbox({ images, index, onIndex, onClose }: { images: Lightbox
   }, [index, images.length, onIndex, onClose]);
   if (!image) return null;
   return (
-    <div className="viewer" role="dialog" aria-modal="true" aria-label={image.label ?? "Image"} onClick={onClose}>
-      <button type="button" className="icon-button close" aria-label="Close" onClick={onClose} style={{ color: "#fff" }}><X size={22} /></button>
-      {images.length > 1 && <button type="button" className="nav-btn prev" aria-label="Previous" onClick={(event) => { event.stopPropagation(); onIndex((index - 1 + images.length) % images.length); }}>‹</button>}
+    <div className="viewer" role="dialog" aria-modal="true" aria-label={image.label ?? "Ảnh"} onClick={onClose}>
+      <button type="button" className="icon-button close" aria-label="Đóng" onClick={onClose} style={{ color: "#fff" }}><X size={22} /></button>
+      {images.length > 1 && <button type="button" className="nav-btn prev" aria-label="Trước" onClick={(event) => { event.stopPropagation(); onIndex((index - 1 + images.length) % images.length); }}>‹</button>}
       <img src={image.src} alt={image.label ?? ""} referrerPolicy="no-referrer" onClick={(event) => event.stopPropagation()} />
-      {images.length > 1 && <button type="button" className="nav-btn next" aria-label="Next" onClick={(event) => { event.stopPropagation(); onIndex((index + 1) % images.length); }}>›</button>}
+      {images.length > 1 && <button type="button" className="nav-btn next" aria-label="Tiếp" onClick={(event) => { event.stopPropagation(); onIndex((index + 1) % images.length); }}>›</button>}
       <div className="row small" onClick={(event) => event.stopPropagation()}>
         {image.label && <span>{image.label}</span>}
         <span>{`${index + 1} / ${images.length}`}</span>
-        {image.href && <a href={image.href} target="_blank" rel="noreferrer">Open the source page</a>}
+        {image.href && <a href={image.href} target="_blank" rel="noreferrer">Mở trang nguồn</a>}
       </div>
     </div>
   );

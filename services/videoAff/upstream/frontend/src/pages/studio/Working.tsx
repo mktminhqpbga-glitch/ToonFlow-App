@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { Spinner } from "../../components/ui";
 import { API } from "../../hooks/useStudio";
-import { friendlyStep } from "../../lib/studio";
+import { friendlyStep, PIPELINE_LABELS } from "../../lib/studio";
 import { getJson } from "../../services/http";
 import type { BriefRecord, Keyframe, PipelineRun } from "../../types/studio";
 
-const STAGES = ["Writing your script", "Creating the first image", "Creating the other scenes", "Filming the scenes", "Recording the voice-over", "Putting the video together", "Writing the caption"];
+const STAGES = Object.values(PIPELINE_LABELS);
 
 /** Shown while the server works: where it is, how long it takes, and that the user may leave. */
 export function Working({ run, record, frames }: { productId: string; run: PipelineRun; record: BriefRecord | null; frames: Keyframe[] }) {
@@ -22,7 +22,7 @@ export function Working({ run, record, frames }: { productId: string; run: Pipel
         <h1 style={{ fontSize: 24 }}>{current}…</h1>
       </div>
       <p className="muted">
-        {toVideo ? "Making the video takes about 10 minutes." : index === 0 ? "Writing the script takes about a minute." : "Creating the images takes about 8 minutes."} You can leave this page. We keep working and tell you when it is done.
+        {toVideo ? "Video thường mất khoảng 10 phút để dựng." : index === 0 ? "Viết kịch bản mất khoảng một phút." : "Tạo ảnh mất khoảng 8 phút."} Bạn có thể rời trang và sẽ nhận thông báo khi hoàn tất.
       </p>
       <ol className="stack" style={{ listStyle: "none", margin: 0, padding: 0, gap: 8 }}>
         {STAGES.filter((_, i) => (toVideo ? i >= 3 : i < 3)).map((label) => {
@@ -36,17 +36,17 @@ export function Working({ run, record, frames }: { productId: string; run: Pipel
         })}
       </ol>
       {shots.length > 0 && (
-        <section className="stack" aria-label="The script so far">
+        <section className="stack" aria-label="Kịch bản hiện tại">
           <h2 style={{ fontSize: 18 }}>{record?.brief.title}</h2>
           {shots.map((shot, at) => {
             const reference = scenes.data?.find((scene) => scene.image_id === record?.brief.shot_references?.[at]);
             return (
               <div key={at} className="row" style={{ alignItems: "flex-start", gap: 12 }}>
-                {reference ? <img className="ref-thumb" style={{ width: 56, aspectRatio: "1", objectFit: "cover", borderRadius: 8 }} src={reference.image_url} alt="Reference for this scene" referrerPolicy="no-referrer" /> : <span className="muted small" style={{ width: 56 }}>{index > 0 ? "No reference" : ""}</span>}
+                {reference ? <img className="ref-thumb" style={{ width: 56, aspectRatio: "1", objectFit: "cover", borderRadius: 8 }} src={reference.image_url} alt="Ảnh tham khảo cho cảnh này" referrerPolicy="no-referrer" /> : <span className="muted small" style={{ width: 56 }}>{index > 0 ? "Chưa có ảnh tham khảo" : ""}</span>}
                 <div className="stack" style={{ gap: 2 }}>
-                  <strong className="small">{`Scene ${at + 1}`}</strong>
+                  <strong className="small">{`Cảnh ${at + 1}`}</strong>
                   <span className="small">{shot.voiceover}</span>
-                  {shot.on_screen_text && <span className="muted small">{`On screen: ${shot.on_screen_text}`}</span>}
+                  {shot.on_screen_text && <span className="muted small">{`Chữ trên màn hình: ${shot.on_screen_text}`}</span>}
                 </div>
               </div>
             );

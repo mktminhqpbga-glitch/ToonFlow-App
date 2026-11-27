@@ -35,13 +35,12 @@ test("the app has four menu pages, the studio and redirects for old links", () =
   for (const [from, to] of [["briefs", "/videos"], ["outputs", "/videos"], ["second-brain", "/memory"]]) {
     assert.match(app, new RegExp(`path="${from}" element=\\{<Navigate replace to="${to}" />`));
   }
-  for (const label of ["Home", "Products", "My videos", "AI memory"]) assert.match(shell, new RegExp(`label: "${label}"`));
+  for (const label of ["Tổng quan", "Sản phẩm", "Video của tôi", "Bộ nhớ AI"]) assert.match(shell, new RegExp(`label: "${label}"`));
 });
 
-test("the interface is English only and has no translation layer", () => {
-  for (const file of sourceFiles()) {
-    assert.doesNotMatch(fs.readFileSync(file, "utf8"), /useI18n|I18nProvider/, file);
-  }
+test("the dashboard declares Vietnamese and Products links to the Chrome extension", () => {
+  assert.match(fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8"), /<html lang="vi">/);
+  assert.match(src("pages", "Products.tsx"), /href="\/api\/v1\/extension\/download" download/);
 });
 
 test("a rule the AI proposes waits for a human before it is used", () => {
@@ -49,7 +48,7 @@ test("a rule the AI proposes waits for a human before it is used", () => {
   const api = src("services", "pilotApi.ts");
   assert.match(api, /creative-knowledge\/bootstrap/);
   assert.match(api, /retireCreativeKnowledge/);
-  assert.match(rules, /Approve all/);
+  assert.match(rules, /Duyệt tất cả/);
   assert.match(rules, /decideCreativeKnowledge\(saved\.knowledge_id, "approved"/);
   assert.doesNotMatch(rules, /autoApprove|auto_approve/);
 });
@@ -61,6 +60,6 @@ test("the studio pauses for image review before the video is paid for", () => {
   assert.match(idea, /until: "images"/);
   assert.match(images, /until: "images"/);
   assert.match(images, /until: "video"/);
-  assert.match(images, /Approve every scene to continue/);
+  assert.match(images, /Duyệt tất cả cảnh để tiếp tục/);
   assert.match(hook, /pipeline/);
 });

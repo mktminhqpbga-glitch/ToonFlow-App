@@ -36,9 +36,9 @@ export default function App() {
 function NotFound() {
   return (
     <section className="page" role="alert">
-      <h1>Page not found</h1>
-      <p className="muted">The page you asked for does not exist.</p>
-      <Link className="btn btn-primary" style={{ alignSelf: "flex-start" }} to="/">Back to home</Link>
+      <h1>Không tìm thấy trang</h1>
+      <p className="muted">Trang bạn yêu cầu không tồn tại.</p>
+      <Link className="btn btn-primary" style={{ alignSelf: "flex-start" }} to="/">Về tổng quan</Link>
     </section>
   );
 }

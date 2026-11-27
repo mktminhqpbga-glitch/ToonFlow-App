@@ -56,7 +56,7 @@
       },
     });
     state.captured = true;
-    banner(`AIC Collector: page sent (${reason})`);
+    banner(`VideoAFF: đã gửi dữ liệu trang (${reason})`);
   };
 
   // wait while a human clears a security check or login, then go on
@@ -64,7 +64,7 @@
     let reason = challengeReason();
     if (!reason) return;
     send({ type: "challenge", reason });
-    banner(`AIC Collector: waiting for you to handle ${reason}`);
+    banner(`VideoAFF: đang chờ bạn xử lý ${reason}`);
     while (challengeReason()) {
       send({ type: "heartbeat" });
       await wait(2000);
@@ -195,7 +195,7 @@
     for (let guard = 0; pinterestLoginWall() && guard < 600; guard += 1) {
       if (guard === 0) {
         send({ type: "challenge", reason: "Pinterest login" });
-        banner("AIC Collector: waiting for you to log in to Pinterest");
+        banner("VideoAFF: đang chờ bạn đăng nhập Pinterest");
       }
       send({ type: "heartbeat" });
       await wait(2000);
@@ -209,7 +209,7 @@
       collectPins(pins);
       window.scrollBy({ top: Math.round(window.innerHeight * 0.9), behavior: "smooth" });
       send({ type: "heartbeat" });
-      banner(`AIC Collector: Pinterest ${meta.query}: ${pins.size} images`);
+      banner(`VideoAFF: Pinterest · ${meta.query} · ${pins.size} ảnh`);
       send({ type: "progress", detail: `"${meta.query}": ${pins.size} images` });
       await wait(1400 + Math.random() * 900);
       collectPins(pins);
@@ -276,7 +276,7 @@
       const payloads = state.sent.size;
       const { clicked, seen } = clickLoadMore();
       if (clicked) clicks += 1;
-      banner(`AIC Collector: collecting the list ${i + 1}/${rounds}, ${last} products, "Load more" clicked ${clicks} times${clicked ? "" : ", button not found yet"} (${seen} buttons)`);
+      banner(`VideoAFF: lượt ${i + 1}/${rounds}, ${last} sản phẩm, đã bấm Xem thêm ${clicks} lần${clicked ? "" : ", chưa thấy nút Xem thêm"} (${seen} nút)`);
       send({ type: "heartbeat" });
       const grew = await waitForGrowth(last, payloads, clicked ? 8000 : 3000);
       if (location.pathname !== startPath) {
@@ -308,7 +308,7 @@
     }
     state.harvest = false;
     window.scrollTo({ top: 0, behavior: "smooth" });
-    banner(auto ? `AIC Collector: stopped scrolling (${reason}), ${last} products` : "AIC Collector: done, product list sent");
+    banner(auto ? `VideoAFF: đã dừng cuộn trang (${reason}), ${last} sản phẩm` : "VideoAFF: đã gửi danh sách sản phẩm");
     // a category tab of the "collect everything" run reports through page-done instead
     if (auto && !auto.walker) send({ type: "harvest-done", auto, count: last, clicks, reason });
     return { count: last, clicks, reason };
@@ -356,7 +356,7 @@
       harvestFeed(Number(message.rounds) || 15, message.auto || null);
     }
     if (message?.type === "capture-now") {
-      if (challengeReason()) banner("AIC Collector: a security check is showing, handle it first");
+      if (challengeReason()) banner("VideoAFF: hãy hoàn thành bước xác minh trước");
       else snapshot("manual");
     }
   });

@@ -39,7 +39,10 @@ COPY --from=builder-dependencies /app/.venv /app/.venv
 
 FROM runtime-base AS runtime
 
+ENV AIC_EXTENSION_DIR=/app/extension
 COPY --from=builder /app/.venv /app/.venv
+COPY extension /app/extension
+COPY LICENSE /app/LICENSE
 COPY config /app/config
 COPY alembic.ini /app/alembic.ini
 COPY migrations /app/migrations

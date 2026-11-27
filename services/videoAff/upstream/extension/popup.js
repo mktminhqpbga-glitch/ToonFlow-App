@@ -36,7 +36,7 @@ const pinBox = document.getElementById("pin-walker");
 
 const sendToTab = (tabId, message) =>
   chrome.tabs.sendMessage(tabId, message, () => {
-    if (chrome.runtime.lastError) status.textContent = "Open a TikTok or Pinterest page, then reload the tab (F5).";
+    if (chrome.runtime.lastError) status.textContent = "Mở trang TikTok hoặc Pinterest rồi tải lại thẻ (F5).";
   });
 
 // TikTok and Pinterest run independently; each shows its progress in its own section.
@@ -47,11 +47,11 @@ const paint = ({ box, bar, stop }, w, mine, describe) => {
   bar.firstElementChild.style.width = total ? `${Math.round(((w.done + w.failed) / total) * 100)}%` : "0%";
   stop.hidden = !(mine && w.running);
 };
-const state = (w) => (w.running ? (w.paused ? "PAUSED, needs you" : "Running") : "Stopped");
+const state = (w) => (w.running ? (w.paused ? "Đang chờ bạn xác minh" : "Đang chạy") : "Đã dừng");
 const tiktokText = (w) =>
-  `${state(w)}: ${w.done + w.failed}/${w.queue.length} ${w.kind === "category" ? "categories" : "products"} | ${Object.keys(w.active || {}).length} tabs | OK ${w.done} | failed ${w.failed}\n${w.note}`;
+  `${state(w)}: ${w.done + w.failed}/${w.queue.length} ${w.kind === "category" ? "danh mục" : "sản phẩm"} | ${Object.keys(w.active || {}).length} thẻ · Thành công ${w.done} · Lỗi ${w.failed}\n${w.note}`;
 const pinterestText = (w) =>
-  `${state(w)}: keywords ${w.done + w.failed}/${w.queue.length} | OK ${w.done} | failed ${w.failed}${w.detail ? `\nCollecting ${w.detail}` : `\n${w.note}`}`;
+  `${state(w)}: từ khóa ${w.done + w.failed}/${w.queue.length} · Thành công ${w.done} · Lỗi ${w.failed}${w.detail ? `\nĐang thu thập ${w.detail}` : `\n${w.note}`}`;
 
 const collectorOrigin = "http://127.0.0.1:8000";
 async function studioLink() {
@@ -84,16 +84,16 @@ const showCapture = (capture) => {
   link.hidden = true;
   if (!capture) return;
   if (capture.stored === "detail") {
-    note.textContent = "Sent. The product is saved.";
+    note.textContent = "Đã gửi và lưu sản phẩm.";
     void studioUrlFor.then((studioUrl) => {
       if (currentCapture !== capture) return;
       link.href = studioUrl(capture.productId);
       link.hidden = false;
     });
   } else if (capture.stored === "ignored") {
-    note.textContent = "This page has no product data. Open a product page, wait for it to load, then press the button again.";
+    note.textContent = "Chưa thấy dữ liệu sản phẩm. Mở trang sản phẩm, chờ tải xong rồi bấm gửi lại.";
   } else {
-    note.textContent = `The collector did not accept it: ${capture.reason || "unknown error"}`;
+    note.textContent = `VideoAFF chưa nhận được sản phẩm: ${capture.reason || "chưa rõ nguyên nhân"}`;
   }
 };
 
@@ -104,7 +104,7 @@ const refresh = () =>
     const pin = s.pinWalker;
     document.getElementById("auto-note").textContent = s.autoNote;
     enabled.checked = Boolean(s.enabled);
-    status.textContent = s.error ? `Send error: ${s.error}` : `Sent ${s.sent} packages to the collector`;
+    status.textContent = s.error ? `Lỗi gửi dữ liệu: ${s.error}` : `Đã gửi ${s.sent} gói dữ liệu`;
     paint({ box: walkerBox, bar: document.getElementById("walker-bar"), stop: document.getElementById("stop") }, w, Boolean(w), tiktokText);
     paint({ box: pinBox, bar: document.getElementById("pin-bar"), stop: document.getElementById("pin-stop") }, pin, Boolean(pin), pinterestText);
     const lanes = { "crawl-all": w, pins: pin };
@@ -112,7 +112,7 @@ const refresh = () =>
       const button = document.getElementById(id);
       const busy = Boolean(lane?.running);
       button.disabled = busy;
-      button.title = busy ? "This collection is already running; wait or press Stop" : "";
+      button.title = busy ? "Đang thu thập dữ liệu. Bạn có thể chờ hoặc bấm Dừng." : "";
     }
   });
 
@@ -123,10 +123,10 @@ document.getElementById("send-one").addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (!tab?.id || !(tab.url || "").includes("/pdp/")) {
-      document.getElementById("send-note").textContent = "Open a product page on TikTok Shop first.";
+      document.getElementById("send-note").textContent = "Hãy mở trang sản phẩm trên TikTok Shop trước.";
       return;
     }
-    document.getElementById("send-note").textContent = "Sending...";
+    document.getElementById("send-note").textContent = "Đang gửi…";
     document.getElementById("open-studio").hidden = true;
     chrome.storage.local.set({ lastCapture: null }, () => sendToTab(tab.id, { type: "capture-now" }));
   });
@@ -143,7 +143,7 @@ document.getElementById("crawl-all").addEventListener("click", () => {
     ...CATEGORIES.map(([slug, id]) => `https://shop.tiktok.com/vn/c/${slug}/${id}`),
   ];
   const meta = Object.fromEntries(urls.map((url) => [url, { category: true }]));
-  chrome.storage.local.set({ autoNote: `Collecting ${urls.length} categories, ${concurrency} at a time, then the product pages.` });
+  chrome.storage.local.set({ autoNote: `Đang thu thập ${urls.length} trang danh mục với ${concurrency} thẻ cùng lúc, sau đó sẽ mở trang sản phẩm.` });
   chrome.runtime.sendMessage({ type: "walker-start", kind: "category", urls, meta, concurrency, followUp: { concurrency } });
 });
 document.getElementById("stop").addEventListener("click", () => chrome.runtime.sendMessage({ type: "walker-stop", lane: "tiktok" }));
@@ -157,25 +157,25 @@ document.getElementById("pins").addEventListener("click", async () => {
   try {
     const items = await (await fetch(`${API}/reference-queue?limit=${searches}`)).json();
     if (!items.length) {
-      pinBox.textContent = "No approved keywords left to collect.";
+      pinBox.textContent = "Không còn từ khóa đã duyệt nào cần thu thập.";
       return;
     }
     const meta = Object.fromEntries(items.map((item) => [item.url, { product_type: item.product_type, query: item.query, max_images: maxImages }]));
     chrome.runtime.sendMessage({ type: "walker-start", kind: "pinterest", urls: items.map((item) => item.url), meta, concurrency });
   } catch (error) {
-    pinBox.textContent = `Could not reach the API: ${error}`;
+    pinBox.textContent = `Không kết nối được với VideoAFF: ${error}`;
   }
 });
 document.getElementById("xlsx").addEventListener("click", () => chrome.tabs.create({ url: `${API}/export?format=xlsx` }));
 document.getElementById("json").addEventListener("click", () => chrome.tabs.create({ url: `${API}/export?format=json` }));
 document.getElementById("media").addEventListener("click", async () => {
   const box = document.getElementById("media-status");
-  box.textContent = "Downloading...";
+  box.textContent = "Đang tải…";
   try {
     const r = await (await fetch(`${API}/media/download`, { method: "POST" })).json();
-    box.textContent = `New ${r.downloaded}, duplicates ${r.duplicates}, already had ${r.skipped}, failed ${r.failed}`;
+    box.textContent = `Đã tải ${r.downloaded} · Trùng ${r.duplicates} · Đã có ${r.skipped} · Lỗi ${r.failed}`;
   } catch (error) {
-    box.textContent = `Error: ${error}`;
+    box.textContent = `Lỗi: ${error}`;
   }
 });
 chrome.storage.onChanged.addListener(refresh);

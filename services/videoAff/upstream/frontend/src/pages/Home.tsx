@@ -22,37 +22,37 @@ export function HomePage() {
   return (
     <div className="page">
       <PageHead
-        title="Hello, what video do you want to make today?"
-        text="Pick a product, the AI writes the script, creates the pictures and puts the video together. You only watch and approve."
-        actions={<Link className="btn btn-primary btn-lg" to="/products"><Plus size={20} aria-hidden="true" />Make a new video</Link>}
+        title="Hôm nay bạn muốn làm video gì?"
+        text="Chọn sản phẩm để AI viết kịch bản, tạo ảnh và dựng video. Bạn xem và duyệt từng cảnh."
+        actions={<Link className="btn btn-primary btn-lg" to="/products"><Plus size={20} aria-hidden="true" />Tạo video mới</Link>}
       />
 
       {waiting > 0 && (
         <Link to="/memory" className="card todo">
           <span className="icon"><Sparkles size={20} aria-hidden="true" /></span>
           <div>
-            <strong>{waiting === 1 ? "The AI wants to remember 1 new thing" : `The AI wants to remember ${waiting} new things`}</strong>
-            <p className="muted">Read it and approve it so every next video follows it.</p>
+            <strong>{waiting === 1 ? "Có 1 quy tắc mới cần duyệt" : `Có ${waiting} quy tắc mới cần duyệt`}</strong>
+            <p className="muted">Duyệt quy tắc để AI áp dụng cho các video tiếp theo.</p>
           </div>
         </Link>
       )}
 
       {working.length > 0 && (
         <section className="stack" aria-labelledby="working">
-          <h2 id="working">In progress</h2>
+          <h2 id="working">Đang thực hiện</h2>
           {working.map((record) => <WorkCard key={record.product_id} record={record} product={productById.get(productOf(record.product_id))} />)}
         </section>
       )}
 
       <section className="stack" aria-labelledby="done">
-        <h2 id="done">Finished videos</h2>
+        <h2 id="done">Video đã hoàn thành</h2>
         {finished.length ? (
           <div className="video-grid">{finished.slice(0, 6).map((item) => <VideoCard key={item.product_id} item={item} />)}</div>
         ) : (
           <div className="card empty">
             <Film size={32} aria-hidden="true" />
-            <h2>No finished video yet</h2>
-            <p>Your first video will show up here, ready to download.</p>
+            <h2>Chưa có video hoàn thành</h2>
+            <p>Video sẽ xuất hiện ở đây khi có thể tải xuống.</p>
           </div>
         )}
       </section>
@@ -75,26 +75,26 @@ function WorkCard({ record, product }: { record: BriefRecord; product: Product |
   const status = running
     ? friendlyStep(pipeline.data?.step ?? "")
     : runStopped(pipeline.data)
-      ? "Stopped, needs a look"
+      ? "Đã dừng, cần kiểm tra"
       : needsReview
-        ? `${approved} of ${total} images approved`
+        ? `Đã duyệt ${approved}/${total} ảnh`
         : hasVideo
-          ? "Video is ready"
+          ? "Video đã sẵn sàng"
           : allApproved
-            ? "Ready to make the video"
-            : "Script is ready";
+            ? "Sẵn sàng dựng video"
+            : "Kịch bản đã sẵn sàng";
   return (
     <div className="card work-card">
       {product?.images[0] && <img src={product.images[0]} alt="" referrerPolicy="no-referrer" />}
       <div className="info">
         <div className="row">
           <strong style={{ fontSize: 18 }}>{record.brief.title}</strong>
-          {running ? <span className="pill"><Spinner size={13} />&nbsp;AI is working</span> : needsReview ? <span className="pill pill-warn">Needs your review</span> : null}
+          {running ? <span className="pill"><Spinner size={13} />&nbsp;AI đang xử lý</span> : needsReview ? <span className="pill pill-warn">Cần bạn duyệt</span> : null}
         </div>
-        <p className="muted">{running ? `${status}. You can leave this page, we keep going.` : status}</p>
-        <div className="progress" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label="Progress"><div style={{ width: `${percent}%` }} /></div>
+        <p className="muted">{running ? `${status}. Bạn có thể rời trang. Tác vụ vẫn tiếp tục.` : status}</p>
+        <div className="progress" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến độ"><div style={{ width: `${percent}%` }} /></div>
       </div>
-      <Link className="btn btn-primary" to={`/studio/${record.product_id}`}>{needsReview ? "Review the images" : "Open"}</Link>
+      <Link className="btn btn-primary" to={`/studio/${record.product_id}`}>{needsReview ? "Duyệt ảnh" : "Mở"}</Link>
     </div>
   );
 }
@@ -108,7 +108,7 @@ export function VideoCard({ item }: { item: OutputItem }) {
       </div>
       <div>
         <strong>{item.title ?? item.product_title ?? item.product_id}</strong>
-        <span className="muted small">{`${item.shots} scenes${item.built_at ? `, ${new Date(item.built_at).toLocaleDateString()}` : ""}`}</span>
+        <span className="muted small">{`${item.shots} cảnh${item.built_at ? `, ${new Date(item.built_at).toLocaleDateString("vi-VN")}` : ""}`}</span>
       </div>
     </Link>
   );

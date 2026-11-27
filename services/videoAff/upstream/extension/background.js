@@ -141,7 +141,7 @@ async function fill(lane) {
       if (w.next >= w.queue.length) {
         if (!Object.keys(w.active).length) {
           w.running = false;
-          w.note = `Done: ${w.done} succeeded, ${w.failed} failed`;
+          w.note = `Hoàn tất: ${w.done} thành công, ${w.failed} lỗi`;
           await locked(() => setState(w));
           badge();
           if (w.kind === "category" && w.followUp) fetchDetails(w.followUp);
@@ -165,7 +165,7 @@ async function fill(lane) {
         const fresh = await getState(lane);
         fresh.active[tab.id] = url;
         fresh.next += 1;
-        fresh.note = `Running ${Object.keys(fresh.active).length} tabs, pausing about ${Math.round(fresh.delayMs / 1000)} s between pages`;
+        fresh.note = `Đang chạy ${Object.keys(fresh.active).length} thẻ, nghỉ khoảng ${Math.round(fresh.delayMs / 1000)} giây giữa các trang`;
         await setState(fresh);
       });
       badge();
@@ -193,7 +193,7 @@ async function finishTab(tabId, ok, reason) {
       } else {
         w.failed += 1;
       }
-      w.note = ok ? "OK" : `Skipped (${reason})`;
+      w.note = ok ? "Thành công" : `Đã bỏ qua (${reason})`;
       await setState(w);
       return name;
     }
@@ -241,27 +241,27 @@ async function pauseForHuman(tabId, reason) {
       });
     }
     if (count >= BREAKER_CAPTCHAS) {
-      await stopWalker(lane, `Stopped after ${count} captchas in 10 minutes. Wait 15 to 30 minutes, then run again.`);
-      notify("AIC Collector stopped", `${count} captchas in 10 minutes. Wait 15 to 30 minutes, then run again to avoid being flagged further.`);
+      await stopWalker(lane, `Đã dừng sau ${count} yêu cầu xác minh trong 10 phút. Hãy chờ 15–30 phút trước khi chạy lại.`);
+      notify("VideoAFF đã dừng thu thập", `Gặp ${count} yêu cầu xác minh trong 10 phút. Hãy chờ 15–30 phút trước khi chạy lại.`);
       return;
     }
   }
   const active = await locked(async () => {
     const w = await getState(lane);
     w.paused = true;
-    w.note = `Waiting for you: ${reason}`;
+    w.note = `Đang chờ bạn xử lý: ${reason}`;
     await setState(w);
     return Object.keys(w.active).map(Number);
   });
   for (const id of active) clearTimeout(timers.get(id));
   clearTimeout(local[lane].humanTimer);
   local[lane].humanTimer = setTimeout(async () => {
-    await stopWalker(lane, "Stopped: no one handled the captcha or login within 15 minutes.");
-    notify("AIC Collector stopped", "The captcha or login was not handled within 15 minutes. Run again when you are ready.");
+    await stopWalker(lane, "Đã dừng vì hết 15 phút chờ đăng nhập hoặc xác minh.");
+    notify("VideoAFF đã dừng thu thập", "Đã hết 15 phút chờ đăng nhập hoặc xác minh. Hãy chạy lại khi bạn đã sẵn sàng.");
   }, HUMAN_WAIT_MS);
   chrome.action.setBadgeText({ text: "!" });
   if (tabId) chrome.tabs.update(tabId, { active: true }).catch(() => {});
-  notify("AIC Collector needs you", `Handle the ${reason} in the ${lane === "pinterest" ? "Pinterest" : "TikTok"} tab; collection resumes by itself.`);
+  notify("VideoAFF cần bạn xác nhận", `Hãy xử lý yêu cầu trên thẻ ${lane === "pinterest" ? "Pinterest" : "TikTok"} (${reason}). VideoAFF sẽ tự tiếp tục.`);
 }
 
 // Products TikTok does not sell to this region come back in the queue every run, so remember them.
@@ -277,7 +277,7 @@ async function startWalker(urls, meta, concurrency, kind = "tiktok", followUp = 
   if (lane === "tiktok") {
     const waitMs = await breakerOpenFor();
     if (waitMs > 0) {
-      const note = `Too many captchas just now. Wait about ${Math.ceil(waitMs / 60_000)} more minutes, then run again.`;
+      const note = `Có nhiều yêu cầu xác minh liên tiếp. Hãy chờ thêm khoảng ${Math.ceil(waitMs / 60_000)} phút rồi thử lại.`;
       await chrome.storage.local.set({ autoNote: note });
       await locked(() => setState({ ...EMPTY, lane, note }));
       return;
@@ -295,7 +295,7 @@ async function startWalker(urls, meta, concurrency, kind = "tiktok", followUp = 
       kind,
       followUp,
       concurrency: Math.min(Math.max(Number(concurrency) || 1, 1), MAX_TABS),
-      note: "Started",
+      note: "Đã bắt đầu",
     }),
   );
   badge();
@@ -310,16 +310,16 @@ async function afterHarvest(auto, summary) {
     const urls = await (await fetch(`${COLLECTOR}/queue?limit=${Number(auto.limit) || 5000}`)).json();
     if (!urls.length) {
       await chrome.storage.local.set({
-        autoNote: `Stopped scrolling: ${summary.reason}. The page has ${summary.count} products, "Load more" clicked ${summary.clicks} times. No new products to fetch.`,
+        autoNote: `Đã dừng cuộn trang (${summary.reason}) sau khi thấy ${summary.count} sản phẩm và bấm Xem thêm ${summary.clicks} lần. Không có sản phẩm mới.`,
       });
       return;
     }
     await chrome.storage.local.set({
-      autoNote: `Stopped scrolling: ${summary.reason}. The page has ${summary.count} products, "Load more" clicked ${summary.clicks} times. Fetching details for ${urls.length} new products.`,
+      autoNote: `Đã dừng cuộn trang (${summary.reason}) sau khi thấy ${summary.count} sản phẩm và bấm Xem thêm ${summary.clicks} lần. Đang lấy thông tin ${urls.length} sản phẩm mới.`,
     });
     startWalker(urls, {}, auto.concurrency);
   } catch (error) {
-    await chrome.storage.local.set({ autoNote: `Could not reach the collector: ${error}` });
+    await chrome.storage.local.set({ autoNote: `Không kết nối được với VideoAFF: ${error}` });
   }
 }
 
@@ -329,12 +329,12 @@ async function fetchDetails(followUp) {
   try {
     const urls = await (await fetch(`${COLLECTOR}/queue?limit=${QUEUE_LIMIT}`)).json();
     const note = urls.length
-      ? `All category lists collected. Fetching the page of ${urls.length} products.`
-      : "All category lists collected. No product page is missing.";
+      ? `Đã thu thập xong danh sách. Đang lấy thông tin ${urls.length} sản phẩm.`
+      : "Đã thu thập xong danh sách và thông tin sản phẩm.";
     await chrome.storage.local.set({ autoNote: note });
     if (urls.length) startWalker(urls, {}, followUp.concurrency);
   } catch (error) {
-    await chrome.storage.local.set({ autoNote: `Could not reach the collector: ${error}` });
+    await chrome.storage.local.set({ autoNote: `Không kết nối được với VideoAFF: ${error}` });
   }
 }
 
@@ -385,7 +385,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const w = await getState(lane);
             if (!w.paused) return false;
             w.paused = false;
-            w.note = "Handled, continuing";
+            w.note = "Đã xử lý, đang tiếp tục";
             await setState(w);
             for (const id of Object.keys(w.active)) armTimer(Number(id));
             return true;
@@ -411,7 +411,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
       break;
     case "walker-stop":
-      for (const lane of message.lane ? [message.lane] : LANES) stopWalker(lane, "Stopped");
+      for (const lane of message.lane ? [message.lane] : LANES) stopWalker(lane, "Đã dừng");
       break;
     default:
       break;

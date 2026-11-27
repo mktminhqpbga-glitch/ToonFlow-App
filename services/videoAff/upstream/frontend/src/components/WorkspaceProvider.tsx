@@ -15,7 +15,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       {notice && (
         <div className={`toast${notice.tone === "error" ? " toast-error" : ""}`} role={notice.tone === "error" ? "alert" : "status"}>
           <span>{notice.message}</span>
-          <button aria-label="Dismiss" onClick={() => setNotice(null)}>×</button>
+          <button aria-label="Đóng" onClick={() => setNotice(null)}>×</button>
         </div>
       )}
     </WorkspaceContext.Provider>

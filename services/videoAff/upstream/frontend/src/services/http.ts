@@ -9,13 +9,13 @@ export class ApiError extends Error {
 export function friendlyMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if ([0, 502, 503, 504].includes(error.status)) {
-      return "The AI service is busy or not reachable right now. Nothing was lost, please try again in a minute.";
+      return "Dịch vụ AI đang bận hoặc mất kết nối. Vui lòng thử lại sau một phút.";
     }
-    if (error.status === 409) return error.message;
-    if (error.status === 413) return "That file is too large. Choose a smaller one and try again.";
-    if (error.status >= 500) return "Something went wrong on our side. Please try again shortly.";
+    if (error.status === 409) return "Chưa thể thực hiện bước này. Hãy kiểm tra tiến độ hoặc xem chi tiết bên dưới.";
+    if (error.status === 413) return "Tệp quá lớn. Hãy chọn tệp nhỏ hơn rồi thử lại.";
+    if (error.status >= 500) return "VideoAFF gặp sự cố. Vui lòng thử lại sau ít phút.";
   }
-  return "We could not finish that step. Please try again.";
+  return "Chưa thể hoàn thành bước này. Vui lòng thử lại.";
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {

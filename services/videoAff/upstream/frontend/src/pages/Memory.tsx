@@ -10,10 +10,10 @@ export function MemoryPage() {
   const tab: Tab = params.get("tab") === "scenes" ? "scenes" : "rules";
   return (
     <div className="page">
-      <PageHead title="AI memory" text="What the AI knows and follows when it makes your videos. Change it here and every next video follows." />
-      <div className="tabs" role="tablist" aria-label="AI memory">
-        <button role="tab" aria-selected={tab === "rules"} onClick={() => setParams({})}>Rules</button>
-        <button role="tab" aria-selected={tab === "scenes"} onClick={() => setParams({ tab: "scenes" })}>Reference scenes</button>
+      <PageHead title="Bộ nhớ AI" text="Quản lý quy tắc và ảnh tham khảo AI dùng cho các video tiếp theo." />
+      <div className="tabs" role="tablist" aria-label="Bộ nhớ AI">
+        <button role="tab" aria-selected={tab === "rules"} onClick={() => setParams({})}>Quy tắc</button>
+        <button role="tab" aria-selected={tab === "scenes"} onClick={() => setParams({ tab: "scenes" })}>Ảnh bối cảnh</button>
       </div>
       {tab === "rules" ? <RulesTab /> : <ScenesTab />}
     </div>

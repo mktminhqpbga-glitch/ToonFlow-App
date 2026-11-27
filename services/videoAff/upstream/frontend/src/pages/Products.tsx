@@ -61,44 +61,53 @@ export function ProductsPage() {
 
   if (products.isLoading) return <div className="page"><Skeleton /></div>;
   if (products.error || !products.data) {
-    return <div className="page"><ErrorNote error={products.error ?? new Error("No data")} /></div>;
+    return <div className="page"><ErrorNote error={products.error ?? new Error("Chưa có dữ liệu")} /></div>;
   }
   const briefIds = new Set((briefs.data ?? []).map((record) => productOf(record.product_id)));
 
   return (
     <div className="page page-wide">
       <PageHead
-        title="Products"
-        text="Products you collected from TikTok Shop. Pick one and make a video."
-        actions={<a className="btn" href={`${API}/export?format=xlsx`}><Download size={16} aria-hidden="true" />Download Excel</a>}
+        title="Sản phẩm"
+        text="Chọn một sản phẩm đã thu thập từ TikTok Shop để tạo video."
+        actions={
+          <>
+            <a className="btn btn-primary" href="/api/v1/extension/download" download>
+              <Download size={16} aria-hidden="true" />Tải tiện ích Chrome
+            </a>
+            <a className="btn" href={`${API}/export?format=xlsx`}>
+              <Download size={16} aria-hidden="true" />Tải Excel
+            </a>
+          </>
+        }
       />
       <ErrorNote error={start.error ?? remove.error} />
 
       {products.data.length > 0 && (
         <div className="toolbar">
-          <label className="sr-only" htmlFor="product-search">Search products</label>
+          <label className="sr-only" htmlFor="product-search">Tìm sản phẩm</label>
           <div style={{ position: "relative" }}>
             <Search size={16} aria-hidden="true" style={{ position: "absolute", left: 12, top: 14, color: "var(--muted)" }} />
-            <input id="product-search" className="input" style={{ paddingLeft: 36 }} type="search" placeholder="Search by name or shop" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <input id="product-search" className="input" style={{ paddingLeft: 36 }} type="search" placeholder="Tìm theo tên sản phẩm hoặc cửa hàng" value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
           {categories.length > 0 && (
             <label className="row">
-              <span className="muted small">Category</span>
+              <span className="muted small">Danh mục</span>
               <select className="input" style={{ width: "auto" }} value={category} onChange={(event) => setCategory(event.target.value)}>
-                <option value="">{`All (${products.data.length})`}</option>
+                <option value="">{`Tất cả (${products.data.length})`}</option>
                 {categories.map(([name, count]) => <option key={name} value={name}>{`${name} (${count})`}</option>)}
               </select>
             </label>
           )}
           <label className="row">
-            <span className="muted small">Sort by</span>
+            <span className="muted small">Sắp xếp</span>
             <select className="input" style={{ width: "auto" }} value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
-              <option value="sold">Most sold</option>
-              <option value="rating">Best rated</option>
+              <option value="sold">Bán chạy nhất</option>
+              <option value="rating">Đánh giá cao nhất</option>
             </select>
           </label>
-          <span className="muted small">{`${rows.length} of ${products.data.length}`}</span>
-          {!!waiting.data?.length && <span className="muted small">{`${waiting.data.length} more waiting for their page to be read`}</span>}
+          <span className="muted small">{`${rows.length}/${products.data.length} sản phẩm`}</span>
+          {!!waiting.data?.length && <span className="muted small">{`${waiting.data.length} sản phẩm đang chờ lấy thông tin`}</span>}
         </div>
       )}
 
@@ -114,19 +123,19 @@ export function ProductsPage() {
                 </div>
                 <div className="body">
                   <a className="title" href={product.url.split("?")[0]} target="_blank" rel="noreferrer" title={product.title ?? ""}>{product.title}</a>
-                  <span className="muted small">{product.seller?.name || "Unknown shop"}</span>
-                  <span className="small">{`${toNumber(product.sold_count).toLocaleString("en-US")} sold`}{product.rating ? ` · ★ ${product.rating}` : ""}</span>
+                  <span className="muted small">{product.seller?.name || "Chưa rõ tên cửa hàng"}</span>
+                  <span className="small">{`${toNumber(product.sold_count).toLocaleString("vi-VN")} lượt bán`}{product.rating ? ` · ★ ${product.rating}` : ""}</span>
                   <div className="foot">
                     <button className="btn btn-primary btn-block" disabled={start.isPending} onClick={() => start.mutate(product.product_id)}>
-                      <Sparkles size={16} aria-hidden="true" />{hasVideoWork ? "Make another video" : "Make a video"}
+                      <Sparkles size={16} aria-hidden="true" />{hasVideoWork ? "Tạo video khác" : "Tạo video"}
                     </button>
                     <button
                       className="icon-button"
-                      aria-label="Delete product"
-                      title="Delete product"
+                      aria-label="Xóa sản phẩm"
+                      title="Xóa sản phẩm"
                       disabled={remove.isPending}
                       onClick={() => {
-                        if (window.confirm("Delete this product and everything made for it? It will not be collected again.")) remove.mutate(product.product_id);
+                        if (window.confirm("Xóa sản phẩm và mọi nội dung đã tạo từ sản phẩm này? VideoAFF sẽ bỏ qua sản phẩm này trong những lần thu thập sau.")) remove.mutate(product.product_id);
                       }}
                     ><Trash2 size={16} /></button>
                   </div>
@@ -136,23 +145,23 @@ export function ProductsPage() {
           })}
         </div>
       ) : (
-        <Empty icon={<Package size={32} aria-hidden="true" />} title={products.data.length ? "No product matches" : "No products yet"} text={products.data.length ? "Try a different search." : "Collect products from TikTok Shop in three steps."}>
+        <Empty icon={<Package size={32} aria-hidden="true" />} title={products.data.length ? "Không tìm thấy sản phẩm phù hợp" : "Chưa có sản phẩm"} text={products.data.length ? "Thử tìm bằng từ khóa khác." : "Thu thập sản phẩm từ TikTok Shop qua ba bước."}>
           {!products.data.length && (
             <div className="steps-3">
-              <div className="card"><span className="num">1</span><Chrome size={20} aria-hidden="true" /><strong>Install the Chrome extension</strong><span className="muted small">Add it to your Chrome browser.</span></div>
-              <div className="card"><span className="num">2</span><ShoppingBag size={20} aria-hidden="true" /><strong>Browse TikTok Shop</strong><span className="muted small">Open the products you want to promote.</span></div>
-              <div className="card"><span className="num">3</span><Sparkles size={20} aria-hidden="true" /><strong>Click Collect, then come back here</strong><span className="muted small">Your products appear on this page.</span></div>
+              <div className="card"><span className="num">1</span><Chrome size={20} aria-hidden="true" /><strong>Cài tiện ích Chrome</strong><span className="muted small">Tải và giải nén tệp ZIP. Mở <code>chrome://extensions</code>, bật Chế độ dành cho nhà phát triển rồi chọn Tải tiện ích đã giải nén. Chọn thư mục <strong>VideoAFF-Collector</strong>.</span></div>
+              <div className="card"><span className="num">2</span><ShoppingBag size={20} aria-hidden="true" /><strong>Mở TikTok Shop</strong><span className="muted small">Mở trang sản phẩm bạn muốn quảng bá.</span></div>
+              <div className="card"><span className="num">3</span><Sparkles size={20} aria-hidden="true" /><strong>Gửi sản phẩm vào VideoAFF</strong><span className="muted small">Mở tiện ích, bấm Gửi sản phẩm này rồi quay lại trang Sản phẩm.</span></div>
             </div>
           )}
         </Empty>
       )}
 
       <details>
-        <summary className="muted small" style={{ cursor: "pointer" }}>More tools</summary>
+        <summary className="muted small" style={{ cursor: "pointer" }}>Công cụ khác</summary>
         <div className="row" style={{ marginTop: 12 }}>
-          <a className="btn btn-sm" href={`${API}/export?format=json`}>Download JSON</a>
-          <button className="btn btn-sm" disabled={media.isPending} onClick={() => media.mutate()}>{media.isPending ? "Saving pictures…" : "Save product pictures to the server"}</button>
-          {media.data && <span className="muted small">{`${media.data.downloaded} new pictures saved`}</span>}
+          <a className="btn btn-sm" href={`${API}/export?format=json`}>Tải JSON</a>
+          <button className="btn btn-sm" disabled={media.isPending} onClick={() => media.mutate()}>{media.isPending ? "Đang lưu ảnh…" : "Lưu ảnh sản phẩm vào VideoAFF"}</button>
+          {media.data && <span className="muted small">{`Đã lưu ${media.data.downloaded} ảnh mới`}</span>}
         </div>
       </details>
     </div>

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Empty, ErrorNote, Skeleton } from "../components/ui";
 import { useBrief, useKeyframes, usePipeline, useProducts, useSelections, useVideoInfo } from "../hooks/useStudio";
-import { doneSteps, friendlyStep, productOf, STEPS, suggestedStep, type StepId } from "../lib/studio";
+import { doneSteps, pipelineStage, productOf, STEPS, suggestedStep, type StepId } from "../lib/studio";
 import { FinishStep } from "./studio/FinishStep";
 import { IdeaStep } from "./studio/IdeaStep";
 import { ImagesStep } from "./studio/ImagesStep";
@@ -35,7 +35,7 @@ export function StudioPage() {
   if (products.isLoading || brief.isLoading) return <div className="page"><Skeleton /></div>;
   const product = products.data?.find((item) => item.product_id === productOf(productId));
   if (!product) {
-    return <div className="page"><Empty icon={<Package size={32} aria-hidden="true" />} title="Product not found" text="Pick a product from the list to make a video."><Link className="btn btn-primary" to="/products">Go to products</Link></Empty></div>;
+    return <div className="page"><Empty icon={<Package size={32} aria-hidden="true" />} title="Không tìm thấy sản phẩm" text="Chọn một sản phẩm trong danh sách để tạo video."><Link className="btn btn-primary" to="/products">Đến trang Sản phẩm</Link></Empty></div>;
   }
   if (brief.error) return <div className="page"><ErrorNote error={brief.error} /></div>;
 
@@ -49,12 +49,12 @@ export function StudioPage() {
   const productType = selections.data?.[productOf(productId)] ?? null;
   // Once the first image exists, making the other scenes and the video happens on the one scenes page
   const onePage = running && !!record && frames.length > 0;
-  const makingScenes = onePage && friendlyStep(pipeline.data!.step) === "Creating the other scenes";
+  const makingScenes = onePage && pipelineStage(pipeline.data!.step) === "images";
   const makingVideo = onePage && !makingScenes;
 
   return (
     <div className="page">
-      <ol className="stepper" aria-label="Steps">
+      <ol className="stepper" aria-label="Các bước">
         {STEPS.map((item, index) => {
           const state = step === item.id ? "current" : done[item.id] ? "done" : "";
           return (

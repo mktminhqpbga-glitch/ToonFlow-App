@@ -84,10 +84,10 @@ test("three captcha waves stop the run and block a new one for a while", async (
     }
   }
   await wait(1000);
-  assert.ok(w.store.walker.running === false && /3 captchas/.test(w.store.walker.note), w.store.walker.note);
+  assert.ok(w.store.walker.running === false && /3 yêu cầu xác minh/.test(w.store.walker.note), w.store.walker.note);
   await w.send({ type: "walker-start", urls: urls(5), concurrency: 1 });
   await wait(500);
-  assert.ok(w.store.walker.running === false && /Wait about/.test(w.store.autoNote), w.store.autoNote);
+  assert.ok(w.store.walker.running === false && /Hãy chờ thêm khoảng/.test(w.store.autoNote), w.store.autoNote);
 });
 
 test("captchas on several tabs at once count as one wave and double the delay once", async () => {
@@ -102,7 +102,7 @@ test("captchas on several tabs at once count as one wave and double the delay on
   assert.ok(after >= before * 2 * 0.75 - 1 && after <= before * 2 * 1.25 + 1, `${before} -> ${after}`);
   assert.equal(w.store.walker.paused, true);
   await wait(15 * 60_000 + 5_000);
-  assert.ok(w.store.walker.running === false && /15 minutes/.test(w.store.walker.note), w.store.walker.note);
+  assert.ok(w.store.walker.running === false && /15 phút/.test(w.store.walker.note), w.store.walker.note);
 });
 
 test("a login wall is not counted as a captcha", async () => {

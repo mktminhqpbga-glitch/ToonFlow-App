@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlsplit
+from zipfile import ZIP_DEFLATED, ZipFile
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -108,6 +110,34 @@ async def macflow_host() -> dict[str, str | None]:
     except ValueError:
         pass
     return {"origin": None}
+
+
+@app.get("/api/v1/extension/download")
+def download_extension() -> Response:
+    """Package the Chrome extension shipped with this installation."""
+    root = Path(os.environ.get("AIC_EXTENSION_DIR") or Path(__file__).resolve().parents[4] / "extension")
+    files = (
+        "manifest.json", "background.js", "content.js", "hook.js", "popup.html",
+        "popup.css", "popup.js", "icon.png", "README.md",
+    )
+    output = BytesIO()
+    try:
+        with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+            for name in files:
+                archive.write(root / name, f"VideoAFF-Collector/{name}")
+            archive.write(root.parent / "LICENSE", "VideoAFF-Collector/LICENSE")
+    except OSError as error:
+        raise HTTPException(
+            status_code=503, detail="Chưa có tệp tiện ích Chrome trong bản VideoAFF này."
+        ) from error
+    return Response(
+        output.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="VideoAFF-Collector.zip"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/health/live", response_model=HealthResponse)

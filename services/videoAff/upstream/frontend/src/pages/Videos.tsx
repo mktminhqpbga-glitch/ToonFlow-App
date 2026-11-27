@@ -23,26 +23,26 @@ export function VideosPage() {
   return (
     <div className="page">
       <PageHead
-        title="My videos"
-        text="Every video you made or are still making."
-        actions={<Link className="btn btn-primary" to="/products"><Plus size={18} aria-hidden="true" />Make a new video</Link>}
+        title="Video của tôi"
+        text="Xem video đang thực hiện và video đã hoàn thành."
+        actions={<Link className="btn btn-primary" to="/products"><Plus size={18} aria-hidden="true" />Tạo video mới</Link>}
       />
-      <div className="tabs" role="tablist" aria-label="Filter videos">
-        {([["all", "All"], ["finished", "Finished"], ["working", "In progress"]] as [Tab, string][]).map(([id, label]) => (
+      <div className="tabs" role="tablist" aria-label="Lọc video">
+        {([["all", "Tất cả"], ["finished", "Đã hoàn thành"], ["working", "Đang thực hiện"]] as [Tab, string][]).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
         ))}
       </div>
       {shown.finished.length + shown.working.length === 0 ? (
-        <Empty icon={<Film size={32} aria-hidden="true" />} title="Nothing here yet" text="Pick a product to make your first video." />
+        <Empty icon={<Film size={32} aria-hidden="true" />} title="Chưa có video nào" text="Chọn sản phẩm để tạo video đầu tiên." />
       ) : (
         <div className="video-grid">
           {shown.working.map((record) => (
             <Link key={record.product_id} to={`/studio/${record.product_id}`} className="video-card">
               <div className="cover">
                 {imageById.get(productOf(record.product_id)) && <img src={imageById.get(productOf(record.product_id))} alt="" loading="lazy" referrerPolicy="no-referrer" />}
-                <span className="tag pill pill-warn">In progress</span>
+                <span className="tag pill pill-warn">Đang thực hiện</span>
               </div>
-              <div><strong>{record.brief.title}</strong><span className="muted small">{`${record.brief.shots?.length ?? 0} scenes`}</span></div>
+              <div><strong>{record.brief.title}</strong><span className="muted small">{`${record.brief.shots?.length ?? 0} cảnh`}</span></div>
             </Link>
           ))}
           {shown.finished.map((item) => <VideoCard key={item.product_id} item={item} />)}

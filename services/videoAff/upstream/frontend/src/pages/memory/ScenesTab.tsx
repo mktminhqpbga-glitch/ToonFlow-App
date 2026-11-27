@@ -55,37 +55,37 @@ export function ScenesTab() {
   });
 
   if (!profiles.data?.length) {
-    return <Empty icon={<Images size={32} aria-hidden="true" />} title="No reference scenes yet" text="Collect scenes from Pinterest once with the Chrome extension. Every product draws on the same collection." />;
+    return <Empty icon={<Images size={32} aria-hidden="true" />} title="Chưa có ảnh bối cảnh" text="Dùng tiện ích Chrome để lưu ảnh bối cảnh từ Pinterest. Bạn có thể dùng lại kho ảnh này cho nhiều sản phẩm." />;
   }
   const lines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
   return (
     <div className="stack-lg">
-      <p className="muted">Reference scenes are real photos the AI borrows the room, light and style from. Remove the ones you do not like.</p>
+      <p className="muted">AI tham khảo không gian, ánh sáng và phong cách từ các ảnh này. Bạn có thể bỏ ảnh không phù hợp.</p>
 
       <div className="row">
         <button className="btn btn-primary" disabled={review.isPending || running || !pending.data?.length} onClick={() => review.mutate()}>
-          {running ? <><Spinner size={14} />Checking…</> : `Check new scenes (${pending.data?.length ?? 0})`}
+          {running ? <><Spinner size={14} />Đang kiểm tra…</> : `Kiểm tra ảnh mới (${pending.data?.length ?? 0})`}
         </button>
-        <select className="input" style={{ width: "auto" }} value={productType} onChange={(event) => setProductType(event.target.value)} aria-label="Product type">
-          <option value="">All product types</option>
+        <select className="input" style={{ width: "auto" }} value={productType} onChange={(event) => setProductType(event.target.value)} aria-label="Loại sản phẩm">
+          <option value="">Tất cả loại sản phẩm</option>
           {profiles.data.map((profile) => <option key={profile.product_type} value={profile.product_type}>{profile.product_type}</option>)}
         </select>
-        <select className="input" style={{ width: "auto" }} value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Show">
-          <option value="live">In use</option>
-          <option value="rejected">Rejected by the AI</option>
-          <option value="removed">Removed by you</option>
-          <option value="duplicate">Duplicates</option>
-          <option value="">All</option>
+        <select className="input" style={{ width: "auto" }} value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Hiển thị">
+          <option value="live">Đang dùng</option>
+          <option value="rejected">AI đã loại</option>
+          <option value="removed">Bạn đã bỏ</option>
+          <option value="duplicate">Ảnh trùng</option>
+          <option value="">Tất cả</option>
         </select>
-        <span className="muted small">{`${images.data?.length ?? 0} scenes`}</span>
+        <span className="muted small">{`${images.data?.length ?? 0} ảnh`}</span>
       </div>
       {run.data && run.data.status !== "idle" && (
         <div className="stack" role="status">
-          <div className="progress ok" role="progressbar" aria-valuenow={run.data.reviewed + run.data.failed} aria-valuemin={0} aria-valuemax={run.data.total} aria-label="Scenes checked"><div style={{ width: `${run.data.total ? ((run.data.reviewed + run.data.failed) / run.data.total) * 100 : 0}%` }} /></div>
-          <span className="muted small">{`${run.data.reviewed + run.data.failed} of ${run.data.total} checked · ${run.data.usable} in use · ${run.data.rejected} rejected${run.data.failed ? ` · ${run.data.failed} got no answer` : ""}`}</span>
-          {run.data.status === "stopped" && <div className="notice notice-warn">{run.data.message}</div>}
-          {run.data.status === "failed" && <div className="notice notice-warn">{`The check failed: ${run.data.message}`}</div>}
-          {run.data.status === "done" && <span className="muted small">Done.</span>}
+          <div className="progress ok" role="progressbar" aria-valuenow={run.data.reviewed + run.data.failed} aria-valuemin={0} aria-valuemax={run.data.total} aria-label="Ảnh đã kiểm tra"><div style={{ width: `${run.data.total ? ((run.data.reviewed + run.data.failed) / run.data.total) * 100 : 0}%` }} /></div>
+          <span className="muted small">{`Đã kiểm tra ${run.data.reviewed + run.data.failed}/${run.data.total} ảnh · ${run.data.usable} ảnh dùng được · ${run.data.rejected} ảnh bị loại${run.data.failed ? ` · ${run.data.failed} ảnh chưa có phản hồi` : ""}`}</span>
+          {run.data.status === "stopped" && <div className="notice notice-warn">AI đã ngừng phản hồi. Hãy kiểm tra hạn mức rồi thử lại.<details><summary>Chi tiết</summary>{run.data.message}</details></div>}
+          {run.data.status === "failed" && <div className="notice notice-warn">Chưa kiểm tra được ảnh. Hãy thử lại.<details><summary>Chi tiết</summary>{run.data.message}</details></div>}
+          {run.data.status === "done" && <span className="muted small">Đã xong.</span>}
         </div>
       )}
       <ErrorNote error={review.error ?? remove.error ?? images.error} />
@@ -102,18 +102,18 @@ export function ScenesTab() {
                 {...lightbox.zoom(images.data.map((item) => ({ src: item.image_url, label: item.title, href: `https://www.pinterest.com${item.pin_url}` })), index)}
               />
               {image.status !== "removed" && (
-                <button type="button" className="icon-button remove" style={{ background: "var(--paper)" }} aria-label="Remove this scene" disabled={remove.isPending} onClick={() => remove.mutate(image.image_id)}><X size={14} /></button>
+                <button type="button" className="icon-button remove" style={{ background: "var(--paper)" }} aria-label="Bỏ ảnh này" disabled={remove.isPending} onClick={() => remove.mutate(image.image_id)}><X size={14} /></button>
               )}
-              <figcaption>{image.status === "rejected" && image.screening?.reject_reason ? `Rejected (${image.screening.reject_reason}): ` : ""}{image.screening?.description ?? image.screening?.scene_description ?? image.query}</figcaption>
+              <figcaption>{image.status === "rejected" && image.screening?.reject_reason ? `Đã loại (${image.screening.reject_reason}): ` : ""}{image.screening?.description ?? image.screening?.scene_description ?? image.query}</figcaption>
             </figure>
           ))}
         </div>
       ) : (
-        <Empty icon={<Images size={32} aria-hidden="true" />} title="No scenes to show" text="Collect scenes from Pinterest with the Chrome extension." />
+        <Empty icon={<Images size={32} aria-hidden="true" />} title="Không có ảnh để hiển thị" text="Dùng tiện ích Chrome để lưu ảnh từ Pinterest." />
       )}
 
       <details>
-        <summary className="muted small" style={{ cursor: "pointer" }}>Search keywords used to find scenes</summary>
+        <summary className="muted small" style={{ cursor: "pointer" }}>Từ khóa tìm ảnh bối cảnh</summary>
         <div className="stack" style={{ marginTop: 12 }}>
           {profiles.data.map((profile) => (
             <form
@@ -125,9 +125,9 @@ export function ScenesTab() {
                 saveKeywords.mutate({ product_type: profile.product_type, keywords: lines(String(data.get("keywords"))), status: "approved" });
               }}
             >
-              <div className="row"><strong>{profile.product_type}</strong><span className={`pill ${profile.status === "approved" ? "pill-ok" : "pill-warn"}`}>{profile.status === "approved" ? "Approved" : "Needs your OK"}</span></div>
-              <label className="field">One keyword per line<textarea name="keywords" rows={Math.min(Math.max(profile.keywords.length + 1, 4), 9)} defaultValue={profile.keywords.join("\n")} /></label>
-              <div><button className="btn btn-primary btn-sm" type="submit" disabled={saveKeywords.isPending}>Save and approve</button></div>
+              <div className="row"><strong>{profile.product_type}</strong><span className={`pill ${profile.status === "approved" ? "pill-ok" : "pill-warn"}`}>{profile.status === "approved" ? "Đã duyệt" : "Chờ bạn duyệt"}</span></div>
+              <label className="field">Mỗi dòng một từ khóa<textarea name="keywords" rows={Math.min(Math.max(profile.keywords.length + 1, 4), 9)} defaultValue={profile.keywords.join("\n")} /></label>
+              <div><button className="btn btn-primary btn-sm" type="submit" disabled={saveKeywords.isPending}>Lưu và duyệt</button></div>
             </form>
           ))}
         </div>
