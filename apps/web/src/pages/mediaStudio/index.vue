@@ -236,8 +236,8 @@
       :directory="directory" :mediaModels="models" @saved="flowCatalogRevision++" />
     <settings v-model="settingsVisible" ref="settingsRef" />
     <writeVideoPrompt v-if="promptWriterVisible && kind === 'video' && directory" :key="directory" v-model="promptWriterVisible"
-      :directory="directory" :ownerId="ownerId" :prompt="prompt" :ratio="ratio || ''" :duration="duration || null"
-      :hasReference="!!references.length" @apply="prompt = $event" />
+      :directory="directory" :ownerId="ownerId" :prompt="prompt" :ratio="selectedRatio" :duration="selectedVideoDuration ?? null"
+      :hasReference="supportsReferences && references.some(reference => !reference.missing)" @apply="applyWrittenPrompt" />
     <characterLibrary v-if="charactersVisible" v-model="charactersVisible" :canUse="canUseCharacter" @select="useCharacterPhoto" />
     <assetLibraryDialog v-if="savedLibraryVisible" v-model="savedLibraryVisible" :directory="directory" />
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
@@ -421,8 +421,14 @@ const referenceMimeTypes = computed(() => model.value?.referenceLimits?.allowedM
   ?? ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
 const maxReferenceBytes = computed(() => model.value?.referenceLimits?.maxReferenceBytes ?? 20 * 1024 * 1024);
 const ratioOptions = computed(() => model.value?.imageRatios ?? []);
+const selectedRatio = computed(() => ratioOptions.value.includes(ratio.value) ? ratio.value : "");
 const sizeOptions = computed(() => model.value?.imageSizes ?? []);
 const durationOptions = computed(() => [...new Set(model.value?.durationResolutionMap?.flatMap(item => item.duration) ?? [])]);
+const selectedVideoDuration = computed(() => {
+  const options = durationOptions.value;
+  if (options.length === 1) return options[0];
+  return typeof duration.value === "number" && options.includes(duration.value) ? duration.value : undefined;
+});
 const resolutionOptions = computed(() => [...new Set((model.value?.durationResolutionMap ?? []).filter(item => !duration.value || item.duration.includes(Number(duration.value))).flatMap(item => item.resolution))]);
 function checkResolution() {
   if (resolution.value && !resolutionOptions.value.includes(resolution.value)) resolution.value = "";
@@ -445,13 +451,12 @@ const generationInput = computed(() => {
     providerId: current.providerId, modelId: current.modelId, prompt: prompt.value.trim(),
   };
   const photos = references.value.map(({ path, mimeType }) => ({ path, mimeType }));
-  if (ratio.value && ratioOptions.value.includes(ratio.value)) input.ratio = ratio.value;
+  if (selectedRatio.value) input.ratio = selectedRatio.value;
   if (props.kind === "image") {
     if (size.value && sizeOptions.value.includes(size.value)) input.size = size.value;
     if (photos.length) input.images = photos;
   } else {
-    if (durationOptions.value.length === 1) input.duration = durationOptions.value[0];
-    else if (duration.value && durationOptions.value.includes(duration.value)) input.duration = duration.value;
+    if (selectedVideoDuration.value !== undefined) input.duration = selectedVideoDuration.value;
     if (resolutionOptions.value.length === 1) input.resolution = resolutionOptions.value[0];
     else if (resolution.value && resolutionOptions.value.includes(resolution.value)) input.resolution = resolution.value;
     if (photos[0]) input.firstFrame = photos[0];
@@ -599,6 +604,13 @@ function applyIncomingPrompt() {
     overwriteVisible.value = false;
     ElMessage.success("Đã dùng prompt của cảnh. Bấm Hoàn tác để lấy lại nháp cũ.");
   }
+}
+
+function applyWrittenPrompt(value: string) {
+  if (submitting.value || !directory.value) return;
+  if (value !== prompt.value && !replacePrompt(value, incomingPrompt.value)) return;
+  promptWriterVisible.value = false;
+  ElMessage.success("Đã đưa prompt vào ô Mô tả ý tưởng.");
 }
 
 function keepCurrentPrompt() {
@@ -950,6 +962,7 @@ watch(requestedModelKey, key => { if (key && !modelsLoading.value) void loadMode
 watch(browserKey, async () => {
   if (!mounted) return;
   scopeVersion++;
+  promptWriterVisible.value = false;
   generationReview.value = undefined;
   savingLibraryTaskId.value = "";
   savedLibraryTaskId.value = "";
