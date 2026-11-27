@@ -119,7 +119,7 @@ def download_extension(request: Request) -> Response:
     """Package the Chrome extension shipped with this installation."""
     root = Path(os.environ.get("AIC_EXTENSION_DIR") or Path(__file__).resolve().parents[4] / "extension")
     files = (
-        "manifest.json", "background.js", "content.js", "hook.js", "popup.html",
+        "manifest.json", "background.js", "content.js", "hook.js", "shopee.js", "popup.html",
         "popup.css", "popup.js", "icon.png", "README.md",
     )
     collector_origin = request.headers.get("x-video-aff-collector-origin")

@@ -224,7 +224,7 @@ class PostgresProductRepository:
     async def upsert_detail(self, detail: dict[str, Any]) -> None:
         values = {
             "product_id": detail["product_id"],
-            "source": SOURCE,
+            "source": detail.get("source", SOURCE),
             "title": detail.get("title"),
             "sold_count": _sold(detail.get("sold_count")),
             "detail": detail,

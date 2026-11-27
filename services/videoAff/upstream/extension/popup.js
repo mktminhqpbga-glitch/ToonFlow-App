@@ -93,7 +93,9 @@ const showCapture = (capture) => {
       link.hidden = false;
     });
   } else if (capture.stored === "ignored") {
-    note.textContent = "Chưa thấy dữ liệu sản phẩm. Mở trang sản phẩm, chờ tải xong rồi bấm gửi lại.";
+    note.textContent = capture.source === "shopee" && capture.reason
+      ? capture.reason
+      : "Chưa thấy dữ liệu sản phẩm. Mở trang sản phẩm, chờ tải xong rồi bấm gửi lại.";
   } else {
     note.textContent = `VideoAFF chưa nhận được sản phẩm: ${capture.reason || "chưa rõ nguyên nhân"}`;
   }
@@ -121,17 +123,37 @@ const refresh = () =>
 const version = document.getElementById("version");
 if (version) version.textContent = `v${chrome.runtime.getManifest().version}`;
 enabled.addEventListener("change", () => chrome.storage.local.set({ enabled: enabled.checked }));
-document.getElementById("send-one").addEventListener("click", () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
-    if (!tab?.id || !(tab.url || "").includes("/pdp/")) {
-      document.getElementById("send-note").textContent = "Hãy mở trang sản phẩm trên TikTok Shop trước.";
+const sendOne = document.getElementById("send-one");
+sendOne.addEventListener("click", async () => {
+  const note = document.getElementById("send-note");
+  sendOne.disabled = true;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const url = tab?.url ? new URL(tab.url) : null;
+    const shopee = ["https://shopee.vn", "https://www.shopee.vn"].includes(url?.origin);
+    const tiktok = ["https://shop.tiktok.com", "https://www.tiktok.com"].includes(url?.origin) && url.pathname.includes("/pdp/");
+    if (tab?.id === undefined || (!shopee && !tiktok)) {
+      note.textContent = "Hãy mở trang chi tiết sản phẩm trên TikTok Shop hoặc Shopee Việt Nam.";
       return;
     }
-    document.getElementById("send-note").textContent = "Đang gửi…";
+    note.textContent = "Đang gửi…";
     document.getElementById("open-studio").hidden = true;
-    chrome.storage.local.set({ lastCapture: null }, () => sendToTab(tab.id, { type: "capture-now" }));
-  });
+    await chrome.storage.local.set({ lastCapture: null });
+    if (tiktok) {
+      sendToTab(tab.id, { type: "capture-now" });
+      return;
+    }
+    const [capture] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["shopee.js"] });
+    if (!capture?.result) {
+      note.textContent = "Chưa đọc được tên và ảnh. Hãy mở trang chi tiết sản phẩm Shopee và đợi ảnh tải xong rồi thử lại.";
+      return;
+    }
+    await chrome.runtime.sendMessage({ type: "ingest-shopee", payload: capture.result });
+  } catch {
+    note.textContent = "Chưa gửi được sản phẩm. Hãy tải lại trang sản phẩm và thử lại.";
+  } finally {
+    sendOne.disabled = false;
+  }
 });
 document.getElementById("capture").addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

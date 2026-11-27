@@ -70,6 +70,9 @@ const laneOfTab = async (tabId) => {
 
 // ---- ingest from content scripts -------------------------------------------------
 async function ingest(payload) {
+  const shopee = payload.kind === "shopee";
+  const single = payload.kind === "page" || shopee;
+  const source = shopee ? { source: "shopee" } : {};
   try {
     const response = await collectRequest(`${COLLECTOR}/ingest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const s = await chrome.storage.local.get({ sent: 0 });
@@ -77,18 +80,19 @@ async function ingest(payload) {
       // the collector refused the data (for example the duplicate check is off): say so, never swallow it
       const detail = await response.json().then((body) => body.detail).catch(() => "");
       await chrome.storage.local.set({ sent: s.sent + 1, error: `HTTP ${response.status}${detail ? `: ${detail}` : ""}` });
-      if (payload.kind === "page") await chrome.storage.local.set({ lastCapture: { stored: "refused", reason: String(detail || response.status) } });
+      if (single) await chrome.storage.local.set({ lastCapture: { stored: "refused", reason: String(detail || response.status), ...source } });
       return;
     }
     const result = await response.json().catch(() => ({}));
     // the popup shows what happened to the page the user just sent
-    if (payload.kind === "page") {
-      await chrome.storage.local.set({ lastCapture: { stored: result.stored || "", productId: result.product_id || "", reason: result.reason || "" } });
+    if (single) {
+      await chrome.storage.local.set({ lastCapture: { stored: result.stored || "", productId: result.product_id || "", reason: result.reason || "", ...source } });
     }
     const failed = Number(result.check_failed || 0);
     await chrome.storage.local.set({ sent: s.sent + 1, error: failed ? `${failed} images could not be checked for duplicates (see the References page)` : "" });
   } catch (error) {
     await chrome.storage.local.set({ error: String(error) });
+    if (shopee) await chrome.storage.local.set({ lastCapture: { stored: "refused", reason: "Hãy kiểm tra MacFlow đang chạy rồi thử lại.", ...source } });
   }
 }
 
@@ -348,8 +352,12 @@ async function fetchDetails(followUp) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
   switch (message?.type) {
+    case "ingest-shopee":
+      if (sender.url !== chrome.runtime.getURL("popup.html") || message.payload?.kind !== "shopee") break;
+      ingest(message.payload).then(() => sendResponse());
+      return true;
     case "ingest":
-      ingest(message.payload);
+      if (message.payload?.kind && message.payload.kind !== "shopee") ingest(message.payload);
       break;
     case "am-i-walker":
       locked(async () => {

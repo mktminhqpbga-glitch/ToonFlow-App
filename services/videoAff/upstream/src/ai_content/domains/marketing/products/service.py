@@ -82,6 +82,7 @@ from .parsing import (
     junk_reason,
     parse_feed_payload,
     parse_product_page,
+    parse_shopee_capture,
 )
 from .posting import PostingPackageWriter
 from .projects import product_of
@@ -385,8 +386,15 @@ class ProductCatalogService:
         """Store whatever a captured page or feed response contains."""
         kind = payload.get("kind")
         url = str(payload.get("url") or "")
-        if kind == "page" and is_product_url(url):
-            detail = parse_product_page(str(payload.get("html") or ""), url)
+        if kind == "shopee" or (kind == "page" and is_product_url(url)):
+            if kind == "shopee":
+                detail = parse_shopee_capture(url, payload.get("product"))
+                if detail is None:
+                    return {"stored": "ignored", "reason": "Cần mở trang sản phẩm Shopee Việt Nam có tên và ảnh."}
+                if junk_reason(detail):
+                    return {"stored": "ignored", "reason": "VideoAFF chỉ nhận sản phẩm có thể dùng để làm video quảng bá."}
+            else:
+                detail = parse_product_page(str(payload.get("html") or ""), url)
             if detail is None:
                 return {"stored": "ignored", "reason": "no product data in page"}
             await self._repository.upsert_detail(detail)

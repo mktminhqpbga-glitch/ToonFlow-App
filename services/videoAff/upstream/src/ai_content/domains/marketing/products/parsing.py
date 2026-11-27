@@ -1,12 +1,18 @@
-"""Pure parsers for TikTok Shop pages and feed responses."""
+"""Pure parsers for marketplace captures and feed responses."""
 
 from __future__ import annotations
 
 import json
 import re
 from typing import Any
+from urllib.parse import urlsplit
 
 SOURCE = "tiktok_shop_vn"
+SHOPEE_SOURCE = "shopee_vn"
+_SHOPEE_PRODUCT_PATH = re.compile(r"/product/([0-9]{1,20})/([0-9]{1,20})/?$")
+_SHOPEE_SLUG_PATH = re.compile(r"/[^/]*[/-]i\.([0-9]{1,20})\.([0-9]{1,20})/?$")
+_SHOPEE_IMAGE_HOST = re.compile(r"(?:[a-z0-9-]+\.)+img\.susercontent\.com|cf\.shopee\.vn")
+_SHOPEE_IMAGE_PATH = re.compile(r"/file/[A-Za-z0-9_.@-]{1,256}")
 # the home page and a category page (its "Xem thêm" button too) load products from these
 _FEED_MARKERS = (
     "homepage_desktop/products_by_component",
@@ -56,15 +62,72 @@ def junk_reason(product: dict[str, Any]) -> str | None:
     """Why a captured product is not worth turning into content, or None."""
     price = product.get("price") or {}
     sale = money(price.get("sale"), price.get("currency"))
-    if price.get("currency") != "VND" or sale is None:
+    if (price.get("currency") != "VND" or sale is None) and product.get("source") != SHOPEE_SOURCE:
         return "not a VND price"
-    if sale < MIN_REAL_PRICE_VND:
+    if sale is not None and sale < MIN_REAL_PRICE_VND:
         return "promo price under 1,000 VND"
     if is_non_physical(product.get("title")):
         return "voucher or non-physical item"
     if not product.get("images"):
         return "no images"
     return None
+
+
+def _capture_text(value: object, limit: int) -> str:
+    return value.replace("\x00", "").strip()[:limit] if isinstance(value, str) else ""
+
+
+def _shopee_image(value: object) -> str | None:
+    if not isinstance(value, str) or len(value) > 2048:
+        return None
+    try:
+        url = urlsplit(value)
+    except ValueError:
+        return None
+    if (
+        url.scheme == "https"
+        and _SHOPEE_IMAGE_HOST.fullmatch(url.netloc)
+        and _SHOPEE_IMAGE_PATH.fullmatch(url.path)
+    ):
+        return f"https://{url.netloc}{url.path}"
+    return None
+
+
+def parse_shopee_capture(url: str, product: object) -> dict[str, Any] | None:
+    """Validate the product fields captured from the open Shopee Vietnam page."""
+    if not isinstance(product, dict) or len(url) > 2048:
+        return None
+    try:
+        page = urlsplit(url)
+    except ValueError:
+        return None
+    if page.scheme != "https" or page.netloc not in {"shopee.vn", "www.shopee.vn"}:
+        return None
+    ids = _SHOPEE_PRODUCT_PATH.fullmatch(page.path) or _SHOPEE_SLUG_PATH.fullmatch(page.path)
+    if not ids:
+        return None
+
+    title = _capture_text(product.get("title"), 500)
+    raw_images = product.get("images")
+    images = list(dict.fromkeys(
+        image for raw in raw_images[:12] if (image := _shopee_image(raw))
+    )) if isinstance(raw_images, list) else []
+    if not title or not images:
+        return None
+    shop_id, item_id = ids.groups()
+    sale = _capture_text(product.get("sale"), 24)
+    return {
+        "source": SHOPEE_SOURCE,
+        "url": f"https://shopee.vn/product/{shop_id}/{item_id}",
+        "product_id": f"shopee-{shop_id}-{item_id}",
+        "title": title,
+        "images": images,
+        "description": _capture_text(product.get("description"), 5000),
+        "seller": {"id": shop_id, "name": _capture_text(product.get("seller"), 160) or None},
+        "price": {"sale": sale if re.fullmatch(r"[0-9]{1,12}", sale) else None, "currency": "VND"},
+        "sold_count": None,
+        "rating": None,
+    }
 
 
 def _int(value: object) -> int | None:
@@ -238,5 +301,6 @@ __all__ = [
     "money",
     "parse_feed_payload",
     "parse_product_page",
+    "parse_shopee_capture",
     "product_id_from_url",
 ]

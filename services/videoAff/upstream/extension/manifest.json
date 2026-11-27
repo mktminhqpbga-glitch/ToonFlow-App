@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "VideoAFF – Thu thập sản phẩm",
-  "version": "0.8.4",
+  "version": "0.9.0",
   "description": "Gửi thông tin sản phẩm và ảnh tham khảo từ Chrome vào VideoAFF trên máy của bạn.",
-  "permissions": ["storage", "notifications"],
+  "permissions": ["storage", "notifications", "activeTab", "scripting"],
   "host_permissions": [
     "https://shop.tiktok.com/*",
     "https://www.tiktok.com/*",

@@ -13,6 +13,8 @@ const SORTS = {
   rating: (product: Product) => Number(product.rating) || 0,
 } as const;
 type SortKey = keyof typeof SORTS;
+const marketplaceName = { shopee_vn: "Shopee", tiktok_shop_vn: "TikTok Shop" } as const;
+const marketplaceOf = (product: Product) => product.source === "shopee_vn" ? "shopee_vn" : "tiktok_shop_vn";
 
 export function ProductsPage() {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export function ProductsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("sold");
   const [category, setCategory] = useState("");
+  const [marketplace, setMarketplace] = useState("");
   const products = useProducts();
   const briefs = useBriefs();
   const refresh = () => {
@@ -49,10 +52,11 @@ export function ProductsPage() {
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return (products.data ?? [])
+      .filter((product) => !marketplace || marketplaceOf(product) === marketplace)
       .filter((product) => !category || product.category === category)
       .filter((product) => !needle || `${product.title} ${product.seller?.name}`.toLowerCase().includes(needle))
       .sort((a, b) => SORTS[sort](b) - SORTS[sort](a));
-  }, [products.data, search, sort, category]);
+  }, [products.data, search, sort, category, marketplace]);
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
     for (const product of products.data ?? []) if (product.category) counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
@@ -69,7 +73,7 @@ export function ProductsPage() {
     <div className="page page-wide">
       <PageHead
         title="Sản phẩm"
-        text="Chọn một sản phẩm đã thu thập từ TikTok Shop để tạo video."
+        text="Chọn sản phẩm từ Shopee hoặc TikTok Shop để tạo video."
         actions={
           <>
             <a className="btn btn-primary" href={`${apiRoot}/extension/download`} download>
@@ -90,6 +94,13 @@ export function ProductsPage() {
             <Search size={16} aria-hidden="true" style={{ position: "absolute", left: 12, top: 14, color: "var(--muted)" }} />
             <input id="product-search" className="input" style={{ paddingLeft: 36 }} type="search" placeholder="Tìm theo tên sản phẩm hoặc cửa hàng" value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
+          <label className="row">
+            <span className="muted small">Nguồn sản phẩm</span>
+            <select className="input" style={{ width: "auto" }} value={marketplace} onChange={(event) => setMarketplace(event.target.value)}>
+              <option value="">Tất cả nguồn</option>
+              {Object.entries(marketplaceName).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+          </label>
           {categories.length > 0 && (
             <label className="row">
               <span className="muted small">Danh mục</span>
@@ -123,8 +134,11 @@ export function ProductsPage() {
                 </div>
                 <div className="body">
                   <a className="title" href={product.url.split("?")[0]} target="_blank" rel="noreferrer" title={product.title ?? ""}>{product.title}</a>
-                  <span className="muted small">{product.seller?.name || "Chưa rõ tên cửa hàng"}</span>
-                  <span className="small">{`${toNumber(product.sold_count).toLocaleString("vi-VN")} lượt bán`}{product.rating ? ` · ★ ${product.rating}` : ""}</span>
+                  <span className="muted small">{[marketplaceName[marketplaceOf(product)], product.seller?.name].filter(Boolean).join(" · ")}</span>
+                  {(product.sold_count != null || product.rating) && <span className="small">{[
+                    product.sold_count != null && `${toNumber(product.sold_count).toLocaleString("vi-VN")} lượt bán`,
+                    product.rating && `★ ${product.rating}`,
+                  ].filter(Boolean).join(" · ")}</span>}
                   <div className="foot">
                     <button className="btn btn-primary btn-block" disabled={start.isPending} onClick={() => start.mutate(product.product_id)}>
                       <Sparkles size={16} aria-hidden="true" />{hasVideoWork ? "Tạo video khác" : "Tạo video"}
@@ -145,11 +159,11 @@ export function ProductsPage() {
           })}
         </div>
       ) : (
-        <Empty icon={<Package size={32} aria-hidden="true" />} title={products.data.length ? "Không tìm thấy sản phẩm phù hợp" : "Chưa có sản phẩm"} text={products.data.length ? "Thử tìm bằng từ khóa khác." : "Thu thập sản phẩm từ TikTok Shop qua ba bước."}>
+        <Empty icon={<Package size={32} aria-hidden="true" />} title={products.data.length ? "Không tìm thấy sản phẩm phù hợp" : "Chưa có sản phẩm"} text={products.data.length ? "Thử từ khóa hoặc bộ lọc khác." : "Thêm sản phẩm từ Shopee hoặc TikTok Shop qua ba bước."}>
           {!products.data.length && (
             <div className="steps-3">
               <div className="card"><span className="num">1</span><Chrome size={20} aria-hidden="true" /><strong>Cài tiện ích Chrome</strong><span className="muted small">Tải và giải nén tệp ZIP. Mở <code>chrome://extensions</code>, bật Chế độ dành cho nhà phát triển rồi chọn Tải tiện ích đã giải nén. Chọn thư mục <strong>VideoAFF-Collector</strong>.</span></div>
-              <div className="card"><span className="num">2</span><ShoppingBag size={20} aria-hidden="true" /><strong>Mở TikTok Shop</strong><span className="muted small">Mở trang sản phẩm bạn muốn quảng bá.</span></div>
+              <div className="card"><span className="num">2</span><ShoppingBag size={20} aria-hidden="true" /><strong>Mở Shopee hoặc TikTok Shop</strong><span className="muted small">Mở trang chi tiết sản phẩm bạn muốn quảng bá và chờ ảnh tải xong.</span></div>
               <div className="card"><span className="num">3</span><Sparkles size={20} aria-hidden="true" /><strong>Gửi sản phẩm vào VideoAFF</strong><span className="muted small">Mở tiện ích, bấm Gửi sản phẩm này rồi quay lại trang Sản phẩm.</span></div>
             </div>
           )}

@@ -116,6 +116,37 @@ def test_ingest_ignores_unsupported_captures(client: TestClient) -> None:
     assert client.get("/api/v1/products").json() == []
 
 
+def test_ingest_shopee_alongside_tiktok_and_select_for_video(client: TestClient) -> None:
+    _capture_product(client)
+    shopee_id = f"shopee-42-{PRODUCT_ID}"
+    image = "https://down-vn.img.susercontent.com/file/vn-example"
+    capture = {
+        "kind": "shopee",
+        "url": f"https://shopee.vn/Ao-thun-i.42.{PRODUCT_ID}?tracking=example",
+        "product": {
+            "title": "Áo thun Shopee",
+            "images": [f"{image}?tracking=example", image, "https://example.com/other.png"],
+        },
+    }
+    assert client.post("/api/v1/products/ingest", json=capture).json() == {
+        "stored": "detail", "product_id": shopee_id
+    }
+    capture["url"] = f"https://www.shopee.vn/product/42/{PRODUCT_ID}"
+    assert client.post("/api/v1/products/ingest", json=capture).json()["product_id"] == shopee_id
+
+    products = {product["product_id"]: product for product in client.get("/api/v1/products").json()}
+    assert set(products) == {PRODUCT_ID, shopee_id}
+    assert products[shopee_id]["source"] == "shopee_vn"
+    assert products[shopee_id]["images"] == [image]
+    assert products[shopee_id]["price"]["sale"] is None
+    assert products[shopee_id]["url"] == f"https://shopee.vn/product/42/{PRODUCT_ID}"
+    assert client.post(f"/api/v1/products/{shopee_id}/select").status_code == 200
+    assert client.get(f"/api/v1/products/{shopee_id}-vtest").json()["title"] == "Áo thun Shopee"
+
+    capture["url"] = f"https://shopee.vn.invalid/product/42/{PRODUCT_ID}"
+    assert client.post("/api/v1/products/ingest", json=capture).json()["stored"] == "ignored"
+
+
 def test_queue_skips_captured_vouchers_and_non_vnd(client: TestClient) -> None:
     client.post("/api/v1/products/ingest", json={"kind": "json", "url": FEED_URL, "body": FEED})
     assert client.get("/api/v1/products/queue").json() == ["https://shop.tiktok.com/vn/pdp/coc/2"]

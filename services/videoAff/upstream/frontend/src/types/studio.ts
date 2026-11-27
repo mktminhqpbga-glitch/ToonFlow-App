@@ -22,6 +22,7 @@ export type Clip = { shot_index: number; status: "processing" | "ready" | "faile
 export type PipelineRun = { status: "idle" | "running" | "paused" | "failed" | "interrupted" | "done"; step: string; message: string };
 export type Product = {
   product_id: string;
+  source?: string;
   title: string | null;
   url: string;
   price: { sale: string | null };
