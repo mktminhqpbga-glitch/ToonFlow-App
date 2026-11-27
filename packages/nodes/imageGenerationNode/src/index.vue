@@ -51,6 +51,10 @@
           v-model="refList"
           @preview="setReferencePreview"
           @remove="removeReference" />
+        <details v-if="connectedText.length" class="connectedText">
+          <summary>Đang dùng {{ connectedText.length }} văn bản từ node đã nối</summary>
+          <p v-for="item in connectedText" :key="`${item.source}:${item.sourceHandle}`">{{ item.value }}</p>
+        </details>
         <promptInput v-if="editor?.mode === 'inpaint'" v-model="data.inpaintPromptModel" v-model:text="data.inpaintPrompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
         <promptInput v-else v-model="data.promptModel" v-model:text="data.prompt" :references="referenceMentions" :materials="materialMentions" :selectMaterial="selectMaterialReference" :selectAsset="selectAssetReference" expandable />
         <el-button v-if="editor?.mode !== 'inpaint'" text class="promptLibraryOpen" :disabled="generating || deleting || uploading || !!pendingRecovery" title="Mở thư viện prompt tạo ảnh" aria-label="Thư viện prompt tạo ảnh" @click.stop="openPromptLibrary">Thư viện prompt</el-button>
@@ -194,6 +198,7 @@ watch(generating, value => { if (!value && !disposed && !deleting.value && !mode
 const selectedModel = useNodeModelSelection(models, computed({ get: () => data.value.model, set: value => { data.value.model = value; } }));
 const { sizeOptions, ratioOptions } = useImageModelForm(data, selectedModel);
 const modelGroups = computed(() => groupNodeModels(models.value));
+const connectedText = computed(() => refList.value.filter(item => item.dataType === "STRING" && item.value?.trim()));
 const generationPrompt = computed(() =>
   [
     (editor.value?.mode === "inpaint" ? data.value.inpaintPrompt : data.value.prompt).trim(),
@@ -506,6 +511,13 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.connectedText {
+  margin-bottom: 8px;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  summary { cursor: pointer; }
+  p { max-height: 200px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+}
 .imageContent {
   .nodeSkeleton.resized & {
     height: 100%;

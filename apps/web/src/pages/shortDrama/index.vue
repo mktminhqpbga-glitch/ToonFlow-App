@@ -93,9 +93,10 @@
               <div class="sceneHeader">
                 <div>
                   <h2><icon-movie :size="20" /> Phân cảnh <span class="sceneCount">{{ board.scenes.length }}</span></h2>
-                  <p class="hint sceneTotal">Tổng thời lượng {{ durationText }}<span v-if="unknownDurations"> · {{ unknownDurations }} cảnh chưa đặt giờ</span></p>
+                  <p class="hint sceneTotal">Tổng thời lượng {{ estimatedDurations ? 'khoảng ' : '' }}{{ durationText }}<span v-if="unknownDurations"> · {{ unknownDurations }} cảnh chưa có thời lượng</span></p>
                 </div>
                 <div class="buttonRow">
+                  <el-button v-if="canEstimateDuration" :disabled="sceneListLocked || !!translation" @click="fillSceneDurations">Ước tính thời lượng còn thiếu</el-button>
                   <el-button :icon="IconFileImport" :disabled="sceneListLocked || !!generation" @click="importVisible = true">Nhập từ Huobao</el-button>
                   <el-button :icon="IconPlus" :disabled="sceneListLocked || board.scenes.length >= sceneLimit" @click="addScene">Thêm cảnh</el-button>
                 </div>
@@ -105,7 +106,7 @@
             <div v-if="board.scenes.length" class="sceneBody">
               <div class="sceneFinder">
                 <el-input v-model="sceneQuery" clearable placeholder="Tìm theo tên, mô tả hoặc lời thoại…" aria-label="Tìm phân cảnh" />
-                <p class="hint">Kéo cảnh bằng biểu tượng ⋮⋮, hoặc dùng nút Lên trước và Xuống sau. {{ sceneQuery.trim() ? 'Xóa từ khóa để đổi thứ tự.' : '' }}</p>
+                <p class="hint">Kéo cảnh bằng biểu tượng ⋮⋮, hoặc dùng nút Lên trước và Xuống sau. {{ sceneQuery.trim() ? 'Xóa từ khóa để đổi thứ tự.' : 'Cuộn dọc danh sách nếu có nhiều cảnh.' }}</p>
               </div>
               <nav v-if="visibleScenes.length" class="sceneTimeline" aria-label="Thứ tự phân cảnh">
                 <div v-for="{ scene, index } in visibleScenes" :key="scene.id" class="sceneTab"
@@ -113,7 +114,7 @@
                   @dragover="dragOverScene($event, scene.id)" @drop="dropScene($event, scene.id)">
                   <span v-if="canReorder && board.scenes.length > 1" class="dragHandle" aria-hidden="true" title="Kéo để đổi thứ tự" draggable="true"
                     @dragstart="beginDrag($event, scene.id)" @dragend="resetDrag">⋮⋮</span>
-                  <button type="button" :aria-pressed="scene.id === activeScene?.id" @click="activeId = scene.id">
+                  <button type="button" :title="scene.title || `Cảnh ${index + 1}`" :aria-pressed="scene.id === activeScene?.id" @click="activeId = scene.id">
                     <span class="sceneIndex">{{ index + 1 }}</span><span class="sceneTitle">{{ scene.title || `Cảnh ${index + 1}` }}</span>
                   </button>
                 </div>
@@ -134,7 +135,10 @@
               <section v-if="activeScene && visibleScenes.some(item => item.scene.id === activeId)" class="formFields sceneEditor" aria-label="Chỉnh phân cảnh">
                 <div class="sceneDetails">
                   <label class="dramaField"><span>Tên cảnh</span><el-input v-model="activeScene.title" :maxlength="200" :disabled="sceneLocked" @input="markDirty" /></label>
-                  <label class="dramaField"><span>Thời lượng (giây)</span><el-input-number v-model="activeScene.duration" :min="0" :max="3600" :disabled="sceneLocked" @change="updateDuration" /></label>
+                  <label class="dramaField"><span>Thời lượng (giây)</span><el-input-number v-model="activeScene.duration" :min="0" :max="3600" :disabled="sceneLocked" @change="updateDuration" />
+                    <small v-if="activeScene.durationEstimated" class="hint">Ước tính. Bạn có thể chỉnh theo nhịp dựng.</small>
+                    <small v-else-if="!activeScene.duration" class="hint">Cảnh này chưa có thời lượng.</small>
+                  </label>
                 </div>
                 <label class="dramaField"><span>Mô tả cảnh và góc máy</span><el-input v-model="activeScene.description" type="textarea" :rows="3" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" /></label>
                 <label class="dramaField"><span>Lời thoại hoặc thuyết minh</span><el-input v-model="activeScene.dialogue" type="textarea" :rows="2" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" /></label>
@@ -156,12 +160,12 @@
                 </div>
                 <div class="promptGrid">
                   <div class="promptPanel">
-                    <label class="dramaField"><span>Prompt ảnh</span><el-input v-model="activeScene.imagePrompt" type="textarea" :rows="3" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" /></label>
+                    <label class="dramaField"><span>Prompt ảnh</span><el-input v-model="activeScene.imagePrompt" type="textarea" :autosize="{ minRows: 3 }" :maxlength="10000" showWordLimit :disabled="sceneLocked" @input="markDirty" /></label>
                     <el-button plain :icon="IconPhoto" :disabled="sceneLocked || !activeScene.imagePrompt.trim()" @click="openStudio('image')">Đưa sang Xưởng ảnh</el-button>
                     <small v-if="!activeScene.imagePrompt.trim()" class="hint">Nhập prompt ảnh để gửi sang xưởng.</small>
                   </div>
                   <div class="promptPanel">
-                    <label class="dramaField"><span>Prompt video</span><el-input v-model="activeScene.videoPrompt" type="textarea" :rows="3" :maxlength="10000" :disabled="sceneLocked" @input="markDirty" /></label>
+                    <label class="dramaField"><span>Prompt video</span><el-input v-model="activeScene.videoPrompt" type="textarea" :autosize="{ minRows: 3 }" :maxlength="10000" showWordLimit :disabled="sceneLocked" @input="markDirty" /></label>
                     <el-button plain :icon="IconVideo" :disabled="sceneLocked || !activeScene.videoPrompt.trim()" @click="openStudio('video')">Đưa sang Xưởng video</el-button>
                     <small v-if="!activeScene.videoPrompt.trim()" class="hint">Nhập prompt video để gửi sang xưởng.</small>
                   </div>
@@ -240,7 +244,7 @@
         <template v-if="printSnapshot.characters"><h2>Nhân vật</h2><p>{{ printSnapshot.characters }}</p></template>
         <template v-if="printSnapshot.importNotes"><h2>Ghi chú nhập từ Huobao</h2><p>{{ printSnapshot.importNotes }}</p></template>
         <section v-for="(scene, index) in printSnapshot.scenes" :key="scene.id">
-          <h2>{{ index + 1 }}. {{ scene.title || 'Cảnh' }}<span v-if="scene.duration"> ({{ scene.duration }} giây)</span></h2>
+          <h2>{{ index + 1 }}. {{ scene.title || 'Cảnh' }}<span v-if="scene.duration"> ({{ scene.durationEstimated ? 'khoảng ' : '' }}{{ scene.duration }} giây)</span></h2>
           <p v-if="scene.description">{{ scene.description }}</p>
           <p v-if="scene.dialogue"><strong>Lời thoại</strong><br />{{ scene.dialogue }}</p>
           <p v-if="scene.imagePrompt"><strong>Prompt ảnh</strong><br />{{ scene.imagePrompt }}</p>
@@ -267,9 +271,9 @@ import saveFile from "@/lib/saveFile";
 import useWorkspaceFiles, { type TextSnapshot } from "@/lib/workspaceFiles";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser } from "@/stores/multiTenant";
-import { defaultBoardId, emptyBoard, hasSceneText, huobaoStoryboardUrl, importByteLimit, importHuobaoScenes, newScene, readDramaBoard,
+import { defaultBoardId, emptyBoard, estimateSceneDuration, hasSceneText, huobaoStoryboardUrl, importByteLimit, importHuobaoScenes, newScene, readDramaBoard,
   readGeneratedScenes, readTranslatedScene, sceneLimit, scriptLimit, splitSystemPrompt, storyboardId, storyboardIdFromPath,
-  storyboardMarkdown, storyboardPath, translateSystemPrompt, type DramaScene } from "./shortDrama";
+  storyboardExportName, storyboardMarkdown, storyboardPath, translateSystemPrompt, type DramaScene } from "./shortDrama";
 
 type Feedback = { type: "success" | "error" | "info"; text: string };
 type Generation = { kind: "split" | "translate"; controller: AbortController; sceneId?: string; label?: string };
@@ -340,6 +344,8 @@ const visibleScenes = computed(() => {
 const number = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
 const scriptStats = computed(() => `${number.format(board.value.script.length)} / ${number.format(scriptLimit)} ký tự · ${number.format(board.value.script.trim().split(/\s+/).filter(Boolean).length)} từ`);
 const unknownDurations = computed(() => board.value.scenes.filter(scene => !scene.duration).length);
+const estimatedDurations = computed(() => board.value.scenes.some(scene => scene.durationEstimated));
+const canEstimateDuration = computed(() => board.value.scenes.some(scene => !scene.duration && hasSceneText(scene)));
 const durationText = computed(() => {
   const seconds = board.value.scenes.reduce((sum, scene) => sum + (scene.duration || 0), 0);
   return seconds < 60 ? `${number.format(seconds)} giây` : `${number.format(Math.floor(seconds / 60))} phút ${number.format(seconds % 60)} giây`;
@@ -730,8 +736,22 @@ function addScene() {
 }
 
 function updateDuration(value?: number) {
-  if (activeScene.value) activeScene.value.duration = value ?? 0;
+  if (!activeScene.value) return;
+  activeScene.value.duration = value ?? 0;
+  delete activeScene.value.durationEstimated;
   markDirty();
+}
+
+function fillSceneDurations() {
+  if (sceneListLocked.value || translation.value) return;
+  const scenes = board.value.scenes.filter(scene => !scene.duration && hasSceneText(scene));
+  for (const scene of scenes) {
+    scene.duration = estimateSceneDuration(scene);
+    scene.durationEstimated = true;
+  }
+  if (!scenes.length) return;
+  markDirty();
+  ElMessage.success(`Đã ước tính thời lượng cho ${scenes.length} cảnh.`);
 }
 
 function moveScene(id: string, target: number) {
@@ -875,7 +895,8 @@ async function sendToCanvas() {
   const accepted = await ElMessageBox.confirm("MacFlow sẽ mở Canvas và thêm một node Văn bản chứa bảng phân cảnh hiện tại.", "Đưa bảng phân cảnh vào Canvas?",
     { confirmButtonText: "Mở Canvas", cancelButtonText: "Ở lại" }).then(() => true, () => false);
   if (!accepted || version !== loadVersion || !(await saveBoard())) return;
-  const transfer: StudioMediaTransfer = { directory: directory.value, mediaType: "text", name: "Phân cảnh phim ngắn.md", text: storyboardMarkdown(board.value) };
+  const transfer: StudioMediaTransfer = { directory: directory.value, mediaType: "text",
+    name: storyboardExportName(board.value.title), text: storyboardMarkdown(board.value) };
   queueStudioMediaForCanvas(transfer);
   try {
     if (await router.push("/workspace")) throw new Error();
@@ -890,8 +911,9 @@ async function downloadBoard() {
   downloading.value = true;
   const content = new Blob([storyboardMarkdown(board.value)], { type: "text/markdown;charset=utf-8" });
   try {
-    const saved = await saveFile(content, "phanCanhPhimNgan.md");
-    if (saved) ElMessage.success("Đã xuất tệp Markdown.");
+    const name = storyboardExportName(board.value.title);
+    const saved = await saveFile(content, name);
+    if (saved) ElMessage.success(`Đã xuất ${name}`);
     else ElMessage.info("Đã hủy lưu tệp Markdown.");
   } catch (error) { ElMessage.error(`Chưa tải được Markdown. ${errorText(error)}`); }
   finally { downloading.value = false; }
@@ -970,8 +992,8 @@ onBeforeRouteUpdate((to, from) => storyboardId(to.query.board) === storyboardId(
 .dramaField :deep(input::placeholder), .dramaField :deep(textarea::placeholder), .sceneFinder :deep(input::placeholder) { color: var(--el-text-color-regular); opacity: 1; }
 .modelGroup, .outputBar { margin-top: auto; padding-top: 13px; border-top: 1px solid var(--el-border-color-light); }
 .outputBar { display: grid; gap: 8px; }
-.sceneTimeline { display: flex; gap: 6px; overflow-x: auto; padding: 3px 3px 8px; }
-.sceneTab { display: flex; align-items: center; flex: 0 0 auto; max-width: 205px; border: 1px solid var(--el-border-color); border-radius: 7px; background: var(--el-fill-color-lighter); color: var(--el-text-color-regular); }
+.sceneTimeline { display: flex; flex-wrap: wrap; gap: 6px; max-height: 172px; overflow-y: auto; padding: 3px 3px 8px; }
+.sceneTab { display: flex; align-items: center; flex: 0 0 auto; max-width: min(205px, 100%); border: 1px solid var(--el-border-color); border-radius: 7px; background: var(--el-fill-color-lighter); color: var(--el-text-color-regular); }
 .sceneTab.active { border-color: var(--el-color-primary); background: var(--el-color-primary-light-9); color: var(--el-text-color-primary); }
 .sceneTab.dropTarget { box-shadow: -3px 0 var(--el-color-primary); }
 .sceneTab button { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 36px; padding: 4px 8px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }

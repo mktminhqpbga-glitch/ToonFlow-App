@@ -1,7 +1,7 @@
 <template>
   <el-tooltip v-model:visible="infoVisible" :content="priceLabel" :disabled="!priceLabel" placement="top" :showArrow="false" :trigger="['hover', 'focus']" :triggerKeys="[]" :popperStyle="{ maxWidth: '280px', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }">
     <button type="button" class="mediaPrice" :aria-label="price?.price || priceLabel" :aria-busy="loading" @pointerdown.stop @click.stop="infoVisible = Boolean(priceLabel)">
-      <span>{{ loading ? "Đang tính giá…" : price ? price.price : "Không tính được giá" }}</span>
+      <span>{{ loading ? "Đang tính giá…" : price ? price.price : "Chưa có báo giá" }}</span>
       <icon-info-circle v-if="!loading && (!price || price.tips)" :size="14" aria-hidden="true" />
     </button>
   </el-tooltip>
@@ -13,7 +13,7 @@ import { ElTooltip } from "element-plus";
 import { IconInfoCircle } from "@tabler/icons-vue";
 import { subscribeNodeModels, useNodeAi, type NodeMediaPrice, type NodeMediaPriceRequest } from "@toonflow/nodes-scaffold/nodeAi";
 
-const props = defineProps<{ input: Omit<NodeMediaPriceRequest, "directory">; supported: boolean }>();
+const props = defineProps<{ input: Omit<NodeMediaPriceRequest, "directory">; supported: boolean; directory?: string }>();
 const ai = useNodeAi();
 const getDirectory = inject<(() => string) | undefined>("workspaceDirectory", undefined);
 const price = ref<NodeMediaPrice | null>();
@@ -28,7 +28,7 @@ const priceLabel = computed(() => !props.supported ? "Nhà cung cấp chưa hỗ
 onScopeDispose(subscribeNodeModels(type => { if (type === "media") revision.value++; }));
 
 function currentDirectory() {
-  try { return getDirectory?.(); }
+  try { return props.directory ?? getDirectory?.(); }
   catch { return undefined; }
 }
 

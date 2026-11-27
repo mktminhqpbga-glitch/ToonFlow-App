@@ -17,6 +17,7 @@ import { detectLocale, normalizeLocale } from "@toonflow/i18n";
 const autoInstallProviders = ["apiMart.ts", "metaso.ts", "compshare.ts", "muse2Api.ts", ...Object.keys(mac2ApiProviders).map(id => `${id}.ts`)];
 const modelPickerNodes = ["audioGenerationNode", "director3dNode", "frameAnalysisNode", "imageGenerationNode", "textNode", "videoGenerationNode"]
   .map(name => `${name}.umd.js`);
+const canvasPortNodes = [...modelPickerNodes, ...["audioNode", "imageNode", "videoNode"].map(name => `${name}.umd.js`)];
 
 export async function createApp({
   webRoot,
@@ -72,6 +73,7 @@ export async function createApp({
     if (pluginRevision === undefined) {
       await initializePlugins(nodeDirectory, nodesRoot, modelPickerNodes, "1", "modelPickerRevision");
       await initializePlugins(nodeDirectory, nodesRoot, ["videoMergeNode.umd.js"], "2", "videoMergeNodeRevision");
+      await initializePlugins(nodeDirectory, nodesRoot, canvasPortNodes, "1", "canvasPortNodeRevision");
     }
   }
   if (dataDirectory && extRoot) {

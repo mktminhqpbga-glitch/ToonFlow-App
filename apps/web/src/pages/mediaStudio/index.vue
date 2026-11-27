@@ -122,6 +122,11 @@
             <p class="fieldHint" role="status">{{ queueRunning }} đang chạy · {{ queueWaiting }} đang chờ</p>
             <p v-if="queueError" class="taskError" role="status">{{ queueError }}</p>
             <p v-if="draftWarning" class="taskError" role="status">{{ draftWarning }}</p>
+            <div v-if="studioMode === 'single' && generationInput && directory && !referenceIssue" class="studioEstimate">
+              <span>Chi phí dự kiến</span>
+              <mediaPrice :input="{ ...generationInput, mediaType: kind, outputDirectory: generatedDirectory }" :directory="directory" :supported="model?.supportsPrice === true" />
+              <p v-if="!model?.supportsPrice" class="fieldHint">Chi phí thực tế theo nhà cung cấp đã kết nối.</p>
+            </div>
             <div class="studioSubmit">
               <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting" :disabled="!canSubmit" @click="submitTask">
                 {{ submitting ? "Đang thêm tác vụ…" : "Thêm vào hàng chờ" }}
@@ -218,6 +223,7 @@ import settings from "@/components/settings/index.vue";
 import assetLibrary from "@/pages/workspace/panels/canvas/components/assetLibrary.vue";
 import creativeNavigation from "@/components/creativeNavigation.vue";
 import characterLibrary from "@/components/characterLibrary.vue";
+import mediaPrice from "@toonflow/node-shared/mediaPrice";
 import logoUrl from "@toonflow/assets/logo.svg";
 import { describeStudioError, requestStudio, StudioRequestError } from "./studioRequests";
 import { readStudioAttempts, readStudioDraft, saveStudioBrowserState, type StudioAttempt, type StudioSubmission } from "./studioBrowserState";
@@ -350,6 +356,29 @@ const referenceIssue = computed(() => {
 });
 const canSubmit = computed(() => !!directory.value && !!prompt.value.trim() && !!model.value && model.value.configured !== false && !submitting.value
   && !modelsLoading.value && !referenceBusy.value && !referenceIssue.value && (!requestedModelKey.value || modelKey.value === requestedModelKey.value));
+const generatedDirectory = "assets/generated";
+const generationInput = computed(() => {
+  const current = model.value;
+  if (!current || current.configured === false || !prompt.value.trim()) return;
+  const input: StudioSubmission = { providerId: current.providerId, modelId: current.modelId, prompt: prompt.value.trim() };
+  const photos = references.value.map(({ path, mimeType }) => ({ path, mimeType }));
+  if (ratio.value && ratioOptions.value.includes(ratio.value)) input.ratio = ratio.value;
+  if (props.kind === "image") {
+    if (size.value && sizeOptions.value.includes(size.value)) input.size = size.value;
+    if (photos.length) input.images = photos;
+  } else {
+    if (duration.value && durationOptions.value.includes(duration.value)) input.duration = duration.value;
+    if (resolution.value && resolutionOptions.value.includes(resolution.value)) input.resolution = resolution.value;
+    if (photos[0]) input.firstFrame = photos[0];
+    if (current.providerId.startsWith("mac2Api")) input.mode = photos.length ? "singleImage" : "text";
+    if (current.referenceLimits && photos.length > 1) {
+      delete input.firstFrame;
+      input.images = photos;
+      input.mode = ["imageReference:" + photos.length];
+    }
+  }
+  return input;
+});
 const latestTask = computed(() => tasks.value.find(task => task.taskId === selectedTaskId.value) ?? tasks.value[0]);
 const selectedMedia = computed(() => latestTask.value && fileOf(latestTask.value));
 const orderedTasks = computed(() => [
@@ -655,25 +684,8 @@ function previewDecodeFailed() {
 }
 async function refreshAll() { await Promise.all([loadModels(), loadHistory()]); await refreshStatuses(); }
 function submitTask() {
-  if (!canSubmit.value || !model.value) return;
-  const current = model.value;
-  const input: StudioSubmission = { providerId: current.providerId, modelId: current.modelId, prompt: prompt.value.trim() };
-  const photos = references.value.map(({ path, mimeType }) => ({ path, mimeType }));
-  if (ratio.value && ratioOptions.value.includes(ratio.value)) input.ratio = ratio.value;
-  if (props.kind === "image") {
-    if (size.value && sizeOptions.value.includes(size.value)) input.size = size.value;
-    if (photos.length) input.images = photos;
-  } else {
-    if (duration.value && durationOptions.value.includes(duration.value)) input.duration = duration.value;
-    if (resolution.value && resolutionOptions.value.includes(resolution.value)) input.resolution = resolution.value;
-    if (photos[0]) input.firstFrame = photos[0];
-    if (current.providerId.startsWith("mac2Api")) input.mode = photos.length ? "singleImage" : "text";
-    if (current.referenceLimits && photos.length > 1) {
-      delete input.firstFrame;
-      input.images = photos;
-      input.mode = ["imageReference:" + photos.length];
-    }
-  }
+  const input = generationInput.value;
+  if (!canSubmit.value || !input) return;
   void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: input }, directory.value);
 }
 
@@ -701,7 +713,7 @@ async function sendAttempt(attempt: StudioAttempt, studioDirectory: string, desc
   try {
     const url = previousTaskId ? "/api/mediaStudio/retry" : "/api/ai/media/generate";
     const body = previousTaskId ? { directory: studioDirectory, taskId, previousTaskId }
-      : { ...request, directory: studioDirectory, mediaType: kind, taskId, studioQueue: true, outputDirectory: "assets/generated" };
+      : { ...request, directory: studioDirectory, mediaType: kind, taskId, studioQueue: true, outputDirectory: generatedDirectory };
     const result = await requestStudio<{ taskId: string }>(url, { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
     if (result?.taskId !== taskId) throw new Error("Chưa xác nhận được thông tin gửi đi.");
   } catch (cause) {
@@ -800,6 +812,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.studioEstimate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 0;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  .fieldHint { flex-basis: 100%; margin: 0; }
+}
 .mediaStudio {
   display: grid;
   grid-template-columns: 226px minmax(0, 1fr);

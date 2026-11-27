@@ -5,9 +5,9 @@ Mở **Phim ngắn → Mở bảng phân cảnh MacFlow đã lưu** trong một 
 ## Từ kịch bản đến phân cảnh
 
 1. Nhập tên tập và dán kịch bản. Mở ví dụ bên dưới ô kịch bản nếu cần. Thêm cảnh thủ công hoặc chọn mô hình văn bản rồi bấm **AI chia phân cảnh**. Khi AI chạy, bạn sẽ thấy thời gian chờ và nút dừng. Mức sử dụng và chi phí phụ thuộc nhà cung cấp mô hình.
-2. Thêm danh sách nhân vật, chỉnh tên, thời lượng, mô tả, lời thoại và ghi chú sản xuất. Kéo tay nắm của cảnh hoặc bấm **Lên trước** và **Xuống sau** để đổi thứ tự. Thời lượng `0` thể hiện chưa chốt. Bấm **Tải ảnh cảnh** để thêm ảnh PNG, JPG hoặc WebP tối đa 6 MiB. Nếu vừa bỏ nhầm cảnh, bấm **Hoàn tác** ngay trên bảng.
+2. Thêm danh sách nhân vật, chỉnh tên, thời lượng, mô tả, lời thoại và ghi chú sản xuất. Kéo tay nắm của cảnh hoặc bấm **Lên trước** và **Xuống sau** để đổi thứ tự. Cảnh do AI chia có thời lượng ước tính. Với cảnh cũ còn 0 giây, bấm **Ước tính thời lượng còn thiếu**, rồi chỉnh số giây theo nhịp dựng. Bấm **Tải ảnh cảnh** để thêm ảnh PNG, JPG hoặc WebP tối đa 6 MiB. Nếu vừa bỏ nhầm cảnh, bấm **Hoàn tác** ngay trên bảng.
 3. Bấm **Đưa sang Xưởng ảnh** hoặc **Đưa sang Xưởng video**. MacFlow lưu bảng và điền prompt của cảnh đang chọn vào đúng xưởng. Ở xưởng, chọn mô hình, thêm tư liệu tham chiếu nếu cần rồi dùng nút **Thêm vào hàng chờ**. Khi xong, kết quả xuất hiện trong lịch sử xưởng.
-4. Bấm **Tải Markdown** để giữ kịch bản và các cảnh trong một tệp, hoặc bấm **In hoặc lưu PDF** và chọn **Lưu dưới dạng PDF** trong hộp thoại in. **Đưa vào Canvas** tạo một node **Văn bản** với nội dung này khi Canvas đã mở và node Văn bản đang bật.
+4. Bấm **Tải Markdown** để giữ kịch bản và các cảnh trong một tệp, hoặc bấm **In hoặc lưu PDF** và chọn **Lưu dưới dạng PDF** trong hộp thoại in. **Đưa vào Canvas** tạo một node **Văn bản** ở chỗ trống, với tên bảng và thời điểm xuất. Bấm **Đọc toàn bộ** để đọc nội dung. Để dùng nội dung này cho **Tạo ảnh**, bấm cổng đầu ra của **Văn bản**, rồi bấm cổng đầu vào của **Tạo ảnh**. Phần văn bản đã nối hiện trong node nhận.
 
 ## Nhập một tập từ Huobao Drama
 

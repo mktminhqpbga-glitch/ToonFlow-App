@@ -1,10 +1,10 @@
-import { IconCompass, IconFolder, IconHome, IconLayoutDashboard, IconMovie, IconPhoto, IconShoppingBag, IconVideo } from "@tabler/icons-vue";
+import { IconBook, IconCompass, IconFolder, IconHome, IconLayoutDashboard, IconMovie, IconPhoto, IconShoppingBag, IconVideo } from "@tabler/icons-vue";
 
 export const homeSections = [
   { id: "home", label: "Trang chủ", icon: IconHome },
   { id: "projects", label: "Dự án", icon: IconFolder },
-  { id: "prompts", label: "Thư viện prompt", icon: IconCompass },
-  { id: "explore", label: "Khám phá", icon: IconCompass },
+  { id: "prompts", label: "Thư viện prompt", icon: IconBook },
+  { id: "explore", label: "Khám phá dự án", icon: IconCompass },
 ];
 
 export const creationLinks = [

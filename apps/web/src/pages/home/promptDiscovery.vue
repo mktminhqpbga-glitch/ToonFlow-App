@@ -1,7 +1,7 @@
 <template>
-  <section class="homePromptDiscovery" aria-label="Khám phá prompt tạo ảnh">
+  <section class="homePromptDiscovery" aria-labelledby="homePromptLibrary">
     <header class="homePromptHeader">
-      <div><h2>Khám phá prompt</h2><p>Thử các mẫu tạo ảnh từ cộng đồng, có ghi rõ tác giả và nguồn.</p></div>
+      <div><h2 id="homePromptLibrary">Thư viện prompt</h2><p>Thử các mẫu tạo ảnh từ cộng đồng, có ghi rõ tác giả và nguồn.</p></div>
       <el-button type="primary" plain @click="openAll">Xem tất cả</el-button>
     </header>
     <el-alert v-if="error" type="warning" :title="error" :closable="false" showIcon><el-button size="small" text @click="load">Thử lại</el-button></el-alert>

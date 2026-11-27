@@ -5,7 +5,7 @@
     :topVisible="node.selected"
     topWidth="max-content"
     :downloadUrl="downloadUrl"
-    :downloadName="`${nodeProps.label || 'Văn bản'}.md`"
+    :downloadName="`${(nodeProps.label || 'Văn bản').replace(/\.md$/i, '')}.md`"
     :bottomWidth="660"
     @fullscreen="fullscreen = true; editing = true">
     <div class="textContent" :class="{ empty: !outputs.text.value.trim(), resized }">
@@ -16,7 +16,10 @@
       <div v-if="outputs.text.value.trim() && previewReady" class="textPreview nopan nowheel" aria-label="Nội dung văn bản">
         <markdownPreview :modelValue="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="previewReady" />
       </div>
-      <el-button class="editButton nodrag nopan" :icon="IconEdit" :disabled="generating || !textReady" text @dblclick.stop @click.stop="editing = true">Chỉnh sửa</el-button>
+      <div class="textActions nodrag nopan">
+        <el-button v-if="outputs.text.value.trim()" text @click.stop="reading = true; editing = true">Đọc toàn bộ</el-button>
+        <el-button :icon="IconEdit" :disabled="generating || !textReady" text @dblclick.stop @click.stop="editing = true">Chỉnh sửa</el-button>
+      </div>
     </div>
     <template #bottom>
       <el-card class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
@@ -48,8 +51,12 @@
       </el-card>
     </template>
   </nodeSkeleton>
-  <el-dialog v-model="editing" title="Chỉnh sửa văn bản" width="min(860px, calc(100vw - 32px))" :fullscreen="fullscreen" alignCenter appendToBody @closed="fullscreen = false">
-    <div class="textEditor" :class="{ fullscreen }">
+  <el-dialog v-model="editing" :title="reading ? (nodeProps.label || 'Văn bản') : 'Chỉnh sửa văn bản'" width="min(860px, calc(100vw - 32px))"
+    :fullscreen="fullscreen" alignCenter appendToBody @closed="fullscreen = false; reading = false">
+    <div v-if="reading" class="readFull">
+      <markdownPreview :modelValue="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="editing" />
+    </div>
+    <div v-else class="textEditor" :class="{ fullscreen }">
       <markdownEditor v-model="outputs.text.value" :files="textReady ? textFiles : undefined" :path="textPath" :active="editing" :disabled="generating || textReloading" :readonly="!!documentState.error" ariaLabel="Chỉnh sửa nội dung văn bản" />
     </div>
   </el-dialog>
@@ -87,6 +94,7 @@ const { node, nodeProps, outputs, ai, files, nodeEvent, previewReady } = useNode
 });
 const { refList, referenceMentions, setReferencePreview, removeReference } = useNodeReferences();
 const editing = ref(false);
+const reading = ref(false);
 const fullscreen = ref(false);
 const downloadUrl = ref("");
 const documentContext = inject<NodeDocumentContext | undefined>("nodeDocument", undefined);
@@ -305,7 +313,7 @@ nodeTools.register({
       max-height: none;
     }
 
-    .editButton { flex-shrink: 0; }
+    .textActions { flex-shrink: 0; }
   }
 
   &.empty {
@@ -313,9 +321,6 @@ nodeTools.register({
     align-items: center;
     justify-content: center;
 
-    .editButton {
-      margin: 0;
-    }
   }
 
   .textPreview {
@@ -326,11 +331,15 @@ nodeTools.register({
     user-select: none;
   }
 
-  .editButton {
+  .textActions {
     display: flex;
-    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    :deep(.el-button) { margin-left: 0; }
   }
 }
+.readFull { max-height: 70dvh; overflow: auto; overflow-wrap: anywhere; }
 
 .promptCard {
   .promptHeader {

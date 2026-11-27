@@ -26,6 +26,7 @@
       :min-zoom="0.2"
       :max-zoom="8"
       :nodes-connectable="true"
+      :connectOnClick="true"
       :connection-mode="ConnectionMode.Strict"
       :nodes-focusable="false"
       :edges-focusable="false"
@@ -50,9 +51,12 @@
       :zoomActivationKeyCode="zoomKeyPressed ? true : null"
       :pan-activation-key-code="null"
       v-model="flowData"
-      @connect="addEdges"
+      @connect="connectPorts"
+      @clickConnectStart="clickConnectionMade = false"
+      @clickConnectEnd="finishPortClick"
+      @connectEnd="finishPortDrag"
       @edgeClick="showEdgeDisconnect"
-      @paneClick="edgeDisconnect = undefined"
+      @paneClick="edgeDisconnect = undefined; flow.endConnection(undefined, true)"
       @moveStart="edgeDisconnect = undefined"
       :default-edge-options="defaultEdgeOptions">
       <template v-for="type in remoteNodeTypes" :key="type" #[`node-${type}`]="nodeProps">
@@ -71,6 +75,10 @@
         :availableNodes="availableNodes"
         @create="createEmptyNode" />
       <canvasViewportHint v-if="active && !settingsVisible && project?.directory && canvasReady" :key="canvasId" />
+      <div v-if="clickPortSelected" class="connectionHint" role="status">
+        {{ clickPortSelected.type === 'source' ? 'Bấm vào cổng đầu vào của node nhận.' : 'Bấm vào cổng đầu ra của node nguồn.' }}
+        <el-button size="small" text @click="flow.endConnection(undefined, true)">Hủy nối</el-button>
+      </div>
       <canvasMenu ref="canvasMenuRef" v-model:canvasId="canvasId" :directory="project?.directory" :initialCanvasId="initialCanvasId" :activateCanvas="activateCanvas" :flushSave="flushCanvases ?? flushCanvasSave">
         <assetLibrary v-if="currentUser?.role !== 'user'" ref="assetLibraryRef" v-model="assetsVisible" :directory="project?.directory" />
       </canvasMenu>
@@ -160,6 +168,7 @@ import {
   type GraphEdge,
   type GraphNode,
   type EdgeMouseEvent,
+  type Connection,
   type NodeTypesObject,
   type XYPosition,
 } from "@vue-flow/core";
@@ -282,6 +291,31 @@ const { canUndo, canRedo } = canvasHistory;
 provide("batchCanvasHistory", canvasHistory.batch);
 const getNodeTools = useNodeToolsContext();
 const { addNodes, addEdges, removeEdges, findEdge, findNode, toObject, viewport, screenToFlowCoordinate } = flow;
+const clickPortSelected = flow.connectionClickStartHandle;
+let clickConnectionMade = false;
+
+function connectPorts(connection: Connection) {
+  addEdges(connection);
+  if (!clickPortSelected.value) return;
+  clickConnectionMade = true;
+  ElMessage.success("Đã nối hai node.");
+}
+
+function finishPortClick() {
+  if (!clickConnectionMade) ElMessage.warning("Chọn đầu ra và đầu vào của hai node có cùng loại dữ liệu.");
+}
+
+function finishPortDrag(event?: MouseEvent | TouchEvent) {
+  const start = flow.connectionStartHandle.value;
+  if (!event || !start || flow.connectionStatus.value === "valid") return;
+  const point = "changedTouches" in event ? event.changedTouches[0] : event;
+  if (!point) return;
+  const target = document.elementFromPoint(point.clientX, point.clientY);
+  const targetNode = target?.closest<HTMLElement>(".vue-flow__node");
+  if (targetNode?.dataset.id && targetNode.dataset.id !== start.nodeId) {
+    ElMessage.warning("Thả dây vào cổng phù hợp hoặc bấm lần lượt hai cổng để nối.");
+  }
+}
 provide("copyNodeToClipboard", async (node: Parameters<typeof copyNodeToClipboard>[0]) => {
   const directory = project.value?.directory;
   if (!directory) throw new Error("Hãy chọn thư mục làm việc trước");
@@ -1081,6 +1115,22 @@ function pastePosition() {
   return screenToFlowCoordinate(point);
 }
 
+function storyboardNodePosition() {
+  const rect = canvasElement.value?.getBoundingClientRect();
+  const position = rect ? screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }) : { x: 0, y: 0 };
+  const width = 240;
+  const height = 360;
+  const gap = 40;
+  const nodes = flow.getNodes.value.filter(node => !node.hidden
+    && node.computedPosition.x < position.x + width + gap
+    && node.computedPosition.x + (node.dimensions.width || width) > position.x - gap);
+  for (const node of nodes.sort((a, b) => a.computedPosition.y - b.computedPosition.y)) {
+    if (position.y + height + gap <= node.computedPosition.y) break;
+    position.y = Math.max(position.y, node.computedPosition.y + (node.dimensions.height || height) + gap);
+  }
+  return position;
+}
+
 async function pasteNodeAtCenter(command?: string) {
   const position = pastePosition();
   if (position) await pasteClipboardNode(position, command);
@@ -1158,7 +1208,7 @@ async function importPendingStudioMedia() {
       ? new File([pending.text], pending.name, { type: "text/markdown" })
       : new File([await useWorkspaceFiles(directory).read(pending.path)], pending.path.split("/").at(-1) ?? `studio.${pending.mediaType === "image" ? "png" : "mp4"}`, { type: pending.mimeType });
     if (!isCurrent()) return;
-    const position = pastePosition() ?? { x: 0, y: 0 };
+    const position = pending.mediaType === "text" ? storyboardNodePosition() : pastePosition() ?? { x: 0, y: 0 };
     let imported = 0;
     await canvasHistory.batch(async () => {
       const ids = await importCanvasFiles([file], position, {
@@ -1168,6 +1218,9 @@ async function importPendingStudioMedia() {
     });
     if (!imported) throw new Error("Không thể đưa tệp vào Canvas. Hãy kiểm tra node tương ứng đã được bật.");
     clearStudioMediaForCanvas(pending);
+    if (pending.mediaType === "text") {
+      void flow.setCenter(position.x + 110, position.y + 130, { zoom: Math.min(1, viewport.value.zoom), duration: 200 });
+    }
     ElMessage.success(pending.mediaType === "text" ? "Đã đưa bảng phân cảnh vào node Văn bản trên Canvas."
       : "Đã đưa kết quả từ xưởng vào Canvas hiện tại.");
   } catch (cause) {
@@ -1303,6 +1356,10 @@ function updateCanvasKeys(event: KeyboardEvent) {
   panKeyPressed.value = !!inCanvas && !editing && !event.isComposing
     && shortcutPressed(event, getShortcutBindings(shortcuts.pan).filter(binding => binding !== "None").join(" / "), pressedCodes);
   updateCanvasSelection(event);
+  if (event.type === "keydown" && event.key === "Escape" && inCanvas && clickPortSelected.value) {
+    flow.endConnection(undefined, true);
+    return;
+  }
   if (event.type === "keyup" || event.defaultPrevented || event.isComposing || !inCanvas || editing) return;
   const action = ([
     "group", "mergeGroup", "ungroup", "addNode", "moveTool", "handTool", "arrange", "search",
@@ -1611,5 +1668,17 @@ const defaultEdgeOptions = markRaw({
   height: 32px;
   padding: 0;
   transform: translate(-50%, -50%);
+}
+.connectionHint {
+  position: absolute;
+  z-index: 6;
+  inset: 52px 12px auto auto;
+  max-width: calc(100% - 24px);
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  color: var(--el-text-color-primary);
+  background: var(--el-bg-color-overlay);
+  font-size: 13px;
 }
 </style>

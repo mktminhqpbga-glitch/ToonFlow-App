@@ -177,7 +177,7 @@ const panelOptions = [
   { label: "画布", value: "canvas", icon: IconVector },
   { label: "文档", value: "document", icon: IconFileText },
 ];
-const agentVisible = ref(true);
+const agentVisible = ref(window.innerWidth >= 920);
 const agentWidth = ref(0);
 const settingsVisible = ref(false);
 const promptVisible = ref(false);

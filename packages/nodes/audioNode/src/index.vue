@@ -43,6 +43,7 @@
         aria-label="Tải âm thanh lên"
         @dblclick.stop
         @click.stop="fileInput?.click()">Tải lên</el-button>
+      <small v-if="!outputFile" class="audioHint">Để tạo lời đọc hoặc âm thanh mới, chọn node <strong>Tạo âm thanh</strong>.</small>
     </div>
     <template v-if="actions?.mode === 'speed'" #bottom><div ref="speedTarget" /></template>
   </nodeSkeleton>
@@ -174,5 +175,6 @@ function showError(error: unknown, fallback: string) {
   .uploadButton {
     align-self: center;
   }
+  .audioHint { margin: 0 12px 8px; color: var(--el-text-color-regular); text-align: center; }
 }
 </style>

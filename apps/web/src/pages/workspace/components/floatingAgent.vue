@@ -7,7 +7,7 @@
       class="floatingAgent"
       :class="{ docked, dragging: interaction?.mode === 'move' }"
       :style="panelStyle"
-      aria-label="AI 对话"
+      aria-label="Đối thoại AI"
       @pointerdown="startMenuMove"
       @pointermove="moveInteraction"
       @pointerup="stopInteraction"
@@ -32,8 +32,8 @@
           <el-button
             text
             circle
-            :aria-label="docked ? '切换为悬浮' : '停靠到右侧'"
-            :title="docked ? '切换为悬浮' : '停靠到右侧'"
+            :aria-label="docked ? 'Tách thành cửa sổ nổi' : 'Ghim sang bên phải'"
+            :title="docked ? 'Tách thành cửa sổ nổi' : 'Ghim sang bên phải'"
             @click="docked = !docked">
             <icon-app-window-bottom-right v-if="docked" :size="17" aria-hidden="true" />
             <icon-layout-sidebar-right v-else :size="17" aria-hidden="true" />
@@ -51,7 +51,7 @@ import agent from "@/components/agent/index.vue";
 
 const visible = defineModel<boolean>({ default: false });
 const emit = defineEmits<{ resize: [width: number] }>();
-const docked = ref(false);
+const docked = ref(window.innerWidth >= 920);
 const viewport = reactive({ width: window.innerWidth, height: window.innerHeight });
 const gap = computed(() => Math.min(15, viewport.width / 2, viewport.height / 2));
 const maxWidth = computed(() => Math.max(0, docked.value ? viewport.width * 0.45 : viewport.width - gap.value * 2));

@@ -72,6 +72,7 @@
     </div>
     <div
       v-if="!readOnly && $slots.bottom && (documentTarget || (bottomVisible && slotsVisible))"
+      ref="bottomSlot"
       class="floatingSlot bottomSlot nodrag nopan nowheel"
       :style="{ width: typeof bottomWidth === 'number' ? `${bottomWidth}px` : bottomWidth }"
       @pointerdown.stop
@@ -148,8 +149,12 @@
           :isValidConnection="validateConnection"
           :data-connection-status="getHandleStatus(item)"
           :style="{ top: `${((index + 1) / (group.items.length + 1)) * 100}%` }"
-          :title="`${item.label ?? item.id} · ${Array.isArray(item.dataType) ? item.dataType.join(' / ') : item.dataType}`"
+          :title="`${item.label ?? item.id} · ${Array.isArray(item.dataType) ? item.dataType.join(' / ') : item.dataType}. Kéo hoặc bấm lần lượt hai cổng để nối.`"
           :aria-label="`${item.label ?? item.id} · ${Array.isArray(item.dataType) ? item.dataType.join(' / ') : item.dataType}`"
+          :role="readOnly || loading ? undefined : 'button'"
+          :tabindex="readOnly || loading ? undefined : 0"
+          @keydown.enter.stop.prevent="clickPortWithKeyboard"
+          @keydown.space.stop.prevent="clickPortWithKeyboard"
           @pointermove="moveHandle"
           @pointerleave="resetHandle"
           @pointercancel="resetHandle">
@@ -239,6 +244,7 @@ const { id: nodeId, node } = useNode();
 const documentContext = inject<NodeDocumentContext | undefined>("nodeDocument", undefined);
 const documentTarget = computed(() => props.readOnly ? undefined : documentContext?.targets.get(nodeId));
 const skeletonElement = ref<HTMLElement>();
+const bottomSlot = ref<HTMLElement>();
 const canvasSize = shallowRef<{ width: string; height: string }>();
 let documentLease: symbol | undefined;
 function mountDocument(target: HTMLElement) {
@@ -286,6 +292,7 @@ const {
   minZoom,
   maxZoom,
   viewport,
+  dimensions,
   vueFlowRef,
   addNodes,
   addEdges,
@@ -395,12 +402,12 @@ const connectedHandles = computed<Set<string>>((previous) => {
   return previous?.size === connected.size && [...connected].every((key) => previous.has(key)) ? previous : connected;
 });
 
-async function focusNode(event: MouseEvent) {
+async function focusNode(event?: MouseEvent) {
   if (documentTarget.value) return;
-  const element = event.currentTarget as HTMLElement;
   await nextTick();
+  const element = skeletonElement.value;
   const flowElement = vueFlowRef.value;
-  if (!flowElement || !element.isConnected) return;
+  if (!flowElement || !element?.isConnected) return;
   const flowRect = flowElement.getBoundingClientRect();
   if (flowRect.width <= 0 || flowRect.height <= 0) return;
   const rects = [element, ...element.querySelectorAll<HTMLElement>(":scope > .floatingSlot")]
@@ -408,16 +415,36 @@ async function focusNode(event: MouseEvent) {
     .map((item) => item.getBoundingClientRect());
   const left = Math.min(...rects.map((rect) => rect.left));
   const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  if (!event && left >= flowRect.left + 8 && right <= flowRect.right - 8
+    && top >= flowRect.top + 8 && bottom <= flowRect.bottom - 8) return;
   const origin = pointToRendererPoint({ x: left - flowRect.left, y: top - flowRect.top }, viewport.value);
   const targetViewport = getTransformForBounds(
     {
       ...origin,
-      width: (Math.max(...rects.map((rect) => rect.right)) - left) / viewport.value.zoom,
-      height: (Math.max(...rects.map((rect) => rect.bottom)) - top) / viewport.value.zoom,
+      width: (right - left) / viewport.value.zoom,
+      height: (bottom - top) / viewport.value.zoom,
     },
     flowRect.width, flowRect.height, minZoom.value, maxZoom.value, 0.2
   );
   await setViewport(targetViewport, { duration: 300 });
+}
+
+watch([bottomSlot, () => dimensions.value.width], ([slot], _previous, onCleanup) => {
+  if (!slot || props.readOnly || props.loading) return;
+  const observer = new ResizeObserver(() => {
+    if (node.selected && getSelectedNodes.value.length === 1) void focusNode();
+  });
+  observer.observe(slot);
+  onCleanup(() => observer.disconnect());
+}, { flush: "post" });
+
+function clickPortWithKeyboard(event: KeyboardEvent) {
+  const port = event.currentTarget;
+  if (props.readOnly || props.loading || !(port instanceof HTMLElement)) return;
+  const rect = port.getBoundingClientRect();
+  port.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
 }
 
 function zoomCanvas(event: WheelEvent) {
@@ -895,11 +922,13 @@ watch(
       &.connected .handleIcon,
       &.linking .handleIcon,
       &.connecting .handleIcon,
+      &:focus-visible .handleIcon,
       &[data-connection-status] .handleIcon {
         opacity: 1;
       }
 
       &:hover,
+      &:focus-visible,
       &.linking,
       &.connecting,
       &[data-connection-status="valid"] {

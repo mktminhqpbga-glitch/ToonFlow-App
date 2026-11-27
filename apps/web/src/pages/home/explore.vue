@@ -1,7 +1,7 @@
 <template>
   <section ref="exploreElement" class="explore" aria-labelledby="exploreTitle">
     <div class="exploreToolbar">
-      <h2 id="exploreTitle">探索</h2>
+      <h2 id="exploreTitle">Khám phá dự án cộng đồng</h2>
       <div class="toolbarActions">
         <el-input v-model="search" class="searchInput" :prefixIcon="IconSearch" placeholder="搜索项目" aria-label="搜索云端项目" clearable />
         <el-button :icon="IconPlus" aria-haspopup="dialog" :aria-expanded="publishVisible" @click="publishVisible = true">发布作品</el-button>
