@@ -10,6 +10,7 @@ const receiptSchema = z.object({
   stage: z.enum(["preparing", "setupFailed", "awaiting", "accepted", "detached"]),
   projectId: remoteId.optional(), compositionId: remoteId.optional(),
   savedPath: z.string().regex(/^assets\/generated\/clipForge[0-9a-f-]{36}\.mp4$/).optional(),
+  published: z.literal(true).optional(),
 }).refine(value => (value.stage !== "awaiting" || !!value.projectId)
   && (value.stage !== "accepted" || (!!value.projectId && !!value.compositionId)));
 

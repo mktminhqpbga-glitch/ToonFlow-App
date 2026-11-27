@@ -484,8 +484,10 @@ async function saveResult(item: Item, toLibrary: boolean) {
     const result = async () => new Blob([await files.read(media.path)], { type: "video/mp4" });
     if (toLibrary) {
       libraryNotice.value = "";
-      await axios.put("/api/assets/save", await result(), { params: { path: filename }, signal: lifetime.signal, timeout: 120000,
-        headers: { "Content-Type": "application/octet-stream" } });
+      await requestStudio("/api/mediaStudio/publishVideo", {
+        method: "POST", body: JSON.stringify({ directory: props.directory, path: media.path }),
+        signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(120000)]),
+      });
       itemErrors[item.id] = "";
       issue.value = "";
       libraryNotice.value = "Đã lưu video vào thư viện MacFlow.";

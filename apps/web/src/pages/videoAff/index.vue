@@ -5,6 +5,8 @@
         <icon-arrow-left :size="18" aria-hidden="true" /> <span>MacFlow</span>
       </router-link>
       <h1><icon-movie :size="21" aria-hidden="true" /> VideoAFF</h1>
+      <el-button v-if="!dashboardUrl" text @click="sharedLibraryVisible = true"><icon-library-photo :size="18" aria-hidden="true" /> Kho tài nguyên</el-button>
+      <el-button v-if="!dashboardUrl" text @click="charactersVisible = true"><icon-users :size="18" aria-hidden="true" /> Kho nhân vật</el-button>
       <div class="headerActions">
         <el-button v-if="status?.online" text aria-label="Tải lại xưởng" title="Tải lại xưởng" @click="frameRevision++">
           <icon-refresh :size="18" aria-hidden="true" />
@@ -93,6 +95,8 @@
         </el-card>
       </div>
     </el-drawer>
+    <assetLibraryDialog v-if="sharedLibraryVisible" v-model="sharedLibraryVisible" :directory="workspaceStore.project?.directory" />
+    <characterLibrary v-if="charactersVisible" v-model="charactersVisible" :canUse="!!status?.online" @select="useCharacterPhoto" />
   </main>
 </template>
 
@@ -100,6 +104,9 @@
 import { computed, onMounted, onScopeDispose, reactive, ref } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
+import assetLibraryDialog from "@/pages/home/assetLibraryDialog.vue";
+import characterLibrary from "@/components/characterLibrary.vue";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 const kinds = [
   { key: "writer", label: "Viết kịch bản" },
@@ -124,6 +131,9 @@ const config = { signal: lifetime.signal };
 const route = useRoute();
 const status = ref<Status>();
 const settingsVisible = ref(false);
+const sharedLibraryVisible = ref(false);
+const charactersVisible = ref(false);
+const workspaceStore = useWorkspaceStore();
 const frameRevision = ref(0);
 const studioFrame = ref<HTMLIFrameElement>();
 const connectionError = ref("");
@@ -306,11 +316,26 @@ async function saveOutput(kind: "video" | "cover") {
   finally { transfer.value = undefined; }
 }
 
+function openSharedLibrary(event: MessageEvent) {
+  if (event.origin !== window.location.origin || event.source !== studioFrame.value?.contentWindow) return;
+  if (event.data?.type === "macflow:videoAff/openLibrary") sharedLibraryVisible.value = true;
+  if (event.data?.type === "macflow:videoAff/openCharacters") charactersVisible.value = true;
+}
+
+function useCharacterPhoto(entry: Entry) {
+  if (!status.value?.online) return;
+  charactersVisible.value = false;
+  photo.value = entry.path;
+  rights.value = false;
+  openSettings();
+}
+
 onMounted(() => {
+  window.addEventListener("message", openSharedLibrary);
   appearanceObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
   void refresh(true);
 });
-onScopeDispose(() => { lifetime.abort(); appearanceObserver.disconnect(); clearTimeout(poll); });
+onScopeDispose(() => { window.removeEventListener("message", openSharedLibrary); lifetime.abort(); appearanceObserver.disconnect(); clearTimeout(poll); });
 </script>
 
 <style scoped>

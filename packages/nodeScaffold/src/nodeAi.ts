@@ -23,6 +23,15 @@ export type NodeMediaModel = Omit<MediaModel, "mode"> & {
 };
 type ModelIdentity = { providerId: string; modelId: string; routeId?: string };
 
+export function createNodeRequestId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6]! & 15) | 64;
+  bytes[8] = (bytes[8]! & 63) | 128;
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("")
+    .replace(/^(........)(....)(....)(....)(............)$/, "$1-$2-$3-$4-$5");
+}
+
 export function getNodeModelIdentity(model: ModelIdentity) {
   return { providerId: model.providerId, modelId: model.providerId === "multiTenant" ? model.routeId ?? model.modelId : model.modelId };
 }
@@ -237,7 +246,7 @@ async function requestModel(input: NodeAiRequest, context: Context, model: Model
     signal.throwIfAborted();
     const response = await fetch("/api/ai/generate", {
       method: "POST", headers: { "Content-Type": "application/json", "x-toonflow-workspace": "1" },
-      body: JSON.stringify({ providerId, modelId, context, directory, references, chromeTabId: input.chromeTabId, requestId: crypto.randomUUID() }), signal,
+      body: JSON.stringify({ providerId, modelId, context, directory, references, chromeTabId: input.chromeTabId, requestId: createNodeRequestId() }), signal,
     });
     if (!response.ok) await readResult(response);
     if (!response.body || !response.headers.get("content-type")?.includes("text/event-stream")) throw new Error("AI không trả về luồng SSE như mong đợi nên không thể nhận nội dung tạo ra.");

@@ -6,15 +6,16 @@ import { success } from "@/lib/responseFormat";
 import { detectMimeType } from "@/utils/media/priceReference";
 import { requireDirectModelAccess } from "@/utils/multiTenant/gateway";
 import bridge from "./bridge";
+import { saveVideoAffVideo, startVideoAffLibrarySync, syncVideoAffLibrary } from "./librarySync";
 import { localVideoAffAvailable, localVideoAffStatus, startLocalVideoAff } from "./local";
 import { configuredModels, fail, imageFormat, modelSelections, selectionSchema, videoAffModels,
   videoAffFetch, videoAffStudioPath, videoAffToken } from "./config";
 
 const router = Router();
+startVideoAffLibrarySync();
 const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,160}$/);
 const assetPathSchema = z.string().trim().min(1).max(2048);
 const productsPath = "/api/v1/products";
-const maxVideoBytes = 100 * 1024 * 1024;
 const personasSchema = z.array(z.object({ id: idSchema, name: z.string() }));
 const videosSchema = z.array(z.object({ product_id: idSchema, title: z.string().nullish(),
   product_title: z.string().nullish(), has_cover: z.boolean() }));
@@ -68,6 +69,7 @@ router.get("/status", async (req, res) => {
     localVideoAffStatus().phase === "starting" ? false : videoAffOnline(),
     localVideoAffAvailable(req),
   ]);
+  if (online) syncVideoAffLibrary();
   res.json(success({ publicUrl: `${videoAffStudioPath}/dashboard/`, online, canStart, local: localVideoAffStatus(),
     bridgeReady: Boolean(videoAffToken()), selections: configuredModels() }));
 });
@@ -120,8 +122,12 @@ router.post("/personPhoto", async (req, res) => {
 
 router.post("/saveOutput", async (req, res) => {
   const { id, kind } = z.object({ id: idSchema, kind: z.enum(["video", "cover"]) }).parse(req.body);
-  const response = await videoAffRequest(`${productsPath}/${id}/${kind}`, undefined, 90_000);
-  const limit = kind === "video" ? maxVideoBytes : 10 * 1024 * 1024;
+  if (kind === "video") {
+    res.json(success({ path: await saveVideoAffVideo(id) }));
+    return;
+  }
+  const response = await videoAffRequest(`${productsPath}/${id}/cover`, undefined, 90_000);
+  const limit = 10 * 1024 * 1024;
   if (!response.body || Number(response.headers.get("content-length")) > limit) {
     await response.body?.cancel().catch(() => {});
     fail("Tệp VideoAFF trống hoặc vượt dung lượng Kho MacFlow cho phép.", 413);
@@ -139,12 +145,11 @@ router.post("/saveOutput", async (req, res) => {
     }
   } finally { await reader.cancel().catch(() => {}); }
   const bytes = Buffer.concat(chunks, length);
-  const wanted = kind === "video" ? "video/mp4" : "image/jpeg";
-  if (detectMimeType(bytes, "") !== wanted) fail("Tệp kết quả VideoAFF không đúng định dạng.", 422);
+  if (detectMimeType(bytes, "") !== "image/jpeg") fail("Tệp kết quả VideoAFF không đúng định dạng.", 422);
   await u.assets.createAssetDirectory("VideoAFF").catch((cause: NodeJS.ErrnoException) => {
     if (cause.code !== "EEXIST") throw cause;
   });
-  const { path } = await u.assets.writeAssetFile(`VideoAFF/${id}-${randomUUID().slice(0, 8)}.${kind === "video" ? "mp4" : "jpg"}`, bytes);
+  const { path } = await u.assets.writeAssetFile(`VideoAFF/${id}-${randomUUID().slice(0, 8)}.jpg`, bytes);
   res.json(success({ path }));
 });
 export default router;

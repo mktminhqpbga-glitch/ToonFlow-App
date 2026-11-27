@@ -20,6 +20,10 @@ export function setLocalVideoAffConnection(connection?: typeof localConnection) 
   localConnection = connection;
 }
 
+export function videoAffSourceId() {
+  return localConnection ? "local" : process.env.TOONFLOW_VIDEO_AFF_ORIGIN;
+}
+
 export function fail(message: string, status = 400): never {
   throw Object.assign(new Error(message), { status });
 }

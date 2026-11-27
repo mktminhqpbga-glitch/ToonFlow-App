@@ -8,6 +8,12 @@
         <router-link to="/image" :class="{ active: kind === 'image' }"><icon-photo :size="18" /> Xưởng tạo ảnh</router-link>
         <router-link to="/video" :class="{ active: kind === 'video' }"><icon-video :size="18" /> Xưởng tạo video</router-link>
         <router-link to="/shortDrama"><icon-movie :size="18" /> Phim ngắn</router-link>
+        <button v-if="currentUser?.role !== 'user' && !publicWeb" type="button" class="libraryLink" aria-label="Kho tài nguyên" title="Kho tài nguyên" @click="sharedLibraryVisible = true">
+          <icon-library-photo :size="18" aria-hidden="true" /> Kho tài nguyên
+        </button>
+        <button v-if="currentUser?.role !== 'user' && !publicWeb" type="button" class="libraryLink" aria-label="Kho nhân vật tham chiếu" title="Kho nhân vật tham chiếu" @click="charactersVisible = true">
+          <icon-users :size="18" aria-hidden="true" /> Kho nhân vật
+        </button>
       </nav>
       <div class="studioSidebarFooter">
         <span v-if="workspaceStore.project" class="workspaceName" :title="workspaceStore.project.directory"><icon-folder :size="16" /> {{ workspaceStore.project.name }}</span>
@@ -55,7 +61,10 @@
           <el-card shadow="never">
             <template #header><div class="studioCardHeading"><span><icon-sparkles :size="19" /> Tạo {{ kind === "image" ? "ảnh mới" : "video mới" }}</span></div></template>
 
-            <label class="fieldLabel" for="studioPrompt">Mô tả ý tưởng <span>*</span></label>
+            <div class="promptHeading">
+              <label class="fieldLabel" for="studioPrompt">Mô tả ý tưởng <span>*</span></label>
+              <el-button v-if="kind === 'video'" size="small" plain :icon="IconSparkles" :disabled="!directory || submitting" @click="promptWriterVisible = true">Viết prompt</el-button>
+            </div>
             <el-input id="studioPrompt" v-model="prompt" type="textarea" resize="vertical" :rows="6"
               :maxlength="100000" showWordLimit :placeholder="kind === 'image' ? 'Mô tả bối cảnh, nhân vật, ánh sáng và phong cách bạn muốn tạo…' : 'Mô tả cảnh quay, chuyển động, hành động và không khí video…'"
               :disabled="submitting" />
@@ -114,6 +123,7 @@
               </div>
               <button v-if="supportsReferences && references.length < maxReferences" class="referenceAdd" type="button" :disabled="submitting || !directory" @click="referenceInput?.click()"><icon-plus :size="21" /><span>Tải ảnh lên</span></button>
               <el-button v-if="supportsReferences && references.length < maxReferences && currentUser?.role !== 'user'" plain :disabled="submitting || !directory" @click="assetPickerVisible = true">Chọn từ thư viện</el-button>
+              <el-button v-if="canUseCharacter" plain @click="charactersVisible = true">Chọn nhân vật</el-button>
               <el-button v-if="kind === 'image' && latestTask && fileOf(latestTask) && references.length < maxReferences" plain
                 :disabled="submitting || referenceBusy" @click="useCurrentImage(latestTask)">Dùng ảnh hiện tại làm tham chiếu</el-button>
             </div>
@@ -192,6 +202,11 @@
     <studioFlowSetup v-if="flowSetupVisible && directory" :key="directory" v-model="flowSetupVisible" :kind="kind"
       :directory="directory" :mediaModels="models" @saved="flowCatalogRevision++" />
     <settings v-model="settingsVisible" ref="settingsRef" />
+    <writeVideoPrompt v-if="promptWriterVisible && kind === 'video' && directory" :key="directory" v-model="promptWriterVisible"
+      :directory="directory" :ownerId="ownerId" :prompt="prompt" :ratio="ratio || ''" :duration="duration || null"
+      :hasReference="!!references.length" @apply="prompt = $event" />
+    <assetLibraryDialog v-if="sharedLibraryVisible" v-model="sharedLibraryVisible" :directory="directory" />
+    <characterLibrary v-if="charactersVisible" v-model="charactersVisible" :canUse="canUseCharacter" @select="useCharacterPhoto" />
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
       <assetLibrary v-model="assetPickerVisible" expanded :canSelect="canSelectAsset" :selecting="referenceBusy" @select="selectAsset" />
     </el-dialog>
@@ -207,7 +222,7 @@ import {
   IconAlertCircle, IconDownload, IconFolderPlus, IconGitBranch, IconHistory, IconLayoutDashboard, IconLoader2,
   IconRefresh, IconSparkles, IconX,
 } from "@tabler/icons-vue";
-import { readNodeModels, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
+import { createNodeRequestId, readNodeModels, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser, publicWeb } from "@/stores/multiTenant";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
@@ -215,6 +230,8 @@ import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
 import { takeStudioPrompt } from "@/lib/studioPromptTransfer";
 import settings from "@/components/settings/index.vue";
 import assetLibrary from "@/pages/workspace/panels/canvas/components/assetLibrary.vue";
+import assetLibraryDialog from "@/pages/home/assetLibraryDialog.vue";
+import characterLibrary from "@/components/characterLibrary.vue";
 import logoUrl from "@toonflow/assets/logo.svg";
 import { describeStudioError, requestStudio, StudioRequestError } from "./studioRequests";
 import { readStudioAttempts, readStudioDraft, saveStudioBrowserState, type StudioAttempt, type StudioSubmission } from "./studioBrowserState";
@@ -227,7 +244,7 @@ type StudioTask = {
   result?: { code: number; message: string; data: MediaFile[] | null };
   cancelDisposition?: "confirmed" | "requested" | "running" | "terminal" | "localOnly" | "notSent";
 };
-type ImageReference = { path: string; mimeType: string; name: string; preview: string; digest: string; bytes: number; missing?: boolean; release: () => void };
+type ImageReference = { path: string; mimeType: string; name: string; preview: string; digest?: string; bytes: number; missing?: boolean; release: () => void };
 type AssetEntry = { name: string; type: "file" | "directory"; path: string };
 type StudioQueueStatus = { limit: number; running: number; queued: number };
 
@@ -236,6 +253,10 @@ const props = defineProps<{ kind: "image" | "video" }>();
 const studioFlowSetup = defineAsyncComponent(() => import("./studioFlowSetup.vue"));
 const clipForgeStudio = defineAsyncComponent(() => import("./clipForgeStudio.vue"));
 const moneyPrinterStudio = defineAsyncComponent(() => import("./moneyPrinterStudio.vue"));
+const writeVideoPrompt = defineAsyncComponent(() => import("./writeVideoPrompt.vue"));
+const promptWriterVisible = ref(false);
+const sharedLibraryVisible = ref(false);
+const charactersVisible = ref(false);
 const videoFlowRun = defineAsyncComponent(() => import("./videoFlowRun.vue"));
 const router = useRouter();
 const route = useRoute();
@@ -325,6 +346,8 @@ const supportsReferences = computed(() => model.value?.referenceLimits
   : modes.value.some(value => ["singleImage", "multiReference", "startFrameOptional", "startEndRequired", "endFrameOptional"].includes(value)));
 const maxReferences = computed(() => model.value?.referenceLimits?.maxReferences
   ?? (props.kind === "video" || !modes.value.includes("multiReference") ? 1 : 4));
+const canUseCharacter = computed(() => canRenderFromMedia.value && !!directory.value && !submitting.value
+  && !referenceBusy.value && supportsReferences.value && references.value.length < maxReferences.value);
 const referenceMimeTypes = computed(() => model.value?.referenceLimits?.allowedMimeTypes
   ?? ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
 const maxReferenceBytes = computed(() => model.value?.referenceLimits?.maxReferenceBytes ?? 20 * 1024 * 1024);
@@ -462,10 +485,11 @@ async function saveReference(file: File, version: number, existingPath?: string)
   const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/avif": "avif" } as Record<string, string>)[file.type];
   if (!extension) throw new Error("Ảnh phải có định dạng PNG, JPEG, WebP, GIF hoặc AVIF.");
   const projectFiles = useWorkspaceFiles(directory.value);
-  const path = existingPath ?? `studioReference${crypto.randomUUID().replaceAll("-", "")}.${extension}`;
-  const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), byte => byte.toString(16).padStart(2, "0")).join("");
+  const path = existingPath ?? `studioReference${createNodeRequestId().replaceAll("-", "")}.${extension}`;
+  const digest = crypto.subtle ? Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())),
+    byte => byte.toString(16).padStart(2, "0")).join("") : undefined;
   if (version !== scopeVersion) return;
-  if (references.value.some(item => item.path === path || item.digest === digest)) return;
+  if (references.value.some(item => item.path === path || digest && item.digest === digest)) return;
   if (!existingPath) await projectFiles.write(path, file, true, AbortSignal.timeout(60000));
   if (version !== scopeVersion) return;
   const preview = URL.createObjectURL(file);
@@ -514,6 +538,12 @@ async function selectAsset(entry: AssetEntry) {
     if (version === scopeVersion) assetPickerVisible.value = false;
   } catch (cause) { ElMessage.error(messageOf(cause)); }
   finally { referenceBusy.value = false; }
+}
+
+function useCharacterPhoto(entry: AssetEntry) {
+  if (!canUseCharacter.value) return;
+  charactersVisible.value = false;
+  void selectAsset(entry);
 }
 
 function updateQueue(queue?: StudioQueueStatus) {
@@ -657,13 +687,13 @@ function submitTask() {
       input.mode = ["imageReference:" + photos.length];
     }
   }
-  void sendAttempt({ taskId: crypto.randomUUID(), createdAt: Date.now(), request: input }, directory.value);
+  void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: input }, directory.value);
 }
 
 function retryTask(task: StudioTask) {
   if (task.state !== "failed") return;
   const local = attempts.value.find(item => item.taskId === task.taskId);
-  void sendAttempt({ taskId: crypto.randomUUID(), createdAt: Date.now(),
+  void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(),
     ...(local?.request ? { request: local.request } : { previousTaskId: local?.previousTaskId ?? task.taskId }) }, directory.value, task.prompt);
 }
 
@@ -718,6 +748,11 @@ async function saveToLibrary(task: StudioTask) {
   const media = fileOf(task);
   if (!media) return;
   try {
+    if (media.mediaType === "video") {
+      await requestStudio("/api/mediaStudio/publishVideo", { method: "POST", body: JSON.stringify({ directory: directory.value, path: media.path }) });
+      ElMessage.success("Video đã có trong Kho tài nguyên MacFlow.");
+      return;
+    }
     const bytes = await useWorkspaceFiles(directory.value).read(media.path);
     const extension = media.path.split(".").at(-1) ?? (props.kind === "image" ? "png" : "mp4");
     const name = `xuong${props.kind === "image" ? "Anh" : "Video"}-${task.taskId.replaceAll("-", "")}.${extension}`;
@@ -789,10 +824,11 @@ onBeforeUnmount(() => {
     background: var(--el-bg-color); border-right: 1px solid var(--el-border-color-light);
     .studioBrand { display: flex; gap: 11px; align-items: center; padding: 3px 13px 27px; font-size: 20px; img { width: 31px; height: 31px; } }
     .studioNavigation { display: grid; gap: 7px;
-      a { display: flex; align-items: center; gap: 12px; text-decoration: none; padding: 12px; border-radius: 10px; color: var(--el-text-color-regular); font-weight: 500; transition: background .12s;
+      a, .libraryLink { display: flex; align-items: center; gap: 12px; text-decoration: none; padding: 12px; border-radius: 10px; color: var(--el-text-color-regular); font-weight: 500; transition: background .12s;
         &:hover { background: var(--el-fill-color-light); }
         &.active, &.router-link-active { background: var(--el-color-primary-light-9); color: var(--el-color-primary); }
       }
+      .libraryLink { border: 0; background: transparent; cursor: pointer; font-family: inherit; font-size: inherit; text-align: left; }
     }
     .studioSidebarFooter { margin-top: auto; display: grid; gap: 8px; min-width: 0; .workspaceName { display: flex; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-items: center; font-size: 12px; color: var(--el-text-color-secondary); } }
   }
@@ -809,6 +845,7 @@ onBeforeUnmount(() => {
   :deep(.el-card__body) { padding: 22px; }
   .studioCardHeading { display: flex; justify-content: space-between; align-items: center; gap: 8px; > span { display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 650; } }
   .fieldLabel { display: block; margin: 22px 0 8px; font-size: 13px; font-weight: 650; span { color: var(--el-color-danger); } }
+  .promptHeading { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 20px 0 8px; .fieldLabel { margin: 0; } }
   .fieldHint { color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.5; }
   .browserModelNotice { margin-top: 12px; line-height: 1.5; }
   .fullWidth { width: 100%; }
@@ -844,7 +881,7 @@ onBeforeUnmount(() => {
   }
 }
 @keyframes studioSpin { to { transform: rotate(360deg); } }
-@media (max-width: 1080px) { .mediaStudio { grid-template-columns: 68px minmax(0, 1fr); .studioSidebar { padding: 15px 6px; .studioBrand { justify-content: center; padding: 3px 0 20px; strong { display: none; } } .studioNavigation a { font-size: 0; justify-content: center; padding: 12px; } .studioSidebarFooter { .workspaceName { display: none; } :deep(.el-button) { font-size: 0; } } } .studioColumns { grid-template-columns: minmax(0, 1fr); } } }
-@media (max-width: 600px) { .mediaStudio { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); .studioSidebar { padding: 8px 12px; flex-direction: row; align-items: center; justify-content: space-between; border-right: 0; border-bottom: 1px solid var(--el-border-color-light); .studioBrand { display: none; } .studioNavigation { display: flex; gap: 3px; a { font-size: 0; padding: 10px; } } .studioSidebarFooter { margin: 0; } } .studioMain { padding: 18px 12px; } .studioColumns { gap: 13px; } :deep(.el-card__body) { padding: 16px; } } }
+@media (max-width: 1080px) { .mediaStudio { grid-template-columns: 68px minmax(0, 1fr); .studioSidebar { padding: 15px 6px; .studioBrand { justify-content: center; padding: 3px 0 20px; strong { display: none; } } .studioNavigation :is(a, .libraryLink) { font-size: 0; justify-content: center; padding: 12px; } .studioSidebarFooter { .workspaceName { display: none; } :deep(.el-button) { font-size: 0; } } } .studioColumns { grid-template-columns: minmax(0, 1fr); } } }
+@media (max-width: 600px) { .mediaStudio { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); .studioSidebar { padding: 8px 12px; flex-direction: row; align-items: center; justify-content: space-between; border-right: 0; border-bottom: 1px solid var(--el-border-color-light); .studioBrand { display: none; } .studioNavigation { display: flex; gap: 3px; :is(a, .libraryLink) { font-size: 0; padding: 10px; } } .studioSidebarFooter { margin: 0; } } .studioMain { padding: 18px 12px; } .studioColumns { gap: 13px; } :deep(.el-card__body) { padding: 16px; } } }
 @media (max-width: 600px) { .mediaStudio .studioHeader { flex-wrap: wrap; } }
 </style>

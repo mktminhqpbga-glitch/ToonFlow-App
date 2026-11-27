@@ -137,6 +137,7 @@ export async function createApp({
   const router = await import("@/router");
   router.default(app);
   app.use("/api/mediaStudio/render", (await import("@/utils/mediaStudio/renderRoute")).default);
+  app.use("/api/mediaStudio/publishVideo", (await import("@/utils/mediaStudio/publishRoute")).default);
   app.use("/api/huobao", (await import("@/utils/huobao")).default);
   app.use("/api/videoAff", (await import("@/utils/videoAff")).default);
   const [{ createMcpRouter }, { getMcpTools, runInMcpRequest }, { authorizeMcp }, { skillResources }] = await Promise.all([

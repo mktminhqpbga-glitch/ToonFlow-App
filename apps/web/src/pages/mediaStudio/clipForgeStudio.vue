@@ -77,10 +77,12 @@ import { IconDownload, IconExternalLink, IconFolderPlus, IconLayoutDashboard, Ic
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from "vue";
 import { useRouter } from "vue-router";
 import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
-import { currentUser } from "@/stores/multiTenant";
+import { currentUser, publicWeb } from "@/stores/multiTenant";
+import { createNodeRequestId } from "@toonflow/nodes-scaffold/nodeAi";
 import useWorkspaceFiles, { type TextSnapshot } from "@/lib/workspaceFiles";
 import { checkClipForge, clipForgeOrigin, clipForgeReceiptPath, composeClipForge, downloadClipForgeMp4, parseClipForgeReceipt,
   prepareClipForge, readClipForgeComposition, validateClipForgeImage, type ClipForgeOptions, type ClipForgeReceipt } from "./clipForgeApi";
+import { requestStudio } from "./studioRequests";
 
 const props = defineProps<{ directory: string; active: boolean }>();
 const router = useRouter();
@@ -223,7 +225,7 @@ async function selectImage(event: Event) {
     validateClipForgeImage(file);
     imageLoading.value = true;
     const extension = file.type === "image/jpeg" ? "jpg" : file.type.slice(6);
-    const path = "studioClipPhoto" + crypto.randomUUID().replaceAll("-", "") + "." + extension;
+    const path = "studioClipPhoto" + createNodeRequestId().replaceAll("-", "") + "." + extension;
     await files.write(path, file, true, AbortSignal.any([lifetime.signal, AbortSignal.timeout(60000)]));
     imageLoading.value = false;
     sourceImage.value = { path, name: file.name.slice(0, 300), mimeType: file.type };
@@ -280,6 +282,7 @@ async function refreshResult(manual = false) {
     notice.value = result.status === "failed" ? { type: "error", text: "ClipForge dựng thất bại. Mở dự án ClipForge để kiểm tra chi tiết." } : undefined;
   } catch (error) { if (manual || !notice.value) showError(error); }
   finally { checking.value = false; }
+  if (composition.value?.status === "done" && !receipt.value?.published && !publicWeb.value && currentUser.value?.role !== "user") void saveVideo();
 }
 
 async function stopFollowing() {
@@ -298,20 +301,28 @@ async function saveVideo() {
   const current = receipt.value;
   const url = composition.value?.videoUrl;
   if (!current || busy.value || checking.value) return;
-  if (current.savedPath) return current.savedPath;
-  if (!url) return;
+  if (current.published) return current.savedPath;
+  if (!url && !current.savedPath) return;
   action.value = "save";
   try {
-    const video = await downloadClipForgeMp4(url, lifetime.signal);
-    for (const dir of ["assets", "assets/generated"]) {
-      await files.mkdir(dir).catch(error => { if (workspaceCode(error) !== "EEXIST") throw error; });
+    let path = current.savedPath;
+    if (!path) {
+      const video = await downloadClipForgeMp4(url!, lifetime.signal);
+      for (const dir of ["assets", "assets/generated"]) {
+        await files.mkdir(dir).catch(error => { if (workspaceCode(error) !== "EEXIST") throw error; });
+      }
+      path = `assets/generated/clipForge${createNodeRequestId()}.mp4`;
+      await files.write(path, video, true, lifetime.signal);
+      await storeReceipt({ ...current, savedPath: path });
     }
-    const path = `assets/generated/clipForge${crypto.randomUUID()}.mp4`;
-    await files.write(path, video, true, lifetime.signal);
-    await storeReceipt({ ...current, savedPath: path });
-    notice.value = { type: "success", text: "Đã lưu video sản phẩm vào workspace MacFlow." };
+    if (!publicWeb.value && currentUser.value?.role !== "user") {
+      await requestStudio("/api/mediaStudio/publishVideo", { method: "POST", body: JSON.stringify({ directory: props.directory, path }),
+        signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(120000)]) });
+      await storeReceipt({ ...current, savedPath: path, published: true });
+      notice.value = { type: "success", text: "Đã lưu video vào Kho tài nguyên MacFlow." };
+    }
     return path;
-  } catch (error) { showError(error); }
+  } catch (error) { showError(error); return receipt.value?.savedPath; }
   finally { action.value = undefined; }
 }
 

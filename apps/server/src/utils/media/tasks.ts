@@ -18,6 +18,7 @@ import { assertProviderAvailable, isRetiredProvider } from "@/lib/retiredProvide
 import { isMac2ApiProvider } from "@/utils/mac2Api/contract";
 import { cancelMac2Api } from "@/utils/mac2Api/tasks";
 import { moneyPrinterProvider, moneyPrinterSchema, renderMoneyPrinter } from "@/utils/mediaStudio/moneyPrinterTurbo";
+import { publishWorkspaceVideo } from "@/utils/assets/generatedVideos";
 
 const maxRecordSize = 16 * 1024 * 1024;
 const maxBlobSize = 140 * 1024 * 1024;
@@ -557,6 +558,12 @@ async function execute(task: MediaTask, resume: boolean) {
       await persist(task);
       if (record.request?.providerId === "aiChrome") await completeTask(record.taskId);
     });
+    if (record.state === "succeeded" && record.studioQueue && record.mediaType === "video" && !record.ownerUserId && !modelGateway.enabled()) {
+      for (const file of files) {
+        if (file.mediaType !== "video") continue;
+        await publishWorkspaceVideo(record.cwd, file.path).catch(() => {});
+      }
+    }
   } catch (cause) {
     if (record.request?.providerId === "aiChrome") failTask(record.taskId, cause);
     try {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Film, Home, Menu, Moon, Package, Sparkles, Sun } from "lucide-react";
+import { Bell, Film, FolderOpen, Home, Menu, Moon, Package, Sparkles, Sun, Users } from "lucide-react";
 import { Suspense, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useNotifications } from "../hooks/useNotifications";
@@ -34,6 +34,12 @@ export function Shell() {
           {embedded && <NavLink to="/notifications"><Bell size={20} aria-hidden="true" />Thông báo
             {Boolean(notifications.data?.unread) && <span className="navCount" aria-label="Thông báo chưa đọc">{notifications.data?.unread}</span>}
           </NavLink>}
+          {embedded && <button className="libraryAction" type="button" onClick={() => window.parent.postMessage({ type: "macflow:videoAff/openLibrary" }, window.location.origin)}>
+            <FolderOpen size={20} aria-hidden="true" />Kho tài nguyên
+          </button>}
+          {embedded && <button className="libraryAction" type="button" aria-label="Kho nhân vật tham chiếu" onClick={() => window.parent.postMessage({ type: "macflow:videoAff/openCharacters" }, window.location.origin)}>
+            <Users size={20} aria-hidden="true" />Kho nhân vật
+          </button>}
         </nav>
         <div className="side-note">
           <strong>{learned === 1 ? "AI áp dụng 1 quy tắc" : `AI áp dụng ${learned} quy tắc`}</strong>

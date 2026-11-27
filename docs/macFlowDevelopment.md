@@ -167,3 +167,11 @@ Ví dụ khi thêm **Dùng làm ảnh tham chiếu** ở Xưởng ảnh, đặt 
 4. Báo phần đã xác minh, phần cần máy hoặc provider thật, phiên bản artefact nếu có và mã commit đầy đủ. Với file cài, thử tải đúng bản và đối chiếu version trong metadata. Chỉ đẩy nhánh đã được người dùng chọn bằng cập nhật fast-forward.
 
 > Làm trong `mktminhqpbga-glitch/ToonFlow-App`, nhánh `feat/macflow-media-studios`. Đọc `AGENTS.md` và `docs/macFlowDevelopment.md`. Mục tiêu của tôi là **[viết điều tôi muốn làm và nơi bấm]**. Dùng **[màn hoặc node hiện có]** làm chuẩn giao diện. Dữ liệu đầu vào gồm **[liệt kê]**; kết quả cần ở **[màn, node, file hoặc cổng]**. Nếu sửa lỗi, tái hiện bằng **[các bước]** và giữ hành vi cũ cho **[trường hợp liên quan]**. Ưu tiên SDK và component sẵn có. Kiểm tra bằng **[luồng nghiệm thu]** trên workspace thử, báo kiểm tra đã chạy, các lỗi xác minh được, mã commit và cách cập nhật. Nếu là plugin cài riêng, giao tệp JS cùng tên và phiên bản để tôi chọn trong Chợ plugin.
+
+## Kho video và nhân vật dùng chung
+
+Trong **Xưởng tạo video**, mở **Viết prompt** ngay cạnh **Mô tả ý tưởng**. Chọn mô hình văn bản đã cài, mở **Mẫu yêu cầu** để chỉnh mẫu mặc định, rồi bấm **Viết bằng AI**. Bạn có thể sửa bản nháp và bấm **Dùng prompt này** để đưa nội dung vào ô tạo video. Mẫu và mô hình được lưu theo trình duyệt.
+
+Thanh bên của **Xưởng tạo video** và **VideoAFF** có **Kho tài nguyên** và **Kho nhân vật**. Kho video có thư mục `XuongVideo` và `VideoAFF`. Kết quả Xưởng video đi qua hàng chờ được lưu khi hoàn thành. VideoAFF đồng bộ video đã ghép khi xưởng đang chạy. ClipForge chuyển video khi Xưởng đọc được kết quả từ dịch vụ ClipForge.
+
+Trong **Kho nhân vật**, thêm tên nhân vật rồi tải các ảnh PNG, JPG hoặc WebP có dung lượng tối đa 20 MiB mỗi ảnh. Ảnh được lưu trong `NhanVatThamChieu` ở Kho MacFlow. Khi mô hình tạo video nhận ảnh đầu vào, **Dùng ảnh này** thêm ảnh vào ô tham chiếu. Trong VideoAFF, nút đó mở bảng chọn người mẫu với ảnh đã chọn sẵn để bạn xác nhận quyền sử dụng trước khi thêm.

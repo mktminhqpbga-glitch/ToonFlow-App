@@ -7,7 +7,7 @@ const mediaReference = z.object({ path: assetPath, mimeType: z.string().regex(/^
 const draft = z.object({
   prompt: z.string().max(100000), modelKey: z.string().max(1024), ratio: z.string().max(32), size: z.string().max(64),
   duration: z.union([z.number().finite(), z.literal("")]), resolution: z.string().max(64), selectedTaskId: z.union([id, z.literal("")]),
-  references: z.array(mediaReference.extend({ name: z.string().max(300), digest: z.string().regex(/^[\da-f]{64}$/), bytes: z.number().int().positive() })).max(64),
+  references: z.array(mediaReference.extend({ name: z.string().max(300), digest: z.string().regex(/^[\da-f]{64}$/).optional(), bytes: z.number().int().positive() })).max(64),
 });
 const request = z.object({
   providerId: z.string().max(96), modelId: z.string().max(256), prompt: z.string().max(100000),
