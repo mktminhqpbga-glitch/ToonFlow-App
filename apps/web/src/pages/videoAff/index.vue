@@ -1,96 +1,100 @@
 <template>
   <main class="videoAffPage">
-    <nav aria-label="Điều hướng"><router-link to="/home">← Tổng quan</router-link></nav>
-
     <header class="pageHeader">
-      <div>
-        <h1>VideoAFF</h1>
-        <p>Tạo video bán hàng từ sản phẩm, kịch bản và ảnh từng cảnh.</p>
+      <router-link class="backLink" to="/home">← Tổng quan</router-link>
+      <h1>VideoAFF</h1>
+      <div class="headerActions">
+        <el-button v-if="status?.online" text @click="frameRevision++">Tải lại xưởng</el-button>
+        <el-button @click="openSettings">Mô hình và Kho</el-button>
       </div>
-      <el-button v-if="status?.online" tag="a" type="primary" :href="status.publicUrl" target="_blank" rel="noopener noreferrer">Mở VideoAFF</el-button>
-      <el-button v-else-if="status?.canStart" type="primary" :loading="starting || status.local.phase === 'starting'"
-        @click="startHere">Khởi động VideoAFF</el-button>
     </header>
 
-    <div v-if="status" class="statusBar">
-      <el-tag :type="status.online ? 'success' : 'warning'">
-        {{ status.online ? "Đã kết nối" : status.local.phase === "starting" ? "Đang khởi động" : "Chưa kết nối" }}
-      </el-tag>
-      <span v-if="!status.online && status.local.message" :role="status.local.phase === 'error' ? 'alert' : 'status'">{{ status.local.message }}</span>
-      <span v-else-if="!status.online">{{ status.canStart ? "Bấm Khởi động VideoAFF để chạy ngay trên máy này." : "Mở VideoAFF trên máy đang chạy MacFlow rồi kiểm tra lại." }}</span>
-      <el-button text :loading="loading" :disabled="starting" @click="refresh">Kiểm tra lại</el-button>
-      <a :href="guide" target="_blank" rel="noopener noreferrer">Hướng dẫn cài VideoAFF</a>
-    </div>
-    <div v-else class="statusBar">
-      <el-button :loading="loading" @click="refresh">Kiểm tra kết nối</el-button>
-      <a :href="guide" target="_blank" rel="noopener noreferrer">Hướng dẫn cài VideoAFF</a>
-    </div>
+    <iframe v-if="dashboardUrl" :key="frameRevision" class="studioFrame" :src="dashboardUrl" title="Xưởng VideoAFF" allow="clipboard-write; fullscreen"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox" />
 
-    <el-alert v-if="notice" :type="notice.type" :title="notice.text" showIcon @close="notice = undefined" />
-
-    <el-card shadow="never">
-      <template #header><h2>Mô hình từ MacFlow</h2></template>
-      <p v-if="!status?.bridgeReady" class="hint">{{ status?.canStart ? "Khởi động VideoAFF để chọn mô hình trong MacFlow." : "Thiết lập mã kết nối theo hướng dẫn để VideoAFF dùng được mô hình trong MacFlow." }}</p>
-      <template v-else>
-        <p class="hint">Chọn mô hình phù hợp cho từng bước. VideoAFF dùng mô hình đọc được ảnh để viết và kiểm tra cảnh, cùng mô hình nhận ảnh đầu để tạo clip 15 giây.</p>
-        <div class="modelGrid">
-          <label v-for="kind in kinds" :key="kind.key">
-            {{ kind.label }}
-            <el-select v-model="choices[kind.key]" :disabled="loading || saving" clearable placeholder="Chọn mô hình">
-              <el-option v-for="model in models[kind.key]" :key="modelKey(model)" :label="model.label + ' · ' + model.providerLabel" :value="modelKey(model)" />
-            </el-select>
-            <small v-if="!loading && !models[kind.key].length">Chưa có mô hình phù hợp trong Cài đặt MacFlow.</small>
-          </label>
-        </div>
-        <el-button type="primary" plain :disabled="loading" :loading="saving" @click="saveModels">Lưu mô hình</el-button>
-      </template>
-    </el-card>
-
-    <el-card v-if="status?.online" shadow="never">
-      <template #header>
-        <div class="cardHeader">
-          <h2>Kho tài nguyên</h2>
-          <el-button text :loading="loadingLibrary" @click="loadLibrary">Làm mới danh sách</el-button>
-        </div>
-      </template>
-      <p v-if="libraryError" class="error" role="status">{{ libraryError }}</p>
-      <div class="libraryGrid">
-        <section aria-labelledby="affAddPhoto">
-          <h3 id="affAddPhoto">Thêm ảnh người mẫu từ Kho MacFlow</h3>
-          <p v-if="!people.length && !loadingLibrary" class="hint">Tạo người mẫu trong VideoAFF rồi làm mới danh sách.</p>
-          <label>Người mẫu
-            <el-select v-model="person" filterable :disabled="loadingLibrary || transferring" placeholder="Chọn người mẫu">
-              <el-option v-for="entry in people" :key="entry.id" :label="entry.name" :value="entry.id" />
-            </el-select>
-          </label>
-          <label>Ảnh trong Kho MacFlow
-            <el-select v-model="photo" filterable :disabled="loadingLibrary || transferring" placeholder="Chọn ảnh">
-              <el-option v-for="path in photos" :key="path" :label="path" :value="path" />
-            </el-select>
-          </label>
-          <el-checkbox v-model="rights" :disabled="transferring">Tôi có quyền sử dụng ảnh này.</el-checkbox>
-          <el-button :loading="transfer === 'photo'" :disabled="!person || !photo || !rights || transferring" @click="sendPhoto">Thêm ảnh vào VideoAFF</el-button>
-        </section>
-        <section aria-labelledby="affSaveVideo">
-          <h3 id="affSaveVideo">Lưu kết quả từ VideoAFF vào Kho MacFlow</h3>
-          <p v-if="!videos.length && !loadingLibrary" class="hint">Video đã ghép xong trong VideoAFF sẽ xuất hiện tại đây.</p>
-          <label>Video đã hoàn thành
-            <el-select v-model="video" filterable :disabled="loadingLibrary || transferring" placeholder="Chọn video">
-              <el-option v-for="entry in videos" :key="entry.id" :label="entry.name" :value="entry.id" />
-            </el-select>
-          </label>
-          <div class="actions">
-            <el-button :loading="transfer === 'video'" :disabled="!video || transferring" @click="saveOutput('video')">Lưu video</el-button>
-            <el-button :loading="transfer === 'cover'" :disabled="!videos.find(entry => entry.id === video)?.hasCover || transferring" @click="saveOutput('cover')">Lưu ảnh bìa</el-button>
-          </div>
-        </section>
+    <section v-else class="launchPanel" aria-labelledby="launchTitle">
+      <h2 id="launchTitle">Xưởng video bán hàng</h2>
+      <p v-if="booting" role="status">{{ status?.local.message || "Đang mở VideoAFF…" }}</p>
+      <p v-else-if="status?.local.message" :role="status.local.phase === 'error' ? 'alert' : 'status'">{{ status.local.message }}</p>
+      <p v-else>Chưa kết nối được với VideoAFF trên máy đang chạy MacFlow.</p>
+      <el-alert v-if="connectionError" :title="connectionError" type="error" showIcon :closable="false" />
+      <div class="actions">
+        <el-button v-if="status?.canStart && !booting" type="primary" @click="startHere">Thử khởi động lại</el-button>
+        <el-button v-else-if="!booting" @click="refresh(true)">Kiểm tra lại</el-button>
+        <a :href="guide" target="_blank" rel="noopener noreferrer">Hướng dẫn cài VideoAFF</a>
       </div>
-    </el-card>
+    </section>
+
+    <el-drawer v-model="settingsVisible" title="Mô hình và Kho" size="min(720px, 100%)" appendToBody>
+      <div class="settingsContent">
+        <el-alert v-if="notice" :type="notice.type" :title="notice.text" showIcon @close="notice = undefined" />
+
+        <el-card shadow="never">
+          <template #header><h2>Mô hình từ MacFlow</h2></template>
+          <p v-if="!status?.bridgeReady" class="hint">{{ status?.canStart ? "Khởi động VideoAFF để chọn mô hình trong MacFlow." : "Thiết lập mã kết nối theo hướng dẫn để VideoAFF dùng được mô hình trong MacFlow." }}</p>
+          <template v-else>
+            <p class="hint">Chọn mô hình phù hợp cho từng bước. VideoAFF dùng mô hình đọc được ảnh để viết và kiểm tra cảnh, cùng mô hình nhận ảnh đầu để tạo clip 15 giây.</p>
+            <div class="modelGrid">
+              <label v-for="kind in kinds" :key="kind.key">
+                {{ kind.label }}
+                <el-select v-model="choices[kind.key]" :disabled="loadingModels || saving" clearable placeholder="Chọn mô hình">
+                  <el-option v-for="model in models[kind.key]" :key="modelKey(model)" :label="model.label + ' · ' + model.providerLabel" :value="modelKey(model)" />
+                </el-select>
+                <small v-if="!loadingModels && !models[kind.key].length">Chưa có mô hình phù hợp trong Cài đặt MacFlow.</small>
+              </label>
+            </div>
+            <el-button type="primary" plain :disabled="loadingModels" :loading="saving" @click="saveModels">Lưu mô hình</el-button>
+          </template>
+        </el-card>
+
+        <el-card v-if="status?.online" shadow="never">
+          <template #header>
+            <div class="cardHeader">
+              <h2>Kho tài nguyên</h2>
+              <el-button text :loading="loadingLibrary" @click="loadLibrary">Làm mới danh sách</el-button>
+            </div>
+          </template>
+          <p v-if="libraryError" class="error" role="status">{{ libraryError }}</p>
+          <div class="libraryGrid">
+            <section aria-labelledby="affAddPhoto">
+              <h3 id="affAddPhoto">Thêm ảnh người mẫu từ Kho MacFlow</h3>
+              <p v-if="!people.length && !loadingLibrary" class="hint">Tạo người mẫu trong VideoAFF rồi làm mới danh sách.</p>
+              <label>Người mẫu
+                <el-select v-model="person" filterable :disabled="loadingLibrary || transferring" placeholder="Chọn người mẫu">
+                  <el-option v-for="entry in people" :key="entry.id" :label="entry.name" :value="entry.id" />
+                </el-select>
+              </label>
+              <label>Ảnh trong Kho MacFlow
+                <el-select v-model="photo" filterable :disabled="loadingLibrary || transferring" placeholder="Chọn ảnh">
+                  <el-option v-for="path in photos" :key="path" :label="path" :value="path" />
+                </el-select>
+              </label>
+              <el-checkbox v-model="rights" :disabled="transferring">Tôi có quyền sử dụng ảnh này.</el-checkbox>
+              <el-button :loading="transfer === 'photo'" :disabled="!person || !photo || !rights || transferring" @click="sendPhoto">Thêm ảnh vào VideoAFF</el-button>
+            </section>
+            <section aria-labelledby="affSaveVideo">
+              <h3 id="affSaveVideo">Lưu kết quả từ VideoAFF vào Kho MacFlow</h3>
+              <p v-if="!videos.length && !loadingLibrary" class="hint">Video đã ghép xong trong VideoAFF sẽ xuất hiện tại đây.</p>
+              <label>Video đã hoàn thành
+                <el-select v-model="video" filterable :disabled="loadingLibrary || transferring" placeholder="Chọn video">
+                  <el-option v-for="entry in videos" :key="entry.id" :label="entry.name" :value="entry.id" />
+                </el-select>
+              </label>
+              <div class="actions">
+                <el-button :loading="transfer === 'video'" :disabled="!video || transferring" @click="saveOutput('video')">Lưu video</el-button>
+                <el-button :loading="transfer === 'cover'" :disabled="!videos.find(entry => entry.id === video)?.hasCover || transferring" @click="saveOutput('cover')">Lưu ảnh bìa</el-button>
+              </div>
+            </section>
+          </div>
+        </el-card>
+      </div>
+    </el-drawer>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onScopeDispose, reactive, ref } from "vue";
+import { useRoute } from "vue-router";
 import axios from "axios";
 
 const kinds = [
@@ -113,12 +117,27 @@ const guide = "https://github.com/mktminhqpbga-glitch/ToonFlow-App/blob/feat/mac
 const client = axios.create({ baseURL: "/api/videoAff", headers: { "x-toonflow-workspace": "1" }, timeout: 105_000 });
 const lifetime = new AbortController();
 const config = { signal: lifetime.signal };
+const route = useRoute();
 const status = ref<Status>();
+const settingsVisible = ref(false);
+const frameRevision = ref(0);
+const connectionError = ref("");
+const dashboardUrl = computed(() => {
+  if (!status.value?.online) return;
+  const url = new URL(status.value.publicUrl);
+  const product = route.query.product;
+  if (typeof product === "string" && /^[a-zA-Z0-9_-]{1,160}$/.test(product)) {
+    url.pathname += "studio/" + product;
+  }
+  return url.href;
+});
 const models = ref<Record<Kind, Model[]>>({ writer: [], review: [], image: [], video: [], audio: [] });
 const choices = reactive<Record<Kind, string>>({ writer: "", review: "", image: "", video: "", audio: "" });
 const loading = ref(false);
 const starting = ref(false);
+const booting = computed(() => loading.value || starting.value || status.value?.local.phase === "starting");
 const saving = ref(false);
+const loadingModels = ref(false);
 const loadingLibrary = ref(false);
 const libraryError = ref("");
 const transfer = ref<"photo" | "video" | "cover">();
@@ -143,41 +162,63 @@ function showError(error: unknown) {
   if (!lifetime.signal.aborted) notice.value = { type: "error", text: message(error) };
 }
 
-async function refresh() {
-  if (loading.value || saving.value) return;
+async function refresh(autoStart = false) {
+  if (loading.value) return;
   clearTimeout(poll);
   loading.value = true;
-  notice.value = undefined;
+  connectionError.value = "";
   try {
     const { data } = await client.get<{ data: Status }>("/status", config);
     status.value = data.data;
-    if (status.value.local.phase === "starting") return;
-    if (status.value.online) void loadLibrary();
-    if (status.value.bridgeReady) {
-      const catalog = await client.get<{ data: Record<Kind, Model[]> }>("/models", config);
-      models.value = catalog.data.data;
-      for (const kind of kinds) {
-        const selection = status.value.selections[kind.key];
-        choices[kind.key] = selection ? modelKey(selection) : "";
-      }
+    if (autoStart && !status.value.online && status.value.canStart && status.value.local.phase === "idle") {
+      await requestStart();
     }
-  } catch (error) { showError(error); }
+    if (settingsVisible.value && status.value.local.phase !== "starting") loadSettings();
+  } catch (error) { if (!lifetime.signal.aborted) connectionError.value = message(error); }
   finally {
     loading.value = false;
     if (!lifetime.signal.aborted && status.value?.local.phase === "starting") poll = setTimeout(() => void refresh(), 2000);
   }
 }
 
+async function requestStart() {
+  const { data } = await client.post<{ data: { local: LocalStatus } }>("/local/start", undefined, config);
+  if (status.value) status.value.local = data.data.local;
+}
+
 async function startHere() {
   if (starting.value || !status.value?.canStart) return;
   starting.value = true;
-  notice.value = undefined;
+  connectionError.value = "";
   try {
-    const { data } = await client.post<{ data: { local: LocalStatus } }>("/local/start", undefined, config);
-    status.value.local = data.data.local;
+    await requestStart();
     await refresh();
-  } catch (error) { showError(error); }
+  } catch (error) { if (!lifetime.signal.aborted) connectionError.value = message(error); }
   finally { starting.value = false; }
+}
+
+function openSettings() {
+  settingsVisible.value = true;
+  loadSettings();
+}
+
+function loadSettings() {
+  if (status.value?.online) void loadLibrary();
+  if (status.value?.bridgeReady) void loadModels();
+}
+
+async function loadModels() {
+  if (loadingModels.value || saving.value) return;
+  loadingModels.value = true;
+  try {
+    const catalog = await client.get<{ data: Record<Kind, Model[]> }>("/models", config);
+    models.value = catalog.data.data;
+    for (const kind of kinds) {
+      const selection = status.value?.selections[kind.key];
+      choices[kind.key] = selection ? modelKey(selection) : "";
+    }
+  } catch (error) { showError(error); }
+  finally { loadingModels.value = false; }
 }
 
 async function saveModels() {
@@ -244,20 +285,25 @@ async function saveOutput(kind: "video" | "cover") {
   finally { transfer.value = undefined; }
 }
 
-onMounted(() => void refresh());
+onMounted(() => void refresh(true));
 onScopeDispose(() => { lifetime.abort(); clearTimeout(poll); });
 </script>
 
 <style scoped>
-.videoAffPage { box-sizing: border-box; max-width: 1100px; min-height: 100%; margin: auto; padding: clamp(16px, 4vw, 48px); display: grid; align-content: start; gap: 16px; }
-.pageHeader, .statusBar, .cardHeader, .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.pageHeader, .cardHeader { justify-content: space-between; }
+.videoAffPage { box-sizing: border-box; height: 100dvh; display: flex; flex-direction: column; background: var(--el-bg-color); }
+.pageHeader, .headerActions, .cardHeader, .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.pageHeader { flex: none; padding: 10px clamp(12px, 3vw, 30px); border-bottom: 1px solid var(--el-border-color-light); }
+.backLink { padding-right: 12px; border-right: 1px solid var(--el-border-color-light); }
+.headerActions { margin-left: auto; }
+.cardHeader { justify-content: space-between; }
+.studioFrame { flex: 1; min-height: 0; width: 100%; border: 0; }
+.launchPanel { display: grid; gap: 12px; align-content: center; justify-items: start; flex: 1; width: min(100%, 650px); margin: auto; padding: 20px; box-sizing: border-box; }
+.settingsContent { display: grid; gap: 12px; }
 h1, h2, h3, p { margin: 0; }
-h1 { font-size: clamp(30px, 4vw, 44px); }
+h1 { font-size: 17px; }
 h2 { font-size: 17px; }
 h3 { font-size: 15px; }
-.pageHeader p { margin-top: 5px; }
-.pageHeader p, .hint, small { color: var(--el-text-color-secondary); }
+.launchPanel p, .hint, small { color: var(--el-text-color-secondary); }
 .hint, small { font-size: 13px; line-height: 1.5; }
 .error { color: var(--el-color-danger); margin-bottom: 10px; }
 a { color: var(--el-color-primary); text-underline-offset: 3px; }

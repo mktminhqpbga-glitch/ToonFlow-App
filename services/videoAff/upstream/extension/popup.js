@@ -53,12 +53,29 @@ const tiktokText = (w) =>
 const pinterestText = (w) =>
   `${state(w)}: keywords ${w.done + w.failed}/${w.queue.length} | OK ${w.done} | failed ${w.failed}${w.detail ? `\nCollecting ${w.detail}` : `\n${w.note}`}`;
 
-const studioOrigin = fetch("http://127.0.0.1:8000/dashboard/", { signal: AbortSignal.timeout(1200), redirect: "error" })
-  .then(async (response) => {
-    const isDashboard = response.ok && response.headers.get("content-type")?.includes("text/html")
+const collectorOrigin = "http://127.0.0.1:8000";
+async function studioLink() {
+  const options = () => ({ signal: AbortSignal.timeout(1200), redirect: "error" });
+  try {
+    const response = await fetch(collectorOrigin + "/api/v1/macflow-host", options());
+    if (response.ok) {
+      const { origin } = await response.json();
+      if (typeof origin === "string") {
+        const url = new URL(origin);
+        if (url.origin === origin && ["http:", "https:"].includes(url.protocol)
+          && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
+          return (product) => `${origin}/#/videoAff?product=${encodeURIComponent(product)}`;
+        }
+      }
+    }
+  } catch { /* Fall back to the standalone dashboard. */ }
+  const local = await fetch(collectorOrigin + "/dashboard/", options()).then(async (response) => {
+    return response.ok && response.headers.get("content-type")?.includes("text/html")
       && (await response.text()).includes("<title>VideoAFF</title>");
-    return isDashboard ? "http://127.0.0.1:8000" : "http://localhost:8080";
-  }).catch(() => "http://localhost:8080");
+  }).catch(() => false);
+  return (product) => `${local ? collectorOrigin : "http://localhost:8080"}/dashboard/studio/${encodeURIComponent(product)}`;
+}
+const studioUrlFor = studioLink();
 let currentCapture;
 const showCapture = (capture) => {
   const note = document.getElementById("send-note");
@@ -68,9 +85,9 @@ const showCapture = (capture) => {
   if (!capture) return;
   if (capture.stored === "detail") {
     note.textContent = "Sent. The product is saved.";
-    void studioOrigin.then((origin) => {
+    void studioUrlFor.then((studioUrl) => {
       if (currentCapture !== capture) return;
-      link.href = `${origin}/dashboard/studio/${capture.productId}`;
+      link.href = studioUrl(capture.productId);
       link.hidden = false;
     });
   } else if (capture.stored === "ignored") {

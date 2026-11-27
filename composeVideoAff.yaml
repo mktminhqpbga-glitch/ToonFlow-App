@@ -54,6 +54,7 @@ services:
       - videoAffMedia:/var/lib/aicontent
     environment:
       BAML_LOG: "OFF"
+      AIC_MACFLOW_ORIGIN: ${MACFLOW_VIDEO_AFF_HOST_URL:-http://127.0.0.1:3000}
       AIC_AI_DATABASE_URL: *videoAffDatabase
       AIC_AI_OBJECT_STORAGE_BACKEND: filesystem
       AIC_SCREENING_BASE_URL: ${AIC_SCREENING_BASE_URL:-http://toonflow:3000/api/videoAff/bridge/v1}

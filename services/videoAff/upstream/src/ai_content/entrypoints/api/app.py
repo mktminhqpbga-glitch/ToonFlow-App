@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,6 +86,28 @@ def _configure_cors(application: FastAPI) -> None:
 @app.get("/api/v1/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     return HealthResponse()
+
+
+@app.get("/api/v1/macflow-host")
+async def macflow_host() -> dict[str, str | None]:
+    """Share the loopback MacFlow origin with the VideoAFF Chrome extension."""
+    raw = os.environ.get("AIC_MACFLOW_ORIGIN", "")
+    try:
+        url = urlsplit(raw)
+        if (
+            url.scheme in {"http", "https"}
+            and url.hostname in {"127.0.0.1", "localhost", "::1"}
+            and url.port != 0
+            and url.username is None
+            and url.password is None
+            and url.path in {"", "/"}
+            and not url.query
+            and not url.fragment
+        ):
+            return {"origin": f"{url.scheme}://{url.netloc}"}
+    except ValueError:
+        pass
+    return {"origin": None}
 
 
 @app.get("/health/live", response_model=HealthResponse)
