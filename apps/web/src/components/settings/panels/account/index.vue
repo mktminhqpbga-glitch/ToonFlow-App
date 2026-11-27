@@ -22,16 +22,16 @@
           <div class="summaryGrid">
             <section class="summaryCard" aria-label="Số dư chính">
               <div class="summaryLabel"><span>Số dư chính</span><icon-wallet :size="20" aria-hidden="true" /></div>
-              <strong>{{ formatMoney(previewData?.totalPoints) }}</strong>
+              <strong>{{ formatMoney(previewData?.totalPoints, previewLoading) }}</strong>
               <el-button class="rechargeButton" type="primary" :icon="IconCreditCard" @click="accountTab = 'wallet'">Nạp tiền</el-button>
             </section>
             <section class="summaryCard" aria-label="Ưu đãi khả dụng">
               <div class="summaryLabel"><span>Ưu đãi khả dụng</span><icon-gift :size="20" aria-hidden="true" /></div>
-              <strong>{{ formatMoney(previewData?.bonusBalance) }}</strong>
+              <strong>{{ formatMoney(previewData?.bonusBalance, previewLoading) }}</strong>
             </section>
             <section class="summaryCard" aria-label="Tổng số tiền đã sử dụng">
               <div class="summaryLabel"><span>Tổng số tiền đã sử dụng</span><icon-chart-bar :size="20" aria-hidden="true" /></div>
-              <strong>{{ formatMoney(previewData?.totalConsumption) }}</strong>
+              <strong>{{ formatMoney(previewData?.totalConsumption, previewLoading) }}</strong>
             </section>
           </div>
 
@@ -40,11 +40,11 @@
             <dl class="usageMetrics">
               <div>
                 <dt>Số lần gọi API</dt>
-                <dd>{{ usageStatistics?.summary.totalRequests ?? "" }}</dd>
+                <dd>{{ usageStatistics?.summary?.totalRequests ?? (usageLoading ? "Đang tải…" : "Chưa có dữ liệu") }}</dd>
               </div>
               <div>
                 <dt>Chi phí sử dụng</dt>
-                <dd>{{ formatMoney(usageStatistics?.summary.totalAmount) }}</dd>
+                <dd>{{ formatMoney(usageStatistics?.summary?.totalAmount, usageLoading) }}</dd>
               </div>
             </dl>
             <div class="chartHeader">
@@ -98,7 +98,7 @@
           <div class="authLogo"><img :src="logoUrl" alt="Toonflow" /></div>
           <div class="authInfo">
             <h3>Toonflow</h3>
-            <p>Đăng nhập để sử dụng Toonflow</p>
+            <p>Đăng nhập để xem số dư và lịch sử sử dụng dịch vụ Toonflow.</p>
           </div>
           <el-segmented v-model="authTab" class="authTabs" :options="authOptions" :disabled="submitting" block aria-label="Đăng nhập hoặc đăng ký" />
         </header>
@@ -226,8 +226,9 @@ const registerReady = computed(() => !!registerForm.phone.trim() && !!registerFo
   && registerForm.password === registerForm.confirmPassword && !!registerForm.verificationCode.trim() && !submitting.value);
 const moneyFormat = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY" });
 
-function formatMoney(value?: number) {
-  return typeof value === "number" && Number.isFinite(value) ? moneyFormat.format(value) : "";
+function formatMoney(value?: number, loading = false) {
+  if (typeof value === "number" && Number.isFinite(value)) return moneyFormat.format(value);
+  return loading ? "Đang tải…" : "Chưa có dữ liệu";
 }
 
 function loadError(error: unknown, fallback: string) {

@@ -190,7 +190,7 @@ const displayEntries = computed(() => {
 });
 
 function filterEntry(query: string, entry: TreeNodeData) {
-  return !!entry.draft || entry.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  return !!entry.draft || entry.path.normalize("NFC").toLocaleLowerCase("vi").includes(query.trim().normalize("NFC").toLocaleLowerCase("vi"));
 }
 
 watch(searchQuery, query => assetTree.value?.filter(query));

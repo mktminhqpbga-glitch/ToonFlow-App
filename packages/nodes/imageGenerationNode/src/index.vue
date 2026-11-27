@@ -41,6 +41,7 @@
         <icon-photo-ai :size="48" stroke="1.25" aria-hidden="true" />
       </div>
     </div>
+    <p v-if="generating" class="generationTime">Đang xử lý ảnh · {{ elapsedSeconds }} giây</p>
     <template v-if="editor?.mode !== 'mark'" #bottom>
       <div v-if="lightingVisible" ref="lightingTarget" />
       <div v-else-if="multiAngleVisible" ref="multiAngleTarget" />
@@ -191,7 +192,7 @@ const generationState = useNodeGeneration(outputs, () => generationController?.a
     return generateInpaint(recovery.input, recovery.inpaint, signal, results.filter(result => result.mediaType === "image"));
   },
 });
-const { generating, pendingRecovery, cancelling } = generationState;
+const { generating, elapsedSeconds, pendingRecovery, cancelling } = generationState;
 let generation: Promise<void> | undefined;
 let modelsRequest: Promise<void> | undefined;
 watch(generating, value => { if (!value && !disposed && !deleting.value && !models.value.length) void loadModels().catch(error => showNodeError(error, "Lỗi tải mô hình")); });
@@ -511,6 +512,13 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.generationTime {
+  margin: 4px 8px;
+  text-align: center;
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
 .connectedText {
   margin-bottom: 8px;
   color: var(--el-text-color-regular);

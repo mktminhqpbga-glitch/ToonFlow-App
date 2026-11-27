@@ -41,6 +41,16 @@ export function useNodeGeneration(outputs: Readonly<Ref<NodeOutputs>>, cancel: (
   const error = ref("");
   const cancelling = ref(false);
   const generating = computed(() => status.value === "running");
+  const elapsedSeconds = ref(0);
+  watch(generating, (active, _, onCleanup) => {
+    elapsedSeconds.value = 0;
+    if (!active) return;
+    const started = performance.now();
+    const timer = setInterval(() => {
+      elapsedSeconds.value = Math.floor((performance.now() - started) / 1000);
+    }, 1000);
+    onCleanup(() => clearInterval(timer));
+  });
   const pendingRecovery = computed(() => !generating.value && needsRecovery());
   const getStatus = () => ({ status: status.value, outputs: outputs.value, ...(error.value ? { error: error.value } : {}),
     ...(savedData.value.mediaTask ? { task: { taskId: savedData.value.mediaTask.taskId, state: savedData.value.mediaTask.state, resumable: savedData.value.mediaTask.resumable } } : {}) });
@@ -241,5 +251,5 @@ export function useNodeGeneration(outputs: Readonly<Ref<NodeOutputs>>, cancel: (
   }, { deep: true, flush: "sync" });
   onScopeDispose(() => lifetime.abort());
 
-  return { generating, pendingRecovery, cancelling, run, generate, resume, cancel: cancelGeneration };
+  return { generating, elapsedSeconds, pendingRecovery, cancelling, run, generate, resume, cancel: cancelGeneration };
 }

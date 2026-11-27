@@ -93,6 +93,16 @@
         </div>
       </div>
     </section>
+    <section v-if="!publicWeb" class="settingSection" aria-labelledby="projectBackupTitle">
+      <div class="settingHeader">
+        <div class="settingInfo">
+          <h3 id="projectBackupTitle">Sao lưu dự án</h3>
+          <p class="description">{{ project ? `Dự án đang mở · ${project.name}` : "Hãy mở một dự án để sao lưu." }}</p>
+          <p class="description">Để dùng lại bản sao, giải nén tệp ZIP vào thư mục riêng trên máy đang chạy MacFlow. Vào Dự án, bấm Tạo dự án mới rồi chọn thư mục đã giải nén.</p>
+        </div>
+        <el-button size="small" :disabled="!project" :loading="exporting" @click="backupProject">Tải bản sao ZIP</el-button>
+      </div>
+    </section>
     <nodeMenuSettings />
     <canvasShortcuts />
     <extensionAssociationsDialog v-if="!publicWeb" v-model="associationsVisible" />
@@ -100,12 +110,14 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { defaultUiSettings, generalSettings, uiSettings, updateGeneralSettings, updateUiSettings } from "@/stores/settings";
 import { publicWeb } from "@/stores/multiTenant";
 import { getNotificationPermission, requestNotificationPermission } from "@/lib/notification";
 import { actualPlatform } from "@/lib/platform";
+import { useWorkspaceStore } from "@/stores/workspace";
+import { exportWorkspace } from "@/lib/exportWorkspace";
 import ui from "./ui.vue";
 import canvasShortcuts from "./canvasShortcuts.vue";
 import nodeMenuSettings from "./nodeMenuSettings.vue";
@@ -114,6 +126,20 @@ import extensionAssociationsDialog from "./extensionAssociationsDialog.vue";
 const associationsVisible = ref(false);
 const notificationPermission = ref(getNotificationPermission());
 const requestingPermission = ref(false);
+const workspace = useWorkspaceStore();
+const project = computed(() => workspace.project);
+const exporting = ref(false);
+const lifetime = new AbortController();
+
+async function backupProject() {
+  if (!project.value || exporting.value) return;
+  exporting.value = true;
+  try {
+    if (await exportWorkspace(project.value, lifetime.signal)) ElMessage.success("Đã xuất bản sao dự án.");
+  } catch (cause) {
+    if (!lifetime.signal.aborted) ElMessage.error(cause instanceof Error ? cause.message : "Không sao lưu được dự án.");
+  } finally { exporting.value = false; }
+}
 
 function refreshNotificationPermission() {
   notificationPermission.value = getNotificationPermission();
@@ -128,7 +154,10 @@ async function authorizeNotifications() {
 }
 
 onMounted(() => window.addEventListener("focus", refreshNotificationPermission));
-onBeforeUnmount(() => window.removeEventListener("focus", refreshNotificationPermission));
+onBeforeUnmount(() => {
+  lifetime.abort();
+  window.removeEventListener("focus", refreshNotificationPermission);
+});
 </script>
 
 <style lang="scss" scoped>
@@ -143,7 +172,8 @@ onBeforeUnmount(() => window.removeEventListener("focus", refreshNotificationPer
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
 
       > .el-switch { flex-shrink: 0; }
 
@@ -151,13 +181,15 @@ onBeforeUnmount(() => window.removeEventListener("focus", refreshNotificationPer
         display: flex;
         align-items: center;
         gap: 12px;
-        flex-shrink: 0;
+        flex-wrap: wrap;
 
         .el-select { width: 140px; }
       }
 
       .settingInfo {
+        flex: 1 1 220px;
         min-width: 0;
+        overflow-wrap: anywhere;
 
         h3 {
           margin: 0;
@@ -175,6 +207,9 @@ onBeforeUnmount(() => window.removeEventListener("focus", refreshNotificationPer
           .permissionAction {
             padding: 0;
             font-size: inherit;
+            height: auto;
+            line-height: inherit;
+            white-space: normal;
             vertical-align: baseline;
           }
         }

@@ -1,9 +1,9 @@
 <template>
   <div class="about">
     <div class="brand">
-      <div class="brandMark"><img class="brandLogo" :src="logoUrl" alt="Toonflow Logo" /></div>
+      <div class="brandMark"><img class="brandLogo" :src="logoUrl" alt="MacFlow" /></div>
       <div class="brandInfo">
-        <h3>Toonflow</h3>
+        <h3>MacFlow</h3>
         <div class="brandMeta">
           <span v-if="currentVersion">v{{ currentVersion }}</span>
           <el-tag v-if="clientBuild?.channel || snapshot?.channel" type="info" size="small" round>{{ clientBuild?.channel || snapshot?.channel }}</el-tag>
@@ -11,7 +11,20 @@
       </div>
     </div>
 
-    <el-card v-if="!publicWeb && (isMobile || !isRemoteConnection)" class="infoCard updateCard" shadow="never">
+    <el-card v-if="!publicWeb && !actualPlatform.isDesktop && !isMobile" class="infoCard updateCard" shadow="never">
+      <div class="cardHeader">
+        <div class="cardLabel">
+          <icon-refresh :size="18" aria-hidden="true" />
+          <span>Cập nhật phiên bản web</span>
+        </div>
+        <el-button tag="a" size="small" type="primary" plain :href="webUpdateGuide" target="_blank" rel="noopener noreferrer">
+          Hướng dẫn cập nhật
+        </el-button>
+      </div>
+      <p class="webUpdateHint">Cập nhật trên máy đang chạy MacFlow, khởi động lại ứng dụng rồi tải lại trang này.</p>
+      <div v-if="webRevision" class="buildInfo"><span>Mã bản dựng</span><code>{{ webRevision }}</code></div>
+    </el-card>
+    <el-card v-else-if="!publicWeb && (isMobile || !isRemoteConnection)" class="infoCard updateCard" shadow="never">
       <div class="cardHeader">
         <div class="updateCopy">
           <div class="cardLabel">
@@ -58,10 +71,10 @@
     </el-card>
 
     <el-card class="infoCard repositoryCard" shadow="never">
-      <a class="repositoryLink" :href="repositoryUrl" target="_blank" rel="noopener noreferrer" aria-label="Kho mã nguồn GitHub: HBAI-Ltd/Toonflow-app">
+      <a class="repositoryLink" :href="`${macflowRepository}/tree/${macflowBranch}`" target="_blank" rel="noopener noreferrer" aria-label="Kho mã nguồn MacFlow trên GitHub">
         <icon-brand-github class="repositoryIcon" :size="22" aria-hidden="true" />
         <div class="repositoryInfo">
-          <span class="repositoryTitle">Kho mã nguồn GitHub</span>
+          <span class="repositoryTitle">Kho mã nguồn MacFlow</span>
         </div>
         <icon-external-link class="externalIcon" :size="16" aria-hidden="true" />
       </a>
@@ -198,7 +211,7 @@
       </div>
       <template #footer>
           <el-button size="small" @click="resultVisible = false">Đóng</el-button>
-        <el-button v-if="updateError && !snapshot?.installFailure && !updateInProgress" tag="a" size="small" :href="`${repositoryUrl}/releases/latest`" target="_blank" rel="noopener noreferrer">前往下载页</el-button>
+        <el-button v-if="updateError && !snapshot?.installFailure && !updateInProgress" tag="a" size="small" :href="`${repositoryUrl}/releases/latest`" target="_blank" rel="noopener noreferrer">Đến trang tải xuống</el-button>
         <el-button v-if="snapshot?.installFailure" tag="a" type="primary" size="small" :href="snapshot.installFailure.downloadUrl" target="_blank" rel="noopener noreferrer">Đến trang tải xuống</el-button>
         <el-button v-else-if="snapshot?.updating && !working" size="small" type="primary" @click="runUpdate('read')">Đọc lại trạng thái</el-button>
         <el-button
@@ -255,6 +268,10 @@ import {
 const messageMarkdown = defineAsyncComponent(() => import("@/components/messageMarkdown.vue"));
 const privacy = defineAsyncComponent(() => import("./privacy.vue"));
 const repositoryUrl = "https://github.com/HBAI-Ltd/Toonflow-app";
+const macflowRepository = "https://github.com/mktminhqpbga-glitch/ToonFlow-App";
+const macflowBranch = "feat/macflow-media-studios";
+const webUpdateGuide = `${macflowRepository}/blob/${macflowBranch}/docs/macFlowDevelopment.md#chạy-macflow-từ-repo`;
+const webRevision = import.meta.env.macflowRevision as string;
 const communityUrl = "https://work.weixin.qq.com/u/vc36adcc89845edcbe?v=5.0.3.63936&bb=85b8d228e8";
 const clientBuild = ref<{ version: string; channel: string }>();
 const currentVersion = computed(() => actualPlatform.isDesktop && actualPlatform.isRemoteConnection
@@ -382,6 +399,12 @@ async function runUpdate(nextAction: "read" | "check" | "download" | "apply") {
 </script>
 
 <style lang="scss" scoped>
+.webUpdateHint {
+  margin: 12px 0 0;
+  color: var(--el-text-color-regular);
+  line-height: 1.5;
+}
+
 .about {
   display: flex;
   flex-direction: column;

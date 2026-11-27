@@ -119,6 +119,8 @@ bun run build:server
 bun run start:server
 ```
 
+Khi cập nhật bản web đã cài từ repo, mở thư mục MacFlow trên máy đang chạy ứng dụng và lấy mã mới bằng `git pull --ff-only origin feat/macflow-media-studios`. Chạy lại các lệnh trên để dựng và khởi động bản mới. Trong **Cài đặt → Giới thiệu**, đối chiếu **Mã bản dựng** với commit GitHub để biết trình duyệt đang mở bản nào.
+
 Bản standalone phục vụ Web và API tại `http://127.0.0.1:3000` theo cấu hình mặc định. Khi phát triển giao diện, dùng `bun run dev:plugins` để đồng bộ plugin phát triển, rồi `bun run dev`. Vite mặc định mở tại `http://localhost:5173` và proxy API tới Server. `TOONFLOW_SERVER_PORT` đổi cổng Server và đích proxy. Khi cần thử bằng dữ liệu riêng, dùng `TOONFLOW_DATA_DIR` trỏ tới thư mục tạm. Lệnh `dev:plugins` đồng bộ plugin vào thư mục `data/` của repo, vì vậy với Server thử trỏ dữ liệu tạm, hãy cài plugin thử bằng tệp build trong chính instance đó. Khi chỉ chạy một gói, dùng `bun run --cwd <đường-dẫn> <lệnh>` để dùng đúng tên thư mục trên Linux.
 
 ### Node tích hợp

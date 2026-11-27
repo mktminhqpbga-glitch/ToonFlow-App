@@ -219,6 +219,7 @@
         <label class="dramaField"><span>Địa chỉ Huobao</span><el-input v-model="huobaoAddress" placeholder="http://localhost:5679" :disabled="action === 'import'" /></label>
         <label class="dramaField"><span>ID tập</span><el-input v-model="huobaoEpisode" inputmode="numeric" placeholder="Ví dụ: 3" :disabled="action === 'import'" /></label>
         <p class="hint">Mở tập trong Huobao và xem ID trong địa chỉ hoặc thông tin tập. ID có thể khác số thứ tự của tập. <a :href="huobaoGuide" target="_blank" rel="noopener noreferrer">Xem hướng dẫn lấy ID và tệp JSON</a></p>
+        <p v-if="!huobaoEpisode.trim()" class="hint">Nhập ID tập để mở JSON của tập. Nếu đã có JSON, hãy chọn tệp hoặc dán nội dung ở bên dưới.</p>
         <label class="dramaField"><span>Ghi chú nhập <small class="hint">Tùy chọn</small></span>
           <el-input v-model="importNotes" type="textarea" :rows="2" :maxlength="10000" :disabled="action === 'import'" placeholder="Ví dụ: Tập 3, bản dựng ngày 27/11" />
         </label>
@@ -239,6 +240,7 @@
         <details class="guide">
           <summary>Dán JSON</summary>
           <el-input v-model="pastedJson" type="textarea" :rows="4" :disabled="!!action" aria-label="Nội dung JSON từ Huobao" />
+          <p v-if="!pastedJson.trim()" class="hint">Dán nội dung JSON để bật nút nhập.</p>
           <el-button :disabled="!!action || !pastedJson.trim()" @click="importJson(() => pastedJson)">Nhập nội dung đã dán</el-button>
         </details>
         <el-alert v-if="importError" :title="importError" type="error" :closable="false" showIcon />
@@ -915,7 +917,7 @@ async function openStudio(kind: "image" | "video") {
   const version = loadVersion;
   if (!prompt || sceneLocked.value) return;
   const label = kind === "image" ? "Xưởng ảnh" : "Xưởng video";
-  const accepted = await ElMessageBox.confirm(`Prompt sẽ được điền vào ô ý tưởng của ${label}. Bạn có thể xem và sửa trước khi tạo.`,
+  const accepted = await ElMessageBox.confirm(`Mở ${label} để xem prompt của cảnh. Nếu xưởng đang có bản nháp, bạn chọn có dùng prompt mới hay không.`,
     `Đưa sang ${label}?`, { confirmButtonText: "Mở xưởng", cancelButtonText: "Ở lại" }).then(() => true, () => false);
   if (!accepted || version !== loadVersion || !(await saveBoard())) return;
   const transfer = { directory: directory.value, kind, prompt };

@@ -151,7 +151,7 @@ import { currentUser, publicWeb } from "@/stores/multiTenant";
 import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib/mobile";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
-import saveFile from "@/lib/saveFile";
+import { exportWorkspace } from "@/lib/exportWorkspace";
 import http from "@/lib/http";
 import { waitForControlValue } from "@/lib/mcpControl";
 import settings from "@/components/settings/index.vue";
@@ -439,19 +439,10 @@ async function exportProject(project: Project) {
   const directory = project.directory;
   exportingDirectory.value = directory;
   try {
-    let name = project.name.replace(/[<>:"/\\|?*\x00-\x1f\x7f-\x9f]/g, "_").slice(0, 120).replace(/[. ]+$/, "");
-    if (!name || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) name = "Toonflow";
-    const files = useWorkspaceFiles(directory);
-    await saveFile(() => files.exportZip(pageLifetime.signal), `${name}.zip`);
+    if (await exportWorkspace(project, pageLifetime.signal)) ElMessage.success("Đã xuất bản sao dự án.");
   } catch (error) {
     if (pageLifetime.signal.aborted) return;
-    let message = error instanceof Error ? error.message : translate("导出项目失败，请重试");
-    if (axios.isAxiosError(error)) {
-      const data = error.response?.data instanceof Blob
-        ? await error.response.data.text().then(JSON.parse).catch(() => null) : error.response?.data;
-      if (typeof data?.message === "string") message = data.message;
-    }
-    ElMessage.error(message);
+    ElMessage.error(error instanceof Error ? error.message : "Không xuất được dự án. Vui lòng thử lại.");
   } finally { exportingDirectory.value = ""; }
 }
 

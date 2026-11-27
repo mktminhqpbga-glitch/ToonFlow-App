@@ -55,8 +55,35 @@
             <el-input id="studioPrompt" v-model="prompt" type="textarea" resize="vertical" :rows="6"
               :maxlength="100000" showWordLimit :placeholder="kind === 'image' ? 'Mô tả bối cảnh, nhân vật, ánh sáng và phong cách bạn muốn tạo…' : 'Mô tả cảnh quay, chuyển động, hành động và không khí video…'"
               :disabled="submitting" />
+            <section v-if="incomingPrompt" class="promptTransfer" aria-label="Prompt từ bảng phân cảnh">
+              <p>Đã nhận prompt từ bảng phân cảnh. Nháp đang soạn vẫn ở ô ý tưởng.</p>
+              <details><summary>Xem prompt từ phân cảnh</summary><p class="incomingText">{{ incomingPrompt }}</p></details>
+              <div class="transferActions">
+                <el-button size="small" type="primary" :disabled="submitting" @click="applyIncomingPrompt">Dùng prompt của cảnh</el-button>
+                <el-button size="small" @click="incomingPrompt = ''">Giữ nháp hiện tại</el-button>
+              </div>
+            </section>
+            <el-button v-if="previousPrompt && previousPrompt !== prompt" class="restorePrompt" size="small" text :disabled="submitting"
+              @click="restorePreviousPrompt">Khôi phục nháp trước</el-button>
 
             <p v-if="model" class="fieldHint">Đang dùng {{ model.label }}</p>
+            <div v-if="kind === 'video' && model" class="studioOptions videoOptions">
+              <div>
+                <label class="fieldLabel" for="studioDuration">Thời lượng video</label>
+                <el-select v-if="durationOptions.length" id="studioDuration" v-model="duration" class="fullWidth" placeholder="Mặc định"
+                  clearable aria-label="Thời lượng video" @change="checkResolution">
+                  <el-option v-for="item in durationOptions" :key="item" :label="`${item} giây`" :value="item" />
+                </el-select>
+                <p v-else class="fieldHint">Theo mặc định của mô hình</p>
+              </div>
+              <div>
+                <label class="fieldLabel" for="studioVideoSize">Độ phân giải video</label>
+                <el-select v-if="resolutionOptions.length" id="studioVideoSize" v-model="resolution" class="fullWidth" placeholder="Mặc định" clearable aria-label="Độ phân giải video">
+                  <el-option v-for="item in resolutionOptions" :key="item" :label="item" :value="item" />
+                </el-select>
+                <p v-else class="fieldHint">Theo mặc định của mô hình</p>
+              </div>
+            </div>
             <details class="studioAdvanced">
               <summary>Cài đặt nâng cao</summary>
               <label class="fieldLabel" for="studioModel">Mô hình {{ kind === "image" ? "ảnh" : "video" }}</label>
@@ -71,19 +98,13 @@
               </el-alert>
 
 
-              <div v-if="model && (ratioOptions.length || sizeOptions.length || durationOptions.length || resolutionOptions.length)" class="studioOptions">
+              <div v-if="model && (ratioOptions.length || sizeOptions.length)" class="studioOptions">
                 <div v-if="ratioOptions.length"><label class="fieldLabel" for="studioRatio">Tỷ lệ khung hình</label>
                   <el-select id="studioRatio" v-model="ratio" class="fullWidth" placeholder="Mặc định của mô hình" clearable><el-option v-for="item in ratioOptions" :key="item" :label="item" :value="item" /></el-select>
                 </div>
                 <div v-if="sizeOptions.length"><label class="fieldLabel" for="studioImageSize">Độ phân giải</label>
                   <el-select id="studioImageSize" v-model="size" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in sizeOptions" :key="item" :label="item === 'auto' ? 'Tự động' : item" :value="item" /></el-select>
                   <p v-if="model.localImageSizing" class="fieldHint">Chọn Tự động để giữ kích thước gốc của ảnh.</p>
-                </div>
-                <div v-if="durationOptions.length"><label class="fieldLabel" for="studioDuration">Thời lượng</label>
-                  <el-select id="studioDuration" v-model="duration" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in durationOptions" :key="item" :label="`${item} giây`" :value="item" /></el-select>
-                </div>
-                <div v-if="resolutionOptions.length"><label class="fieldLabel" for="studioVideoSize">Độ phân giải</label>
-                  <el-select id="studioVideoSize" v-model="resolution" class="fullWidth" placeholder="Mặc định" clearable><el-option v-for="item in resolutionOptions" :key="item" :label="item" :value="item" /></el-select>
                 </div>
               </div>
 
@@ -128,7 +149,7 @@
               <p v-if="!model?.supportsPrice" class="fieldHint">Chi phí thực tế theo nhà cung cấp đã kết nối.</p>
             </div>
             <div class="studioSubmit">
-              <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting" :disabled="!canSubmit" @click="submitTask">
+              <el-button type="primary" size="large" :icon="IconSparkles" :loading="submitting || checkingVideoQuote" :disabled="!canSubmit" @click="submitTask">
                 {{ submitting ? "Đang thêm tác vụ…" : "Thêm vào hàng chờ" }}
               </el-button>
             </div>
@@ -162,16 +183,22 @@
               </details>
               <p v-if="latestTask.result && latestTask.result.code !== 200" class="taskError">{{ describeStudioError(latestTask.result.message, latestTask.result.code) }}</p>
               <p v-if="latestTask.state === 'interrupted'" class="fieldHint">Bấm Kiểm tra lại để tìm kết quả của yêu cầu đã gửi.</p>
+              <p v-if="kind === 'video' && latestTask.state === 'succeeded'" class="fieldHint">Xem khoản phí thực tế trong tài khoản của nhà cung cấp.</p>
               <p v-if="latestTask.statusUnavailable" class="fieldHint" role="status">Chưa kiểm tra được kết quả. Hãy thử lại sau.</p>
               <el-button v-if="latestTask.state === 'queued' || latestTask.state === 'running'" type="danger" plain
                 :loading="cancelling" @click="cancelTask(latestTask)">Hủy tác vụ</el-button>
               <div v-if="fileOf(latestTask)" class="resultActions">
                 <el-button :icon="IconDownload" :loading="downloadedTaskId === latestTask.taskId" @click="downloadResult(latestTask)">Tải về</el-button>
-                <el-button :icon="IconFolderPlus" :disabled="currentUser?.role === 'user'" @click="saveToLibrary(latestTask)">Lưu vào thư viện</el-button>
+                <el-button :icon="IconFolderPlus" :disabled="currentUser?.role === 'user' || !!savingLibraryTaskId"
+                  :loading="savingLibraryTaskId === latestTask.taskId" @click="saveToLibrary(latestTask)">Lưu vào thư viện</el-button>
                 <el-button type="primary" plain :icon="IconLayoutDashboard" @click="sendToCanvas(latestTask)">Đưa vào Canvas</el-button>
               </div>
               <el-button v-else-if="latestTask.state === 'failed'" type="primary" plain :disabled="submitting" @click="retryTask(latestTask)">Chạy lại</el-button>
               <el-button v-else-if="latestTask.state === 'interrupted' || latestTask.statusUnavailable" plain :disabled="statusBusy || submitting" @click="refreshStatuses(true)">Kiểm tra lại</el-button>
+              <div v-if="savedLibraryTaskId === latestTask.taskId && currentUser?.role !== 'user'" class="resultActions" role="status">
+                <span>Đã lưu vào Kho tài nguyên.</span>
+                <el-button link type="primary" @click="savedLibraryVisible = true">Mở Kho tài nguyên</el-button>
+              </div>
             </div>
             <el-empty v-else description="Kết quả mới sẽ xuất hiện tại đây" :imageSize="110" />
           </el-card>
@@ -198,14 +225,29 @@
       :directory="directory" :ownerId="ownerId" :prompt="prompt" :ratio="ratio || ''" :duration="duration || null"
       :hasReference="!!references.length" @apply="prompt = $event" />
     <characterLibrary v-if="charactersVisible" v-model="charactersVisible" :canUse="canUseCharacter" @select="useCharacterPhoto" />
+    <assetLibraryDialog v-if="savedLibraryVisible" v-model="savedLibraryVisible" :directory="directory" />
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
       <assetLibrary v-model="assetPickerVisible" expanded :canSelect="canSelectAsset" :selecting="referenceBusy" @select="selectAsset" />
+    </el-dialog>
+    <el-dialog :modelValue="!!videoReview" title="Xác nhận tạo video" width="min(460px, calc(100vw - 24px))" appendToBody
+      @update:modelValue="value => { if (!value) videoReview = undefined; }">
+      <dl v-if="videoReview" class="videoReview">
+        <div><dt>Mô hình</dt><dd>{{ videoReview.label }}</dd></div>
+        <div><dt>Thời lượng</dt><dd>{{ videoReview.input.duration ? `${videoReview.input.duration} giây` : 'Mặc định của mô hình' }}</dd></div>
+        <div><dt>Độ phân giải</dt><dd>{{ videoReview.input.resolution || 'Mặc định của mô hình' }}</dd></div>
+        <div><dt>Chi phí dự kiến</dt><dd>{{ videoReview.quote || 'Chưa có báo giá' }}</dd></div>
+      </dl>
+      <p class="reviewHint">Nhà cung cấp quyết định phí thực tế khi xử lý video.</p>
+      <template #footer>
+        <el-button @click="videoReview = undefined">Quay lại</el-button>
+        <el-button type="primary" @click="confirmVideo">Xác nhận thêm vào hàng chờ</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -213,20 +255,21 @@ import {
   IconAlertCircle, IconDownload, IconFolderPlus, IconGitBranch, IconHistory, IconLayoutDashboard, IconLoader2,
   IconRefresh, IconSparkles, IconX,
 } from "@tabler/icons-vue";
-import { createNodeRequestId, readNodeModels, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
+import { createNodeRequestId, readNodeModels, useNodeAi, type NodeMediaModel, type NodeVideoRequest } from "@toonflow/nodes-scaffold/nodeAi";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser, publicWeb } from "@/stores/multiTenant";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
 import { takeStudioPrompt } from "@/lib/studioPromptTransfer";
 import settings from "@/components/settings/index.vue";
+import assetLibraryDialog from "@/pages/home/assetLibraryDialog.vue";
 import assetLibrary from "@/pages/workspace/panels/canvas/components/assetLibrary.vue";
 import creativeNavigation from "@/components/creativeNavigation.vue";
 import characterLibrary from "@/components/characterLibrary.vue";
 import mediaPrice from "@toonflow/node-shared/mediaPrice";
 import logoUrl from "@toonflow/assets/logo.svg";
 import { describeStudioError, requestStudio, StudioRequestError } from "./studioRequests";
-import { readStudioAttempts, readStudioDraft, saveStudioBrowserState, type StudioAttempt, type StudioSubmission } from "./studioBrowserState";
+import { readStudioAttempts, readStudioDraft, saveStudioBrowserState, type StudioAttempt, type StudioDraft, type StudioSubmission } from "./studioBrowserState";
 import saveFile from "@/lib/saveFile";
 
 type MediaFile = { path: string; mimeType: string; mediaType: "image" | "video" };
@@ -280,6 +323,11 @@ const modelsLoading = ref(false);
 const flowSetupVisible = ref(false);
 const modelKey = ref("");
 const prompt = ref("");
+const incomingPrompt = ref("");
+const previousPrompt = ref("");
+const ai = useNodeAi();
+const checkingVideoQuote = ref(false);
+const videoReview = shallowRef<{ input: StudioSubmission; scope: number; label: string; quote?: string }>();
 const ratio = ref("");
 const size = ref("");
 const duration = ref<number | "">("");
@@ -308,6 +356,9 @@ const previewError = ref("");
 const previewRefresh = ref(0);
 const draftWarning = ref("");
 const downloadedTaskId = ref("");
+const savingLibraryTaskId = ref("");
+const savedLibraryTaskId = ref("");
+const savedLibraryVisible = ref(false);
 const attempts = ref<StudioAttempt[]>([]);
 const browserKey = computed(() => "macflow.studio.v2:" + JSON.stringify([directory.value, props.kind, ownerId.value]));
 let restoringDraft = false;
@@ -346,6 +397,9 @@ const ratioOptions = computed(() => model.value?.imageRatios ?? []);
 const sizeOptions = computed(() => model.value?.imageSizes ?? []);
 const durationOptions = computed(() => [...new Set(model.value?.durationResolutionMap?.flatMap(item => item.duration) ?? [])]);
 const resolutionOptions = computed(() => [...new Set((model.value?.durationResolutionMap ?? []).filter(item => !duration.value || item.duration.includes(Number(duration.value))).flatMap(item => item.resolution))]);
+function checkResolution() {
+  if (resolution.value && !resolutionOptions.value.includes(resolution.value)) resolution.value = "";
+}
 const referenceIssue = computed(() => {
   if (references.value.some(ref => ref.missing)) return "Một ảnh tham chiếu không còn trong dự án. Hãy bỏ ảnh đó rồi thêm lại.";
   if (!modelsLoading.value && model.value && references.value.length && (!supportsReferences.value
@@ -360,7 +414,9 @@ const generatedDirectory = "assets/generated";
 const generationInput = computed(() => {
   const current = model.value;
   if (!current || current.configured === false || !prompt.value.trim()) return;
-  const input: StudioSubmission = { providerId: current.providerId, modelId: current.modelId, prompt: prompt.value.trim() };
+  const input: StudioSubmission & { mode?: NodeVideoRequest["mode"] } = {
+    providerId: current.providerId, modelId: current.modelId, prompt: prompt.value.trim(),
+  };
   const photos = references.value.map(({ path, mimeType }) => ({ path, mimeType }));
   if (ratio.value && ratioOptions.value.includes(ratio.value)) input.ratio = ratio.value;
   if (props.kind === "image") {
@@ -374,7 +430,7 @@ const generationInput = computed(() => {
     if (current.referenceLimits && photos.length > 1) {
       delete input.firstFrame;
       input.images = photos;
-      input.mode = ["imageReference:" + photos.length];
+      input.mode = [`imageReference:${photos.length}`];
     }
   }
   return input;
@@ -460,7 +516,9 @@ function restoreDraft() {
   clearReferences();
   const draft = directory.value ? readStudioDraft(browserKey.value) : undefined;
   const transferredPrompt = takeStudioPrompt(directory.value, props.kind);
-  prompt.value = transferredPrompt ?? draft?.prompt ?? "";
+  prompt.value = draft?.prompt ?? "";
+  incomingPrompt.value = draft?.incomingPrompt ?? "";
+  previousPrompt.value = draft?.previousPrompt ?? "";
   modelKey.value = draft?.modelKey ?? "";
   ratio.value = draft?.ratio ?? "";
   size.value = draft?.size ?? "";
@@ -468,12 +526,9 @@ function restoreDraft() {
   resolution.value = draft?.resolution ?? "";
   selectedTaskId.value = draft?.selectedTaskId ?? "";
   attempts.value = directory.value ? readStudioAttempts(browserKey.value + ":attempts", { directory: directory.value, kind: props.kind, ownerId: ownerId.value }) : [];
-  restoringDraft = false;
-  if (transferredPrompt) ElMessage.success("Đã điền prompt từ bảng phân cảnh. Bạn có thể xem lại trước khi tạo.");
-  if (!draft || !directory.value) return;
-  const projectFiles = useWorkspaceFiles(directory.value);
+  const projectFiles = useWorkspaceFiles(directory);
   const version = scopeVersion;
-  for (const saved of draft.references) {
+  for (const saved of draft?.references ?? []) {
     const lease = projectFiles.acquireUrl(saved.path, saved.mimeType);
     const reference = reactive<ImageReference>({ ...saved, preview: "", release: lease.release });
     references.value.push(reference);
@@ -481,10 +536,20 @@ function restoreDraft() {
       if (version === scopeVersion) reference.preview = url;
     }).catch(() => { if (version === scopeVersion) reference.missing = true; });
   }
+  restoringDraft = false;
+  if (!transferredPrompt) return;
+  if (prompt.value.trim()) {
+    incomingPrompt.value = transferredPrompt === prompt.value ? "" : transferredPrompt;
+  } else {
+    incomingPrompt.value = "";
+    prompt.value = transferredPrompt;
+    ElMessage.success("Đã điền prompt từ bảng phân cảnh. Bạn có thể xem lại trước khi tạo.");
+  }
 }
 
-watch(() => ({
+watch((): StudioDraft => ({
   prompt: prompt.value, modelKey: modelKey.value, ratio: ratio.value || "", size: size.value || "",
+  incomingPrompt: incomingPrompt.value || undefined, previousPrompt: previousPrompt.value || undefined,
   duration: duration.value || "" as const, resolution: resolution.value || "", selectedTaskId: selectedTaskId.value,
   references: references.value.map(({ path, mimeType, name, digest, bytes }) => ({ path, mimeType, name, digest, bytes })),
 }), draft => {
@@ -492,6 +557,22 @@ watch(() => ({
   try { saveStudioBrowserState(browserKey.value, draft); }
   catch { draftWarning.value = "Trình duyệt chưa lưu được nội dung đang làm. Hãy giữ trang mở để tiếp tục."; }
 }, { flush: "sync" });
+
+function applyIncomingPrompt() {
+  if (!incomingPrompt.value || submitting.value) return;
+  previousPrompt.value = prompt.value;
+  prompt.value = incomingPrompt.value;
+  incomingPrompt.value = "";
+  ElMessage.success("Đã điền prompt của cảnh. Bạn có thể khôi phục nháp trước.");
+}
+
+function restorePreviousPrompt() {
+  if (!previousPrompt.value || submitting.value) return;
+  const current = prompt.value;
+  prompt.value = previousPrompt.value;
+  previousPrompt.value = current;
+  ElMessage.success("Đã khôi phục nháp trước.");
+}
 
 async function saveReference(file: File, version: number, existingPath?: string) {
   if (version !== scopeVersion || !directory.value || !supportsReferences.value || references.value.length >= maxReferences.value) return;
@@ -683,10 +764,34 @@ function previewDecodeFailed() {
   if (previewUrl.value) previewError.value = "Trình duyệt không mở được định dạng hoặc nội dung tệp kết quả.";
 }
 async function refreshAll() { await Promise.all([loadModels(), loadHistory()]); await refreshStatuses(); }
-function submitTask() {
+async function submitTask() {
   const input = generationInput.value;
   if (!canSubmit.value || !input) return;
-  void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: input }, directory.value);
+  if (props.kind === "image") {
+    void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: input }, directory.value);
+    return;
+  }
+  if (checkingVideoQuote.value || videoReview.value) return;
+  const scope = scopeVersion;
+  const target = directory.value;
+  const label = model.value?.label ?? input.modelId;
+  checkingVideoQuote.value = true;
+  try {
+    const quote = model.value?.supportsPrice ? await ai.getMediaPrice({
+      ...input, directory: target, mediaType: "video", outputDirectory: generatedDirectory,
+    }, AbortSignal.timeout(7000)).catch(() => null) : null;
+    if (scope === scopeVersion && input === generationInput.value && canSubmit.value) videoReview.value = { input, scope, label, quote: quote?.price };
+  } finally { checkingVideoQuote.value = false; }
+}
+
+function confirmVideo() {
+  const review = videoReview.value;
+  videoReview.value = undefined;
+  if (!review || !canSubmit.value || review.scope !== scopeVersion || review.input !== generationInput.value) {
+    ElMessage.warning("Thông tin tạo video đã thay đổi. Hãy kiểm tra và xác nhận lại.");
+    return;
+  }
+  void sendAttempt({ taskId: createNodeRequestId(), createdAt: Date.now(), request: review.input }, directory.value);
 }
 
 function retryTask(task: StudioTask) {
@@ -743,23 +848,33 @@ async function downloadResult(task: StudioTask) {
   finally { downloadedTaskId.value = ""; }
 }
 async function saveToLibrary(task: StudioTask) {
-  if (currentUser.value?.role === "user") return;
+  if (currentUser.value?.role === "user" || savingLibraryTaskId.value) return;
   const media = fileOf(task);
   if (!media) return;
+  const version = scopeVersion;
+  const project = directory.value;
+  savingLibraryTaskId.value = task.taskId;
   try {
     if (media.mediaType === "video") {
-      await requestStudio("/api/mediaStudio/publishVideo", { method: "POST", body: JSON.stringify({ directory: directory.value, path: media.path }) });
-      ElMessage.success("Video đã có trong Kho tài nguyên MacFlow.");
-      return;
+      await requestStudio("/api/mediaStudio/publishVideo", { method: "POST", body: JSON.stringify({ directory: project, path: media.path }) });
+    } else {
+      const bytes = await useWorkspaceFiles(project).read(media.path);
+      if (version !== scopeVersion) return;
+      const extension = media.path.split(".").at(-1) ?? "png";
+      const name = `xuongAnh-${task.taskId.replaceAll("-", "")}.${extension}`;
+      await axios.put("/api/assets/save", new Blob([bytes], { type: media.mimeType }), {
+        params: { path: name }, timeout: 120000, headers: { "Content-Type": "application/octet-stream" },
+      });
     }
-    const bytes = await useWorkspaceFiles(directory.value).read(media.path);
-    const extension = media.path.split(".").at(-1) ?? (props.kind === "image" ? "png" : "mp4");
-    const name = `xuong${props.kind === "image" ? "Anh" : "Video"}-${task.taskId.replaceAll("-", "")}.${extension}`;
-    await axios.put("/api/assets/save", new Blob([bytes], { type: media.mimeType }), {
-      params: { path: name }, timeout: 120000, headers: { "Content-Type": "application/octet-stream" },
-    });
-    ElMessage.success("Đã lưu bản sao vào thư viện tài nguyên MacFlow.");
-  } catch (cause) { ElMessage.error(messageOf(cause)); }
+    if (version === scopeVersion) {
+      savedLibraryTaskId.value = task.taskId;
+      ElMessage.success("Đã lưu vào Kho tài nguyên MacFlow.");
+    }
+  } catch (cause) {
+    if (version === scopeVersion) ElMessage.error(messageOf(cause));
+  } finally {
+    if (version === scopeVersion) savingLibraryTaskId.value = "";
+  }
 }
 async function sendToCanvas(task: StudioTask) {
   const media = fileOf(task);
@@ -779,6 +894,10 @@ watch(requestedModelKey, key => { if (key && !modelsLoading.value) void loadMode
 watch(browserKey, async () => {
   if (!mounted) return;
   scopeVersion++;
+  videoReview.value = undefined;
+  savingLibraryTaskId.value = "";
+  savedLibraryTaskId.value = "";
+  savedLibraryVisible.value = false;
   historySequence++;
   tasks.value = [];
   submitError.value = "";
@@ -812,6 +931,17 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.promptTransfer { display: grid; gap: 6px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--el-border-color); border-radius: 8px; color: var(--el-text-color-regular); font-size: 13px; }
+.promptTransfer p { margin: 0; }
+.promptTransfer summary { cursor: pointer; }
+.incomingText { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 170px; overflow: auto; }
+.transferActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.transferActions :deep(.el-button + .el-button) { margin-left: 0; }
+.videoOptions { margin-block: 10px; }
+.videoReview { display: grid; gap: 9px; margin: 0; }
+.videoReview div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; }
+.videoReview dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.reviewHint { color: var(--el-text-color-regular); }
 .studioEstimate {
   display: flex;
   flex-wrap: wrap;

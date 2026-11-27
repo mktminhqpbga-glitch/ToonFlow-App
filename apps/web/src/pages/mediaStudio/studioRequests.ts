@@ -40,6 +40,9 @@ export async function requestStudio<T>(url: string, options?: RequestInit) {
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000), ...options, headers });
   const result = await response.json().catch(() => null) as { code: number; message: string; data: T } | null;
   if (!result || typeof result.code !== "number") throw new StudioRequestError(describeStudioError(undefined, response.status), response.status);
-  if (!response.ok || result.code !== 200) throw new StudioRequestError(describeStudioError(result.message, response.status === 200 ? result.code : response.status), response.status, result.code);
+  if (!response.ok || result.code !== 200) {
+    const status = response.ok ? result.code : response.status;
+    throw new StudioRequestError(describeStudioError(result.message, status), status, result.code);
+  }
   return result.data;
 }

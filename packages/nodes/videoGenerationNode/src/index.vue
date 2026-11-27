@@ -41,6 +41,7 @@
         <icon-camera-ai :size="48" stroke="1.25" aria-hidden="true" />
       </div>
     </div>
+    <p v-if="generating" class="generationTime">Đang xử lý video · {{ elapsedSeconds }} giây</p>
     <template #bottom>
       <el-card class="promptCard" shadow="never" :bodyStyle="{ padding: '14px 16px 12px' }">
         <referenceItem
@@ -151,7 +152,7 @@ const actions = ref<InstanceType<typeof videoActions>>();
 const videoWidth = ref(0);
 let generationController: AbortController | undefined;
 const generationState = useNodeGeneration(outputs, () => generationController?.abort(), { ai });
-const { generating, pendingRecovery, cancelling } = generationState;
+const { generating, elapsedSeconds, pendingRecovery, cancelling } = generationState;
 let generation: Promise<void> | undefined;
 let modelsRequest: Promise<void> | undefined;
 watch(generating, value => { if (!value && !disposed && !deleting.value && !models.value.length) void loadModels().catch(error => showNodeError(error, "Lỗi tải mô hình")); });
@@ -507,6 +508,13 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.generationTime {
+  margin: 4px 8px;
+  text-align: center;
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+}
+
 .videoContent {
   .nodeSkeleton.resized & {
     height: 100%;

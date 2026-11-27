@@ -37,10 +37,18 @@
             <p>{{ scopeFiles.length }}  tài nguyên<span v-if="scopeDirectories.length"> · {{ scopeDirectories.length }}  thư mục</span></p>
           </div>
           <div class="headerActions">
-            <el-input v-model="searchQuery" class="searchInput" :prefixIcon="IconSearch" :placeholder="folder === '.' ? 'Tìm tất cả tài nguyên' : 'Tìm trong thư mục hiện tại'" aria-label="Tìm tài nguyên" clearable @keydown.esc.stop="searchQuery = ''" />
+            <el-input v-model="searchQuery" class="searchInput" :prefixIcon="IconSearch" placeholder="Tìm theo tên tệp hoặc thư mục" aria-label="Tìm tài nguyên" clearable @keydown.esc.stop="searchQuery = ''" />
             <el-button class="createButton" :icon="IconFolderPlus" :disabled="newFolderParent !== undefined || loading" @click="emit('startFolder')">Tạo thư mục mới</el-button>
             <el-button class="uploadButton" type="primary" :icon="IconUpload" :loading="uploading" :disabled="newFolderParent !== undefined || loading || selecting" @click="emit('upload')">Tải lên từ máy</el-button>
           </div>
+        </div>
+        <div class="sortRow">
+          <label for="assetSort">Sắp xếp</label>
+          <el-select id="assetSort" v-model="sortOrder" size="small" aria-label="Sắp xếp tài nguyên">
+            <el-option label="Tên A–Z" value="asc" />
+            <el-option label="Tên Z–A" value="desc" />
+          </el-select>
+          <span v-if="searchQuery.trim()" role="status">{{ displayEntries.length }} kết quả</span>
         </div>
         <div class="filterRow" role="group" aria-label="Loại tài nguyên">
           <button v-for="item in filters" :key="item.value" class="filterButton" :class="{ active: selectedKind === item.value }" type="button" :aria-pressed="selectedKind === item.value" @click="selectedKind = item.value">
@@ -126,6 +134,7 @@ const emit = defineEmits<{
 
 const folderInput = ref<InputInstance>();
 const selectedKind = ref<"all" | MediaKind | "other">("all");
+const sortOrder = ref<"asc" | "desc">("asc");
 const navigationLocked = computed(() => props.folderSaving || props.newFolderParent !== undefined);
 const allEntries = computed(() => {
   const items: AssetEntry[] = [];
@@ -159,12 +168,16 @@ const filters = computed(() => [
   { value: "other" as const, label: translate("其他"), count: scopeFiles.value.filter(entry => !props.mediaKind(entry)).length },
 ]);
 const displayEntries = computed(() => {
-  const query = searchQuery.value.trim().toLocaleLowerCase();
-  return scopeEntries.value.filter(entry => {
-    if (query && !entry.name.toLocaleLowerCase().includes(query)) return false;
+  const normalize = (value: string) => value.normalize("NFC").toLocaleLowerCase("vi");
+  const query = normalize(searchQuery.value.trim());
+  const searchEntries = query
+    ? allEntries.value.filter(entry => folder.value === "." || entry.path.startsWith(folder.value + "/")) : scopeEntries.value;
+  return searchEntries.filter(entry => {
+    if (query && !normalize(folder.value === "." ? entry.path : entry.path.slice(folder.value.length + 1)).includes(query)) return false;
     if (selectedKind.value === "all") return true;
     return entry.type === "file" && (props.mediaKind(entry) ?? "other") === selectedKind.value;
-  }).toSorted((left, right) => Number(right.type === "directory") - Number(left.type === "directory") || left.name.localeCompare(right.name, "zh-CN", { numeric: true }));
+  }).toSorted((left, right) => Number(right.type === "directory") - Number(left.type === "directory")
+    || (sortOrder.value === "asc" ? 1 : -1) * (left.name.localeCompare(right.name, "vi", { numeric: true }) || left.path.localeCompare(right.path)));
 });
 
 function selectDirectory(entry: DirectoryEntry) {
@@ -173,6 +186,7 @@ function selectDirectory(entry: DirectoryEntry) {
 
 function navigateTo(path: string) {
   if (navigationLocked.value) return;
+  if (folder.value !== path) searchQuery.value = "";
   folder.value = path;
   selectedKind.value = "all";
 }
@@ -203,6 +217,8 @@ watch(allEntries, () => {
 </script>
 
 <style scoped lang="scss">
+.sortRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; color: var(--el-text-color-regular); font-size: 13px; }
+.sortRow :deep(.el-select) { width: 128px; }
 .assetBrowser {
   display: flex;
   flex: 1;

@@ -74,6 +74,7 @@ export async function createApp({
       await initializePlugins(nodeDirectory, nodesRoot, modelPickerNodes, "1", "modelPickerRevision");
       await initializePlugins(nodeDirectory, nodesRoot, ["videoMergeNode.umd.js"], "2", "videoMergeNodeRevision");
       await initializePlugins(nodeDirectory, nodesRoot, canvasPortNodes, "1", "canvasPortNodeRevision");
+      await initializePlugins(nodeDirectory, nodesRoot, ["imageGenerationNode.umd.js", "videoGenerationNode.umd.js"], "1", "generationTimerRevision");
     }
   }
   if (dataDirectory && extRoot) {

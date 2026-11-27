@@ -12,6 +12,7 @@ export function clearStudioPrompt(draft: StudioPrompt) {
 
 export function takeStudioPrompt(directory: string, kind: StudioPrompt["kind"]) {
   const draft = pending;
+  if (!draft || draft.directory !== directory || draft.kind !== kind) return;
   pending = undefined;
-  if (draft?.directory === directory && draft.kind === kind) return draft.prompt;
+  return draft.prompt;
 }

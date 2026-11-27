@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { basename } from "node:path";
 import { defineConfig } from "vite";
@@ -10,10 +11,21 @@ import { i18nPlugin } from "@toonflow/i18n/vite";
 
 const serverOrigin = `http://127.0.0.1:${process.env.TOONFLOW_SERVER_PORT || 3000}`;
 
+function readBuildRevision() {
+  try {
+    return execFileSync("git", ["rev-parse", "--short=12", "HEAD"], {
+      cwd: fileURLToPath(new URL(".", import.meta.url)),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch { return ""; }
+}
+
 export default defineConfig(({ command }) => ({
   css: { postcss: postcssConfig },
   define: {
     "import.meta.env.appVersion": JSON.stringify(appVersion),
+    "import.meta.env.macflowRevision": JSON.stringify(readBuildRevision()),
   },
   server: {
     proxy: {
