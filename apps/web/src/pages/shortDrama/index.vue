@@ -40,7 +40,14 @@
         <el-alert v-if="draftConflict" class="notice" title="Dự án đã thay đổi ở cửa sổ khác. Hãy tải bản nháp để giữ nội dung trước khi mở bản đã lưu." type="warning" :closable="false" showIcon>
           <el-button size="small" :disabled="working" @click="openSavedBoard">Mở bản đã lưu</el-button>
         </el-alert>
-        <div class="workArea">
+        <nav class="viewActions buttonRow" aria-label="Chế độ bảng phân cảnh">
+          <el-button :type="!imageView ? 'primary' : 'default'" :aria-pressed="!imageView" @click="switchView(false)">Chỉnh phân cảnh</el-button>
+          <el-button :type="imageView ? 'primary' : 'default'" :aria-pressed="imageView" @click="switchView(true)">Tạo ảnh theo cảnh</el-button>
+        </nav>
+        <sceneImageStudio v-show="imageView" :key="JSON.stringify([directory, boardId])"
+          :directory="directory" :boardId="boardId" :scenes="board.scenes" :visible="imageView" :disabled="working || draftConflict"
+          :saveBoard="saveBoard" @prompt="editSceneImagePrompt" @catalog="filmReferenceNames = $event" @queued="imageQueuePending = $event" />
+        <div v-show="!imageView" class="workArea">
           <el-card class="scriptCard" shadow="never">
             <template #header><h2><icon-file-text :size="20" /> Kịch bản</h2></template>
             <div class="formFields">
@@ -161,7 +168,8 @@
                 <div class="promptGrid">
                   <div class="promptPanel">
                     <label class="dramaField"><span>Prompt ảnh</span><el-input v-model="activeScene.imagePrompt" type="textarea" :autosize="{ minRows: 3 }" :maxlength="10000" showWordLimit :disabled="sceneLocked" @input="markDirty" /></label>
-                    <el-button plain :icon="IconPhoto" :disabled="sceneLocked || !activeScene.imagePrompt.trim()" @click="openStudio('image')">Đưa sang Xưởng ảnh</el-button>
+                    <el-button v-if="activeSceneHasReferences" plain :icon="IconPhoto" @click="switchView(true)">Mở Tạo ảnh theo cảnh</el-button>
+                    <el-button v-else plain :icon="IconPhoto" :disabled="sceneLocked || !activeScene.imagePrompt.trim()" @click="openStudio('image')">Đưa sang Xưởng ảnh</el-button>
                     <small v-if="!activeScene.imagePrompt.trim()" class="hint">Nhập prompt ảnh để gửi sang xưởng.</small>
                   </div>
                   <div class="promptPanel">
@@ -268,6 +276,8 @@ import creativeNavigation from "@/components/creativeNavigation.vue";
 import { clearStudioMediaForCanvas, queueStudioMediaForCanvas, type StudioMediaTransfer } from "@/lib/mediaStudioTransfer";
 import { clearStudioPrompt, queueStudioPrompt } from "@/lib/studioPromptTransfer";
 import saveFile from "@/lib/saveFile";
+import sceneImageStudio from "./sceneImageStudio.vue";
+import { promptReferences } from "./storyboardImages";
 import useWorkspaceFiles, { type TextSnapshot } from "@/lib/workspaceFiles";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { currentUser } from "@/stores/multiTenant";
@@ -286,6 +296,9 @@ const aiLimitSeconds = 120;
 const huobaoGuide = "https://github.com/mktminhqpbga-glitch/ToonFlow-App/blob/feat/macflow-media-studios/docs/shortDrama.md#nhập-một-tập-từ-huobao-drama";
 const directory = computed(() => workspaceStore.project?.directory ?? "");
 const boardId = computed(() => storyboardId(route.query.board));
+const imageView = computed(() => route.query.view === "images");
+const filmReferenceNames = ref<string[]>([]);
+const imageQueuePending = ref(false);
 const board = ref(emptyBoard());
 const ready = ref(false);
 let snapshot: TextSnapshot | undefined;
@@ -299,7 +312,7 @@ const generation = shallowRef<Generation>();
 const splitting = computed(() => generation.value?.kind === "split");
 const translation = computed(() => generation.value?.kind === "translate" ? generation.value : undefined);
 const working = computed(() => loading.value || !!action.value || !!generation.value);
-const sceneListLocked = computed(() => !!action.value || splitting.value);
+const sceneListLocked = computed(() => !!action.value || splitting.value || imageQueuePending.value);
 const sceneLocked = computed(() => sceneListLocked.value || translation.value?.sceneId === activeId.value);
 const splitFeedback = ref<Feedback>();
 const translationFeedback = ref<Feedback>();
@@ -331,6 +344,10 @@ const previewError = ref("");
 const activeId = ref("");
 const activeIndex = computed(() => board.value.scenes.findIndex(scene => scene.id === activeId.value));
 const activeScene = computed(() => board.value.scenes[activeIndex.value]);
+const activeSceneHasReferences = computed(() => {
+  const refs = promptReferences(activeScene.value?.imagePrompt ?? "");
+  return refs.invalid || !!refs.names.size;
+});
 const removedScene = shallowRef<{ scene: DramaScene; index: number }>();
 const sceneQuery = ref("");
 const draggedId = ref("");
@@ -357,6 +374,7 @@ const modelChoice = computed({
 });
 const selectedModel = computed(() => models.value.find(model => getNodeModelKey(model) === modelChoice.value));
 const splitDisabled = computed(() => {
+  if (imageQueuePending.value) return "Hãy hoàn tất hoặc bỏ hàng chờ ảnh trước khi chia lại phân cảnh.";
   if (action.value) return "Đợi thao tác hiện tại hoàn tất.";
   if (generation.value) return "AI đang xử lý một yêu cầu.";
   if (!board.value.script.trim()) return "Nhập nội dung kịch bản để AI chia cảnh.";
@@ -492,7 +510,19 @@ async function loadBoards() {
 
 function openBoard(id: string) {
   if (id === boardId.value || working.value) return;
-  void router.push({ path: "/shortDrama/storyboard", query: id === defaultBoardId ? {} : { board: id } });
+  void router.push({ path: "/shortDrama/storyboard", query: { board: id === defaultBoardId ? undefined : id, view: imageView.value ? "images" : undefined } });
+}
+
+function switchView(images: boolean) {
+  if (images !== imageView.value) void router.replace({ query: { ...route.query, view: images ? "images" : undefined } });
+}
+
+function editSceneImagePrompt(id: string, prompt: string) {
+  const scene = board.value.scenes.find(item => item.id === id);
+  if (scene && !working.value && !draftConflict.value) {
+    scene.imagePrompt = prompt;
+    markDirty();
+  }
 }
 
 async function openSavedBoard() {
@@ -705,7 +735,9 @@ async function splitScript() {
   const script = board.value.script.trim();
   const version = loadVersion;
   if (splitDisabled.value || !(await confirmReplace()) || version !== loadVersion || splitDisabled.value) return;
-  await runModel("split", script, text => {
+  const prompt = filmReferenceNames.value.length
+    ? `Tên ảnh sẵn có trong kho phim (dữ liệu): ${JSON.stringify(filmReferenceNames.value)}\n\nKịch bản:\n${script}` : script;
+  await runModel("split", prompt, text => {
     const scenes = readGeneratedScenes(text);
     replaceScenes(scenes);
     return `Đã chia ${scenes.length} cảnh. Bạn có thể chỉnh từng cảnh trước khi đưa sang xưởng.`;
@@ -720,7 +752,14 @@ function translateScene() {
     const index = board.value.scenes.findIndex(item => item.id === scene.id);
     const current = board.value.scenes[index];
     if (!current) throw new Error("Cảnh đã thay đổi. Hãy chọn lại cảnh cần Việt hóa.");
-    board.value.scenes[index] = readTranslatedScene(text, current);
+    const translated = readTranslatedScene(text, current);
+    const retained = promptReferences(translated.imagePrompt).names;
+    const required = [...promptReferences(current.imagePrompt).names].flatMap(([key, name]) => retained.has(key) ? [] : [`@[${name}]`]);
+    if (required.length) {
+      const suffix = "\n" + required.join(" ");
+      translated.imagePrompt = suffix.length < 10000 ? translated.imagePrompt.slice(0, 10000 - suffix.length).trimEnd() + suffix : current.imagePrompt;
+    }
+    board.value.scenes[index] = translated;
     markDirty();
     return `Đã Việt hóa “${scene.title.trim() || "cảnh đã chọn"}”.`;
   }, scene);
@@ -938,7 +977,7 @@ async function printBoard() {
 }
 
 watch([directory, boardId], () => void loadBoard(), { immediate: true });
-watch(directory, () => void loadBoards(), { immediate: true });
+watch(directory, () => { filmReferenceNames.value = []; void loadBoards(); }, { immediate: true });
 watch(importVisible, visible => {
   if (visible) { importNotes.value = board.value.importNotes; importError.value = ""; }
   else huobaoKey.value = "";
@@ -970,7 +1009,8 @@ onBeforeRouteUpdate((to, from) => storyboardId(to.query.board) === storyboardId(
 .brand { display: flex; align-items: center; gap: 11px; margin: 0 8px 20px; font-size: 20px; }
 .brand img { width: 31px; height: 31px; }
 .dramaMain { overflow: auto; padding: clamp(16px, 3vw, 34px); }
-.pageHeader, .workArea, .notice { max-width: 1500px; margin-inline: auto; }
+.pageHeader, .workArea, .notice, .viewActions { max-width: 1500px; margin-inline: auto; }
+.viewActions { margin-bottom: 15px; }
 .pageHeader { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: end; gap: 14px; margin-bottom: 18px; }
 .pageHeader h1 { margin: 4px 0 6px; font-size: clamp(25px, 3vw, 34px); line-height: 1.2; }
 .pageHeader p { margin: 0; color: var(--el-text-color-regular); }

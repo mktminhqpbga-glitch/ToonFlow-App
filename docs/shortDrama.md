@@ -9,6 +9,13 @@ Mở **Phim ngắn → Mở bảng phân cảnh MacFlow đã lưu** trong một 
 3. Bấm **Đưa sang Xưởng ảnh** hoặc **Đưa sang Xưởng video**. MacFlow lưu bảng và điền prompt của cảnh đang chọn vào đúng xưởng. Ở xưởng, chọn mô hình, thêm tư liệu tham chiếu nếu cần rồi dùng nút **Thêm vào hàng chờ**. Khi xong, kết quả xuất hiện trong lịch sử xưởng.
 4. Bấm **Tải Markdown** để giữ kịch bản và các cảnh trong một tệp, hoặc bấm **In hoặc lưu PDF** và chọn **Lưu dưới dạng PDF** trong hộp thoại in. **Đưa vào Canvas** tạo một node **Văn bản** ở chỗ trống, với tên bảng và thời điểm xuất. Bấm **Đọc toàn bộ** để đọc nội dung. Để dùng nội dung này cho **Tạo ảnh**, bấm cổng đầu ra của **Văn bản**, rồi bấm cổng đầu vào của **Tạo ảnh**. Phần văn bản đã nối hiện trong node nhận.
 
+## Tạo ảnh lần lượt theo cảnh
+
+1. Mở **Tạo ảnh theo cảnh** trong bảng phân cảnh. Vào **Kho tham chiếu của phim**, đặt tên cho ảnh rồi tải lên hoặc chọn ảnh từ **Kho nhân vật**. Mỗi tên gắn với một ảnh dùng chung giữa các bảng trong dự án phim.
+2. Bấm **Sửa prompt** trên thẻ cảnh. Gõ `@` để chọn ảnh hoặc nhập `@[Tên ảnh]`, ví dụ `@[Mai] ở @[Quán cà phê]`. MacFlow gửi kèm các ảnh được gọi theo thứ tự xuất hiện. Nếu kho thiếu ảnh, thẻ hiển thị tên cần bổ sung.
+3. Chọn mô hình ảnh rồi bấm **Chạy cảnh này** hoặc **Chạy tất cả ảnh**. Các cảnh chạy lần lượt theo thứ tự bảng. Cảnh thiếu dữ liệu hoặc tạo lỗi được báo riêng. Sau khi sửa, bấm **Chạy lại cảnh** để chạy mục đó.
+4. Ảnh và tiến độ được lưu trong dự án. Nếu đóng trang giữa chừng, mở lại bảng và bấm **Kiểm tra và tiếp tục** hoặc **Tiếp tục hàng chờ**. MacFlow dùng mã tác vụ đã lưu để kiểm tra cảnh đang dở.
+
 ## Nhập một tập từ Huobao Drama
 
 1. Chạy Huobao Drama trong môi trường được phép sử dụng của bạn và mở tập cần chuyển. Dùng ID của tập trong dữ liệu dự án Huobao. Số thứ tự hiển thị của tập và ID có thể khác nhau.
