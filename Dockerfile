@@ -3,7 +3,7 @@ FROM oven/bun:1.4.3
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-dejavu-core python3 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .

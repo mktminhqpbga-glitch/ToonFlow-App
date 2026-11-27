@@ -10,6 +10,7 @@ Tài liệu này áp dụng cho nhánh `feat/macflow-media-studios` của `mktmi
 | Chạy Huobao Drama tách biệt, nối mô hình và Kho MacFlow | `services/huobaoDrama`, `apps/server/src/utils/huobao` | [Chạy Huobao Drama với MacFlow](huobaoDrama.md). |
 | Phân cảnh phim ngắn và chuyển prompt sang xưởng | `apps/web/src/pages/shortDrama` và `apps/web/src/lib/studioPromptTransfer.ts` | [Phim ngắn và nhập dữ liệu Huobao](shortDrama.md). |
 | Dựng video sản phẩm từ ảnh và lời thoại | `apps/web/src/pages/mediaStudio/clipForgeStudio.vue` và `clipForgeApi.ts` | [Xưởng video sản phẩm với ClipForge](clipForge.md). |
+| Ghép ảnh, clip, lời đọc và phụ đề từ tư liệu trong dự án | `apps/web/src/pages/mediaStudio/moneyPrinterStudio.vue`, `apps/server/src/utils/mediaStudio/moneyPrinterTurbo.ts` | [Dựng video từ tư liệu với MoneyPrinterTurbo](moneyPrinterTurbo.md). |
 | Mở xưởng video bán hàng VideoAFF và kết nối mô hình, tư liệu | `services/videoAff`, `apps/server/src/utils/videoAff` và `apps/web/src/pages/videoAff` | [Chạy VideoAFF với MacFlow](videoAff.md). |
 | Chạy nhiều cảnh, giữ phiên bản và chọn clip ghép | `apps/web/src/pages/mediaStudio/videoFlowRun.vue` và `useVideoFlowRun.ts` | Thao tác theo từng cảnh. Dùng cùng ảnh và kịch bản, chọn rõ bản video sẽ đưa sang node Ghép video. |
 | Thêm node có giao diện trên Canvas | `packages/nodes/<tênNode>` cho node tích hợp, hoặc dự án plugin trong workspace cho tệp cài riêng | [`textNode`](../packages/nodes/textNode), [`videoScriptNote`](../plugins/videoScriptNote), [`nodeScaffold`](../packages/nodeScaffold/readme.md). |

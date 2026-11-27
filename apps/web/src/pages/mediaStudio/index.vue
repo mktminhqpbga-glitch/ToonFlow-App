@@ -20,10 +20,11 @@
         <div>
           <h1>{{ kind === "image" ? "Xưởng tạo ảnh" : "Xưởng tạo video" }}</h1>
           <p v-if="showVideoFlow">Từ ý tưởng đến kịch bản, ảnh mở đầu và video.</p>
+          <p v-else-if="showMoneyPrinter">Ghép ảnh, clip, lời đọc và phụ đề thành video.</p>
           <p v-else-if="showClipForge">Dựng video từ ảnh sản phẩm và lời thoại tiếng Việt.</p>
           <p v-else>Biến mô tả thành {{ kind === "image" ? "hình ảnh" : "video" }} bằng mô hình đã cài trong MacFlow.</p>
         </div>
-        <div v-if="!showClipForge" class="studioHeaderActions">
+        <div v-if="!showClipForge && !showMoneyPrinter" class="studioHeaderActions">
           <el-button type="primary" plain :icon="IconGitBranch" :disabled="!directory" @click="flowSetupVisible = true">Thiết lập luồng</el-button>
           <el-button :icon="IconRefresh" :loading="modelsLoading || historyLoading" @click="refreshAll">Làm mới</el-button>
         </div>
@@ -33,6 +34,7 @@
         <el-button :type="studioMode === 'single' ? 'primary' : 'default'" :plain="studioMode !== 'single'" :aria-pressed="studioMode === 'single'" @click="switchStudio('single')">Tạo từng video</el-button>
         <el-button :type="showVideoFlow ? 'primary' : 'default'" :plain="!showVideoFlow" :aria-pressed="showVideoFlow" @click="switchStudio('flow')">Tự động theo luồng</el-button>
         <el-button :type="showClipForge ? 'primary' : 'default'" :plain="!showClipForge" :aria-pressed="showClipForge" @click="switchStudio('clipForge')">Video từ ảnh sản phẩm</el-button>
+        <el-button v-if="canRenderFromMedia" :type="showMoneyPrinter ? 'primary' : 'default'" :plain="!showMoneyPrinter" :aria-pressed="showMoneyPrinter" @click="switchStudio('render')">Dựng video từ tư liệu</el-button>
       </nav>
 
       <el-alert v-if="!directory" type="warning" :closable="false" showIcon>
@@ -42,6 +44,8 @@
       </el-alert>
 
       <clipForgeStudio v-if="kind === 'video' && directory && clipForgeOpened" v-show="showClipForge" :key="directory" :directory="directory" :active="showClipForge" />
+      <moneyPrinterStudio v-if="kind === 'video' && directory && canRenderFromMedia && moneyPrinterOpened" v-show="showMoneyPrinter"
+        :key="JSON.stringify([directory, ownerId])" :directory="directory" :ownerId="ownerId" :active="showMoneyPrinter" />
 
       <videoFlowRun v-if="kind === 'video' && directory && videoFlowOpened" v-show="showVideoFlow" :key="JSON.stringify([directory, ownerId])"
         :directory="directory" :ownerId="ownerId" :catalogRevision="flowCatalogRevision" @settings="openMediaSettings" />
@@ -205,7 +209,7 @@ import {
 } from "@tabler/icons-vue";
 import { readNodeModels, type NodeMediaModel } from "@toonflow/nodes-scaffold/nodeAi";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { currentUser } from "@/stores/multiTenant";
+import { currentUser, publicWeb } from "@/stores/multiTenant";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
 import { takeStudioPrompt } from "@/lib/studioPromptTransfer";
@@ -231,23 +235,29 @@ type StudioQueueStatus = { limit: number; running: number; queued: number };
 const props = defineProps<{ kind: "image" | "video" }>();
 const studioFlowSetup = defineAsyncComponent(() => import("./studioFlowSetup.vue"));
 const clipForgeStudio = defineAsyncComponent(() => import("./clipForgeStudio.vue"));
+const moneyPrinterStudio = defineAsyncComponent(() => import("./moneyPrinterStudio.vue"));
 const videoFlowRun = defineAsyncComponent(() => import("./videoFlowRun.vue"));
 const router = useRouter();
 const route = useRoute();
+const canRenderFromMedia = computed(() => !publicWeb.value && currentUser.value?.role !== "user");
 const studioMode = computed(() => {
   if (props.kind !== "video") return "single";
+  if (route.query.studio === "render" && canRenderFromMedia.value) return "render";
   return route.query.studio === "clipForge" ? "clipForge" : route.query.studio === "flow" ? "flow" : "single";
 });
 const showClipForge = computed(() => studioMode.value === "clipForge");
+const showMoneyPrinter = computed(() => studioMode.value === "render");
 const showVideoFlow = computed(() => studioMode.value === "flow");
 const clipForgeOpened = ref(showClipForge.value);
+const moneyPrinterOpened = ref(showMoneyPrinter.value);
 const videoFlowOpened = ref(showVideoFlow.value);
 const flowCatalogRevision = ref(0);
 const ownerId = computed(() => currentUser.value?.id ?? "standalone");
 watch(showClipForge, active => { if (active) clipForgeOpened.value = true; });
+watch(showMoneyPrinter, active => { if (active) moneyPrinterOpened.value = true; });
 watch(showVideoFlow, active => { if (active) videoFlowOpened.value = true; });
 
-function switchStudio(mode: "single" | "flow" | "clipForge") {
+function switchStudio(mode: "single" | "flow" | "clipForge" | "render") {
   void router.replace({ query: { ...route.query, studio: mode === "single" ? undefined : mode } });
 }
 const workspaceStore = useWorkspaceStore();

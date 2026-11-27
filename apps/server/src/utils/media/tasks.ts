@@ -17,6 +17,7 @@ import { completeTask, failTask } from "@/utils/aiChrome";
 import { assertProviderAvailable, isRetiredProvider } from "@/lib/retiredProviders";
 import { isMac2ApiProvider } from "@/utils/mac2Api/contract";
 import { cancelMac2Api } from "@/utils/mac2Api/tasks";
+import { moneyPrinterProvider, moneyPrinterSchema, renderMoneyPrinter } from "@/utils/mediaStudio/moneyPrinterTurbo";
 
 const maxRecordSize = 16 * 1024 * 1024;
 const maxBlobSize = 140 * 1024 * 1024;
@@ -397,6 +398,7 @@ async function resumable(task: MediaTask) {
   const { checkpoint, state } = task.record;
   if (state !== "running" && state !== "interrupted") return false;
   const providerId = task.record.request?.providerId;
+  if (providerId === moneyPrinterProvider && task.record.studioQueue && !modelGateway.enabled()) return true;
   if (providerId && providerId !== "aiChrome" && !isRetiredProvider(providerId) && (checkpoint.providerData || checkpoint.assets?.length)) return true;
   if (!checkpoint.assetCount || checkpoint.files?.length !== checkpoint.assetCount) return false;
   for (const file of checkpoint.files) {
@@ -532,15 +534,21 @@ async function prepareCharge(task: MediaTask, recoverExisting = false) {
 
 async function execute(task: MediaTask, resume: boolean) {
   const { record } = task;
+  const localRender = record.request?.providerId === moneyPrinterProvider;
   try {
-    const files = await generateMedia(record.cwd, record.mediaType!, record.request!, task.controller!.signal, {
-      taskId: record.taskId, resume, checkpoint: record.checkpoint, modelRouteCipher: record.modelRouteCipher,
-      save: patch => locked(task.key, async () => {
-        if (record.state !== "running") throw new Error("生成已停止");
-        Object.assign(record.checkpoint, patch);
-        await persist(task);
-      }),
-    });
+    if (localRender && (modelGateway.enabled() || !record.studioQueue || record.mediaType !== "video" || record.ownerUserId)) {
+      invalid("Chế độ dựng từ tư liệu cần Xưởng video trên máy MacFlow tự vận hành.", 403);
+    }
+    const files = localRender
+      ? await renderMoneyPrinter(record.cwd, record.taskId, join(dirname(task.key), `render${record.taskId}`), record.request?.other, task.controller!.signal)
+      : await generateMedia(record.cwd, record.mediaType!, record.request!, task.controller!.signal, {
+          taskId: record.taskId, resume, checkpoint: record.checkpoint, modelRouteCipher: record.modelRouteCipher,
+          save: patch => locked(task.key, async () => {
+            if (record.state !== "running") throw new Error("生成已停止");
+            Object.assign(record.checkpoint, patch);
+            await persist(task);
+          }),
+        });
     await locked(task.key, async () => {
       if (record.state !== "running") return;
       await settleCharge(task, files);
@@ -555,7 +563,7 @@ async function execute(task: MediaTask, resume: boolean) {
       await locked(task.key, async () => {
         if (record.state !== "running") return;
         const notSubmitted = isMediaNotSubmitted(cause);
-        record.state = notSubmitted || (cause as { code?: string } | null)?.code === "MEDIA_TASK_FAILED" ? "failed" : "interrupted";
+        record.state = localRender || notSubmitted || (cause as { code?: string } | null)?.code === "MEDIA_TASK_FAILED" ? "failed" : "interrupted";
         const result = errorFromCause(cause);
         record.result = { ...result, code: result.code === 200 ? 500 : result.code, data: null };
         await persist(task);
@@ -629,6 +637,13 @@ export async function start(cwd: string, taskId: string, mediaType: "image" | "v
   cwd = await realpath(cwd);
   const key = taskPath(cwd, taskId);
   const parsed = requestSchemas[mediaType].parse(request);
+  if (parsed.providerId === moneyPrinterProvider) {
+    if (!studioQueue || mediaType !== "video" || parsed.modelId !== "localRenderer" || modelGateway.enabled()
+      || owner?.role === "user" || attachment.nodeId || attachment.canvasPath) {
+      invalid("Chế độ dựng từ tư liệu cần Xưởng video trên máy MacFlow tự vận hành.", 403);
+    }
+    moneyPrinterSchema.parse(parsed.other);
+  }
   assertProviderAvailable(parsed.providerId);
   if (attachment.nodeId !== undefined) z.string().min(1).max(512).parse(attachment.nodeId);
   if (attachment.canvasPath !== undefined) {
