@@ -8,7 +8,7 @@ import { requireDirectModelAccess } from "@/utils/multiTenant/gateway";
 import bridge from "./bridge";
 import { localVideoAffAvailable, localVideoAffStatus, startLocalVideoAff } from "./local";
 import { configuredModels, fail, imageFormat, modelSelections, selectionSchema, videoAffModels,
-  videoAffOrigin, videoAffPublicUrl, videoAffToken } from "./config";
+  videoAffFetch, videoAffStudioPath, videoAffToken } from "./config";
 
 const router = Router();
 const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,160}$/);
@@ -20,9 +20,8 @@ const videosSchema = z.array(z.object({ product_id: idSchema, title: z.string().
   product_title: z.string().nullish(), has_cover: z.boolean() }));
 
 async function videoAffRequest(path: string, init?: RequestInit, timeout = 12_000) {
-  const response = await fetch(new URL(path, videoAffOrigin()), {
-    ...init, signal: AbortSignal.timeout(timeout), redirect: "error",
-  }).catch(() => fail("Chưa kết nối được VideoAFF. Kiểm tra ứng dụng VideoAFF đã chạy.", 502));
+  const response = await videoAffFetch(path, { ...init, signal: AbortSignal.timeout(timeout) })
+    .catch(() => fail("Chưa kết nối được VideoAFF. Kiểm tra ứng dụng VideoAFF đã chạy.", 502));
   if (!response.ok) {
     await response.body?.cancel().catch(() => {});
     if (response.status === 404) fail("Không tìm thấy nội dung đã chọn trong VideoAFF.", 404);
@@ -69,12 +68,12 @@ router.get("/status", async (req, res) => {
     localVideoAffStatus().phase === "starting" ? false : videoAffOnline(),
     localVideoAffAvailable(req),
   ]);
-  res.json(success({ publicUrl: videoAffPublicUrl(), online, canStart, local: localVideoAffStatus(),
+  res.json(success({ publicUrl: `${videoAffStudioPath}/dashboard/`, online, canStart, local: localVideoAffStatus(),
     bridgeReady: Boolean(videoAffToken()), selections: configuredModels() }));
 });
 
 router.post("/local/start", async (req, res) => {
-  if (!await localVideoAffAvailable(req)) fail("Hãy mở MacFlow trực tiếp trên máy có mã nguồn VideoAFF để khởi động.", 403);
+  if (!await localVideoAffAvailable(req)) fail("Máy chạy MacFlow chưa hỗ trợ tự khởi động VideoAFF.", 403);
   if (localVideoAffStatus().phase !== "starting" && !await videoAffOnline()) startLocalVideoAff(req);
   res.status(202).json(success({ local: localVideoAffStatus() }));
 });

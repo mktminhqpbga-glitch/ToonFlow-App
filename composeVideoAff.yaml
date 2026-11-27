@@ -2,7 +2,6 @@ services:
   toonflow:
     environment:
       TOONFLOW_VIDEO_AFF_ORIGIN: http://videoAffWeb:8080
-      TOONFLOW_VIDEO_AFF_PUBLIC_URL: ${MACFLOW_VIDEO_AFF_PUBLIC_URL:-http://localhost:8080}
       TOONFLOW_VIDEO_AFF_CALLBACK: http://toonflow:3000/api/videoAff/bridge/v1
       TOONFLOW_VIDEO_AFF_TOKEN: ${MACFLOW_VIDEO_AFF_TOKEN:-}
 
@@ -44,8 +43,6 @@ services:
     depends_on:
       videoAffMigrate:
         condition: service_completed_successfully
-    ports:
-      - "127.0.0.1:8000:8000"
     networks:
       default:
       videoAffPrivate:
@@ -54,7 +51,6 @@ services:
       - videoAffMedia:/var/lib/aicontent
     environment:
       BAML_LOG: "OFF"
-      AIC_MACFLOW_ORIGIN: ${MACFLOW_VIDEO_AFF_HOST_URL:-http://127.0.0.1:3000}
       AIC_AI_DATABASE_URL: *videoAffDatabase
       AIC_AI_OBJECT_STORAGE_BACKEND: filesystem
       AIC_SCREENING_BASE_URL: ${AIC_SCREENING_BASE_URL:-http://toonflow:3000/api/videoAff/bridge/v1}
@@ -90,13 +86,13 @@ services:
       context: ./services/videoAff/upstream
       dockerfile: deploy/docker/frontend.Dockerfile
       target: runtime
+      args:
+        VITE_VIDEO_AFF_BASE: /api/videoAff/studio/dashboard/
     init: true
     restart: unless-stopped
     depends_on:
       videoAffApi:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:8080:8080"
     networks: [default, videoAffPrivate]
     volumes:
       - ./services/videoAff/upstream/deploy/nginx/auth.off.conf:/etc/nginx/auth.d/auth.conf:ro

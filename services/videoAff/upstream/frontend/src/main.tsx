@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider><ErrorBoundary><WorkspaceProvider><BrowserRouter basename="/dashboard">
+      <ThemeProvider><ErrorBoundary><WorkspaceProvider><BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <App />
       </BrowserRouter></WorkspaceProvider></ErrorBoundary></ThemeProvider>
     </QueryClientProvider>

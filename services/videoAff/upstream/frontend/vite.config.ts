@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    base: "/dashboard/",
+    base: env.VITE_VIDEO_AFF_BASE || "/dashboard/",
     server: {
       proxy: {
         "/api": { target: proxyTarget },

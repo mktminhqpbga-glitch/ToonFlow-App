@@ -9,5 +9,5 @@ Trong **Xuất dữ liệu**, bạn có thể tải danh sách sản phẩm dư�
 
 ## Dành cho người phát triển
 
-- Tiện ích kết nối trực tiếp đến VideoAFF tại `http://127.0.0.1:8000`.
+- Tệp ZIP tải từ MacFlow được cấu hình theo địa chỉ MacFlow hiện tại. Hãy tải lại ZIP nếu chuyển sang địa chỉ hoặc cổng khác.
 - Chạy kiểm thử với `node --test extension/tests/background.test.cjs` từ thư mục mã nguồn VideoAFF.

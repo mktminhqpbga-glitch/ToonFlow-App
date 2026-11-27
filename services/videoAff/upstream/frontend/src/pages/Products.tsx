@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Empty, ErrorNote, PageHead, Skeleton } from "../components/ui";
 import { API, useBriefs, useProducts } from "../hooks/useStudio";
 import { newProjectId, productOf, toNumber, vnd } from "../lib/studio";
-import { deleteJson, getJson, postJson } from "../services/http";
+import { apiRoot, deleteJson, getJson, postJson } from "../services/http";
 import type { Product } from "../types/studio";
 
 const SORTS = {
@@ -72,7 +72,7 @@ export function ProductsPage() {
         text="Chọn một sản phẩm đã thu thập từ TikTok Shop để tạo video."
         actions={
           <>
-            <a className="btn btn-primary" href="/api/v1/extension/download" download>
+            <a className="btn btn-primary" href={`${apiRoot}/extension/download`} download>
               <Download size={16} aria-hidden="true" />Tải tiện ích Chrome
             </a>
             <a className="btn" href={`${API}/export?format=xlsx`}>

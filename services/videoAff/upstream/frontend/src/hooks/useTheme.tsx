@@ -19,6 +19,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (window.parent !== window && import.meta.env.BASE_URL !== "/dashboard/") return;
     if (theme === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
     } else {

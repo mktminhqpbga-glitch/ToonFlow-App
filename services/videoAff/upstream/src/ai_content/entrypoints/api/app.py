@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -113,18 +115,48 @@ async def macflow_host() -> dict[str, str | None]:
 
 
 @app.get("/api/v1/extension/download")
-def download_extension() -> Response:
+def download_extension(request: Request) -> Response:
     """Package the Chrome extension shipped with this installation."""
     root = Path(os.environ.get("AIC_EXTENSION_DIR") or Path(__file__).resolve().parents[4] / "extension")
     files = (
         "manifest.json", "background.js", "content.js", "hook.js", "popup.html",
         "popup.css", "popup.js", "icon.png", "README.md",
     )
+    collector_origin = request.headers.get("x-video-aff-collector-origin")
+    collector_token = request.headers.get("x-video-aff-collector-token")
+    extension_config = None
+    if collector_origin or collector_token:
+        try:
+            url = urlsplit(collector_origin or "")
+            if (
+                url.scheme not in {"http", "https"} or not url.hostname or url.port == 0
+                or url.username is not None or url.password is not None or url.path
+                or url.query or url.fragment or not re.fullmatch(r"[a-f0-9]{64}", collector_token or "")
+            ):
+                raise ValueError("Invalid collector connection")
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Địa chỉ kết nối MacFlow không hợp lệ.") from error
+        host = f"[{url.hostname}]" if ":" in url.hostname else url.hostname
+        extension_config = {
+            "origin": collector_origin,
+            "products": f"{collector_origin}/api/videoAff/studio/api/v1/products",
+            "token": collector_token,
+        }
     output = BytesIO()
     try:
         with ZipFile(output, "w", ZIP_DEFLATED) as archive:
             for name in files:
-                archive.write(root / name, f"VideoAFF-Collector/{name}")
+                target = f"VideoAFF-Collector/{name}"
+                if extension_config and name == "manifest.json":
+                    manifest = json.loads((root / name).read_text(encoding="utf-8"))
+                    manifest["host_permissions"] = [item for item in manifest["host_permissions"] if item.startswith("https://")]
+                    manifest["host_permissions"].append(f"{url.scheme}://{host}/*")
+                    archive.writestr(target, json.dumps(manifest, ensure_ascii=False, indent=2))
+                elif extension_config and name in {"popup.js", "background.js"}:
+                    prefix = "globalThis.videoAffConnection = " + json.dumps(extension_config) + ";\n"
+                    archive.writestr(target, prefix + (root / name).read_text(encoding="utf-8"))
+                else:
+                    archive.write(root / name, target)
             archive.write(root.parent / "LICENSE", "VideoAFF-Collector/LICENSE")
     except OSError as error:
         raise HTTPException(

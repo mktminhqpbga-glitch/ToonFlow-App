@@ -269,3 +269,48 @@ img { max-width: 100%; }
   h1 { font-size: 24px; }
   .shot-edit { grid-template-columns: 1fr; }
 }
+
+/* Use the current MacFlow appearance across every embedded page. */
+:root:has(.inMacFlow) {
+  --bg: var(--el-bg-color-page, #f2f3f5);
+  --paper: var(--el-bg-color, #fff);
+  --soft: var(--el-fill-color-light, #f5f7fa);
+  --ink: var(--el-text-color-primary, #303133);
+  --ink-2: var(--el-text-color-regular, #606266);
+  --muted: var(--el-text-color-secondary, #73767a);
+  --line: var(--el-border-color-light, #e4e7ed);
+  --line-2: var(--el-border-color, #dcdfe6);
+  --brand: var(--el-color-primary, #1677ff);
+  --brand-ink: #fff;
+  --brand-soft: var(--el-color-primary-light-9, #ecf5ff);
+  --ok: var(--el-color-success, #389e54);
+  --ok-soft: var(--el-color-success-light-9, #f0f9eb);
+  --warn: var(--el-color-warning, #9a6200);
+  --warn-soft: var(--el-color-warning-light-9, #fdf6ec);
+  --danger: var(--el-color-danger, #d9363e);
+  --danger-soft: var(--el-color-danger-light-9, #fef0f0);
+  --radius: clamp(6px, var(--ui-radius, 10px), 22px);
+  --radius-sm: max(4px, calc(var(--radius) - 2px));
+  --sidebar-w: 210px;
+  color-scheme: light;
+}
+:root[data-theme="dark"]:has(.inMacFlow) { color-scheme: dark; }
+body:has(.inMacFlow) { font-size: .9375rem; }
+.inMacFlow h1 { font-size: clamp(1.375rem, 2.4vw, 1.875rem); }
+.inMacFlow .sidebar { padding: 20px 12px; height: 100dvh; }
+.inMacFlow .nav a { white-space: nowrap; }
+.inMacFlow .navCount { margin-left: auto; color: var(--brand); font-size: .75rem; }
+.inMacFlow .page { padding: clamp(16px, 3vw, 36px); gap: 22px; }
+.inMacFlow .btn { border-radius: var(--radius-sm); text-align: center; }
+.inMacFlow .phone { max-width: 100%; }
+.inMacFlow .todo-grid, .inMacFlow .rule-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.inMacFlow .steps-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 225px), 1fr)); }
+.inMacFlow .toolbar > *, .inMacFlow .toolbar .input { min-width: 0; max-width: 100%; }
+@media (max-width: 900px) {
+  .inMacFlow { flex-direction: column; }
+  .inMacFlow .sidebar { position: sticky; z-index: 20; width: 100%; height: auto; flex: none; transform: none; padding: 6px 12px; border: 0; border-bottom: 1px solid var(--line); }
+  .inMacFlow .nav { flex-direction: row; overflow: auto; padding: 3px; }
+  .inMacFlow .side-note { display: none; }
+  .inMacFlow .nav a { padding: 8px; font-size: .8125rem; }
+  .inMacFlow .nav svg { flex: none; width: 16px; height: 16px; }
+}

@@ -13,6 +13,7 @@ const NAV = [
   { to: "/videos", label: "Video của tôi", icon: Film, end: false },
   { to: "/memory", label: "Bộ nhớ AI", icon: Sparkles, end: false },
 ];
+const embedded = window.parent !== window && import.meta.env.BASE_URL !== "/dashboard/";
 
 export function Shell() {
   const { theme, setTheme } = useTheme();
@@ -21,15 +22,18 @@ export function Shell() {
   const rules = useQuery({ queryKey: ["creative-knowledge"], queryFn: ({ signal }) => pilotApi.creativeKnowledge(undefined, signal) });
   const learned = (rules.data?.items ?? []).filter((item) => item.status === "approved").length;
   return (
-    <div className="app">
+    <div className={`app${embedded ? " inMacFlow" : ""}`}>
       <aside className={`sidebar${open ? " open" : ""}`} aria-label="Menu chính">
-        <div className="brand"><span className="brand-mark" aria-hidden="true">VA</span>VideoAFF</div>
+        {!embedded && <div className="brand"><span className="brand-mark" aria-hidden="true">VA</span>VideoAFF</div>}
         <nav className="nav">
           {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)}>
               <Icon size={20} aria-hidden="true" />{label}
             </NavLink>
           ))}
+          {embedded && <NavLink to="/notifications"><Bell size={20} aria-hidden="true" />Thông báo
+            {Boolean(notifications.data?.unread) && <span className="navCount" aria-label="Thông báo chưa đọc">{notifications.data?.unread}</span>}
+          </NavLink>}
         </nav>
         <div className="side-note">
           <strong>{learned === 1 ? "AI áp dụng 1 quy tắc" : `AI áp dụng ${learned} quy tắc`}</strong>
@@ -37,7 +41,7 @@ export function Shell() {
         </div>
       </aside>
       <div className="main">
-        <header className="topbar">
+        {!embedded && <header className="topbar">
           <button className="icon-button menu-button" aria-label="Mở menu" aria-expanded={open} onClick={() => setOpen(!open)}><Menu size={22} /></button>
           <button className="icon-button" aria-label={theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
@@ -45,7 +49,7 @@ export function Shell() {
           <NavLink to="/notifications" className="icon-button" aria-label="Thông báo">
             <Bell size={20} />{(notifications.data?.unread ?? 0) > 0 && <span className="dot" />}
           </NavLink>
-        </header>
+        </header>}
         <Suspense fallback={<div className="page"><Skeleton /></div>}><Outlet /></Suspense>
       </div>
     </div>

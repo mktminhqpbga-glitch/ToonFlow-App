@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { z } from "zod";
 import u from "@/utils";
 import { detectMimeType } from "@/utils/media/priceReference";
+import { nativeFetch } from "@/utils/network/transport";
 
 export const videoAffModels = ["writer", "review", "image", "video", "audio"] as const;
 export type VideoAffModel = typeof videoAffModels[number];
@@ -12,9 +13,8 @@ export const selectionSchema = z.object({
 }).refine(item => !["aiChrome", "toonflow"].includes(item.providerId));
 export const modelSelections = z.record(z.enum(videoAffModels), selectionSchema.nullable());
 export type ModelSelection = z.infer<typeof selectionSchema>;
-export const localVideoAffPort = 8000;
-const localVideoAffOrigin = `http://127.0.0.1:${localVideoAffPort}`;
-let localConnection: { callback: string; token: string } | undefined;
+export const videoAffStudioPath = "/api/videoAff/studio";
+let localConnection: { callback: string; token: string; socket: string } | undefined;
 
 export function setLocalVideoAffConnection(connection?: typeof localConnection) {
   localConnection = connection;
@@ -32,14 +32,11 @@ function origin(value: string) {
   return url.origin;
 }
 
-export function videoAffOrigin() {
-  if (localConnection) return localVideoAffOrigin;
-  return origin(process.env.TOONFLOW_VIDEO_AFF_ORIGIN || "http://127.0.0.1:8080");
-}
-
-export function videoAffPublicUrl() {
-  if (localConnection) return `${localVideoAffOrigin}/dashboard/`;
-  return `${origin(process.env.TOONFLOW_VIDEO_AFF_PUBLIC_URL || "http://localhost:8080")}/dashboard/`;
+export async function videoAffFetch(path: string, init?: RequestInit) {
+  if (localConnection) return nativeFetch(`http://localhost${path}`, { ...init, unix: localConnection.socket, redirect: "manual" });
+  const target = process.env.TOONFLOW_VIDEO_AFF_ORIGIN;
+  if (!target) fail("VideoAFF đang tắt. Hãy mở xưởng trong MacFlow.", 503);
+  return nativeFetch(`${origin(target)}${path}`, { ...init, proxy: "", redirect: "manual" });
 }
 
 export function videoAffToken() {

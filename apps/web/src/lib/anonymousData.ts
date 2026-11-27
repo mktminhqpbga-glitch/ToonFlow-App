@@ -29,6 +29,7 @@ const anonymousData = {
 export default anonymousData;
 
 export function registerAnonymousData() {
+  if (typeof crypto.randomUUID !== "function") return () => {};
   const workspace = useWorkspaceStore();
   const sessionId = crypto.randomUUID();
   const sessionStartedAt = Date.now();

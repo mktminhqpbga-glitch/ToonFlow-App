@@ -4,7 +4,7 @@ import { BlockList, isIP } from "node:net";
 
 export type NetworkProfile = { httpProxy?: string; httpsProxy?: string; noProxy?: string };
 
-const nativeFetch = globalThis.fetch;
+export const nativeFetch = globalThis.fetch;
 const localAddresses = new BlockList();
 localAddresses.addSubnet("127.0.0.0", 8, "ipv4");
 localAddresses.addAddress("::1", "ipv6");

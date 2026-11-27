@@ -1,16 +1,20 @@
 <template>
   <main class="videoAffPage">
     <header class="pageHeader">
-      <router-link class="backLink" to="/home">← Tổng quan</router-link>
-      <h1>VideoAFF</h1>
+      <router-link class="backLink" to="/home" aria-label="Về tổng quan MacFlow">
+        <icon-arrow-left :size="18" aria-hidden="true" /> <span>MacFlow</span>
+      </router-link>
+      <h1><icon-movie :size="21" aria-hidden="true" /> VideoAFF</h1>
       <div class="headerActions">
-        <el-button v-if="status?.online" text @click="frameRevision++">Tải lại xưởng</el-button>
-        <el-button @click="openSettings">Mô hình và Kho</el-button>
+        <el-button v-if="status?.online" text aria-label="Tải lại xưởng" title="Tải lại xưởng" @click="frameRevision++">
+          <icon-refresh :size="18" aria-hidden="true" />
+        </el-button>
+        <el-button plain @click="openSettings">Mô hình và Kho</el-button>
       </div>
     </header>
 
-    <iframe v-if="dashboardUrl" :key="frameRevision" class="studioFrame" :src="dashboardUrl" title="Xưởng VideoAFF" allow="clipboard-write; fullscreen"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox" />
+    <iframe v-if="dashboardUrl" :key="frameRevision" ref="studioFrame" class="studioFrame" :src="dashboardUrl" title="Xưởng VideoAFF" allow="clipboard-write; fullscreen"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox" @load="syncAppearance" />
 
     <section v-else class="launchPanel" aria-labelledby="launchTitle">
       <h2 id="launchTitle">Xưởng video bán hàng</h2>
@@ -121,15 +125,17 @@ const route = useRoute();
 const status = ref<Status>();
 const settingsVisible = ref(false);
 const frameRevision = ref(0);
+const studioFrame = ref<HTMLIFrameElement>();
 const connectionError = ref("");
 const dashboardUrl = computed(() => {
   if (!status.value?.online) return;
-  const url = new URL(status.value.publicUrl);
+  const path = status.value.publicUrl;
+  if (path !== "/api/videoAff/studio/dashboard/") return;
   const product = route.query.product;
   if (typeof product === "string" && /^[a-zA-Z0-9_-]{1,160}$/.test(product)) {
-    url.pathname += "studio/" + product;
+    return path + "studio/" + product;
   }
-  return url.href;
+  return path;
 });
 const models = ref<Record<Kind, Model[]>>({ writer: [], review: [], image: [], video: [], audio: [] });
 const choices = reactive<Record<Kind, string>>({ writer: "", review: "", image: "", video: "", audio: "" });
@@ -152,6 +158,21 @@ const video = ref("");
 const rights = ref(false);
 const modelKey = (model: Selection) => JSON.stringify([model.providerId, model.modelId]);
 let poll: ReturnType<typeof setTimeout> | undefined;
+const appearanceTokens = ["--el-bg-color", "--el-bg-color-page", "--el-fill-color-light", "--el-text-color-primary",
+  "--el-text-color-regular", "--el-text-color-secondary", "--el-border-color-light", "--el-border-color",
+  "--el-color-primary", "--el-color-primary-light-9", "--el-color-success", "--el-color-success-light-9",
+  "--el-color-warning", "--el-color-warning-light-9", "--el-color-danger", "--el-color-danger-light-9", "--ui-radius"];
+const appearanceObserver = new MutationObserver(syncAppearance);
+
+function syncAppearance() {
+  const root = studioFrame.value?.contentDocument?.documentElement;
+  if (!root) return;
+  const host = document.documentElement;
+  const appearance = getComputedStyle(host);
+  root.setAttribute("data-theme", host.classList.contains("dark") ? "dark" : "light");
+  root.style.fontSize = appearance.fontSize;
+  for (const token of appearanceTokens) root.style.setProperty(token, appearance.getPropertyValue(token));
+}
 
 function message(error: unknown) {
   return axios.isAxiosError<{ message?: string }>(error) && error.response?.data?.message
@@ -285,16 +306,23 @@ async function saveOutput(kind: "video" | "cover") {
   finally { transfer.value = undefined; }
 }
 
-onMounted(() => void refresh(true));
-onScopeDispose(() => { lifetime.abort(); clearTimeout(poll); });
+onMounted(() => {
+  appearanceObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
+  void refresh(true);
+});
+onScopeDispose(() => { lifetime.abort(); appearanceObserver.disconnect(); clearTimeout(poll); });
 </script>
 
 <style scoped>
 .videoAffPage { box-sizing: border-box; height: 100dvh; display: flex; flex-direction: column; background: var(--el-bg-color); }
 .pageHeader, .headerActions, .cardHeader, .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.pageHeader { flex: none; padding: 10px clamp(12px, 3vw, 30px); border-bottom: 1px solid var(--el-border-color-light); }
-.backLink { padding-right: 12px; border-right: 1px solid var(--el-border-color-light); }
-.headerActions { margin-left: auto; }
+.pageHeader { flex: none; min-height: 56px; padding: 8px clamp(12px, 3vw, 28px); border-bottom: 1px solid var(--el-border-color-light); }
+.backLink, h1 { display: flex; align-items: center; gap: 7px; }
+.backLink { padding: 6px 12px 6px 0; border-right: 1px solid var(--el-border-color-light); color: var(--el-text-color-regular); font-size: 14px; text-decoration: none; }
+.backLink:hover { color: var(--el-color-primary); }
+h1 svg { color: var(--el-color-primary); }
+.headerActions { margin-left: auto; gap: 4px; }
+.headerActions :deep(.el-button) { margin: 0; }
 .cardHeader { justify-content: space-between; }
 .studioFrame { flex: 1; min-height: 0; width: 100%; border: 0; }
 .launchPanel { display: grid; gap: 12px; align-content: center; justify-items: start; flex: 1; width: min(100%, 650px); margin: auto; padding: 20px; box-sizing: border-box; }
@@ -314,5 +342,8 @@ a { color: var(--el-color-primary); text-underline-offset: 3px; }
 .actions :deep(.el-button) { margin: 0; }
 @media (max-width: 690px) {
   .libraryGrid, .modelGrid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .backLink span { display: none; }
 }
 </style>

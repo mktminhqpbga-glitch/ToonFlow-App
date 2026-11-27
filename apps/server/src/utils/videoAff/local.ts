@@ -1,13 +1,12 @@
-import { cp, lstat, mkdir, open, readFile, readdir, writeAtomic } from "@toonflow/file";
+import { cp, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, writeAtomic } from "@toonflow/file";
 import { createHash, randomBytes } from "node:crypto";
-import { createServer } from "node:net";
 import { homedir } from "node:os";
 import { delimiter, dirname, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { parseEnv } from "node:util";
 import type { Request } from "express";
 import u from "@/utils";
-import { fail, localVideoAffPort, setLocalVideoAffConnection, videoAffToken } from "./config";
+import { fail, setLocalVideoAffConnection, videoAffFetch, videoAffStudioPath, videoAffToken } from "./config";
 
 const loopback = "127.0.0.1";
 const frontendFiles = ["index.html", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "src",
@@ -19,11 +18,7 @@ let managedProcess: { readonly pid: number } | undefined;
 
 export async function localVideoAffAvailable(req: Request) {
   const root = typeof req.app.locals.videoAffRoot === "string" && req.app.locals.videoAffRoot;
-  const configured = process.env.TOONFLOW_VIDEO_AFF_ORIGIN;
-  const address = configured ? URL.parse(configured) : undefined;
-  const localAddress = !configured || (address?.protocol === "http:" && ["localhost", loopback].includes(address.hostname)
-    && ["8080", String(localVideoAffPort)].includes(address.port));
-  if (!root || !localAddress || !["darwin", "linux"].includes(process.platform) || !u.workspace.isLocalHostRequest(req)) return false;
+  if (!root || process.env.TOONFLOW_VIDEO_AFF_ORIGIN || !["darwin", "linux"].includes(process.platform)) return false;
   return (await lstat(resolve(root, "localRunner.py")).catch(() => undefined))?.isFile() === true;
 }
 
@@ -31,17 +26,9 @@ export function localVideoAffStatus() {
   return status;
 }
 
-async function assertFreePort() {
-  const available = await new Promise<boolean>(done => {
-    const server = createServer();
-    server.once("error", () => done(false));
-    server.listen(localVideoAffPort, loopback, () => server.close(() => done(true)));
-  });
-  if (!available) fail(`Cổng ${localVideoAffPort} đang được ứng dụng khác sử dụng. Hãy đóng ứng dụng dùng cổng đó rồi thử lại.`, 409);
-}
-
 async function frontendRevision(frontend: string) {
   const hash = createHash("sha256");
+  hash.update(videoAffStudioPath).update("\0");
   async function add(path: string) {
     const source = resolve(frontend, path);
     hash.update(path).update("\0");
@@ -82,9 +69,8 @@ function toolPath() {
   ].filter(Boolean).join(delimiter);
 }
 
-async function prepareVideoAff(resource: string, macFlowPort: number, macFlowOrigin: string) {
+async function prepareVideoAff(resource: string, macFlowPort: number) {
   if (process.getuid?.() === 0) fail("Hãy chạy MacFlow bằng tài khoản máy tính thường để mở cơ sở dữ liệu VideoAFF.");
-  await assertFreePort();
   const source = resolve(resource, "upstream");
   const root = resolve(dirname(u.conf.path), "videoAff");
   await mkdir(root, { recursive: true, mode: 0o700 });
@@ -106,7 +92,8 @@ async function prepareVideoAff(resource: string, macFlowPort: number, macFlowOri
   const virtualEnv = resolve(root, "venv");
   const pnpmStore = resolve(root, "pnpmStore");
   const log = await open(resolve(root, "start.log"), "a", 0o600);
-  const commandEnv = { ...env, PATH, UV_PROJECT_ENVIRONMENT: virtualEnv, CI: "true" };
+  const commandEnv = { ...env, PATH, UV_PROJECT_ENVIRONMENT: virtualEnv, CI: "true",
+    VITE_VIDEO_AFF_BASE: `${videoAffStudioPath}/dashboard/` };
   async function run(args: string[], cwd: string, message: string) {
     status = { phase: "starting", message };
     const child = Bun.spawn(args, { cwd, env: commandEnv, stdin: "ignore", stdout: log.fd, stderr: log.fd,
@@ -137,15 +124,18 @@ async function prepareVideoAff(resource: string, macFlowPort: number, macFlowOri
     const callback = `http://${loopback}:${macFlowPort}/api/videoAff/bridge/v1`;
     const providers = await providerEnvironment(resource, token, callback);
     status = { phase: "starting", message: "Đang mở cơ sở dữ liệu và VideoAFF…" };
+    const socketDirectory = await mkdtemp("/tmp/macflowVideoAff");
+    const socket = resolve(socketDirectory, "api.sock");
     const runner = Bun.spawn([
-      resolve(virtualEnv, "bin/python"), resolve(resource, "localRunner.py"), source, root, pgBin, String(localVideoAffPort),
-    ], { cwd: source, env: { ...commandEnv, ...providers, AIC_DASHBOARD_DIR: dist, AIC_MACFLOW_ORIGIN: macFlowOrigin, BAML_LOG: "OFF" },
+      resolve(virtualEnv, "bin/python"), resolve(resource, "localRunner.py"), source, root, pgBin, socket,
+    ], { cwd: source, env: { ...commandEnv, ...providers, AIC_DASHBOARD_DIR: dist, BAML_LOG: "OFF" },
       stdin: "pipe", stdout: log.fd, stderr: log.fd });
     managedProcess = runner;
-    setLocalVideoAffConnection({ token, callback });
+    setLocalVideoAffConnection({ token, callback, socket });
     let exited = false;
     void runner.exited.then(() => {
       exited = true;
+      void rm(socketDirectory, { recursive: true, force: true }).catch(console.error);
       if (managedProcess !== runner) return;
       managedProcess = undefined;
       setLocalVideoAffConnection();
@@ -153,8 +143,8 @@ async function prepareVideoAff(resource: string, macFlowPort: number, macFlowOri
     });
     const deadline = Date.now() + 150_000;
     while (!exited && Date.now() < deadline) {
-      const ready = await fetch(`http://${loopback}:${localVideoAffPort}/health/ready`, {
-        signal: AbortSignal.timeout(1200), redirect: "error",
+      const ready = await videoAffFetch("/health/ready", {
+        signal: AbortSignal.timeout(1200),
       }).then(async response => {
         if (!response.ok) return false;
         const health = await response.json() as { status?: string; service?: string };
@@ -176,9 +166,8 @@ export function startLocalVideoAff(req: Request) {
   if (startup || status.phase === "running") return;
   const port = req.socket.localPort;
   if (!port) fail("Không xác định được địa chỉ MacFlow trên máy này.", 503);
-  const origin = u.mcpControl.getAppOrigin(req);
   status = { phase: "starting", message: "Đang kiểm tra công cụ trên máy…" };
-  startup = prepareVideoAff(req.app.locals.videoAffRoot as string, port, origin).catch(error => {
+  startup = prepareVideoAff(req.app.locals.videoAffRoot as string, port).catch(error => {
     const message = error && typeof error === "object" && "status" in error && error instanceof Error ? error.message
       : "Chưa khởi động được VideoAFF. Kiểm tra công cụ đã cài và nhật ký start.log trong thư mục dữ liệu VideoAFF.";
     status = { phase: "error", message };

@@ -53,8 +53,10 @@ const tiktokText = (w) =>
 const pinterestText = (w) =>
   `${state(w)}: từ khóa ${w.done + w.failed}/${w.queue.length} · Thành công ${w.done} · Lỗi ${w.failed}${w.detail ? `\nĐang thu thập ${w.detail}` : `\n${w.note}`}`;
 
+const connection = globalThis.videoAffConnection;
 const collectorOrigin = "http://127.0.0.1:8000";
 async function studioLink() {
+  if (connection) return (product) => `${connection.origin}/#/videoAff?product=${encodeURIComponent(product)}`;
   const options = () => ({ signal: AbortSignal.timeout(1200), redirect: "error" });
   try {
     const response = await fetch(collectorOrigin + "/api/v1/macflow-host", options());
@@ -148,14 +150,21 @@ document.getElementById("crawl-all").addEventListener("click", () => {
 });
 document.getElementById("stop").addEventListener("click", () => chrome.runtime.sendMessage({ type: "walker-stop", lane: "tiktok" }));
 document.getElementById("pin-stop").addEventListener("click", () => chrome.runtime.sendMessage({ type: "walker-stop", lane: "pinterest" }));
-const API = "http://127.0.0.1:8000/api/v1/products";
+const API = connection?.products || collectorOrigin + "/api/v1/products";
+async function collectRequest(url, options) {
+  const response = await fetch(url, connection
+    ? { ...options, credentials: "omit", redirect: "error", headers: { "x-video-aff-collector": connection.token } }
+    : options);
+  if (!response.ok) throw new Error("VideoAFF chưa xử lý được yêu cầu (" + response.status + ").");
+  return response;
+}
 document.getElementById("pins").addEventListener("click", async () => {
   chrome.storage.local.set({ autoNote: "" });
   const searches = Number(document.getElementById("pin-searches").value) || 200;
   const maxImages = Number(document.getElementById("pin-images").value) || 0;
   const concurrency = Number(document.getElementById("pin-tabs").value) || 3;
   try {
-    const items = await (await fetch(`${API}/reference-queue?limit=${searches}`)).json();
+    const items = await (await collectRequest(`${API}/reference-queue?limit=${searches}`)).json();
     if (!items.length) {
       pinBox.textContent = "Không còn từ khóa đã duyệt nào cần thu thập.";
       return;
@@ -166,13 +175,29 @@ document.getElementById("pins").addEventListener("click", async () => {
     pinBox.textContent = `Không kết nối được với VideoAFF: ${error}`;
   }
 });
-document.getElementById("xlsx").addEventListener("click", () => chrome.tabs.create({ url: `${API}/export?format=xlsx` }));
-document.getElementById("json").addEventListener("click", () => chrome.tabs.create({ url: `${API}/export?format=json` }));
+async function exportProducts(format) {
+  const box = document.getElementById("media-status");
+  box.textContent = "Đang tải…";
+  try {
+    const response = await collectRequest(`${API}/export?format=${format}`);
+    const url = URL.createObjectURL(await response.blob());
+    const download = document.createElement("a");
+    download.href = url;
+    download.download = "products." + format;
+    download.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    box.textContent = "";
+  } catch (error) {
+    box.textContent = String(error);
+  }
+}
+document.getElementById("xlsx").addEventListener("click", () => void exportProducts("xlsx"));
+document.getElementById("json").addEventListener("click", () => void exportProducts("json"));
 document.getElementById("media").addEventListener("click", async () => {
   const box = document.getElementById("media-status");
   box.textContent = "Đang tải…";
   try {
-    const r = await (await fetch(`${API}/media/download`, { method: "POST" })).json();
+    const r = await (await collectRequest(`${API}/media/download`, { method: "POST" })).json();
     box.textContent = `Đã tải ${r.downloaded} · Trùng ${r.duplicates} · Đã có ${r.skipped} · Lỗi ${r.failed}`;
   } catch (error) {
     box.textContent = `Lỗi: ${error}`;

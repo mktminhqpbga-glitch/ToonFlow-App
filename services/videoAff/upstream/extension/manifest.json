@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VideoAFF – Thu thập sản phẩm",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Gửi thông tin sản phẩm và ảnh tham khảo từ Chrome vào VideoAFF trên máy của bạn.",
   "permissions": ["storage", "notifications"],
   "host_permissions": [

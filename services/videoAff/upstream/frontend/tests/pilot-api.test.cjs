@@ -40,7 +40,7 @@ test("the app has four menu pages, the studio and redirects for old links", () =
 
 test("the dashboard declares Vietnamese and Products links to the Chrome extension", () => {
   assert.match(fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8"), /<html lang="vi">/);
-  assert.match(src("pages", "Products.tsx"), /href="\/api\/v1\/extension\/download" download/);
+  assert.match(src("pages", "Products.tsx"), /href=\{`\$\{apiRoot\}\/extension\/download`\} download/);
 });
 
 test("a rule the AI proposes waits for a human before it is used", () => {

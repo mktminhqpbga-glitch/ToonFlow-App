@@ -42,7 +42,7 @@ def run_checked(args: list[str | Path], stop_event: threading.Event, timeout: in
 
 def main() -> None:
     source, root, pg_bin = map(Path, sys.argv[1:4])
-    port = sys.argv[4]
+    api_socket = sys.argv[4]
     stop_event = threading.Event()
 
     def wait_for_macflow() -> None:
@@ -111,7 +111,7 @@ def main() -> None:
                     run_checked([sys.executable, "-m", "alembic", "upgrade", "head"], stop_event, 120)
                     command = [
                         sys.executable, "-m", "uvicorn", "ai_content.entrypoints.api.app:app",
-                        "--host", "127.0.0.1", "--port", port,
+                        "--uds", api_socket,
                     ]
                     with subprocess.Popen(command, stdin=subprocess.DEVNULL) as api:
                         try:

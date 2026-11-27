@@ -3,7 +3,8 @@ import { Copy, Download } from "lucide-react";
 import { useState } from "react";
 import { ErrorNote } from "../../components/ui";
 import { API } from "../../hooks/useStudio";
-import { getJson, postJson } from "../../services/http";
+import { useWorkspace } from "../../hooks/useWorkspace";
+import { apiRoot, getJson, postJson } from "../../services/http";
 import type { BriefRecord, PostPackage } from "../../types/studio";
 
 type Usage = { by_operation: { key: string; request_count: number }[] };
@@ -19,11 +20,12 @@ const readLink = (productId: string) => {
 
 export function FinishStep({ productId, record, hasVideo }: { productId: string; record: BriefRecord; hasVideo: boolean }) {
   const client = useQueryClient();
+  const { notify } = useWorkspace();
   const [copied, setCopied] = useState("");
   const [link, setLink] = useState(() => readLink(productId));
   const [review, setReview] = useState("");
   const pack = record.brief.post_package;
-  const usage = useQuery({ queryKey: ["usage", productId], queryFn: ({ signal }) => getJson<Usage>(`/api/v1/ai-usage/summary?correlation_id=${productId}`, signal) });
+  const usage = useQuery({ queryKey: ["usage", productId], queryFn: ({ signal }) => getJson<Usage>(`${apiRoot}/ai-usage/summary?correlation_id=${productId}`, signal) });
   const used = (usage.data?.by_operation ?? []).filter((item) => USED[item.key]);
 
   const writePack = useMutation({
@@ -35,11 +37,30 @@ export function FinishStep({ productId, record, hasVideo }: { productId: string;
     onSuccess: () => setReview(""),
   });
 
-  const copy = (key: string, text: string) => {
-    void navigator.clipboard?.writeText(text).then(() => {
+  const copy = async (key: string, text: string) => {
+    try {
+      if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      else {
+        // Chrome exposes the asynchronous Clipboard API only over HTTPS and localhost.
+        const previous = document.activeElement;
+        const input = document.createElement("textarea");
+        input.value = text;
+        input.readOnly = true;
+        input.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+        document.body.append(input);
+        try {
+          input.select();
+          if (!document.execCommand("copy")) throw new Error("Clipboard unavailable");
+        } finally {
+          input.remove();
+          if (previous instanceof HTMLElement) previous.focus();
+        }
+      }
       setCopied(key);
       window.setTimeout(() => setCopied(""), 1800);
-    });
+    } catch {
+      notify("Chưa sao chép được. Bạn có thể bôi đen nội dung và nhấn Ctrl+C hoặc ⌘C.", "error");
+    }
   };
   const saveLink = (value: string) => {
     setLink(value);

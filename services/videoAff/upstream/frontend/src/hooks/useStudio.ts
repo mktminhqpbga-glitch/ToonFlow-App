@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, getJson, postJson } from "../services/http";
+import { apiRoot, ApiError, getJson, postJson } from "../services/http";
 import type { BriefRecord, Clip, Keyframe, OutputItem, Persona, PipelineRun, Product, RunEvent, VideoInfo } from "../types/studio";
 
-export const API = "/api/v1/products";
+export const API = `${apiRoot}/products`;
 
 export const useProducts = () =>
   useQuery({ queryKey: ["products"], queryFn: ({ signal }) => getJson<Product[]>(API, signal), refetchInterval: 15000 });

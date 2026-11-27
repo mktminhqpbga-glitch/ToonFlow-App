@@ -1,3 +1,5 @@
+export const apiRoot = import.meta.env.BASE_URL.replace(/dashboard\/$/, "") + "api/v1";
+
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);

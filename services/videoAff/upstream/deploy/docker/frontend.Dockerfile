@@ -20,7 +20,8 @@ FROM frontend-dependencies AS builder
 
 
 COPY frontend/ ./
-RUN pnpm build
+ARG VITE_VIDEO_AFF_BASE=/dashboard/
+RUN VITE_VIDEO_AFF_BASE="$VITE_VIDEO_AFF_BASE" pnpm build
 
 FROM nginxinc/nginx-unprivileged:1.30.4-alpine3.24 AS runtime
 

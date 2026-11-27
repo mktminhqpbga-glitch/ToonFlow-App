@@ -1,4 +1,11 @@
-const COLLECTOR = "http://127.0.0.1:8000/api/v1/products";
+const connection = globalThis.videoAffConnection;
+const COLLECTOR = connection?.products || "http://127.0.0.1:8000/api/v1/products";
+function collectRequest(url, options) {
+  if (!connection) return fetch(url, options);
+  const headers = new Headers(options?.headers);
+  headers.set("x-video-aff-collector", connection.token);
+  return fetch(url, { ...options, headers, credentials: "omit", redirect: "error" });
+}
 const PAGE_TIMEOUT_MS = 120_000;
 const MAX_TABS = 20;
 
@@ -64,7 +71,7 @@ const laneOfTab = async (tabId) => {
 // ---- ingest from content scripts -------------------------------------------------
 async function ingest(payload) {
   try {
-    const response = await fetch(`${COLLECTOR}/ingest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const response = await collectRequest(`${COLLECTOR}/ingest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const s = await chrome.storage.local.get({ sent: 0 });
     if (!response.ok) {
       // the collector refused the data (for example the duplicate check is off): say so, never swallow it
@@ -307,7 +314,7 @@ async function afterHarvest(auto, summary) {
   // give the page's last JSON responses time to reach the collector
   await sleep(5000);
   try {
-    const urls = await (await fetch(`${COLLECTOR}/queue?limit=${Number(auto.limit) || 5000}`)).json();
+    const urls = await (await collectRequest(`${COLLECTOR}/queue?limit=${Number(auto.limit) || 5000}`)).json();
     if (!urls.length) {
       await chrome.storage.local.set({
         autoNote: `Đã dừng cuộn trang (${summary.reason}) sau khi thấy ${summary.count} sản phẩm và bấm Xem thêm ${summary.clicks} lần. Không có sản phẩm mới.`,
@@ -327,7 +334,7 @@ async function afterHarvest(auto, summary) {
 async function fetchDetails(followUp) {
   await sleep(5000); // the last JSON responses reach the collector
   try {
-    const urls = await (await fetch(`${COLLECTOR}/queue?limit=${QUEUE_LIMIT}`)).json();
+    const urls = await (await collectRequest(`${COLLECTOR}/queue?limit=${QUEUE_LIMIT}`)).json();
     const note = urls.length
       ? `Đã thu thập xong danh sách. Đang lấy thông tin ${urls.length} sản phẩm.`
       : "Đã thu thập xong danh sách và thông tin sản phẩm.";
