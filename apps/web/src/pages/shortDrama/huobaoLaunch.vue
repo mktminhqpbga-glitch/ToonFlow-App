@@ -1,9 +1,7 @@
 <template>
-  <main class="huobaoPage">
-    <nav aria-label="Điều hướng MacFlow" class="huobaoNav">
-      <router-link to="/home"><icon-home :size="17" /> Tổng quan</router-link>
-      <router-link to="/workspace"><icon-layout-dashboard :size="17" /> Canvas</router-link>
-    </nav>
+  <div class="huobaoLayout">
+    <aside class="huobaoSidebar"><creativeNavigation compact /></aside>
+    <main class="huobaoPage">
     <header class="huobaoHeader">
       <div>
         <h1>Huobao Drama</h1>
@@ -61,11 +59,13 @@
     </el-card>
 
     <router-link to="/shortDrama/storyboard" class="storyboardLink">Mở bảng phân cảnh MacFlow đã lưu</router-link>
-  </main>
+    </main>
+  </div>
 </template>
 
 <script setup lang="ts">
 import axios from "axios";
+import creativeNavigation from "@/components/creativeNavigation.vue";
 import { computed, onMounted, onScopeDispose, reactive, ref } from "vue";
 import { IconExternalLink, IconPlugConnected, IconRefresh } from "@tabler/icons-vue";
 
@@ -188,9 +188,10 @@ onScopeDispose(() => lifetime.abort());
 </script>
 
 <style scoped>
-.huobaoPage { min-height: 100%; max-width: 1080px; margin: auto; padding: clamp(18px, 4vw, 50px); display: grid; gap: 18px; align-content: start; }
-.huobaoNav, .huobaoHeader, .cardHeader, .assetActions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.huobaoNav a { display: inline-flex; align-items: center; gap: 6px; }
+.huobaoLayout { display: grid; grid-template-columns: 226px minmax(0, 1fr); height: 100dvh; }
+.huobaoSidebar { overflow: auto; background: var(--el-bg-color); padding: 14px; border-inline-end: 1px solid var(--el-border-color-light); }
+.huobaoPage { overflow: auto; width: 100%; max-width: 1080px; margin-inline: auto; padding: clamp(18px, 4vw, 50px); display: grid; gap: 18px; align-content: start; }
+.huobaoHeader, .cardHeader, .assetActions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .huobaoHeader, .cardHeader { justify-content: space-between; }
 .huobaoHeader h1, h2 { margin: 0; }
 h2 { font-size: 17px; }
@@ -204,5 +205,7 @@ h2 { font-size: 17px; }
 .assetForm a { overflow-wrap: anywhere; }
 a { color: var(--el-color-primary); }
 .storyboardLink { justify-self: start; }
+@media (max-width: 1050px) { .huobaoLayout { grid-template-columns: 68px minmax(0, 1fr); } .huobaoSidebar { padding: 8px; } }
+@media (max-width: 730px) { .huobaoLayout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } .huobaoSidebar { border-inline-end: 0; border-bottom: 1px solid var(--el-border-color-light); } }
 @media (max-width: 680px) { .assetColumns, .modelFields { grid-template-columns: 1fr; } }
 </style>

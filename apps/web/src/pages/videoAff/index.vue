@@ -1,6 +1,14 @@
 <template>
   <main class="videoAffPage">
     <header class="pageHeader">
+      <el-popover placement="bottom-start" trigger="click" :width="205">
+        <template #reference>
+          <el-button text title="Điều hướng MacFlow" aria-label="Điều hướng MacFlow" aria-haspopup="dialog">
+            <icon-menu-2 :size="18" aria-hidden="true" />
+          </el-button>
+        </template>
+        <creativeNavigation />
+      </el-popover>
       <router-link class="backLink" to="/home" aria-label="Về tổng quan MacFlow">
         <icon-arrow-left :size="18" aria-hidden="true" /> <span>MacFlow</span>
       </router-link>
@@ -104,6 +112,7 @@
 import { computed, onMounted, onScopeDispose, reactive, ref } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
+import creativeNavigation from "@/components/creativeNavigation.vue";
 import assetLibraryDialog from "@/pages/home/assetLibraryDialog.vue";
 import characterLibrary from "@/components/characterLibrary.vue";
 import { useWorkspaceStore } from "@/stores/workspace";

@@ -2,6 +2,14 @@
   <div class="workspaceMenu">
     <el-card shadow="never" :bodyStyle="{ padding: '2px 4px' }">
       <div class="menuContent">
+        <el-popover placement="bottom-start" trigger="click" :width="205">
+          <template #reference>
+            <el-button class="toolButton" text title="Điều hướng MacFlow" aria-label="Điều hướng MacFlow" aria-haspopup="dialog">
+              <icon-menu-2 :size="18" aria-hidden="true" />
+            </el-button>
+          </template>
+          <creativeNavigation />
+        </el-popover>
         <el-button class="toolButton" text aria-label="Xưởng tạo ảnh" title="Xưởng tạo ảnh" @click="router.push('/image')">
           <icon-photo :size="18" aria-hidden="true" />
         </el-button>
@@ -30,8 +38,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import creativeNavigation from "@/components/creativeNavigation.vue";
 import { useRouter } from "vue-router";
-import { IconLogout, IconSettings } from "@tabler/icons-vue";
 import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 
 const emit = defineEmits<{ openSettings: [] }>();

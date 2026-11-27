@@ -4,8 +4,8 @@
     <aside id="homeSidebar" class="homeSidebar" aria-label="Thanh bên trang chủ">
       <div class="sidebarHeader">
         <div class="sidebarBrand">
-          <el-image class="sidebarLogo" :src="logoUrl" fit="contain" alt="Toonflow" />
-          <span class="brandName">Toonflow</span>
+          <el-image class="sidebarLogo" :src="logoUrl" fit="contain" alt="MacFlow" />
+          <span class="brandName">MacFlow</span>
         </div>
         <button class="sidebarToggle" type="button" :aria-label="sidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" :title="sidebarCollapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" :aria-expanded="!sidebarCollapsed" aria-controls="homeSidebar" @click="sidebarCollapsed = !sidebarCollapsed">
           <icon-layout-sidebar-left-expand v-if="sidebarCollapsed" :size="18" aria-hidden="true" />
@@ -17,22 +17,11 @@
           <component :is="section.icon" :size="18" aria-hidden="true" />
           <span class="sidebarText">{{ translate(section.label) }}</span>
         </button>
-        <button class="sidebarItem" type="button" aria-label="Xưởng tạo ảnh" title="Xưởng tạo ảnh" @click="router.push('/image')">
-          <icon-photo :size="18" aria-hidden="true" />
-          <span class="sidebarText">Xưởng tạo ảnh</span>
-        </button>
-        <button class="sidebarItem" type="button" aria-label="Xưởng tạo video" title="Xưởng tạo video" @click="router.push('/video')">
-          <icon-video :size="18" aria-hidden="true" />
-          <span class="sidebarText">Xưởng tạo video</span>
-        </button>
-        <button class="sidebarItem" type="button" aria-label="Phim ngắn" title="Phim ngắn" @click="router.push('/shortDrama')">
-          <icon-movie :size="18" aria-hidden="true" />
-          <span class="sidebarText">Phim ngắn</span>
-        </button>
-        <button v-if="!publicWeb" class="sidebarItem" type="button" aria-label="VideoAFF" title="VideoAFF" @click="router.push('/videoAff')">
-          <icon-shopping-bag :size="18" aria-hidden="true" />
-          <span class="sidebarText">VideoAFF</span>
-        </button>
+        <router-link v-for="item in creationLinks.filter(item => !item.localOnly || !publicWeb)" :key="item.path" class="sidebarItem"
+          :to="item.path" :aria-label="item.label" :title="item.label">
+          <component :is="item.icon" :size="18" aria-hidden="true" />
+          <span class="sidebarText">{{ item.label }}</span>
+        </router-link>
         <hr v-if="currentUser?.role !== 'user'" class="sidebarDivider" />
         <button v-if="currentUser?.role !== 'user'" class="sidebarItem" :class="{ active: assetsVisible }" type="button" aria-label="Thư viện tài nguyên" title="Thư viện tài nguyên" aria-haspopup="dialog" :aria-expanded="assetsVisible" @click="assetsVisible = true">
           <icon-library-photo :size="18" aria-hidden="true" />
@@ -65,7 +54,7 @@
         <el-main class="pageContent">
           <section class="creationPanel" data-home-section="home" aria-label="Tạo dự án">
             <div class="brand">
-              <el-image class="brandLogo" :src="logoUrl" fit="contain" alt="Toonflow" />
+              <el-image class="brandLogo" :src="logoUrl" fit="contain" alt="MacFlow" />
               <h1>Hôm nay bạn muốn sáng tạo gì?</h1>
             </div>
             <div class="promptArea">
@@ -142,11 +131,12 @@ import { locale, translate } from "@toonflow/i18n/vue";
 import axios from "axios";
 import { storeToRefs } from "pinia";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { creationLinks, homeSections } from "@/lib/mainNavigation";
 import { ElMessage, ElMessageBox, type InputInstance, type ScrollbarInstance } from "element-plus";
 import { getReadableFileMimeType, readableFileAccept } from "@toonflow/server/documentFormats";
 import {
-  IconQrcode, IconDeviceDesktop, IconHome, IconCompass,
+  IconQrcode, IconDeviceDesktop,
   IconArrowUp, IconPlus, IconLoader2,
   IconFolder, IconEdit, IconFileZip,
   IconTrash, IconPaperclip,
@@ -181,14 +171,9 @@ const pageScroll = ref<ScrollbarInstance>();
 const backgroundScrollTop = ref(0);
 const activeSection = ref("home");
 const projectType = ref<"local" | "team">("local");
-const homeSections = [
-  { id: "home", label: "Trang chủ", icon: IconHome },
-  { id: "projects", label: "Dự án", icon: IconFolder },
-  { id: "prompts", label: "Thư viện prompt", icon: IconCompass },
-  { id: "explore", label: "Khám phá", icon: IconCompass },
-];
 const mobileConnect = defineAsyncComponent(() => import("@/components/mobileConnect.vue"));
 const router = useRouter();
+const route = useRoute();
 const pageLifetime = new AbortController();
 const creating = ref(false);
 const opening = ref(false);
@@ -290,6 +275,10 @@ function scrollToSection(section: string) {
     behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
   });
 }
+
+watch([pageScroll, () => route.query.section], ([scrollbar, section]) => {
+  if (scrollbar && homeSections.some(item => item.id === section)) scrollToSection(String(section));
+}, { flush: "post" });
 
 function updateActiveSection() {
   const wrap = pageScroll.value?.wrapRef;

@@ -6,6 +6,10 @@ export function queueStudioPrompt(draft: StudioPrompt) {
   pending = draft;
 }
 
+export function clearStudioPrompt(draft: StudioPrompt) {
+  if (pending === draft) pending = undefined;
+}
+
 export function takeStudioPrompt(directory: string, kind: StudioPrompt["kind"]) {
   const draft = pending;
   pending = undefined;

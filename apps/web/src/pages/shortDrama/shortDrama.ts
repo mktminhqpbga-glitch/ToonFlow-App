@@ -1,9 +1,25 @@
 import { z } from "@toonflow/nodes-scaffold/nodeTools";
+import { createNodeRequestId } from "@toonflow/nodes-scaffold/nodeAi";
 
 export const dramaPath = ".macflowShortDrama.json";
 export const scriptLimit = 50000;
 export const sceneLimit = 300;
 export const importByteLimit = 4 * 1024 * 1024;
+export const defaultBoardId = "default";
+const boardIdSchema = z.uuid();
+
+export function storyboardId(input: unknown) {
+  return boardIdSchema.safeParse(input).data ?? defaultBoardId;
+}
+
+export function storyboardPath(id: string) {
+  return id === defaultBoardId ? dramaPath : `.macflowShortDrama.${id}.json`;
+}
+
+export function storyboardIdFromPath(name: string) {
+  if (name === dramaPath) return defaultBoardId;
+  return boardIdSchema.safeParse(name.match(/^\.macflowShortDrama\.(.+)\.json$/)?.[1]).data;
+}
 
 const sceneText = z.string().max(10000);
 const sceneFields = z.object({
@@ -14,11 +30,18 @@ const sceneFields = z.object({
   videoPrompt: sceneText,
   duration: z.number().min(0).max(3600),
 });
-const sceneSchema = sceneFields.extend({ id: z.uuid() });
+const sceneSchema = sceneFields.extend({
+  id: z.uuid(),
+  notes: sceneText.default(""),
+  thumbnail: z.string().regex(/^\.macflowSceneImage\.[0-9a-f-]{36}\.(png|jpg|webp)$/).optional(),
+});
 const dramaSchema = z.object({
   version: z.literal(1),
   title: z.string().max(200),
   script: z.string().max(scriptLimit),
+  characters: z.string().max(4000).default(""),
+  importNotes: sceneText.default(""),
+  savedAt: z.number().int().positive().max(8640000000000000).optional(),
   model: z.string(),
   scenes: z.array(sceneSchema).max(sceneLimit),
 }).refine(board => new Set(board.scenes.map(scene => scene.id)).size === board.scenes.length);
@@ -27,11 +50,16 @@ export type DramaBoard = z.infer<typeof dramaSchema>;
 export type DramaScene = z.infer<typeof sceneSchema>;
 
 export function emptyBoard(): DramaBoard {
-  return { version: 1, title: "", script: "", model: "", scenes: [] };
+  return { version: 1, title: "", script: "", characters: "", importNotes: "", model: "", scenes: [] };
 }
 
 export function newScene(title = ""): DramaScene {
-  return { id: crypto.randomUUID(), title, description: "", dialogue: "", imagePrompt: "", videoPrompt: "", duration: 0 };
+  return { id: createNodeRequestId(), title, description: "", dialogue: "", imagePrompt: "", videoPrompt: "", duration: 0, notes: "" };
+}
+
+export function hasSceneText(scene: DramaScene) {
+  return [scene.description, scene.dialogue, scene.imagePrompt, scene.videoPrompt].some(text => text.trim())
+    || (!!scene.title.trim() && !/^cảnh\s+\d+$/i.test(scene.title.trim()));
 }
 
 export function readDramaBoard(text: string): DramaBoard {
@@ -102,21 +130,24 @@ function modelJson(text: string): unknown {
 export function readGeneratedScenes(text: string): DramaScene[] {
   const result = z.object({ scenes: z.array(sceneFields).min(1).max(sceneLimit) }).safeParse(modelJson(text));
   if (!result.success) throw new Error("Dữ liệu phân cảnh do AI trả về thiếu trường hoặc vượt giới hạn.");
-  return result.data.scenes.map(scene => ({ ...scene, id: crypto.randomUUID() }));
+  return result.data.scenes.map(scene => ({ ...newScene(), ...scene }));
 }
 
 export function readTranslatedScene(text: string, original: DramaScene): DramaScene {
   const result = sceneFields.safeParse(modelJson(text));
   if (!result.success) throw new Error("Mô hình chưa trả về đủ trường của cảnh.");
-  return { ...result.data, id: original.id, duration: original.duration };
+  return { ...original, ...result.data, duration: original.duration };
 }
 
 export function storyboardMarkdown(board: DramaBoard): string {
-  return [`# ${board.title.trim() || "Phim ngắn"}`, board.script.trim(), ...board.scenes.map((scene, index) => [
+  return [`# ${board.title.trim() || "Phim ngắn"}`, board.script.trim(),
+    board.characters.trim() && `## Nhân vật\n\n${board.characters.trim()}`,
+    board.importNotes.trim() && `## Ghi chú nhập từ Huobao\n\n${board.importNotes.trim()}`, ...board.scenes.map((scene, index) => [
     `## ${index + 1}. ${scene.title.trim() || "Cảnh"}${scene.duration ? ` (${scene.duration} giây)` : ""}`,
     scene.description.trim(),
     scene.dialogue.trim() && `**Lời thoại**\n\n${scene.dialogue.trim()}`,
     scene.imagePrompt.trim() && `**Prompt ảnh**\n\n${scene.imagePrompt.trim()}`,
     scene.videoPrompt.trim() && `**Prompt video**\n\n${scene.videoPrompt.trim()}`,
+    scene.notes.trim() && `**Ghi chú sản xuất**\n\n${scene.notes.trim()}`,
   ].filter(Boolean).join("\n\n"))].filter(Boolean).join("\n\n") + "\n";
 }

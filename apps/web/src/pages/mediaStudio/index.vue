@@ -2,22 +2,9 @@
   <div class="mediaStudio">
     <aside class="studioSidebar" aria-label="Điều hướng MacFlow">
       <div class="studioBrand"><img :src="logoUrl" alt="" /><strong>MacFlow</strong></div>
-      <nav class="studioNavigation" aria-label="Các trang sáng tạo">
-        <router-link to="/home"><icon-home :size="18" /> Tổng quan</router-link>
-        <router-link to="/workspace"><icon-layout-dashboard :size="18" /> Canvas</router-link>
-        <router-link to="/image" :class="{ active: kind === 'image' }"><icon-photo :size="18" /> Xưởng tạo ảnh</router-link>
-        <router-link to="/video" :class="{ active: kind === 'video' }"><icon-video :size="18" /> Xưởng tạo video</router-link>
-        <router-link to="/shortDrama"><icon-movie :size="18" /> Phim ngắn</router-link>
-        <button v-if="currentUser?.role !== 'user' && !publicWeb" type="button" class="libraryLink" aria-label="Kho tài nguyên" title="Kho tài nguyên" @click="sharedLibraryVisible = true">
-          <icon-library-photo :size="18" aria-hidden="true" /> Kho tài nguyên
-        </button>
-        <button v-if="currentUser?.role !== 'user' && !publicWeb" type="button" class="libraryLink" aria-label="Kho nhân vật tham chiếu" title="Kho nhân vật tham chiếu" @click="charactersVisible = true">
-          <icon-users :size="18" aria-hidden="true" /> Kho nhân vật
-        </button>
-      </nav>
+      <creativeNavigation compact :showCharacters="!publicWeb" modelSettings @characters="charactersVisible = true" @settings="openMediaSettings" />
       <div class="studioSidebarFooter">
         <span v-if="workspaceStore.project" class="workspaceName" :title="workspaceStore.project.directory"><icon-folder :size="16" /> {{ workspaceStore.project.name }}</span>
-        <el-button text @click="openMediaSettings"><icon-settings :size="18" /> Cài đặt mô hình</el-button>
       </div>
     </aside>
 
@@ -205,7 +192,6 @@
     <writeVideoPrompt v-if="promptWriterVisible && kind === 'video' && directory" :key="directory" v-model="promptWriterVisible"
       :directory="directory" :ownerId="ownerId" :prompt="prompt" :ratio="ratio || ''" :duration="duration || null"
       :hasReference="!!references.length" @apply="prompt = $event" />
-    <assetLibraryDialog v-if="sharedLibraryVisible" v-model="sharedLibraryVisible" :directory="directory" />
     <characterLibrary v-if="charactersVisible" v-model="charactersVisible" :canUse="canUseCharacter" @select="useCharacterPhoto" />
     <el-dialog v-if="currentUser?.role !== 'user'" v-model="assetPickerVisible" title="Chọn ảnh từ thư viện tài nguyên" width="min(980px, 95vw)" alignCenter appendToBody destroyOnClose>
       <assetLibrary v-model="assetPickerVisible" expanded :canSelect="canSelectAsset" :selecting="referenceBusy" @select="selectAsset" />
@@ -230,7 +216,7 @@ import { queueStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
 import { takeStudioPrompt } from "@/lib/studioPromptTransfer";
 import settings from "@/components/settings/index.vue";
 import assetLibrary from "@/pages/workspace/panels/canvas/components/assetLibrary.vue";
-import assetLibraryDialog from "@/pages/home/assetLibraryDialog.vue";
+import creativeNavigation from "@/components/creativeNavigation.vue";
 import characterLibrary from "@/components/characterLibrary.vue";
 import logoUrl from "@toonflow/assets/logo.svg";
 import { describeStudioError, requestStudio, StudioRequestError } from "./studioRequests";
@@ -255,7 +241,6 @@ const clipForgeStudio = defineAsyncComponent(() => import("./clipForgeStudio.vue
 const moneyPrinterStudio = defineAsyncComponent(() => import("./moneyPrinterStudio.vue"));
 const writeVideoPrompt = defineAsyncComponent(() => import("./writeVideoPrompt.vue"));
 const promptWriterVisible = ref(false);
-const sharedLibraryVisible = ref(false);
 const charactersVisible = ref(false);
 const videoFlowRun = defineAsyncComponent(() => import("./videoFlowRun.vue"));
 const router = useRouter();
@@ -445,7 +430,8 @@ function restoreDraft() {
   restoringDraft = true;
   clearReferences();
   const draft = directory.value ? readStudioDraft(browserKey.value) : undefined;
-  prompt.value = takeStudioPrompt(directory.value, props.kind) ?? draft?.prompt ?? "";
+  const transferredPrompt = takeStudioPrompt(directory.value, props.kind);
+  prompt.value = transferredPrompt ?? draft?.prompt ?? "";
   modelKey.value = draft?.modelKey ?? "";
   ratio.value = draft?.ratio ?? "";
   size.value = draft?.size ?? "";
@@ -454,6 +440,7 @@ function restoreDraft() {
   selectedTaskId.value = draft?.selectedTaskId ?? "";
   attempts.value = directory.value ? readStudioAttempts(browserKey.value + ":attempts", { directory: directory.value, kind: props.kind, ownerId: ownerId.value }) : [];
   restoringDraft = false;
+  if (transferredPrompt) ElMessage.success("Đã điền prompt từ bảng phân cảnh. Bạn có thể xem lại trước khi tạo.");
   if (!draft || !directory.value) return;
   const projectFiles = useWorkspaceFiles(directory.value);
   const version = scopeVersion;
@@ -820,16 +807,9 @@ onBeforeUnmount(() => {
   background: var(--el-bg-color-page);
   color: var(--el-text-color-primary);
   .studioSidebar {
-    display: flex; flex-direction: column; padding: 23px 14px 18px;
+    display: flex; flex-direction: column; overflow: auto; padding: 23px 14px 18px;
     background: var(--el-bg-color); border-right: 1px solid var(--el-border-color-light);
     .studioBrand { display: flex; gap: 11px; align-items: center; padding: 3px 13px 27px; font-size: 20px; img { width: 31px; height: 31px; } }
-    .studioNavigation { display: grid; gap: 7px;
-      a, .libraryLink { display: flex; align-items: center; gap: 12px; text-decoration: none; padding: 12px; border-radius: 10px; color: var(--el-text-color-regular); font-weight: 500; transition: background .12s;
-        &:hover { background: var(--el-fill-color-light); }
-        &.active, &.router-link-active { background: var(--el-color-primary-light-9); color: var(--el-color-primary); }
-      }
-      .libraryLink { border: 0; background: transparent; cursor: pointer; font-family: inherit; font-size: inherit; text-align: left; }
-    }
     .studioSidebarFooter { margin-top: auto; display: grid; gap: 8px; min-width: 0; .workspaceName { display: flex; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-items: center; font-size: 12px; color: var(--el-text-color-secondary); } }
   }
   .studioMain { overflow: auto; padding: clamp(18px, 3vw, 40px); }
@@ -881,7 +861,7 @@ onBeforeUnmount(() => {
   }
 }
 @keyframes studioSpin { to { transform: rotate(360deg); } }
-@media (max-width: 1080px) { .mediaStudio { grid-template-columns: 68px minmax(0, 1fr); .studioSidebar { padding: 15px 6px; .studioBrand { justify-content: center; padding: 3px 0 20px; strong { display: none; } } .studioNavigation :is(a, .libraryLink) { font-size: 0; justify-content: center; padding: 12px; } .studioSidebarFooter { .workspaceName { display: none; } :deep(.el-button) { font-size: 0; } } } .studioColumns { grid-template-columns: minmax(0, 1fr); } } }
-@media (max-width: 600px) { .mediaStudio { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); .studioSidebar { padding: 8px 12px; flex-direction: row; align-items: center; justify-content: space-between; border-right: 0; border-bottom: 1px solid var(--el-border-color-light); .studioBrand { display: none; } .studioNavigation { display: flex; gap: 3px; :is(a, .libraryLink) { font-size: 0; padding: 10px; } } .studioSidebarFooter { margin: 0; } } .studioMain { padding: 18px 12px; } .studioColumns { gap: 13px; } :deep(.el-card__body) { padding: 16px; } } }
+@media (max-width: 1050px) { .mediaStudio { grid-template-columns: 68px minmax(0, 1fr); .studioSidebar { padding: 15px 6px; .studioBrand { justify-content: center; padding: 3px 0 20px; strong { display: none; } } .studioSidebarFooter { .workspaceName { display: none; } :deep(.el-button) { font-size: 0; } } } .studioColumns { grid-template-columns: minmax(0, 1fr); } } }
+@media (max-width: 730px) { .mediaStudio { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); .studioSidebar { padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--el-border-color-light); .studioBrand { display: none; } .studioSidebarFooter { margin: 0; } } .studioMain { padding: 18px 12px; } .studioColumns { gap: 13px; } :deep(.el-card__body) { padding: 16px; } } }
 @media (max-width: 600px) { .mediaStudio .studioHeader { flex-wrap: wrap; } }
 </style>

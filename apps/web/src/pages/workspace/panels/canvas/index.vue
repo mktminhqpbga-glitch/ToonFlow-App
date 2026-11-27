@@ -1111,6 +1111,10 @@ async function importPendingStudioMedia() {
       ElMessage.error("Hãy bật node Ghép video rồi chọn lại các clip trong Xưởng video.");
       clearStudioMediaForCanvas(pending);
     }
+    if (pending.mediaType === "text" && availableNodes.value.length) {
+      ElMessage.error("Hãy bật node Văn bản trong Cài đặt rồi gửi lại bảng phân cảnh.");
+      clearStudioMediaForCanvas(pending);
+    }
     return;
   }
   const signal = canvasController.signal;
@@ -1164,11 +1168,12 @@ async function importPendingStudioMedia() {
     });
     if (!imported) throw new Error("Không thể đưa tệp vào Canvas. Hãy kiểm tra node tương ứng đã được bật.");
     clearStudioMediaForCanvas(pending);
-    ElMessage.success("Đã đưa kết quả từ xưởng vào Canvas hiện tại.");
+    ElMessage.success(pending.mediaType === "text" ? "Đã đưa bảng phân cảnh vào node Văn bản trên Canvas."
+      : "Đã đưa kết quả từ xưởng vào Canvas hiện tại.");
   } catch (cause) {
     if (isCurrent()) {
       ElMessage.error(cause instanceof Error ? cause.message : "Không thể đưa kết quả từ xưởng vào Canvas");
-      if (pending.mediaType === "videoMerge") clearStudioMediaForCanvas(pending);
+      if (pending.mediaType === "videoMerge" || pending.mediaType === "text") clearStudioMediaForCanvas(pending);
     }
   } finally { importingStudioMedia = false; }
 }
