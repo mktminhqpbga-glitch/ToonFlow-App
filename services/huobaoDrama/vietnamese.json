@@ -435,6 +435,8 @@
   "errors.moderation": "Dịch vụ từ chối nội dung. Hãy chỉnh mô tả hoặc chọn mô hình khác.",
   "errors.requestFailed": "Không thực hiện được yêu cầu ({status}).",
   "errors.unknown": "Thao tác thất bại. Hãy thử lại.",
+  "errors.imageModelRequired": "Chưa có mô hình tạo ảnh đang bật. Hãy mở Cài đặt → Dịch vụ AI để thêm hoặc bật một mô hình.",
+  "errors.videoModelRequired": "Chưa có mô hình tạo video đang bật. Hãy mở Cài đặt → Dịch vụ AI để thêm hoặc bật một mô hình.",
   "tour.next": "Tiếp theo",
   "tour.prev": "Quay lại",
   "tour.done": "Xong",

@@ -18,12 +18,13 @@ function replace(path, rules) {
 const localeRoot = join(root, "frontend/app/locales");
 const english = JSON.parse(readFileSync(join(localeRoot, "en.json"), "utf8"));
 const dictionaries = JSON.parse(readFileSync(join(__dirname, "vietnamese.json"), "utf8"));
+const additionalKeys = new Set(["settings.general.langNameVi", "errors.imageModelRequired", "errors.videoModelRequired"]);
 const vietnamese = {};
 for (const [key, text] of Object.entries(dictionaries)) {
   const parts = key.split(".");
   const field = parts.pop();
   const original = parts.reduce((value, part) => value?.[part], english)?.[field];
-  if (typeof original !== "string" && key !== "settings.general.langNameVi") throw new Error(`Unknown Huobao translation key: ${key}`);
+  if (typeof original !== "string" && !additionalKeys.has(key)) throw new Error(`Unknown Huobao translation key: ${key}`);
   const placeholders = value => (value?.match(/\{\w+\}/g) ?? []).sort().join(",");
   if (placeholders(original) !== placeholders(text)) throw new Error(`Huobao translation placeholders changed: ${key}`);
   const target = parts.reduce((value, part) => value[part] ??= {}, vietnamese);
@@ -91,7 +92,10 @@ replace("frontend/app/views/drama/detail.vue", [
 ]);
 replace("frontend/app/composables/useToast.ts", [
   ["  if (msg.length <= 40 && CJK_RE.test(msg) && !TECHY_RE.test(msg)) return msg",
-    "  if (i18n.global.locale.value !== 'vi' && msg.length <= 40 && CJK_RE.test(msg) && !TECHY_RE.test(msg)) return msg"],
+    `  if (i18n.global.locale.value === 'vi') {
+    if (msg === '未找到启用的图片生成配置，请先在设置中心添加') return t('errors.imageModelRequired')
+    if (msg === '未找到启用的视频生成配置，请先在设置中心添加') return t('errors.videoModelRequired')
+  } else if (msg.length <= 40 && CJK_RE.test(msg) && !TECHY_RE.test(msg)) return msg`],
 ]);
 replace("frontend/nuxt.config.ts", [["title: '火宝短剧'", "title: 'Huobao Drama'"]]);
 replace("backend/src/services/app-settings.ts", [
@@ -99,3 +103,9 @@ replace("backend/src/services/app-settings.ts", [
   ["? row.value : 'zh'", "? row.value : 'vi'"],
 ]);
 replace("backend/src/agents/language.ts", [["  en: 'English',", "  vi: 'Tiếng Việt (Vietnamese)',\n  en: 'English',"]]);
+replace("backend/src/routes/episodes.ts", [
+  ["import { getActiveConfigId } from '../services/ai.js'",
+    "import { getActiveConfigId } from '../services/ai.js'\nimport { getContentLanguage } from '../services/app-settings.js'"],
+  ["title: body.title || `第${nextNum}集`,",
+    "title: body.title || (getContentLanguage() === 'vi' ? `Tập ${nextNum}` : `第${nextNum}集`),"],
+]);
