@@ -127,7 +127,7 @@ async function removeRelease(revision: string) {
 }
 
 async function build(revision: string) {
-  publish({ phase: "building" });
+  publish({ phase: "building", message: undefined });
   const target = release(revision);
   if (existsSync(target)) await removeRelease(revision);
   await stageCommand(["git", "worktree", "add", "--detach", target, revision], root);
