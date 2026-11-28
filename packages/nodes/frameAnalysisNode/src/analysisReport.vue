@@ -8,7 +8,10 @@
           <span>{{ result.width }} × {{ result.height }}</span>
           <span v-if="result.audio"><icon-wave-sine :size="15" />Âm thanh gốc</span>
         </div>
-        <el-button v-if="manifestUrl" class="downloadButton" tag="a" :href="manifestUrl" download="sceneManifest.json" :icon="IconDownload" text size="small">Tải danh sách</el-button>
+        <div class="reportActions">
+          <el-button v-if="manifestUrl" class="downloadButton" tag="a" :href="manifestUrl" download="sceneManifest.json" :icon="IconDownload" text size="small">Tải danh sách</el-button>
+          <el-button v-if="scriptBridge && result.scenes.length" :icon="IconSparkles" size="small" type="primary" @click="openScript">Chuyển thành kịch bản mới</el-button>
+        </div>
       </div>
       <el-alert v-if="manifestError" :title="manifestError" type="error" :closable="false" showIcon />
       <el-alert v-if="result.ai?.overviewError" :title="`Chưa tổng hợp toàn bộ video: ${result.ai.overviewError}`" type="warning" :closable="false" showIcon />
@@ -82,19 +85,32 @@
       </el-tabs>
     </div>
   </el-dialog>
+  <sceneScriptDraft v-if="scriptOpened && scriptBridge" v-model="scriptVisible" v-model:script="script"
+    :result="result" :source="source" :bridge="scriptBridge" />
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, ref, watch } from "vue";
 import { ElAlert, ElButton, ElDialog, ElRadioButton, ElRadioGroup, ElScrollbar, ElTabPane, ElTabs } from "element-plus";
 import { IconClock, IconDownload, IconMovie, IconSparkles, IconWaveSine } from "@tabler/icons-vue";
 import { useNodeFiles } from "@toonflow/nodes-scaffold/workspaceFiles";
 import type { NodeMediaValue } from "@toonflow/nodes-scaffold/values";
 import type { AnalysisResult } from "./videoAnalysis";
 import { formatSceneTime } from "./resultNodes";
+import type { SceneScriptBridge } from "@toonflow/nodes-scaffold/runtime";
+import type { SceneScriptState } from "./sceneScriptState";
+import sceneScriptDraft from "./sceneScriptDraft.vue";
 
-const props = defineProps<{ result: AnalysisResult }>();
+const props = defineProps<{ result: AnalysisResult; source: string }>();
 const visible = defineModel<boolean>({ required: true });
+const script = defineModel<SceneScriptState>("script");
+const scriptBridge = inject<SceneScriptBridge | undefined>("frameAnalysisScript", undefined);
+const scriptOpened = ref(false);
+const scriptVisible = ref(false);
+function openScript() {
+  scriptOpened.value = scriptVisible.value = true;
+  previewVideo.value?.pause();
+}
 const files = useNodeFiles();
 const activeTab = ref("scenes");
 const selectedIndex = ref(0);
@@ -126,7 +142,7 @@ watch(selectedScene, scene => {
   detailScroll.value?.setScrollTop(0);
 });
 watch(visible, open => {
-  if (!open) return;
+  if (!open) { scriptVisible.value = false; return; }
   selectedIndex.value = props.result.scenes[0]?.index ?? 0;
   previewKind.value = "image";
   activeTab.value = props.result.overview ? "overview" : "scenes";
@@ -163,6 +179,8 @@ watch(() => props.result.overview, overview => {
     }
 
     .downloadButton { margin: 0; text-decoration: none; }
+    .reportActions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .reportActions > * { margin: 0; }
   }
 
   > .el-alert { margin-bottom: 12px; }

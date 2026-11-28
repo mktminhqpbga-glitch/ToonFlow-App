@@ -89,7 +89,8 @@
       </el-card>
     </template>
   </nodeSkeleton>
-  <analysisReport v-if="lastResultMatches && lastResult" v-model="reportVisible" :result="lastResult" />
+  <analysisReport v-if="lastResultMatches && lastResult && source" :key="lastResult.manifest" v-model="reportVisible"
+    v-model:script="sceneScript" :result="lastResult" :source="source.url" />
 </template>
 
 <script setup lang="ts">
@@ -104,6 +105,7 @@ import { analyzeVideo, type AnalysisResult } from "./videoAnalysis";
 import { useResultNodes } from "./resultNodes";
 import { analyzeSceneDescriptions } from "./aiAnalysis";
 import analysisReport from "./analysisReport.vue";
+import type { SceneScriptState } from "./sceneScriptState";
 import videoPlayer from "@toonflow/node-video/videoPlayer";
 import promptInput from "@toonflow/node-shared/promptInput";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
@@ -131,7 +133,7 @@ type AnalysisSettings = {
   focus: string;
 };
 type PromptModel = NonNullable<InstanceType<typeof promptInput>["$props"]["modelValue"]>;
-type AnalysisState = AnalysisSettings & { source?: NodeMediaValue; lastResult?: AnalysisResult; resultSource?: string };
+type AnalysisState = AnalysisSettings & { source?: NodeMediaValue; lastResult?: AnalysisResult; resultSource?: string; sceneScript?: SceneScriptState };
 
 const { id, node, nodeProps, outputs, ai, nodeEvent, files, ffmpeg: loadFfmpeg, updateNodeInternals } = useNode({ label: "Phân tích khung hình", onModelsChanged: () => void loadModels() });
 // ACT: 拉片结果由独立素材节点承载，本节点仅保留视频输入；迁移旧版遗留输出。
@@ -155,6 +157,7 @@ const focusModel = ref<PromptModel>([[{ type: "Write", text: settings.focus }]])
 const uploadedSource = shallowRef<NodeMediaValue | undefined>(isNodeOutput({ dataType: "VIDEO", value: saved?.source }) ? saved?.source : undefined);
 const lastResult = shallowRef<AnalysisResult | undefined>(saved?.lastResult && Array.isArray(saved.lastResult.scenes) ? saved.lastResult : undefined);
 const resultSource = ref(typeof saved?.resultSource === "string" ? saved.resultSource : "");
+const sceneScript = shallowRef(saved?.sceneScript);
 const inputs = useNodeInputs();
 const incoming = computed(() => inputs.getTargetValues(id, "in"));
 const connected = computed(() => incoming.value.length > 0);
@@ -199,9 +202,10 @@ let uploadJob: Promise<void> | undefined;
 let disposed = false;
 
 function persist() {
-  nodeData.frameAnalysis = { ...settings, source: uploadedSource.value, lastResult: lastResult.value, resultSource: resultSource.value };
+  nodeData.frameAnalysis = { ...settings, source: uploadedSource.value, lastResult: lastResult.value, resultSource: resultSource.value,
+    sceneScript: sceneScript.value?.manifest === lastResult.value?.manifest ? sceneScript.value : undefined };
 }
-watch([settings, uploadedSource, lastResult, resultSource], persist, { deep: true, flush: "sync", immediate: true });
+watch([settings, uploadedSource, lastResult, resultSource, sceneScript], persist, { deep: true, flush: "sync", immediate: true });
 watch(() => settings.method, method => { settings.threshold = method === "adaptive" ? 3 : 27; });
 watch(() => settings.aiEnabled, enabled => {
   if (!enabled) return;
@@ -231,7 +235,7 @@ nodeEvent.on("save", reason => {
 });
 // ACT: 结果文件由多个生成节点及撤销历史引用，删除本节点仅停止任务，保留已提交素材。
 nodeEvent.on("delete", cancelAndWait);
-nodeEvent.on("copy", () => ({ frameAnalysis: { ...settings, source: uploadedSource.value, lastResult: lastResult.value, resultSource: resultSource.value } }));
+nodeEvent.on("copy", () => ({ frameAnalysis: nodeData.frameAnalysis }));
 
 function readDirectory() {
   try { return getDirectory?.(); } catch { return undefined; }

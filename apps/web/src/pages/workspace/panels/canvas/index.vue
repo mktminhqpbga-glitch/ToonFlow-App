@@ -115,6 +115,8 @@
         :disabled="!canvasId || !project?.directory" />
       <nodeSearch ref="nodeSearchRef" :disabled="!active || settingsVisible || !canvasId || !project?.directory" />
     </vue-flow>
+    <productProfiles v-if="sceneProductPicker" :modelValue="true" :directory="sceneProductPicker.directory" :initialProduct="{ description: '', photos: [] }"
+      @update:modelValue="finishSceneProduct()" @apply="finishSceneProduct" />
     <el-dialog v-if="currentUser?.role !== 'user'" :modelValue="!!assetSelection" class="referenceAssetDialog" title="Thư viện tài nguyên toàn cục" width="min(1200px, 88vw)" alignCenter appendToBody destroyOnClose @update:modelValue="finishAssetSelection()">
       <assetLibrary :modelValue="!!assetSelection" expanded :canSelect="canSelectAsset" :selecting="assetSelecting" @select="selectAsset" />
     </el-dialog>
@@ -141,7 +143,8 @@
 <script setup lang="ts">
 import { t, translate } from "@toonflow/i18n/vue";
 import * as i18nRuntime from "@toonflow/i18n/vue";
-import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, onScopeDispose, provide, ref, shallowReactive, shallowRef, watch } from "vue";
+import { computed, defineAsyncComponent, markRaw, nextTick, onBeforeUnmount, onMounted, onScopeDispose, provide, ref, shallowReactive, shallowRef, watch } from "vue";
+import { isNavigationFailure, useRouter } from "vue-router";
 import axios from "axios";
 import { debounce } from "lodash-es";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -193,6 +196,7 @@ import selectionToolbar from "./components/selectionToolbar.vue";
 import nodeSearch from "./components/nodeSearch.vue";
 import { finishGroupDrag, fitGroupBounds, getSelectionTree } from "./selectionNodes";
 import type { NodeOutput } from "@toonflow/nodes-scaffold/values";
+import type { SceneScriptBridge, SceneScriptProduct } from "@toonflow/nodes-scaffold/runtime";
 import { validateConnection, type NodeConnectionFeedback, type NodeHandle } from "@toonflow/nodes-scaffold/connection";
 import { useNodeEvent } from "@toonflow/nodes-scaffold/nodeEvent";
 import type { NodeDocumentContext, NodeDocumentState } from "@toonflow/nodes-scaffold/nodeDocument";
@@ -203,6 +207,8 @@ import { generalSettings } from "@/stores/settings";
 import { getShortcutBindings, shortcutLabel, shortcutMatches, shortcutPressed } from "@/lib/canvasShortcuts";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { clearStudioMediaForCanvas, pendingStudioMediaForCanvas } from "@/lib/mediaStudioTransfer";
+import { saveSceneScriptTransfer, sceneScriptTransferKey } from "@/pages/mediaStudio/sceneScriptTransfer";
+import { batchLimit } from "@/pages/mediaStudio/videoFlow";
 import anonymousData from "@/lib/anonymousData";
 import type { PromptItem } from "@/lib/promptLibrary";
 import { createClipboardMediaFile, dropCanvasFiles, getCanvasFileType, getClipboardMediaFiles, importCanvasFiles, isCanvasFileDrag } from "./canvasDrop";
@@ -328,6 +334,51 @@ provide("selectionConnection", shallowRef<NodeConnectionFeedback>());
 provide("saveNodeToAssets", currentUser.value?.role === "user" ? undefined : (label: string, outputs: { label: string; output: NodeOutput }[]) => assetLibraryRef.value?.openSave(label, outputs));
 let canvasController = new AbortController();
 let workspaceController = new AbortController();
+const router = useRouter();
+const productProfiles = defineAsyncComponent(() => import("@/pages/mediaStudio/productProfiles.vue"));
+const sceneProductPicker = shallowRef<{ directory: string; signal: AbortSignal; resolve: (product?: SceneScriptProduct) => void }>();
+
+function finishSceneProduct(product?: SceneScriptProduct) {
+  const picker = sceneProductPicker.value;
+  sceneProductPicker.value = undefined;
+  picker?.signal.removeEventListener("abort", cancelSceneProduct);
+  picker?.resolve(product);
+}
+function cancelSceneProduct() { finishSceneProduct(); }
+
+provide<SceneScriptBridge>("frameAnalysisScript", {
+  batchLimit,
+  pickProduct(signal) {
+    finishSceneProduct();
+    const directory = project.value?.directory;
+    const scope = AbortSignal.any([signal, canvasController.signal, workspaceController.signal]);
+    if (!directory || !props.active || scope.aborted) return Promise.resolve(undefined);
+    return new Promise(resolve => {
+      sceneProductPicker.value = { directory, signal: scope, resolve };
+      scope.addEventListener("abort", cancelSceneProduct, { once: true });
+    });
+  },
+  async openVideoFlow(input, signal) {
+    const directory = project.value?.directory;
+    if (!directory || !props.active) throw new Error("Hãy mở Canvas của dự án trước khi chuyển kịch bản.");
+    const scope = AbortSignal.any([signal, canvasController.signal, workspaceController.signal]);
+    const ownerId = currentUser.value?.id ?? "standalone";
+    await (props.flushCanvases ?? flushCanvasSave)();
+    scope.throwIfAborted();
+    if (directory !== project.value?.directory || ownerId !== (currentUser.value?.id ?? "standalone")) throw new Error("Dự án đã thay đổi. Hãy mở lại báo cáo.");
+    const key = sceneScriptTransferKey(directory, ownerId);
+    if (!saveSceneScriptTransfer(key, input)) throw new Error("Xưởng video đã có một kịch bản chờ nhận. Hãy mở Xưởng video để dùng hoặc bỏ bản đó trước.");
+    try {
+      const result = await router.push({ path: "/video", query: { studio: "flow" } });
+      if (isNavigationFailure(result) || router.currentRoute.value.path !== "/video") throw new Error("Chưa mở được Xưởng video. Hãy thử chuyển lại.");
+    } catch (error) {
+      sessionStorage.removeItem(key);
+      throw error;
+    }
+  },
+});
+onScopeDispose(cancelSceneProduct);
+
 type AssetReference = { source: string; sourceHandle: string };
 type AssetSelection = { target: GraphNode; targetHandleId: string; directory: string; sourceId: string; controller: AbortController; signal: AbortSignal; resolve: (reference?: AssetReference) => void };
 const assetSelection = shallowRef<AssetSelection>();

@@ -8,6 +8,13 @@
     </el-alert>
     <el-alert v-if="operationError" type="error" :title="operationError" showIcon @close="operationError = ''" />
     <el-alert v-if="actionError" type="error" :title="actionError" showIcon @close="actionError = ''" />
+    <el-alert v-if="incomingScript" title="Kịch bản từ Phân tích khung hình" type="info" :closable="false" showIcon>
+      <p class="hint">{{ run ? 'Đợt đang mở vẫn được giữ. Chọn Chuẩn bị đợt mới để dùng kịch bản này.' : `${incomingSceneCount} cảnh đã sẵn sàng. Sau khi nhận, bạn có thể kiểm tra lại đầu vào trước khi chạy.` }}</p>
+      <div class="flowActions">
+        <el-button size="small" type="primary" :disabled="busy || !!run || uploading || !!loadError" @click="applyIncomingScript">Dùng kịch bản này</el-button>
+        <el-button size="small" text @click="discardIncomingScript">Bỏ bản chuyển</el-button>
+      </div>
+    </el-alert>
     <p v-if="busy && !run" class="hint" role="status">Đang mở tiến độ dự án…</p>
 
     <div v-if="run || !busy" class="flowLayout" :class="{ hasRun: run }">
@@ -221,6 +228,7 @@ import { clearStudioMediaForCanvas, queueStudioMediaForCanvas, type StudioMediaT
 import { flowLibraryPath, makeStarterFlow, parseFlowLibrary, type StudioFlow } from "./studioFlows";
 import productProfiles from "./productProfiles.vue";
 import { appendFlowPhotos, type ProductProfile } from "./productProfiles";
+import { readSceneScriptTransfer, sceneScriptTransferKey } from "./sceneScriptTransfer";
 import { canResumeProgress, contextLimit, emptyFlowInput, flowOutput, flowStages, imageExtensions, imageLimit, isVideoFlowTemplate, makeVideoRun,
   promptLimit, readFlowInput, splitFlowPrompts, stageLabels, variantLimit, type FlowItem, type FlowMediaFile, type FlowOutputKind,
   type FlowStage, type FlowVariant, type StepProgress, type VideoFlowMode } from "./videoFlow";
@@ -235,6 +243,14 @@ const draftKey = "macflow.videoFlow.draft.v1:" + JSON.stringify([props.ownerId, 
 const lifetime = new AbortController();
 const draftError = ref("");
 const actionError = ref("");
+const incomingKey = sceneScriptTransferKey(props.directory, props.ownerId);
+const incomingScript = shallowRef<ReturnType<typeof readSceneScriptTransfer>>();
+const incomingSceneCount = computed(() => incomingScript.value ? splitFlowPrompts(incomingScript.value.prompts).length : 0);
+try {
+  const incoming = readSceneScriptTransfer(incomingKey);
+  if (incoming) splitFlowPrompts(incoming.prompts);
+  incomingScript.value = incoming;
+} catch { actionError.value = "Không đọc được kịch bản chuyển từ Canvas."; }
 const draft = ref(emptyFlowInput());
 try { draft.value = readFlowInput(JSON.parse(localStorage.getItem(draftKey) ?? "null")); }
 catch { draftError.value = "Không đọc được bản nhập đã lưu trên trình duyệt này."; }
@@ -403,6 +419,41 @@ async function addPhotos(kind: PhotoKind, event: Event) {
 }
 
 function removePhoto(kind: PhotoKind, path: string) { draft.value[kind] = draft.value[kind].filter(photo => photo.path !== path); }
+
+function clearIncomingScript() {
+  sessionStorage.removeItem(incomingKey);
+  incomingScript.value = undefined;
+}
+
+async function discardIncomingScript() {
+  const accepted = await ElMessageBox.confirm("Bỏ kịch bản đang chờ nhận trong Xưởng video?", "Bỏ bản chuyển", {
+    confirmButtonText: "Bỏ bản chuyển", cancelButtonText: "Quay lại", type: "warning",
+  }).then(() => true, () => false);
+  if (!accepted || lifetime.signal.aborted) return;
+  try { clearIncomingScript(); }
+  catch { actionError.value = "Chưa bỏ được bản chuyển. Hãy thử lại."; }
+}
+
+async function applyIncomingScript() {
+  const input = incomingScript.value;
+  if (!input || run.value || busy.value || uploading.value || loadError.value) return;
+  if (draft.value.prompts.trim() || draft.value.product.trim() || draft.value.products.length || draft.value.sharedScript.trim()) {
+    const accepted = await ElMessageBox.confirm("Kịch bản mới sẽ thay danh sách ý tưởng, kịch bản chung và hồ sơ sản phẩm bạn đang nhập.", "Dùng kịch bản mới", {
+      confirmButtonText: "Dùng kịch bản mới", cancelButtonText: "Quay lại", type: "warning",
+    }).then(() => true, () => false);
+    if (!accepted) return;
+  }
+  if (incomingScript.value !== input || run.value || busy.value || uploading.value || lifetime.signal.aborted) return;
+  if (draft.value.references.length + input.products.length > imageLimit) {
+    actionError.value = `Hai nhóm ảnh dùng chung tối đa ${imageLimit} ảnh. Hãy bớt ảnh tham chiếu rồi nhận lại kịch bản.`;
+    return;
+  }
+  actionError.value = "";
+  draft.value = { ...draft.value, ...input, sharedScript: "", mode: "review" };
+  if (draftError.value) return;
+  try { clearIncomingScript(); }
+  catch { actionError.value = "Đã nhập kịch bản nhưng chưa bỏ được bản chuyển."; }
+}
 
 async function startBatch() {
   actionError.value = "";
