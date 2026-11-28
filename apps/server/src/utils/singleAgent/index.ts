@@ -50,6 +50,10 @@ type SingleSession = {
 // ACT: 临时对话只保存在当前进程内，关闭后销毁；多进程部署需共享会话及回调通道。
 const sessions = new Map<string, SingleSession>();
 
+export function hasActiveSingleAgentRuns() {
+  return [...sessions.values()].some(session => !!session.active);
+}
+
 function getSession(sessionId: string) {
   const session = sessions.get(sessionId);
   if (!session || session.closed) throw Object.assign(new Error("临时对话不存在或已关闭"), { status: 404 });

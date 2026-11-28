@@ -17,12 +17,29 @@
           <icon-refresh :size="18" aria-hidden="true" />
           <span>Cập nhật phiên bản web</span>
         </div>
-        <el-button tag="a" size="small" type="primary" plain :href="webUpdateGuide" target="_blank" rel="noopener noreferrer">
+        <div v-if="macFlowUpdate" class="updateActions">
+          <el-button size="small" plain :loading="macFlowUpdate.phase === 'checking'" :disabled="webUpdateBusy" @click="changeMacFlowUpdate({ type: 'check' })">
+            Kiểm tra cập nhật
+          </el-button>
+          <el-button v-if="macFlowUpdate.latest && macFlowUpdate.latest !== macFlowUpdate.current" size="small" type="primary"
+            :loading="macFlowUpdate.phase === 'building' || macFlowUpdate.phase === 'restarting'" :disabled="webUpdateBusy" @click="changeMacFlowUpdate({ type: 'install' })">
+            Cài bản mới nhất
+          </el-button>
+        </div>
+        <el-button v-else tag="a" size="small" type="primary" plain :href="webUpdateGuide" target="_blank" rel="noopener noreferrer">
           Hướng dẫn cập nhật
         </el-button>
       </div>
-      <p class="webUpdateHint">Cập nhật trên máy đang chạy MacFlow, khởi động lại ứng dụng rồi tải lại trang này.</p>
-      <div v-if="webRevision" class="buildInfo"><span>Mã bản dựng</span><code>{{ webRevision }}</code></div>
+      <template v-if="macFlowUpdate">
+        <div class="autoUpdateSetting">
+          <span>Tự động cài bản mới</span>
+          <el-switch size="small" :modelValue="macFlowUpdate.automatic" :disabled="macFlowUpdatePending || macFlowUpdate.phase === 'restarting'"
+            aria-label="Tự động cài bản mới" @change="(value) => changeMacFlowUpdate({ type: 'automatic', enabled: value === true })" />
+        </div>
+        <p class="webUpdateHint" role="status">{{ webUpdateMessage }}</p>
+      </template>
+      <p v-else class="webUpdateHint">Cập nhật trên máy đang chạy MacFlow, khởi động lại ứng dụng rồi tải lại trang này.</p>
+      <div v-if="macFlowUpdate?.current || webRevision" class="buildInfo"><span>Mã bản dựng</span><code>{{ macFlowUpdate?.current || webRevision }}</code></div>
     </el-card>
     <el-card v-else-if="!publicWeb && (isMobile || !isRemoteConnection)" class="infoCard updateCard" shadow="never">
       <div class="cardHeader">
@@ -252,6 +269,7 @@ import logoUrl from "@toonflow/assets/logo.svg";
 import type { Sponsor } from "@toonflow/server/channel";
 import http from "@/lib/http";
 import { saveSettings } from "@/stores/settings";
+import { changeMacFlowUpdate, macFlowUpdate, macFlowUpdateError, macFlowUpdatePending } from "@/stores/macFlowUpdate";
 import {
   desktopAutoUpdate,
   desktopUpdateSource as updateSource,
@@ -272,6 +290,21 @@ const macflowRepository = "https://github.com/mktminhqpbga-glitch/ToonFlow-App";
 const macflowBranch = "feat/macflow-media-studios";
 const webUpdateGuide = `${macflowRepository}/blob/${macflowBranch}/docs/macFlowDevelopment.md#chạy-macflow-từ-repo`;
 const webRevision = import.meta.env.macflowRevision as string;
+const webUpdateBusy = computed(() => macFlowUpdatePending.value || ["checking", "building", "restarting"].includes(macFlowUpdate.value?.phase ?? ""));
+const webUpdateMessage = computed(() => {
+  const state = macFlowUpdate.value;
+  if (!state) return "";
+  if (macFlowUpdateError.value || state.message) return macFlowUpdateError.value || state.message;
+  return {
+    idle: state.latest ? "Bạn đang dùng bản mới nhất." : "MacFlow sẽ kiểm tra bản mới trên GitHub.",
+    checking: "Đang kiểm tra bản mới trên GitHub…",
+    available: `Đã có bản mới ${state.latest?.slice(0, 12) ?? ""}.`,
+    building: "Đang tải và chuẩn bị bản mới. Bạn có thể tiếp tục làm việc.",
+    waiting: "Bản mới đã sẵn sàng. MacFlow đang chờ tác vụ hiện tại hoàn tất.",
+    restarting: "Đang khởi động lại. Trang sẽ tự tải lại khi phiên bản mới sẵn sàng.",
+    error: "Chưa hoàn tất cập nhật. Hãy thử lại.",
+  }[state.phase];
+});
 const communityUrl = "https://work.weixin.qq.com/u/vc36adcc89845edcbe?v=5.0.3.63936&bb=85b8d228e8";
 const clientBuild = ref<{ version: string; channel: string }>();
 const currentVersion = computed(() => actualPlatform.isDesktop && actualPlatform.isRemoteConnection

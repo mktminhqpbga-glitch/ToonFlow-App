@@ -44,7 +44,7 @@ async function frontendRevision(frontend: string) {
 async function providerEnvironment(resource: string, token: string, callback: string) {
   const allowed = /^AIC_(?:SCREENING_(?:BASE_URL|API_KEY)|(?:WRITER|REVIEW)_MODEL|IMAGE_(?:BASE_URL|API_KEY|MODEL|API)|VIDEO_(?:BASE_URL|API_KEY|MODEL|FRAME_FIELDS)|TTS_(?:BASE_URL|API_KEY|MODEL|VOICE|SPEED)|TEXT_EMBEDDING_(?:BASE_URL|API_KEY|MODEL)|EMBEDDING_MODEL|CLIP_SPEED|DUPLICATE_SIMILARITY)$/;
   const overrides: Record<string, string> = {};
-  const settings = await readFile(resolve(resource, "../../.env.videoAff"), "utf-8").catch((error: NodeJS.ErrnoException) => {
+  const settings = await readFile(resolve(process.env.MACFLOW_INSTALL_ROOT || resolve(resource, "../.."), ".env.videoAff"), "utf-8").catch((error: NodeJS.ErrnoException) => {
     if (error.code !== "ENOENT") throw error;
     return "";
   });

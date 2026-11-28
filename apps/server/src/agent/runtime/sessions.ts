@@ -80,6 +80,10 @@ type ActiveAgentRun = {
 // ACT: 请求进入时即登记，停止操作也覆盖工作区授权和 SDK 初始化期间；进程退出后不恢复任务。
 const activeRuns = new Map<string, ActiveAgentRun>();
 
+export function hasActiveAgentRuns() {
+  return activeRuns.size > 0;
+}
+
 export function registerAgentRun(run: ActiveAgentRun) {
   if (activeRuns.has(run.runId)) throw Object.assign(new Error("Định danh yêu cầu Agent đã tồn tại"), { status: 409 });
   activeRuns.set(run.runId, run);

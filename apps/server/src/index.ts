@@ -26,6 +26,7 @@ app.locals.videoAffRoot = resolve(appDirectory, "services/videoAff");
 const { initializeMcpRuntime } = await import("./utils/mcp/runtime");
 const { startMobileLinkRuntime } = await import("./utils/mobileLink");
 const { startMultiTenantRuntime } = await import("./utils/multiTenant");
+const { notifyUpdateLauncherReady } = await import("./utils/macFlowUpdate");
 await startMultiTenantRuntime(app);
 const server = app.listen(realPort, async (error?: Error) => {
   if (error) throw error;
@@ -33,6 +34,7 @@ const server = app.listen(realPort, async (error?: Error) => {
   await startMobileLinkRuntime(app).catch(error => console.error("设备互联启动失败：", error));
   console.log(`[服务启动成功]: http://localhost:${realPort}`);
   console.log(`[启动耗时]: ${(Date.now() - startTime).toFixed(2)}ms`);
+  notifyUpdateLauncherReady();
 });
 
 const { attach } = await import("./utils/aiChrome");

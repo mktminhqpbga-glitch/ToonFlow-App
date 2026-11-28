@@ -109,6 +109,10 @@ type StudioQueue = {
 const studioQueues = new Map<string, StudioQueue>();
 const restoredStudioWorkspaces = new Set<string>();
 
+export function hasPendingMediaWork() {
+  return activeCount > 0 || operations.size > 0 || studioQueues.size > 0;
+}
+
 function studioOwnerKey(owner?: AuthIdentity | null) {
   return owner?.role === "user" ? owner.id : "host";
 }

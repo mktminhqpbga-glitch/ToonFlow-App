@@ -126,6 +126,8 @@ export async function createApp({
   const { initializeMultiTenantRuntime, multiTenantAccess } = await import("@/utils/multiTenant/runtime");
   initializeMultiTenantRuntime(app);
   app.use(multiTenantAccess);
+  const { default: macFlowUpdate, trackUpdateWork } = await import("@/utils/macFlowUpdate");
+  app.use(trackUpdateWork);
   // VideoAFF forwards uploads and media without buffering or rewriting their bodies.
   const [{ videoAffStudioPath }, { default: videoAffStudio }] = await Promise.all([
     import("@/utils/videoAff/config"), import("@/utils/videoAff/studio"),
@@ -136,6 +138,7 @@ export async function createApp({
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
   app.use("/api/desktop", desktopRequest);
+  app.use("/api/macFlowUpdate", macFlowUpdate);
 
   const router = await import("@/router");
   router.default(app);

@@ -36,6 +36,7 @@
     "start:chromeRelay": "bun build/chromeRelay/index.js",
     "dev:chromeRelay": "bun apps/server/src/chromeRelay/index.ts",
     "start:server": "bun run --cwd apps/server start",
+    "start:managed": "bun scripts/startMacFlow.ts",
     "build:server": "bun apps/server/scripts/buildStandalone.ts",
     "build": "bun run build:tools && bun run build:ext && bun scripts/runWorkspaces.ts build apps",
     "build:nodes": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/nodes'), { recursive: true, force: true });\" && NODE_ENV=production bun scripts/runWorkspaces.ts build packages/nodes",

@@ -119,7 +119,9 @@ bun run build:server
 bun run start:server
 ```
 
-Khi cập nhật bản web đã cài từ repo, mở thư mục MacFlow trên máy đang chạy ứng dụng và lấy mã mới bằng `git pull --ff-only origin feat/macflow-media-studios`. Chạy lại các lệnh trên để dựng và khởi động bản mới. Trong **Cài đặt → Giới thiệu**, đối chiếu **Mã bản dựng** với commit GitHub để biết trình duyệt đang mở bản nào.
+Trên macOS và Linux, mở MacFlow bằng `bun run start:managed` từ bản cài Git trên nhánh này để dùng nút cập nhật. Sau đó, vào **Cài đặt → Giới thiệu → Kiểm tra cập nhật → Cài bản mới nhất** trên trình duyệt của máy đang chạy MacFlow. Có thể bật **Tự động cài bản mới** để MacFlow kiểm tra GitHub mỗi 5 phút, chuẩn bị bản mới và khởi động lại sau khi các tác vụ đang chạy hoàn tất. MacFlow dùng lại thư mục dữ liệu hiện tại và tự tải lại trang.
+
+Để cài nút cập nhật lần đầu, mở thư mục MacFlow và chạy `git pull --ff-only origin feat/macflow-media-studios`, `bun install --frozen-lockfile` và `bun run build:server`. Dừng tiến trình MacFlow cũ rồi mở lại bằng `bun run start:managed`. Bản Docker, bản tải ZIP và máy chủ nhiều người dùng cập nhật theo cách triển khai của bản đó. Trong **Cài đặt → Giới thiệu**, đối chiếu **Mã bản dựng** với commit GitHub để biết trình duyệt đang mở bản nào.
 
 Bản standalone phục vụ Web và API tại `http://127.0.0.1:3000` theo cấu hình mặc định. Khi phát triển giao diện, dùng `bun run dev:plugins` để đồng bộ plugin phát triển, rồi `bun run dev`. Vite mặc định mở tại `http://localhost:5173` và proxy API tới Server. `TOONFLOW_SERVER_PORT` đổi cổng Server và đích proxy. Khi cần thử bằng dữ liệu riêng, dùng `TOONFLOW_DATA_DIR` trỏ tới thư mục tạm. Lệnh `dev:plugins` đồng bộ plugin vào thư mục `data/` của repo, vì vậy với Server thử trỏ dữ liệu tạm, hãy cài plugin thử bằng tệp build trong chính instance đó. Khi chỉ chạy một gói, dùng `bun run --cwd <đường-dẫn> <lệnh>` để dùng đúng tên thư mục trên Linux.
 
