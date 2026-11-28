@@ -38,6 +38,7 @@
 
 <script setup lang="ts">
 import { api } from '~/composables/useApi'
+import { mapError } from '~/composables/useToast'
 
 type Entry = { path: string; name: string; type: 'directory' | 'file' }
 const props = defineProps<{ busy: boolean }>()
@@ -85,7 +86,7 @@ async function load(path: string, next?: string) {
     if (!next) selected.value = ''
   } catch (error) {
     if (next) cursor.value = ''
-    issue.value = error instanceof Error ? error.message : 'Chưa mở được kho ảnh MacFlow.'
+    issue.value = mapError(error, { fallback: 'errors.macFlowImages' })
   } finally { loading.value = false }
 }
 </script>

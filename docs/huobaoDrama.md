@@ -2,7 +2,7 @@
 
 **Tổng quan → Phim ngắn** mở Huobao Drama ngay trong tab hiện tại. Chọn **← MacFlow** ở đầu trang Huobao để quay lại. Khi Huobao chưa chạy, MacFlow hiện nút **Thử lại** và đường dẫn đến bảng phân cảnh đã lưu. Các bảng cũ cũng mở trực tiếp ở `/#/shortDrama/storyboard`. [Hướng dẫn bảng phân cảnh MacFlow](shortDrama.md)
 
-Repo gốc được ghim dưới dạng Git submodule tại `services/huobaoDrama/upstream` tới commit `24d4c17612e71cf10c8eeb1a8b6439afa73e2c07`. Lớp ngôn ngữ thêm tiếng Việt cho các màn hình chính và ngôn ngữ nội dung AI. Các nhãn chưa dịch dùng tiếng Anh. Huobao Drama theo giấy phép CC BY-NC-SA 4.0. Tuân thủ điều kiện phi thương mại, ghi công và chia sẻ tương tự khi phân phối phần Huobao đã chỉnh. [Repo Huobao Drama](https://github.com/chatfire-AI/huobao-drama/tree/24d4c17612e71cf10c8eeb1a8b6439afa73e2c07) · [Giấy phép](https://github.com/chatfire-AI/huobao-drama/blob/24d4c17612e71cf10c8eeb1a8b6439afa73e2c07/LICENSE)
+Repo gốc được ghim dưới dạng Git submodule tại `services/huobaoDrama/upstream` tới commit `24d4c17612e71cf10c8eeb1a8b6439afa73e2c07`. Tiếng Việt là mặc định cho giao diện và nội dung AI của bản tích hợp. Nếu đã lưu lựa chọn khác, chọn **Tiếng Việt** ở đầu trang Huobao. Các mẫu AI tiếng Việt đi kèm dùng được cả với bản đã cài. Huobao đọc mẫu người dùng đã lưu bằng tiếng Việt trước khi dùng mẫu đi kèm. Huobao Drama theo giấy phép CC BY-NC-SA 4.0. Tuân thủ điều kiện phi thương mại, ghi công và chia sẻ tương tự khi phân phối phần Huobao đã chỉnh. [Repo Huobao Drama](https://github.com/chatfire-AI/huobao-drama/tree/24d4c17612e71cf10c8eeb1a8b6439afa73e2c07) · [Giấy phép](https://github.com/chatfire-AI/huobao-drama/blob/24d4c17612e71cf10c8eeb1a8b6439afa73e2c07/LICENSE)
 
 ## Chạy hai dịch vụ bằng Docker
 

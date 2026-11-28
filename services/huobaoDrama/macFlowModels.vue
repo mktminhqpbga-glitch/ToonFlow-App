@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { api } from '~/composables/useApi'
+import { mapError } from '~/composables/useToast'
 
 type Service = 'text' | 'image' | 'video'
 type Selection = { providerId: string; modelId: string }
@@ -66,7 +67,7 @@ async function load() {
       const current = data.selected[type]
       choices[type] = current ? modelKey(current) : ''
     }
-  } catch (error) { issue.value = error instanceof Error ? error.message : 'Chưa tải được mô hình từ MacFlow.' }
+  } catch (error) { issue.value = mapError(error, { fallback: 'errors.macFlowModels' }) }
   finally { loading.value = false }
 }
 
@@ -82,7 +83,7 @@ async function save() {
     await api.post('/macFlow/configure', selected)
     message.value = 'Đã lưu. Các tập mới dùng mô hình MacFlow đã chọn.'
     emit('saved')
-  } catch (error) { issue.value = error instanceof Error ? error.message : 'Chưa lưu được mô hình. Hãy thử lại.' }
+  } catch (error) { issue.value = mapError(error, { fallback: 'errors.macFlowModels' }) }
   finally { saving.value = false }
 }
 
