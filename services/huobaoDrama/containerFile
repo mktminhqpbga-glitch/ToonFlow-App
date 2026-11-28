@@ -4,6 +4,8 @@ COPY upstream/frontend ./frontend
 COPY upstream/backend/src ./backend/src
 COPY prepareLocale.cjs stylePresetLocale.ts vietnamese.json ./
 RUN node prepareLocale.cjs /build
+COPY prepareMacFlow.cjs macFlowRoutes.ts macFlowModels.vue macFlowImagePicker.vue ./
+RUN node prepareMacFlow.cjs /build
 WORKDIR /build/frontend
 RUN node -e "const fs=require('node:fs'); const p=require('./package-lock.json'); for(const entry of Object.values(p.packages)) delete entry.resolved; fs.writeFileSync('package-lock.json', JSON.stringify(p));" \
     && npm ci --no-audit --no-fund --registry=https://registry.npmjs.org \

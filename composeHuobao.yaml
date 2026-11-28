@@ -20,6 +20,10 @@ services:
       - "127.0.0.1:5679:5679"
     environment:
       PUBLIC_BASE_URL: http://huobaoDrama:5679
+      HUOBAO_PUBLIC_ORIGIN: ${MACFLOW_HUOBAO_PUBLIC_URL:-http://127.0.0.1:5679}
+      TOONFLOW_PUBLIC_URL: ${MACFLOW_PUBLIC_URL:-http://127.0.0.1:3000}
+      TOONFLOW_HUOBAO_MACFLOW_ORIGIN: http://toonflow:3000
+      TOONFLOW_HUOBAO_TOKEN: ${MACFLOW_HUOBAO_TOKEN:-}
     volumes:
       - huobaoDramaData:/app/data
 

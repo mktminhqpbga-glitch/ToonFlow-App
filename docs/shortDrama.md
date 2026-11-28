@@ -1,6 +1,6 @@
 # Phim ngắn trong MacFlow
 
-Mở **Phim ngắn → Mở bảng phân cảnh MacFlow đã lưu** trong một dự án MacFlow. Dùng **Tạo storyboard mới** để tạo một bảng riêng cho tập khác và dùng danh sách cạnh nút để mở lại các bảng. Mỗi bảng giữ kịch bản, nhân vật, ảnh xem trước và phân cảnh riêng. MacFlow lưu nháp trên trình duyệt và kiểm tra phiên bản khi bấm **Lưu dự án** để bảo vệ bản đã sửa ở cửa sổ khác. [Chạy Huobao Drama với MacFlow](huobaoDrama.md)
+Mở dự án MacFlow rồi vào `/#/shortDrama/storyboard` để xem bảng phân cảnh MacFlow đã lưu. Khi Huobao chưa chạy, mục **Phim ngắn** cũng có đường dẫn đến các bảng này. Dùng **Tạo storyboard mới** để tạo một bảng riêng cho tập khác và dùng danh sách cạnh nút để mở lại các bảng. Mỗi bảng giữ kịch bản, nhân vật, ảnh xem trước và phân cảnh riêng. MacFlow lưu nháp trên trình duyệt và kiểm tra phiên bản khi bấm **Lưu dự án** để bảo vệ bản đã sửa ở cửa sổ khác. [Chạy Huobao Drama với MacFlow](huobaoDrama.md)
 
 ## Từ kịch bản đến phân cảnh
 

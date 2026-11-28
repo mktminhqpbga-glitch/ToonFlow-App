@@ -1,6 +1,6 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
-import { Router, type Request } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import u from "@/utils";
 import { success } from "@/lib/responseFormat";
@@ -21,6 +21,21 @@ const modelsSchema = z.object({ text: modelSchema.nullable().optional(), image: 
 const pathSchema = z.string().trim().min(1).max(2048);
 
 function fail(message: string, status: number): never { throw Object.assign(new Error(message), { status }); }
+
+function sharedToken() {
+  const token = process.env.TOONFLOW_HUOBAO_TOKEN ?? "";
+  return /^[a-zA-Z0-9_-]{32,256}$/.test(token) ? token : "";
+}
+
+function scopedToken(token: string, scope: "models" | "control") {
+  return createHmac("sha256", token).update(`macflow-huobao-${scope}-v1`).digest("hex");
+}
+
+function matchesToken(req: Request, token: string) {
+  const actual = Buffer.from(req.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${token}`);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
 
 function serviceUrl(value: string) {
   const url = new URL(value);
@@ -46,10 +61,10 @@ function selection(service: Service) {
 }
 
 async function apiSettings(req: Request) {
-  const token = process.env.TOONFLOW_HUOBAO_TOKEN ?? "";
+  const token = sharedToken();
   const value = process.env.TOONFLOW_HUOBAO_MACFLOW_ORIGIN;
   const folder = process.env.TOONFLOW_HUOBAO_PROJECT;
-  if (!/^[a-zA-Z0-9_-]{32,256}$/.test(token) || !value || !folder || isAbsolute(folder) ||
+  if (!token || !value || !folder || isAbsolute(folder) ||
     /[\\/:\x00-\x1f]/.test(folder) || [".", ".."].includes(folder)) fail("Chưa cấu hình kết nối mô hình Huobao trong máy chủ MacFlow.", 503);
   const root = await u.workspace.getWorkspaceRoot(req);
   const path = await u.workspace.resolveWorkspace(req, resolve(root, folder));
@@ -76,11 +91,14 @@ async function assertAvailable(service: Service, model: NonNullable<ReturnType<t
     const configured = await u.ai.getConfiguredModel(model.providerId, model.modelId);
     if (configured.publicProviderId === "muse2Api") fail("Mô hình văn bản cho Huobao phải hỗ trợ gọi công cụ Agent.", 400);
   } else if (!(await u.mediaGeneration.listMediaModels()).some(item => item.type === service &&
-    item.providerId === model.providerId && item.modelId === model.modelId)) fail(`Mô hình MacFlow ${service} chưa có trong danh sách đã cài.`, 400);
+    item.providerId === model.providerId && item.modelId === model.modelId && item.configured !== false)) {
+    fail("Mô hình ảnh hoặc video chưa sẵn sàng. Hãy kiểm tra cấu hình trong MacFlow.", 400);
+  }
 }
 
 let syncing = false;
 const router = Router();
+const partner = Router();
 router.use((_req, res, next) => {
   requireDirectModelAccess();
   res.set("Cache-Control", "no-store");
@@ -98,8 +116,7 @@ router.get("/status", async (req, res) => {
     return model ? [{ service, ...model }] : [];
   }) }));
 });
-router.get("/models", async (req, res) => {
-  u.mcpControl.assertAppRequest(req);
+async function listModels(_req: Request, res: Response) {
   const [text, media] = await Promise.all([u.ai.listAiModels(), u.mediaGeneration.listMediaModels()]);
   const eligible = (item: { providerId: string; modelId: string }) => modelSchema.safeParse(item).success;
   const catalogEntry = ({ providerId, modelId, label, providerLabel }: {
@@ -107,12 +124,12 @@ router.get("/models", async (req, res) => {
   }) => ({ providerId, modelId, label, providerLabel });
   res.json(success({
     text: text.filter(item => eligible(item) && item.providerId !== "muse2Api").map(catalogEntry),
-    image: media.filter(item => eligible(item) && item.type === "image").map(catalogEntry),
-    video: media.filter(item => eligible(item) && item.type === "video").map(catalogEntry),
+    image: media.filter(item => eligible(item) && item.type === "image" && item.configured !== false).map(catalogEntry),
+    video: media.filter(item => eligible(item) && item.type === "video" && item.configured !== false).map(catalogEntry),
+    selected: Object.fromEntries(services.map(service => [service, selection(service)])),
   }));
-});
-router.post("/configure", async (req, res) => {
-  u.mcpControl.assertAppRequest(req);
+}
+async function configure(req: Request, res: Response) {
   const connection = await apiSettings(req);
   if (syncing) fail("Đang kết nối mô hình Huobao. Thử lại sau.", 409);
   syncing = true;
@@ -130,7 +147,7 @@ router.post("/configure", async (req, res) => {
     for (const { service } of selected) {
       const spec = specifications[service];
       const config = { name: spec.label, service_type: service, provider: spec.provider,
-        base_url: connection.apiBase, api_key: connection.token, model: [spec.alias], priority: 10000, is_active: true };
+        base_url: connection.apiBase, api_key: scopedToken(connection.token, "models"), model: [spec.alias], priority: 10000, is_active: true };
       const record = existing.find(item => item.name === spec.label && item.service_type === service && item.provider === spec.provider &&
         item.base_url.endsWith("/api/huobao/bridge"));
       await huobaoRequest(record ? `/ai-configs/${record.id}` : "/ai-configs", record ? "PUT" : "POST", config);
@@ -144,18 +161,51 @@ router.post("/configure", async (req, res) => {
     u.conf.set("huobaoModels", modelsSchema.parse(models));
     res.json(success({ count: selected.length }));
   } finally { syncing = false; }
-});
-router.post("/exportAsset", async (req, res) => {
-  u.mcpControl.assertAppRequest(req);
-  const { assetPath } = z.object({ assetPath: pathSchema }).parse(req.body);
+}
+
+async function uploadAsset(assetPath: string, onlyImages = false) {
   const { content } = await u.assets.readAssetFile(assetPath);
   const { bytes, mimeType } = getTransferMedia(content);
+  if (onlyImages && !mimeType.startsWith("image/")) fail("Hãy chọn ảnh PNG, JPEG hoặc WebP.", 400);
   const form = new FormData();
   const kind = mimeType.split("/")[0]!;
   form.append("file", new Blob([new Uint8Array(bytes)], { type: mimeType }), `macflow.${mediaTypes.get(mimeType)}`);
   const upload = z.object({ data: z.object({ path: z.string().regex(/^\/?static\//) }) }).parse(await huobaoRequest(`/upload/${kind}`, "POST", form));
-  res.json(success({ path: upload.data.path, url: new URL(upload.data.path, endpoint().publicUrl).href }));
+  return { path: upload.data.path, url: new URL(upload.data.path, endpoint().publicUrl).href };
+}
+
+router.get("/models", (req, res) => { u.mcpControl.assertAppRequest(req); return listModels(req, res); });
+router.post("/configure", (req, res) => { u.mcpControl.assertAppRequest(req); return configure(req, res); });
+router.post("/exportAsset", async (req, res) => {
+  u.mcpControl.assertAppRequest(req);
+  const { assetPath } = z.object({ assetPath: pathSchema }).parse(req.body);
+  res.json(success(await uploadAsset(assetPath)));
 });
+
+partner.use((req, _res, next) => {
+  const token = sharedToken();
+  if (req.get("origin") || !token || !matchesToken(req, scopedToken(token, "control"))) fail("Kết nối quản lý Huobao không hợp lệ.", 403);
+  next();
+});
+partner.get("/models", async (req, res) => { await apiSettings(req); await listModels(req, res); });
+partner.post("/configure", configure);
+partner.get("/images", async (req, res) => {
+  const { path, cursor } = z.object({ path: pathSchema.optional(), cursor: z.string().max(100).optional() }).parse(req.query);
+  const result = await u.assets.queryAssets({ path, cursor, limit: 40 });
+  res.json(success({ ...result, items: result.items.filter(item => item.type === "directory" || /\.(png|jpe?g|webp)$/i.test(item.name)) }));
+});
+partner.get("/image", async (req, res) => {
+  const { path } = z.object({ path: pathSchema }).parse(req.query);
+  const { content } = await u.assets.readAssetFile(path);
+  const { bytes, mimeType } = getTransferMedia(content);
+  if (!mimeType.startsWith("image/")) fail("Hãy chọn ảnh PNG, JPEG hoặc WebP.", 400);
+  res.set({ "Content-Type": mimeType, "X-Content-Type-Options": "nosniff" }).send(bytes);
+});
+partner.post("/useImage", async (req, res) => {
+  const { assetPath } = z.object({ assetPath: pathSchema }).parse(req.body);
+  res.json(success(await uploadAsset(assetPath, true)));
+});
+router.use("/partner", partner);
 router.post("/importAsset", async (req, res) => {
   u.mcpControl.assertAppRequest(req);
   const { assetPath } = z.object({ assetPath: pathSchema }).parse(req.body);
@@ -171,11 +221,9 @@ bridge.get("/output/:type/:ticket/:filename", async (req, res, next) => {
   await downloadMedia(res, await apiSettings(req), type, req.params.ticket, req.params.filename, next);
 });
 bridge.use((req, _res, next) => {
-  const token = process.env.TOONFLOW_HUOBAO_TOKEN ?? "";
-  if (req.get("origin") || !/^[a-zA-Z0-9_-]{32,256}$/.test(token)) fail("Cầu nối AI Huobao chỉ nhận yêu cầu máy chủ đã xác thực.", 403);
-  const actual = Buffer.from(req.get("authorization") ?? "");
-  const expected = Buffer.from(`Bearer ${token}`);
-  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) fail("Mã kết nối Huobao không hợp lệ.", 401);
+  const token = sharedToken();
+  if (req.get("origin") || !token) fail("Cầu nối AI Huobao chỉ nhận yêu cầu máy chủ đã xác thực.", 403);
+  if (!matchesToken(req, scopedToken(token, "models")) && !matchesToken(req, token)) fail("Mã kết nối Huobao không hợp lệ.", 401);
   next();
 });
 function modelFor(service: Service) {
