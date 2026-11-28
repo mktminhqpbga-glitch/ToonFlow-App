@@ -38,7 +38,11 @@
         </div>
         <p class="webUpdateHint" role="status">{{ webUpdateMessage }}</p>
       </template>
-      <p v-else class="webUpdateHint">Cập nhật trên máy đang chạy MacFlow, khởi động lại ứng dụng rồi tải lại trang này.</p>
+      <p v-else-if="macFlowUpdateLocal" class="webUpdateHint">
+        Chưa kết nối được bộ cập nhật. Với bản cài từ Git trên macOS hoặc Linux, dừng MacFlow rồi mở lại bằng <code>bun run start:managed</code>.
+        Xem hướng dẫn nếu cần cài bộ cập nhật lần đầu.
+      </p>
+      <p v-else class="webUpdateHint">Để dùng nút cập nhật, mở MacFlow qua địa chỉ <code>127.0.0.1</code> trên máy đang chạy ứng dụng. Bản triển khai từ xa cập nhật trên máy chủ.</p>
       <div v-if="macFlowUpdate?.current || webRevision" class="buildInfo"><span>Mã bản dựng</span><code>{{ macFlowUpdate?.current || webRevision }}</code></div>
     </el-card>
     <el-card v-else-if="!publicWeb && (isMobile || !isRemoteConnection)" class="infoCard updateCard" shadow="never">
@@ -269,7 +273,7 @@ import logoUrl from "@toonflow/assets/logo.svg";
 import type { Sponsor } from "@toonflow/server/channel";
 import http from "@/lib/http";
 import { saveSettings } from "@/stores/settings";
-import { changeMacFlowUpdate, macFlowUpdate, macFlowUpdateError, macFlowUpdatePending } from "@/stores/macFlowUpdate";
+import { changeMacFlowUpdate, macFlowUpdate, macFlowUpdateError, macFlowUpdateLocal, macFlowUpdatePending } from "@/stores/macFlowUpdate";
 import {
   desktopAutoUpdate,
   desktopUpdateSource as updateSource,

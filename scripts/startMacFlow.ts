@@ -30,9 +30,11 @@ const base = localGit("rev-parse", "HEAD") || "";
 const remote = localGit("config", "--get", "remote.origin.url");
 const correctOrigin = [macFlowRepository, macFlowRepository + ".git",
   "git@github.com:mktminhqpbga-glitch/ToonFlow-App.git"].includes(remote || "");
-const managed = ["darwin", "linux"].includes(process.platform) && correctOrigin && revisionPattern.test(base)
-  && localGit("branch", "--show-current") === macFlowBranch
-  && localGit("status", "--porcelain", "--untracked-files=no", "--ignore-submodules=dirty") === "";
+const updateUnavailable = !["darwin", "linux"].includes(process.platform) ? "chế độ cập nhật hỗ trợ macOS và Linux"
+  : !correctOrigin || !revisionPattern.test(base) ? "cần mở từ thư mục cài Git của MacFlow"
+  : localGit("branch", "--show-current") !== macFlowBranch ? `cần chuyển sang nhánh ${macFlowBranch}`
+  : localGit("status", "--porcelain", "--untracked-files=no", "--ignore-submodules=dirty") !== "" ? "thư mục Git có thay đổi chưa lưu hoặc không đọc được trạng thái"
+  : "";
 
 let run: Bun.Subprocess | undefined;
 let staging: Bun.Subprocess | undefined;
@@ -44,8 +46,8 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   });
 }
 
-if (!managed) {
-  console.log("MacFlow đang dùng cách khởi động thông thường. Tự cập nhật cần bản cài Git MacFlow trên macOS hoặc Linux.");
+if (updateUnavailable) {
+  console.log(`MacFlow chạy bình thường. Chế độ tự cập nhật chưa bật vì ${updateUnavailable}.`);
   run = Bun.spawn([process.execPath, builtServer(root)], { cwd: sourceServer, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
   process.exit(await run.exited);
 }

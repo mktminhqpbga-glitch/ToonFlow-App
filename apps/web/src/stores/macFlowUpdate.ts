@@ -6,9 +6,10 @@ import { updatePath, type UpdateAction, type UpdateSnapshot } from "../../../../
 export const macFlowUpdate = shallowRef<UpdateSnapshot | null>(null);
 export const macFlowUpdatePending = shallowRef(false);
 export const macFlowUpdateError = shallowRef("");
+export const macFlowUpdateLocal = typeof window !== "undefined" && ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
 
 export function registerMacFlowUpdate() {
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)) return () => {};
+  if (!macFlowUpdateLocal) return () => {};
   const controller = new AbortController();
   let activity = 0;
   let notified = "";
