@@ -14,7 +14,7 @@ const LENGTHS: Record<number, { scenes: number; about: number }> = { 15: { scene
 const MINUTES: Record<number, number> = { 15: 5, 30: 8, 45: 11, 60: 14 };
 const STYLES = ["Tự nhiên, đời thường", "Đánh giá chân thực", "Trước và sau", "Hướng dẫn nhanh"];
 
-export function IdeaStep({ productId, product, productType, record, run }: { productId: string; product: Product; productType: string | null; record: BriefRecord | null; run: PipelineRun | undefined }) {
+export function IdeaStep({ productId, product, record, run }: { productId: string; product: Product; record: BriefRecord | null; run: PipelineRun | undefined }) {
   const [, setParams] = useSearchParams();
   const [seconds, setSeconds] = useState(30);
   const [styles, setStyles] = useState<string[]>([STYLES[0]]);
@@ -31,7 +31,7 @@ export function IdeaStep({ productId, product, productType, record, run }: { pro
   });
   // every video follows the default person of the library; the user only sees "your photos"
   const chosen = people.data?.find((p) => p.default) ?? people.data?.[0];
-  const needsPhoto = people.isSuccess && !(chosen && chosen.photos > 0);
+  const hasPhoto = !!chosen?.photos;
 
   const begin = () => {
     const prefix = styles.length ? `Style: ${styles.join(", ").toLowerCase()}. ` : "";
@@ -105,11 +105,20 @@ export function IdeaStep({ productId, product, productType, record, run }: { pro
               <ErrorNote error={startOver.error} />
             </>
           ) : (
-            <button className="btn btn-primary btn-lg btn-block" disabled={start.isPending || !productType || needsPhoto} onClick={begin}>
-              {start.isPending ? <><Spinner />Đang bắt đầu…</> : needsPhoto ? "Hãy thêm ảnh nhân vật trước" : productType ? "Bắt đầu tạo video" : "Đang chuẩn bị sản phẩm…"}
-            </button>
+            <>
+              <button className="btn btn-primary btn-lg btn-block" disabled={start.isPending || !hasPhoto} onClick={begin}>
+                {start.isPending ? <><Spinner />Đang bắt đầu…</> : people.isPending ? "Đang tải ảnh nhân vật…" : "Bắt đầu tạo video"}
+              </button>
+              {!hasPhoto && people.isSuccess && <p className="muted small">Hãy thêm ảnh nhân vật trước khi tạo video.</p>}
+              {!hasPhoto && people.isError && (
+                <>
+                  <ErrorNote error={people.error} message="Không tải được ảnh nhân vật." />
+                  <button className="btn btn-block" disabled={people.isFetching} onClick={() => void people.refetch()}>Tải lại ảnh nhân vật</button>
+                </>
+              )}
+            </>
           )}
-          <ErrorNote error={start.error} />
+          <ErrorNote error={start.error} message={start.error?.name === "TimeoutError" ? "VideoAFF phản hồi chậm. Hãy thử lại nếu tác vụ chưa bắt đầu." : undefined} />
         </aside>
       </div>
     </>

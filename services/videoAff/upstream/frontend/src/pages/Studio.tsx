@@ -3,7 +3,7 @@ import { Check, Package } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Empty, ErrorNote, Skeleton } from "../components/ui";
-import { useBrief, useKeyframes, usePipeline, useProducts, useSelections, useVideoInfo } from "../hooks/useStudio";
+import { useBrief, useKeyframes, usePipeline, useProducts, useVideoInfo } from "../hooks/useStudio";
 import { doneSteps, pipelineStage, productOf, STEPS, suggestedStep, type StepId } from "../lib/studio";
 import { FinishStep } from "./studio/FinishStep";
 import { IdeaStep } from "./studio/IdeaStep";
@@ -15,7 +15,6 @@ export function StudioPage() {
   const [params, setParams] = useSearchParams();
   const client = useQueryClient();
   const products = useProducts();
-  const selections = useSelections();
   const pipeline = usePipeline(productId);
   const brief = useBrief(productId, pipeline.data?.status === "running");
   const running = pipeline.data?.status === "running";
@@ -46,7 +45,6 @@ export function StudioPage() {
   const asked = params.get("step") as StepId | null;
   const step: StepId = asked && STEPS.some((item) => item.id === asked) ? asked : suggestedStep(record);
   const reachable = (id: StepId) => id === "idea" || !!record;
-  const productType = selections.data?.[productOf(productId)] ?? null;
   // Once the first image exists, making the other scenes and the video happens on the one scenes page
   const onePage = running && !!record && frames.length > 0;
   const makingScenes = onePage && pipelineStage(pipeline.data!.step) === "images";
@@ -73,7 +71,7 @@ export function StudioPage() {
       ) : running ? (
         <Working productId={productId} run={pipeline.data!} record={record} frames={frames} />
       ) : step === "idea" ? (
-        <IdeaStep productId={productId} product={product} productType={productType} record={record} run={pipeline.data} />
+        <IdeaStep productId={productId} product={product} record={record} run={pipeline.data} />
       ) : record ? (
         <>
           <ImagesStep productId={productId} record={record} frames={frames} run={pipeline.data} hasVideo={hasVideo} />

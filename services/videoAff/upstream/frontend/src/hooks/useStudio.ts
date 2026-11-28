@@ -7,14 +7,6 @@ export const API = `${apiRoot}/products`;
 export const useProducts = () =>
   useQuery({ queryKey: ["products"], queryFn: ({ signal }) => getJson<Product[]>(API, signal), refetchInterval: 15000 });
 
-/** product id -> search keyword; a null keyword means it is still being prepared */
-export const useSelections = () =>
-  useQuery({
-    queryKey: ["product-selections"],
-    queryFn: ({ signal }) => getJson<Record<string, string | null>>(`${API}/selections`, signal),
-    refetchInterval: (query) => (Object.values(query.state.data ?? {}).some((type) => !type) ? 3000 : false),
-  });
-
 export const useOutputs = () => useQuery({ queryKey: ["outputs"], queryFn: ({ signal }) => getJson<OutputItem[]>(`${API}/outputs`, signal) });
 
 export const useBriefs = () => useQuery({ queryKey: ["briefs"], queryFn: ({ signal }) => getJson<BriefRecord[]>(`${API}/briefs`, signal) });
@@ -78,7 +70,8 @@ export function useStartPipeline(productId: string) {
         idea: "",
         video_seconds: 30,
         ...body,
-      }),
+      }, AbortSignal.timeout(30_000)),
     onSuccess: (run) => client.setQueryData(["pipeline", productId], run),
+    onError: () => { void client.invalidateQueries({ queryKey: ["pipeline", productId] }); },
   });
 }

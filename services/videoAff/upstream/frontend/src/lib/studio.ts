@@ -45,6 +45,7 @@ export function runStoppedMessage(run: PipelineRun): string {
   if (message.startsWith("The clips are still being made")) return "Các đoạn phim đang được tạo. Hãy quay lại trang này sau.";
   if (message.startsWith("No usable reference image")) return "Hãy lấy và kiểm tra ảnh bối cảnh trong Bộ nhớ AI trước.";
   if (message.startsWith("No text embedding model")) return "VideoAFF chưa được cấu hình để tìm ảnh bối cảnh.";
+  if (message.startsWith("LLM is not configured")) return "Hãy mở Mô hình và Kho để kiểm tra mô hình Viết kịch bản của VideoAFF.";
   if (message.startsWith("Upload the photo")) return "Hãy thêm ảnh nhân vật trước khi tạo video.";
   if (run.status === "interrupted") return "Lần chạy trước bị gián đoạn. Hãy chạy lại để tiếp tục.";
   return "Lần chạy trước đã dừng. Hãy xem chi tiết và thử lại bước đang làm.";

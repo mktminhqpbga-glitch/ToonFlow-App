@@ -40,7 +40,9 @@ class ProductRepository(Protocol):
 
     async def get_detail(self, product_id: str) -> dict[str, Any] | None: ...
 
-    async def select_product(self, product_id: str, product_type: str | None) -> None: ...
+    async def select_product(
+        self, product_id: str, product_type: str | None, *, only_if_unset: bool = False
+    ) -> None: ...
 
     async def selections(self) -> dict[str, str | None]: ...
 
@@ -295,13 +297,19 @@ class PostgresProductRepository:
         async with self._engine.connect() as connection:
             return (await connection.execute(statement)).scalar_one_or_none()
 
-    async def select_product(self, product_id: str, product_type: str | None) -> None:
+    async def select_product(
+        self, product_id: str, product_type: str | None, *, only_if_unset: bool = False
+    ) -> None:
         statement = insert(product_selections).values(
             product_id=product_id, product_type=product_type
         )
         statement = statement.on_conflict_do_update(
             index_elements=["product_id"],
             set_={"product_type": product_type, "updated_at": func.now()},
+            where=or_(
+                product_selections.c.product_type.is_(None),
+                product_selections.c.product_type == "",
+            ) if only_if_unset else None,
         )
         async with self._engine.begin() as connection:
             await connection.execute(statement)

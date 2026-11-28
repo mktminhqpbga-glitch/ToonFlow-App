@@ -25,13 +25,9 @@ export function ProductsPage() {
   const [marketplace, setMarketplace] = useState("");
   const products = useProducts();
   const briefs = useBriefs();
-  const refresh = () => {
-    void client.invalidateQueries({ queryKey: ["product-selections"] });
-  };
   const start = useMutation({
     mutationFn: (productId: string) => postJson(`${API}/${productId}/select`),
     onSuccess: (_data, productId) => {
-      refresh();
       navigate(`/studio/${newProjectId(productId)}`);
     },
   });
@@ -39,7 +35,6 @@ export function ProductsPage() {
     mutationFn: (productId: string) => deleteJson(`${API}/${productId}`),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["products"] });
-      refresh();
     },
   });
   const waiting = useQuery({

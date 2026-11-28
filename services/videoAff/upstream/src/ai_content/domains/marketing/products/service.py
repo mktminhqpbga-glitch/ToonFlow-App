@@ -2131,9 +2131,10 @@ class ProductCatalogService:
 
     async def select(self, product_id: str) -> bool:
         """Mark a product for content. Every product draws on the one shared reference pool."""
+        product_id = product_of(product_id)
         if await self._repository.get_detail(product_id) is None:
             return False
-        await self._repository.select_product(product_id, GENERAL_TYPE)
+        await self._repository.select_product(product_id, GENERAL_TYPE, only_if_unset=True)
         return True
 
     async def selections(self) -> dict[str, str | None]:

@@ -532,7 +532,7 @@ async def start_pipeline(
     service: ProductCatalogService = Depends(get_product_catalog_service),
 ) -> dict[str, str]:
     """Run every stage in the background: brief, person, images, clips, voice, video, post."""
-    if await service.detail(product_id) is None:
+    if not await service.select(product_id):
         raise HTTPException(status_code=404, detail="Product not captured")
     if _pipeline_runs.get(product_id, {}).get("status") == "running":
         raise HTTPException(status_code=409, detail="This product is already being made")
@@ -541,7 +541,11 @@ async def start_pipeline(
         "step": "Starting automated creation",
         "message": "",
     }
-    await service.save_run(product_id, "running")
+    try:
+        await service.save_run(product_id, "running")
+    except BaseException:
+        _pipeline_runs.pop(product_id, None)
+        raise
     task = asyncio.create_task(
         _run_pipeline(
             product_catalog_scope_for(request),
